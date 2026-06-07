@@ -8,16 +8,16 @@ members = [
 ]
 
 [workspace.dependencies]
-# Shared
-uuid = { version = "1.23.0", features = ["v4", "serde"] }
+sea-orm = { version = "2.0.0-rc.38", features = ["sqlx-sqlite", "runtime-tokio-rustls", "macros"] }
+sea-orm-migration = { version = "2.0.0-rc.38" }
 serde = { version = "1.0.228", features = ["derive"] }
-thiserror = "2.0.18"
+serde_json = "1.0.150"
+uuid = { version = "1.23.0", features = ["v7", "serde"] }
+chrono = { version = "0.4.45", features = ["serde"] }
 derive_more = "2.1.1"
+tokio = { version = "1.52.3", features = ["rt", "macros"] }
+thiserror = "2.0.18"
 tracing = "0.1.44"
-
-# SeaORM for migration only (not in shared-types or contracts)
-sea-orm-migration = "2.0.0-rc.38"
-tokio = { version = "1.52.3", features = ["full"] }
 
 [workspace.package]
 edition = "2024"
