@@ -16,7 +16,7 @@ impl MigrationTrait for Migration {
         manager.get_connection().execute_unprepared("PRAGMA journal_mode=WAL;").await?;
         manager.get_connection().execute_unprepared("PRAGMA foreign_keys = ON").await?;
 
-        // Users table
+        // Users table with CHECK constraint inline
         manager
             .create_table(
                 Table::create()
@@ -37,13 +37,9 @@ impl MigrationTrait for Migration {
                             .default(Platform::Pwa.to_value())
                     )
                     .col(ColumnDef::new(user::Column::EmailVerifiedAt).date_time())
+                    .check(Expr::col(user::Column::ChipBalance).gte(0))
                     .to_owned(),
             )
-            .await?;
-        // CHECK constraint on chip_balance (raw SQL because SeaORM doesn't support it)
-        manager
-            .get_connection()
-            .execute_unprepared("ALTER TABLE users ADD CONSTRAINT chip_balance_nonneg CHECK (chip_balance >= 0)")
             .await?;
 
         // Sessions table
@@ -302,7 +298,7 @@ impl MigrationTrait for Migration {
             )
             .await?;
 
-        // Indexes (including missing foreign key indexes from review)
+        // Indexes
         manager
             .create_index(
                 Index::create()
