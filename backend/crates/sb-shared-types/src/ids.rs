@@ -1,6 +1,6 @@
-use uuid::Uuid;
-use serde::{Serialize, Deserialize};
 use derive_more::{Display, From, Into};
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, From, Into)]
 pub struct UserId(pub Uuid);

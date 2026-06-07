@@ -1,16 +1,28 @@
-use serde::{Serialize, Deserialize};
-use derive_more::{Display, From, Into, Add, Sub};
+use derive_more::{Add, Display, From, Into, Sub};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Display, From, Into, Add, Sub, Default)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Serialize,
+    Deserialize,
+    Display,
+    From,
+    Into,
+    Add,
+    Sub,
+    Default,
+)]
 pub struct ChipAmount(i64);
 
 impl ChipAmount {
     pub fn new(value: i64) -> Option<Self> {
-        if value >= 0 {
-            Some(Self(value))
-        } else {
-            None
-        }
+        if value >= 0 { Some(Self(value)) } else { None }
     }
 
     pub fn checked_add(&self, other: Self) -> Option<Self> {
@@ -18,7 +30,9 @@ impl ChipAmount {
     }
 
     pub fn checked_sub(&self, other: Self) -> Option<Self> {
-        self.0.checked_sub(other.0).and_then(|v| if v >= 0 { Some(ChipAmount(v)) } else { None })
+        self.0
+            .checked_sub(other.0)
+            .and_then(|v| if v >= 0 { Some(ChipAmount(v)) } else { None })
     }
 
     pub fn as_i64(&self) -> i64 {

@@ -1,5 +1,5 @@
-use serde::{Serialize, Deserialize};
 use crate::chips::ChipAmount;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TableConfig {
