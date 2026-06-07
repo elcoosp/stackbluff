@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+@theme {
+  --color-hearts: #B82B4B;
+  --color-spades: #1C1B1E;
+  --color-clubs: #1C1B1E;
+  --color-diamonds: #B82B4B;
+}
