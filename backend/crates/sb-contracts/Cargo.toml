@@ -1,0 +1,11 @@
+[package]
+name = "sb-contracts"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.94"
+
+[dependencies]
+sb-shared-types = { path = "../sb-shared-types" }
+serde = { workspace = true }
+thiserror = { workspace = true }
+async-trait = "0.1.89"
