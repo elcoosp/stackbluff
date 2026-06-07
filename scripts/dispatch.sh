@@ -24,7 +24,7 @@ PROJECT_STRUCTURE="$(cat docs/project-structure.md)"
 TECH_STACK="$(cat docs/tech-stack.md)"
 ISSUE_BODY="$(cat "$ISSUE_FILE")"
 
-# Compute integer issue number (strip leading zeros)
+# Integer issue number (strip leading zeros)
 ISSUE_NUM_INT="$(echo "$ISSUE_NUM" | sed 's/^0*//')"
 
 cat <<EOF
@@ -41,16 +41,52 @@ $TECH_STACK
 ## Issue
 $ISSUE_BODY
 
-## Mandatory rules for your script
+## ⚠️ CRITICAL RULES – FOLLOW EXACTLY
 
-### 1. Worktree setup (idempotent, non‑destructive)
+### 1. Never overwrite existing files without reading first
+- Before creating or modifying any file, check if it already exists in \`main\`:
+  \`git cat-file -e main:relative/path 2>/dev/null\`
+- If it exists, **read its current content** with \`git show main:relative/path\`.
+- Make only the **necessary changes** – do not rewrite the whole file unless it's the only safe way.
+- Prefer \`sed -i '' 's/old/new/g'\` for small changes. If \`sed\` fails, then fallback to a full rewrite.
+
+### 2. Workspace dependencies must be centralised
+- When adding a new dependency to any crate, first check if it already exists in \`backend/Cargo.toml\` under \`[workspace.dependencies]\`.
+- If missing, add it there with the correct version and features (use the versions from \`tech-stack.md\`).
+- Then reference it in the crate’s Cargo.toml as \`dep = { workspace = true }\`.
+
+### 3. SeaORM 2.0 method usage (non‑negotiable)
+- **Do NOT** use \`active.update(&db)\` – that is wrong.
+- Use: \`ActiveModel::update(active, &db)\` with \`ActiveModelTrait\` in scope.
+- For inserts: \`ActiveModel::insert(&db)\` or \`Model::insert(active, &db)\`.
+- Always import: \`use sea_orm::{ActiveModelTrait, ConnectionTrait, EntityTrait};\`.
+
+### 4. Migration file modifications – NEVER use sed to insert code inside functions
+- If you must change an existing migration, **generate a new migration** using \`sea-orm-cli migrate generate <name>\` and write the new schema in it.
+- If you absolutely must modify an existing migration file, **rewrite the whole file** with a here‑doc (no \`sed\` hacks). Copy the original and only change what is needed.
+
+### 5. Test isolation
+- Integration tests inside a crate (e.g., \`sb-db-entities/tests/\`) must **not** depend on other crates (e.g., \`sb-db-repos\`) unless those are declared as dev‑dependencies in that crate’s \`Cargo.toml\`.
+- If you need functionality from another crate, move the test to that crate or add the proper dev‑dependency.
+
+### 6. Clippy is a gate – fix all warnings
+- After every change, run \`cargo clippy --workspace -- -D warnings\` (or limited to affected crates).
+- Do not proceed until all warnings are fixed. Unused imports, unused variables, and incorrect formatting must be cleaned.
+
+### 7. Incremental commits – one logical change per commit
+- Commit after each successful compilation or test pass.
+- Use a new commit for a new logical change.
+- Only use \`git commit --amend\` for the **immediate fix** of the previous change, not for unrelated adjustments.
+- Push after every commit (or every amend) with \`git push --force-with-lease\`.
+
+### 8. Worktree setup (idempotent, no automatic rebase)
 \`\`\`bash
-WORKTREE_DIR="../stackbluff-worktrees/issue-\$ISSUE_NUM"
-BRANCH="issue/\$ISSUE_NUM"
+WORKTREE_DIR="../stackbluff-worktrees/issue-$ISSUE_NUM"
+BRANCH="issue/$ISSUE_NUM"
 mkdir -p ../stackbluff-worktrees
 if [ -d "\$WORKTREE_DIR" ]; then
     cd "\$WORKTREE_DIR"
-    # DO NOT fetch or rebase – worktree may have uncommitted changes.
+    # DO NOT fetch or rebase – the worktree may have uncommitted changes.
     # The user will sync manually if needed.
 else
     git worktree add -b "\$BRANCH" "\$WORKTREE_DIR" main
@@ -58,28 +94,13 @@ else
 fi
 \`\`\`
 
-### 2. Rectification vs. initial implementation
-- **If the branch already has at least one commit** (i.e., this is a rectification), your script should:
-  - Only modify files that are **directly related to the error**.
-  - **Do not recreate** files that already exist and are correct.
-  - Use \`git add . && git commit --amend --no-edit\` to fix the previous commit.
-- **If the branch has no commits** (fresh worktree), create new files normally.
+### 9. Reading existing files (always do this)
+\`\`\`bash
+git show main:relative/path          # to read content
+git cat-file -e main:relative/path   # to check existence
+\`\`\`
 
-### 3. Reading and modifying files
-- **Read existing file from \`main\`**: \`git show main:relative/path\`
-- **Check existence**: \`git cat-file -e main:relative/path 2>/dev/null\`
-- **Modify existing file**: First try \`sed -i '' 's/old/new/g' file\`. If \`sed\` fails, **fallback to rewriting the whole file** using a here‑doc with the complete new content.
-- **Create new file**: \`cat > file <<'EOF' ... EOF\`
-- **Delete file**: \`git rm file\`
-
-### 4. Atomic commits per logical change
-- After each successful test run, commit only the files you changed:
-  \`git commit -m "feat(scope): description"\`
-- For rectifications (branch already has commits), **amend** the previous commit:
-  \`git add . && git commit --amend --no-edit\`
-- Then push: \`git push --force-with-lease -u origin "\$BRANCH"\`
-
-### 5. Testing only affected areas
+### 10. Testing only affected areas
 - **Rust**: Compute changed crates from staged files:
 \`\`\`bash
 changed_crates=\$(git diff --cached --name-only | grep '^backend/crates/' | cut -d/ -f3 | sort -u | sed 's/^/-p /' | tr '\n' ' ')
@@ -88,7 +109,7 @@ if [ -n "\$changed_crates" ]; then
     cargo clippy \$changed_crates -- -D warnings
 fi
 \`\`\`
-- **Frontend**: If any frontend file (\`.ts\`, \`.tsx\`, \`.css\`, \`.vue\`, \`.svelte\`) changed:
+- **Frontend** (if any \`.ts\`, \`.tsx\`, \`.css\`, \`.vue\`, \`.svelte\` changed):
 \`\`\`bash
 pnpm install --frozen-lockfile
 pnpm test
@@ -96,19 +117,20 @@ pnpm lint
 pnpm build
 \`\`\`
 
-### 6. Error handling & debugging
-- At the top: \`set -euo pipefail\`
-- Add \`trap 'echo "ERROR on line \$LINENO"; git checkout -- .; exit 1' ERR\` to revert unstaged changes on failure.
-- Enable \`set -x\` if \`DEBUG=1\` is set.
+### 11. Error handling
+\`\`\`bash
+set -euo pipefail
+trap 'echo "ERROR on line \$LINENO"; git checkout -- .; exit 1' ERR
+DEBUG=\${DEBUG:-0}; [ "\$DEBUG" = "1" ] && set -x
+\`\`\`
 
-### 7. PR creation (only when issue is fully solved)
-- Before creating the PR, **explicitly verify all acceptance criteria** (e.g., file exists, contains expected code). Use \`if\` checks.
-- If all pass, create the PR. **Important:** Use the integer issue number (without leading zeros) in the `Closes` line.
-  \`\`\`bash
-  ISSUE_NUM_INT="$ISSUE_NUM_INT"
-  gh pr create --title "feat(scope): title" --body "Closes #\$ISSUE_NUM_INT" --base main
-  \`\`\`
-- Otherwise **omit** the PR block – just commit and push.
+### 12. PR creation (only when issue fully solved)
+- Before creating the PR, **explicitly verify all acceptance criteria** with \`if\` checks (e.g., file exists, contains expected code).
+- Use the integer issue number (no leading zeros):
+\`\`\`bash
+ISSUE_NUM_INT="$ISSUE_NUM_INT"
+gh pr create --title "feat(scope): title" --body "Closes #\$ISSUE_NUM_INT" --base main
+\`\`\`
 
-Now produce the bash script.
+Now produce the bash script. Follow every rule above. No exceptions.
 EOF

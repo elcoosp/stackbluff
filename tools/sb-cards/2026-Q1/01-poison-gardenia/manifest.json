@@ -1,0 +1,24 @@
+{
+  "id": "01-neon-ronin",
+  "name": "Neon Ronin",
+  "rarity": "epic",
+  "price_eur_cents": 499,
+  "price_stars": 250,
+  "color_palette": {
+    "primary_dark": "#0a0a1a",
+    "primary_accent": "#00ffff",
+    "secondary_accent": "#ff00ff"
+  },
+  "custom_pips": {
+    "spades": "blade",
+    "hearts": "blossom",
+    "diamonds": "circuit",
+    "clubs": "eye"
+  },
+  "animated_cards": [
+    "ace-spades", "ace-hearts", "ace-diamonds", "ace-clubs",
+    "king-spades", "king-hearts", "king-diamonds", "king-clubs",
+    "queen-spades", "queen-hearts", "queen-diamonds", "queen-clubs",
+    "jack-spades", "jack-hearts", "jack-diamonds", "jack-clubs"
+  ]
+}
