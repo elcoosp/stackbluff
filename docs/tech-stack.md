@@ -54,7 +54,7 @@ Biome 2.4.x features: embedded CSS/GraphQL formatting, 15 HTML accessibility rul
 | Setting | Value | Notes |
 | :--- | :--- | :--- |
 | `edition` | **2024** | Latest stable edition |
-| `rust-version` | **1.81** | MSRV pinned for stability |
+| `rust-version` | **1.94** | MSRV pinned for stability |
 
 ### Async Runtime & Web Framework
 
@@ -164,7 +164,7 @@ Biome 2.4.x features: embedded CSS/GraphQL formatting, 15 HTML accessibility rul
 
 ## 🚀 Upgrade & Compatibility Notes
 
-1. **Rust MSRV:** Pinned to **1.81** in `rust-toolchain.toml` to ensure compatibility with Axum 0.8.9.
+1. **Rust MSRV:** Pinned to **1.94** in `rust-toolchain.toml`.
 2. **TypeScript 7.0** (Go‑native) is expected soon – watch the TS blog.
 3. **SeaORM 2.0** is in RC; track official release notes for final changes.
 4. **Biome 2.x** can migrate your existing ESLint/Prettier configs via the built‑in migration tool.
