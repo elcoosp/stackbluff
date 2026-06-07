@@ -15,5 +15,6 @@ sb-shared-types = { path = "../sb-shared-types" }
 sb-contracts = { path = "../sb-contracts" }
 
 [dev-dependencies]
+migration = { path = "../../migration" }
 tokio = { workspace = true, features = ["rt", "macros"] }
 sea-orm-migration = { workspace = true }

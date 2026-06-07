@@ -1,7 +1,7 @@
-use sea_orm::entity::prelude::*;
-use serde::{Serialize, Deserialize};
-use uuid::Uuid;
 use super::TableStatus;
+use sea_orm::entity::prelude::*;
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult)]
 pub struct TableConfig {

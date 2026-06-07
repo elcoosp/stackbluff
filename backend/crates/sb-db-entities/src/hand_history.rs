@@ -1,7 +1,7 @@
+use super::{HandActions, HandPlayers, HandResult};
 use sea_orm::entity::prelude::*;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use super::{HandPlayers, HandActions, HandResult};
 
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize)]

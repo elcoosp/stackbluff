@@ -54,3 +54,18 @@ pub enum RankTier {
     #[sea_orm(string_value = "legend")]
     Legend,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
+#[sea_orm(rs_type = "String", db_type = "String(StringLen::N(50))")]
+pub enum MissionType {
+    #[sea_orm(string_value = "play_5_hands")]
+    Play5Hands,
+    #[sea_orm(string_value = "win_showdown")]
+    WinShowdown,
+    #[sea_orm(string_value = "raise_preflop")]
+    RaisePreflop,
+    #[sea_orm(string_value = "play_10_hands")]
+    Play10Hands,
+    #[sea_orm(string_value = "win_all_in")]
+    WinAllIn,
+}

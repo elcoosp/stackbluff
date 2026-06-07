@@ -1,15 +1,15 @@
-use chrono::Utc;
-use migration::{Migrator, MigratorTrait};
 use sb_db_entities::*;
-use sea_orm::{Database, EntityTrait};
+use sea_orm::{Database, EntityTrait, ActiveModelTrait, IntoActiveModel, ModelTrait};
+use migration::{Migrator, MigratorTrait};
 use uuid::Uuid;
+use chrono::Utc;
 
 #[tokio::test]
 async fn test_migration_and_basic_ops() {
     let db = Database::connect("sqlite::memory:").await.unwrap();
     Migrator::up(&db, None).await.unwrap();
 
-    let user = user::ActiveModel {
+    let user_active = user::ActiveModel {
         id: sea_orm::ActiveValue::Set(Uuid::now_v7()),
         telegram_id: sea_orm::ActiveValue::Set(Some(123456789)),
         email: sea_orm::ActiveValue::Set(None),
@@ -21,7 +21,7 @@ async fn test_migration_and_basic_ops() {
         platform: sea_orm::ActiveValue::Set(Platform::Telegram),
         email_verified_at: sea_orm::ActiveValue::Set(None),
     };
-    let user = user.insert(&db).await.unwrap();
+    let user = user_active.insert(&db).await.unwrap();
 
     let mut bad_user = user.clone().into_active_model();
     bad_user.chip_balance = sea_orm::ActiveValue::Set(-1);

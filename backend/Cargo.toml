@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "crates/sb-db-repos",
     "crates/sb-db-entities",
     "crates/sb-shared-types",
     "crates/sb-contracts",
@@ -8,6 +9,10 @@ members = [
 ]
 
 [workspace.dependencies]
+sqlx = { version = "0.9.0", features = ["sqlite", "runtime-tokio", "tls-rustls"] }
+moka = { version = "0.12", features = ["sync"] }
+async-trait = "0.1.89"
+anyhow = "1.0.102"
 sea-orm = { version = "2.0.0-rc.38", features = ["sqlx-sqlite", "runtime-tokio-rustls", "macros"] }
 sea-orm-migration = { version = "2.0.0-rc.38" }
 serde = { version = "1.0.228", features = ["derive"] }
