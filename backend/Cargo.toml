@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "crates/sb-db-entities",
     "crates/sb-shared-types",
     "crates/sb-contracts",
     "migration",
@@ -17,3 +18,7 @@ tracing = "0.1.44"
 # SeaORM for migration only (not in shared-types or contracts)
 sea-orm-migration = "2.0.0-rc.38"
 tokio = { version = "1.52.3", features = ["full"] }
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.94"

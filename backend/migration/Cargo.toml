@@ -6,4 +6,5 @@ rust-version = "1.94"
 
 [dependencies]
 sea-orm-migration = { workspace = true }
+sb-db-entities = { path = "../crates/sb-db-entities" }
 tokio = { workspace = true }
