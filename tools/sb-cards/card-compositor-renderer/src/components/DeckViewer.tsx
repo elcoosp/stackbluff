@@ -8,9 +8,6 @@ interface Props {
 }
 
 export const DeckViewer: React.FC<Props> = ({ cards, deckName }) => {
-  // Use CSS grid with auto-sized columns; each card container sets its own width.
-  // The actual card is 1000x1400, but we scale it down via CSS transform.
-  // We also add overflow-x: auto to the container to allow scrolling on small screens.
   return (
     <div className="w-full overflow-x-auto">
       <div className="flex flex-wrap justify-center gap-6 p-4">
@@ -26,7 +23,6 @@ export const DeckViewer: React.FC<Props> = ({ cards, deckName }) => {
                 deckName={deckName}
               />
             </div>
-            {/* Add negative margin to compensate for scaling height? Better to let parent handle */}
           </div>
         ))}
       </div>

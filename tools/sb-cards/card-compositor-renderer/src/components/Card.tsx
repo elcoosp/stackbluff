@@ -1,11 +1,14 @@
 import React from 'react';
-import { CardData } from '../types';
 import { StandardLayout } from '../layouts/StandardLayout';
 import { ReversibleLayout } from '../layouts/ReversibleLayout';
 import { resolveAssetPath } from '../utils/assetLoader';
-import { decks } from '../utils/deckConfig';
 
-interface Props extends CardData {
+interface Props {
+  rank: string;
+  suit: string;
+  artPath: string;
+  isBack?: boolean;
+  layoutType: 'standard' | 'reversible';
   deckName: string;
 }
 
@@ -17,19 +20,9 @@ export const Card: React.FC<Props> = ({
   layoutType,
   deckName,
 }) => {
-  const deck = decks[deckName];
-  const suffix = deck.suffix;
-  const baseDir = deck.baseDir;
-
-  const cornerPlaqueUrl = deck.cornerPlaquePath
-    ? resolveAssetPath(baseDir, `${deck.cornerPlaquePath}${suffix}.png`, suffix)
-    : undefined;
-  const borderUrl = deck.borderPath
-    ? resolveAssetPath(baseDir, `${deck.borderPath}${suffix}.png`, suffix)
-    : undefined;
-  const centerBandUrl = deck.centerBandPath
-    ? resolveAssetPath(baseDir, `${deck.centerBandPath}${suffix}.png`, suffix)
-    : undefined;
+  const cornerPlaqueUrl = resolveAssetPath(deckName, `corner-plaque_inspyrenet.png`, '');
+  const borderUrl = resolveAssetPath(deckName, `border_inspyrenet.png`, '');
+  const centerBandUrl = resolveAssetPath(deckName, `center-band_inspyrenet.png`, '');
 
   const showPipPattern = layoutType === 'standard' && !isBack && rank !== 'JOKER';
   const artOpacity = layoutType === 'standard' && rank !== 'A' && !showPipPattern ? 0.5 : 1.0;

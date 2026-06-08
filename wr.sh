@@ -3,100 +3,297 @@ set -uo pipefail
 
 cd tools/sb-cards/card-compositor-renderer || exit 1
 
-echo "=== Undoing symlinks and fixing asset serving ==="
+echo "=== Setting up multi-deck support with asset copying ==="
 
-# 1. Remove all symlinks in public
-echo "Removing symlinks from public/"
-rm -rf public/art public/pips public/fonts public/corner-light.png
+# Determine the base directory for decks relative to this script's location
+# We are now in tools/sb-cards/card-compositor-renderer
+# Decks are in ../2026-Q1 (i.e., tools/sb-cards/2026-Q1)
+DECK_BASE="../2026-Q1"
+if [ ! -d "$DECK_BASE" ]; then
+    echo "ERROR: Deck base directory not found at $DECK_BASE"
+    echo "Expected to find 2026-Q1/ at tools/sb-cards/2026-Q1"
+    exit 1
+fi
 
-# 2. Create an empty public directory for Vite to serve static files
-mkdir -p public
+# Create public/decks directory
+mkdir -p public/decks
 
-# 3. Configure Vite to proxy asset requests to the actual deck folder
-# We'll modify vite.config.ts to add a middleware or alias.
-# Since Vite dev server can serve static files from any directory via `server.fs.allow`,
-# we simply add the absolute paths to `server.fs.allow`.
-# Also we add aliases for `/art`, `/pips`, `/fonts`, `/corner-light.png`.
+# Find all deck folders (01-*, 02-*, etc.)
+shopt -s nullglob
+decks=()
+for d in "$DECK_BASE"/*/; do
+    if [ -d "$d" ]; then
+        deck_name=$(basename "$d")
+        decks+=("$deck_name")
+        echo "Processing deck: $deck_name"
 
-DECK_BASE="$(cd ../../../2026-Q1/01-poison-gardenia && pwd)"
-PIPS_DIR="${DECK_BASE}/2-pips"
-ART_DIR="${DECK_BASE}/1-raw/art"
-FONTS_DIR="$(cd ../../../engine/fonts && pwd 2>/dev/null || echo "$PWD/public/fonts")"
+        # Create deck directory in public/decks
+        target="public/decks/$deck_name"
+        mkdir -p "$target"
 
-echo "Detected DECK_BASE: $DECK_BASE"
-echo "ART_DIR: $ART_DIR"
-echo "PIPS_DIR: $PIPS_DIR"
+        # Copy 1-raw/art if exists
+        if [ -d "$d/1-raw/art" ]; then
+            cp -r "$d/1-raw/art" "$target/art"
+            echo "  Copied art for $deck_name"
+        else
+            echo "  WARNING: No art folder for $deck_name"
+        fi
 
-cat > vite.config.ts << VITE_CFG_FINAL
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import tailwindcss from '@tailwindcss/vite';
+        # Copy 2-pips if exists
+        if [ -d "$d/2-pips" ]; then
+            cp -r "$d/2-pips" "$target/pips"
+            echo "  Copied pips for $deck_name"
+        else
+            echo "  WARNING: No 2-pips folder for $deck_name; run Python script first"
+        fi
+    fi
+done
 
-export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  server: {
-    port: 3000,
-    open: true,
-    fs: {
-      // Allow serving files from these directories
-      allow: [
-        '$ART_DIR',
-        '$PIPS_DIR',
-        '$FONTS_DIR',
-        '.',
-      ]
-    }
-  },
-  resolve: {
-    alias: {
-      '@': '/src',
-    }
-  }
-});
-VITE_CFG_FINAL
+if [ ${#decks[@]} -eq 0 ]; then
+    echo "No decks found in $DECK_BASE"
+    exit 1
+fi
 
-# 4. Create a small script to generate corner-light.png inside public if not exists
+# Generate decks.json for the frontend
+echo "Creating public/decks/decks.json"
+cat > public/decks/decks.json << JSON
+{
+  "decks": [
+$(printf '    "%s"\n' "${decks[@]}" | sed '$!s/$/,/' | sed 's/^/    /')
+  ]
+}
+JSON
+
+# Generate a simple corner-light.png if missing
 if [ ! -f public/corner-light.png ]; then
-    echo "Generating corner-light.png inside public/"
-    # Try ImageMagick first
-    if command -v convert &> /dev/null; then
+    if command -v convert &>/dev/null; then
         convert -size 1000x1400 radial-gradient:white-transparent public/corner-light.png
     else
-        # Create a minimal transparent PNG (1x1 transparent pixel) – not ideal but prevents 404
-        printf '\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82' > public/corner-light.png
-        echo "Created dummy corner-light.png. Replace with proper gradient later."
+        # Create a dummy 1000x1400 transparent PNG (base64)
+        base64 -d > public/corner-light.png << 'PNG_BASE64'
+iVBORw0KGgoAAAANSUhEUgAAA+gAAAPoAQMAAAB2J9EhAAAABlBMVEUAAAD///+l2Z/dAAAA
+AXRSTlMAQObYZgAAAAlwSFlzAAAOxAAADsQBlSsOGwAAADFJREFUeJztwTEBAAAAwqD1T20K
+P6AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA4G8AB4cAARjNuZUAAAAASUVORK5CYII=
+PNG_BASE64
     fi
 fi
 
-# 5. Update assetLoader.ts to use absolute URLs that resolve to those directories.
-# We no longer use baseDir; we directly map to /art/..., /pips/..., etc.
-cat > src/utils/assetLoader.ts << 'ASSET_LOADER_FINAL'
-/**
- * Resolves asset paths to URLs that will be served by Vite dev server.
- * The Vite config allows serving from the actual deck folders.
- * So we construct URLs like /art/filename.png, /pips/suit-size.png, etc.
- */
-export function resolveAssetPath(baseDir: string, filename: string, suffix: string): string {
-  // Remove any leading path (if someone passed full path)
+# Copy fonts if available
+if [ -d "../../engine/fonts" ]; then
+    mkdir -p public/fonts
+    cp -r "../../engine/fonts"/* public/fonts/ 2>/dev/null || true
+    echo "Copied fonts"
+fi
+
+# ----------------------------------------------------------------------
+# Update assetLoader.ts to use /decks/{deckName}/ prefix
+# ----------------------------------------------------------------------
+cat > src/utils/assetLoader.ts << 'ASSET_LOADER_MULTI'
+export function resolveAssetPath(deckName: string, filename: string, suffix: string): string {
   const cleanName = filename.replace(/^.*[\\/]/, '');
-
-  // Determine which folder the asset belongs to by its base name
   if (cleanName.match(/^(back|ace|jack|queen|king|number-template|corner-plaque|border|center-band|joker-)/)) {
-    // These are in the raw art folder
-    return `/art/${cleanName}`;
+    return `/decks/${deckName}/art/${cleanName}`;
+  } else {
+    return `/decks/${deckName}/pips/${cleanName}`;
   }
-  // Otherwise assume it's a pip image (already pre‑processed)
-  // Example: spades-100.png, hearts-160.png
-  return `/pips/${cleanName}`;
 }
-ASSET_LOADER_FINAL
+ASSET_LOADER_MULTI
 
-# 6. Fix Card.tsx to use the correct pip URLs (already handled by assetLoader)
-# But StandardLayout still hardcodes `/pips/...` – that's fine because we serve from /pips.
+# ----------------------------------------------------------------------
+# Update Card.tsx to accept deckName and use the new assetLoader signature
+# ----------------------------------------------------------------------
+cat > src/components/Card.tsx << 'CARD_TSX_NEW'
+import React from 'react';
+import { StandardLayout } from '../layouts/StandardLayout';
+import { ReversibleLayout } from '../layouts/ReversibleLayout';
+import { resolveAssetPath } from '../utils/assetLoader';
 
-# 7. Make the card grid responsive (cards scale down to fit screen)
-# Update DeckViewer component to use CSS scaling that actually works.
-cat > src/components/DeckViewer.tsx << 'DECK_VIEWER_RESPONSIVE'
+interface Props {
+  rank: string;
+  suit: string;
+  artPath: string;
+  isBack?: boolean;
+  layoutType: 'standard' | 'reversible';
+  deckName: string;
+}
+
+export const Card: React.FC<Props> = ({
+  rank,
+  suit,
+  artPath,
+  isBack = false,
+  layoutType,
+  deckName,
+}) => {
+  const cornerPlaqueUrl = resolveAssetPath(deckName, `corner-plaque_inspyrenet.png`, '');
+  const borderUrl = resolveAssetPath(deckName, `border_inspyrenet.png`, '');
+  const centerBandUrl = resolveAssetPath(deckName, `center-band_inspyrenet.png`, '');
+
+  const showPipPattern = layoutType === 'standard' && !isBack && rank !== 'JOKER';
+  const artOpacity = layoutType === 'standard' && rank !== 'A' && !showPipPattern ? 0.5 : 1.0;
+  const noPadding = layoutType === 'standard' && rank !== 'A' && !showPipPattern;
+
+  if (layoutType === 'reversible') {
+    return (
+      <ReversibleLayout
+        rank={rank}
+        suit={suit}
+        artUrl={artPath}
+        cornerPlaqueUrl={cornerPlaqueUrl}
+        borderUrl={borderUrl}
+        cornerLightUrl="/corner-light.png"
+        centerBandUrl={centerBandUrl}
+      />
+    );
+  }
+
+  return (
+    <StandardLayout
+      rank={rank}
+      suit={suit}
+      artUrl={artPath}
+      cornerPlaqueUrl={cornerPlaqueUrl}
+      borderUrl={borderUrl}
+      cornerLightUrl="/corner-light.png"
+      showPipPattern={showPipPattern}
+      artOpacity={artOpacity}
+      noPadding={noPadding}
+      isBack={isBack}
+    />
+  );
+};
+CARD_TSX_NEW
+
+# ----------------------------------------------------------------------
+# Update App.tsx to fetch decks from decks.json and generate cards dynamically
+# ----------------------------------------------------------------------
+cat > src/App.tsx << 'APP_TSX_NEW'
+import { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { DeckViewer } from './components/DeckViewer';
+import { CardPage } from './pages/CardPage';
+
+const SUITS = ['spades', 'hearts', 'diamonds', 'clubs'];
+const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+const FACE_RANKS = ['J', 'Q', 'K'];
+
+function App() {
+  const [selectedDeck, setSelectedDeck] = useState<string>('');
+  const [availableDecks, setAvailableDecks] = useState<string[]>([]);
+  const [cards, setCards] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch('/decks/decks.json')
+      .then(res => res.json())
+      .then(data => {
+        setAvailableDecks(data.decks);
+        if (data.decks.length > 0) setSelectedDeck(data.decks[0]);
+      })
+      .catch(err => console.error('Failed to load decks', err));
+  }, []);
+
+  useEffect(() => {
+    if (!selectedDeck) return;
+    const basePath = `/decks/${selectedDeck}/art/`;
+    const suffix = '_inspyrenet';
+    const newCards: any[] = [];
+
+    // Card back
+    newCards.push({
+      rank: '',
+      suit: '',
+      artPath: `${basePath}back${suffix}.png`,
+      isBack: true,
+      layoutType: 'standard',
+    });
+
+    // Aces
+    for (const suit of SUITS) {
+      newCards.push({
+        rank: 'A',
+        suit,
+        artPath: `${basePath}ace-${suit}${suffix}.png`,
+        layoutType: 'standard',
+      });
+    }
+
+    // Face cards
+    for (const suit of SUITS) {
+      for (const rank of FACE_RANKS) {
+        const rankMap: Record<string, string> = { J: 'jack', Q: 'queen', K: 'king' };
+        newCards.push({
+          rank,
+          suit,
+          artPath: `${basePath}${rankMap[rank]}-${suit}${suffix}.png`,
+          layoutType: 'reversible',
+        });
+      }
+    }
+
+    // Number cards
+    for (const suit of SUITS) {
+      for (const rank of RANKS.slice(0, 9)) {
+        newCards.push({
+          rank,
+          suit,
+          artPath: `${basePath}${rank}-${suit}${suffix}.png`,
+          layoutType: 'standard',
+        });
+      }
+    }
+
+    // Jokers
+    for (let i = 1; i <= 2; i++) {
+      newCards.push({
+        rank: 'JOKER',
+        suit: '',
+        artPath: `${basePath}joker-${i}${suffix}.png`,
+        layoutType: 'standard',
+      });
+    }
+
+    setCards(newCards);
+  }, [selectedDeck]);
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={
+          <div className="min-h-screen bg-gray-900 text-white p-8">
+            <div className="max-w-7xl mx-auto">
+              <h1 className="text-4xl font-bold mb-8 text-center">🎴 Card Composer</h1>
+              <div className="flex gap-4 justify-center mb-8 flex-wrap">
+                {availableDecks.map(deck => (
+                  <button
+                    key={deck}
+                    onClick={() => setSelectedDeck(deck)}
+                    className={`px-6 py-2 rounded-full transition ${
+                      selectedDeck === deck
+                        ? 'bg-amber-500 text-gray-900'
+                        : 'bg-gray-800 hover:bg-gray-700'
+                    }`}
+                  >
+                    {deck.replace(/^\d+-/, '').replace(/-/g, ' ')}
+                  </button>
+                ))}
+              </div>
+              {cards.length > 0 && <DeckViewer cards={cards} deckName={selectedDeck} />}
+            </div>
+          </div>
+        } />
+        <Route path="/card" element={<CardPage />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+export default App;
+APP_TSX_NEW
+
+# ----------------------------------------------------------------------
+# Update DeckViewer and CardPage
+# ----------------------------------------------------------------------
+cat > src/components/DeckViewer.tsx << 'DECK_VIEWER_FINAL'
 import React from 'react';
 import { Card } from './Card';
 import { CardData } from '../types';
@@ -107,9 +304,6 @@ interface Props {
 }
 
 export const DeckViewer: React.FC<Props> = ({ cards, deckName }) => {
-  // Use CSS grid with auto-sized columns; each card container sets its own width.
-  // The actual card is 1000x1400, but we scale it down via CSS transform.
-  // We also add overflow-x: auto to the container to allow scrolling on small screens.
   return (
     <div className="w-full overflow-x-auto">
       <div className="flex flex-wrap justify-center gap-6 p-4">
@@ -125,43 +319,80 @@ export const DeckViewer: React.FC<Props> = ({ cards, deckName }) => {
                 deckName={deckName}
               />
             </div>
-            {/* Add negative margin to compensate for scaling height? Better to let parent handle */}
           </div>
         ))}
       </div>
     </div>
   );
 };
-DECK_VIEWER_RESPONSIVE
+DECK_VIEWER_FINAL
 
-# 8. Update App.css to ensure proper scrolling and background
-cat >> src/App.css << 'APP_CSS_ADD'
-/* Ensure the deck viewer doesn't overflow horizontally */
-.overflow-x-auto {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-.flex-wrap {
-  flex-wrap: wrap;
-}
-@media (max-width: 640px) {
-  .flex-wrap > div {
-    width: 200px !important;
-  }
-  .flex-wrap > div > div {
-    transform: scale(0.2) !important;
-  }
-}
-APP_CSS_ADD
+cat > src/pages/CardPage.tsx << 'CARD_PAGE_FINAL'
+import React from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Card } from '../components/Card';
 
-# 9. Run TypeScript check
+export const CardPage: React.FC = () => {
+  const [params] = useSearchParams();
+  const rank = params.get('rank') || '';
+  const suit = params.get('suit') || '';
+  const layoutType = params.get('layout') as 'standard' | 'reversible' || 'standard';
+  const isBack = params.get('back') === 'true';
+  const deckName = params.get('deck') || '';
+  const artPath = params.get('art') || '';
+
+  return (
+    <div style={{ width: 1000, height: 1400 }}>
+      <Card
+        rank={rank}
+        suit={suit}
+        artPath={artPath}
+        isBack={isBack}
+        layoutType={layoutType}
+        deckName={deckName}
+      />
+    </div>
+  );
+};
+CARD_PAGE_FINAL
+
+# ----------------------------------------------------------------------
+# Remove old symlinks or leftovers
+# ----------------------------------------------------------------------
+rm -f public/art public/pips public/fonts 2>/dev/null || true
+
+# ----------------------------------------------------------------------
+# Minimal vite.config.ts
+# ----------------------------------------------------------------------
+cat > vite.config.ts << 'VITE_CLEAN'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
+
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+  server: {
+    port: 3000,
+    open: true,
+  },
+  resolve: {
+    alias: {
+      '@': '/src',
+    },
+  },
+});
+VITE_CLEAN
+
+# ----------------------------------------------------------------------
+# Run TypeScript check (non‑fatal)
+# ----------------------------------------------------------------------
 echo "Running TypeScript check"
-if npx tsc --noEmit 2>&1; then
-    echo "TypeScript check passed"
-else
-    echo "TypeScript errors (non-fatal)"
-fi
+npx tsc --noEmit 2>&1 || echo "TypeScript errors (non‑fatal, continuing)"
 
-# 10. Commit
+# ----------------------------------------------------------------------
+# Commit
+# ----------------------------------------------------------------------
 git add -A
-git commit -m "fix: remove symlinks, use Vite fs.allow + proper responsive scaling"
+git commit -m "feat: multi‑deck support with asset copying, dynamic deck selection"
+
+echo "✅ All done. Run 'pnpm dev' to start the dev server."
