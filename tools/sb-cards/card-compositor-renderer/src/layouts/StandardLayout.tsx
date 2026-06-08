@@ -51,7 +51,7 @@ export const StandardLayout: React.FC<Props> = ({
         return (
           <img
             key={idx}
-            src={`/2-pips/${suit}-160.png`}
+            src={`/pips/${suit}-160.png`}
             className="absolute w-[160px] h-[160px] pointer-events-none"
             style={{ left, top, transform: shouldRotate ? 'rotate(180deg)' : 'none' }}
             alt="pip"
