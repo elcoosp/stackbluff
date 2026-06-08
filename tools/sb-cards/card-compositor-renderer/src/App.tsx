@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { DeckViewer } from './components/DeckViewer';
+import { CardPage } from './pages/CardPage';
 import { decks } from './utils/deckConfig';
 
 const SUITS = ['spades', 'hearts', 'diamonds', 'clubs'];
@@ -77,27 +79,34 @@ function App() {
   }, [selectedDeck]);
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-8">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-4xl font-bold mb-8 text-center">🎴 Card Composer</h1>
-        <div className="flex gap-4 justify-center mb-8">
-          {Object.entries(decks).map(([id, deck]) => (
-            <button
-              key={id}
-              onClick={() => setSelectedDeck(id)}
-              className={`px-6 py-2 rounded-full transition ${
-                selectedDeck === id
-                  ? 'bg-amber-500 text-gray-900'
-                  : 'bg-gray-800 hover:bg-gray-700'
-              }`}
-            >
-              {deck.name}
-            </button>
-          ))}
-        </div>
-        {cards.length > 0 && <DeckViewer cards={cards} deckName={selectedDeck} />}
-      </div>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={
+          <div className="min-h-screen bg-gray-900 text-white p-8">
+            <div className="max-w-7xl mx-auto">
+              <h1 className="text-4xl font-bold mb-8 text-center">🎴 Card Composer</h1>
+              <div className="flex gap-4 justify-center mb-8">
+                {Object.entries(decks).map(([id, deck]) => (
+                  <button
+                    key={id}
+                    onClick={() => setSelectedDeck(id)}
+                    className={`px-6 py-2 rounded-full transition ${
+                      selectedDeck === id
+                        ? 'bg-amber-500 text-gray-900'
+                        : 'bg-gray-800 hover:bg-gray-700'
+                    }`}
+                  >
+                    {deck.name}
+                  </button>
+                ))}
+              </div>
+              {cards.length > 0 && <DeckViewer cards={cards} deckName={selectedDeck} />}
+            </div>
+          </div>
+        } />
+        <Route path="/card" element={<CardPage />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

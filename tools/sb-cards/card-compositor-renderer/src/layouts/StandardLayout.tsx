@@ -47,12 +47,13 @@ export const StandardLayout: React.FC<Props> = ({
       {pipPositions.map(([col, row], idx) => {
         const left = PIP_GRID_COLS[col] - 80;
         const top = PIP_GRID_ROWS[row] - 80;
+        const shouldRotate = row === 3 || row === 4;
         return (
           <img
             key={idx}
             src={`/2-pips/${suit}-160.png`}
             className="absolute w-[160px] h-[160px] pointer-events-none"
-            style={{ left, top }}
+            style={{ left, top, transform: shouldRotate ? 'rotate(180deg)' : 'none' }}
             alt="pip"
           />
         );
