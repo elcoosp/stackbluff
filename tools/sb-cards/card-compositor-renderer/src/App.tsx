@@ -86,7 +86,7 @@ function App() {
   }, [selectedDeck]);
 
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
         <Route path="/" element={
           <div className="min-h-screen bg-gray-900 text-white p-8">
@@ -97,11 +97,10 @@ function App() {
                   <button
                     key={deck}
                     onClick={() => setSelectedDeck(deck)}
-                    className={`px-6 py-2 rounded-full transition ${
-                      selectedDeck === deck
+                    className={`px-6 py-2 rounded-full transition ${selectedDeck === deck
                         ? 'bg-amber-500 text-gray-900'
                         : 'bg-gray-800 hover:bg-gray-700'
-                    }`}
+                      }`}
                   >
                     {deck.replace(/^\d+-/, '').replace(/-/g, ' ')}
                   </button>
