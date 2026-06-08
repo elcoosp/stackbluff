@@ -1,24 +1,18 @@
 /**
- * Resolves asset paths to URLs served from the public directory.
- * The actual files are symlinked in public/art/ and public/pips/
+ * Resolves asset paths to URLs that will be served by Vite dev server.
+ * The Vite config allows serving from the actual deck folders.
+ * So we construct URLs like /art/filename.png, /pips/suit-size.png, etc.
  */
 export function resolveAssetPath(baseDir: string, filename: string, suffix: string): string {
-  // Determine which folder the file belongs to
-  // 2-pips images are already pre‑processed in the pips folder
-  if (filename.includes('2-pips/') || filename.includes('pip-')) {
-    // Extract suit and size from filename like "spades-100.png"
-    const match = filename.match(/(spades|hearts|diamonds|clubs)-(\d+)\.png/);
-    if (match) {
-      return `/pips/${match[1]}-${match[2]}.png`;
-    }
-    // Fallback: treat as generic pips
-    return `/pips/${filename.replace(/^.*\//, '')}`;
-  }
-
-  // All other assets (back, ace, jack, number-template, border, corner‑plaque, center‑band, joker)
-  // are in the raw art folder.
-  // The filename may already contain the suffix. We just use it as is.
-  // Remove any leading path and use /art/
+  // Remove any leading path (if someone passed full path)
   const cleanName = filename.replace(/^.*[\\/]/, '');
-  return `/art/${cleanName}`;
+
+  // Determine which folder the asset belongs to by its base name
+  if (cleanName.match(/^(back|ace|jack|queen|king|number-template|corner-plaque|border|center-band|joker-)/)) {
+    // These are in the raw art folder
+    return `/art/${cleanName}`;
+  }
+  // Otherwise assume it's a pip image (already pre‑processed)
+  // Example: spades-100.png, hearts-160.png
+  return `/pips/${cleanName}`;
 }

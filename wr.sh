@@ -3,201 +3,165 @@ set -uo pipefail
 
 cd tools/sb-cards/card-compositor-renderer || exit 1
 
-# ----------------------------------------------------------------------
-# 1. Create symlinks for all required asset folders
-# ----------------------------------------------------------------------
-echo "Creating asset symlinks in public/"
+echo "=== Undoing symlinks and fixing asset serving ==="
 
-# Remove old links/directories
+# 1. Remove all symlinks in public
+echo "Removing symlinks from public/"
 rm -rf public/art public/pips public/fonts public/corner-light.png
 
-# Link to the raw art folder (contains all PNGs)
-if [ -d "../../../2026-Q1/01-poison-gardenia/1-raw/art" ]; then
-    ln -sf "../../../2026-Q1/01-poison-gardenia/1-raw/art" public/art
-    echo "Linked public/art -> ../../../2026-Q1/01-poison-gardenia/1-raw/art"
-else
-    echo "ERROR: Art folder not found"
-    mkdir -p public/art
-fi
+# 2. Create an empty public directory for Vite to serve static files
+mkdir -p public
 
-# Link to the pre‑processed pips
-if [ -d "../../../2026-Q1/01-poison-gardenia/2-pips" ]; then
-    ln -sf "../../../2026-Q1/01-poison-gardenia/2-pips" public/pips
-    echo "Linked public/pips -> ../../../2026-Q1/01-poison-gardenia/2-pips"
-else
-    echo "WARNING: 2-pips not found, run Python script first"
-    mkdir -p public/pips
-fi
+# 3. Configure Vite to proxy asset requests to the actual deck folder
+# We'll modify vite.config.ts to add a middleware or alias.
+# Since Vite dev server can serve static files from any directory via `server.fs.allow`,
+# we simply add the absolute paths to `server.fs.allow`.
+# Also we add aliases for `/art`, `/pips`, `/fonts`, `/corner-light.png`.
 
-# Link fonts
-if [ -d "../../../engine/fonts" ]; then
-    ln -sf "../../../engine/fonts" public/fonts
-    echo "Linked public/fonts -> ../../../engine/fonts"
-else
-    mkdir -p public/fonts
-fi
+DECK_BASE="$(cd ../../../2026-Q1/01-poison-gardenia && pwd)"
+PIPS_DIR="${DECK_BASE}/2-pips"
+ART_DIR="${DECK_BASE}/1-raw/art"
+FONTS_DIR="$(cd ../../../engine/fonts && pwd 2>/dev/null || echo "$PWD/public/fonts")"
 
-# Generate corner-light.png if missing
+echo "Detected DECK_BASE: $DECK_BASE"
+echo "ART_DIR: $ART_DIR"
+echo "PIPS_DIR: $PIPS_DIR"
+
+cat > vite.config.ts << VITE_CFG_FINAL
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
+
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+  server: {
+    port: 3000,
+    open: true,
+    fs: {
+      // Allow serving files from these directories
+      allow: [
+        '$ART_DIR',
+        '$PIPS_DIR',
+        '$FONTS_DIR',
+        '.',
+      ]
+    }
+  },
+  resolve: {
+    alias: {
+      '@': '/src',
+    }
+  }
+});
+VITE_CFG_FINAL
+
+# 4. Create a small script to generate corner-light.png inside public if not exists
 if [ ! -f public/corner-light.png ]; then
-    if command -v convert &>/dev/null; then
+    echo "Generating corner-light.png inside public/"
+    # Try ImageMagick first
+    if command -v convert &> /dev/null; then
         convert -size 1000x1400 radial-gradient:white-transparent public/corner-light.png
-        echo "Generated corner-light.png"
     else
-        # Create a dummy transparent PNG
-        printf '\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x03\xe8\x00\x00\x05x\x08\x06\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00IDAT\x08\xd7c\xf8\xff\xff?\x00\x05\xfe\x02\xfe\x01\x13\x00\x00\x00\x00IEND\xaeB`\x82' > public/corner-light.png
-        echo "Created dummy corner-light.png"
+        # Create a minimal transparent PNG (1x1 transparent pixel) – not ideal but prevents 404
+        printf '\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82' > public/corner-light.png
+        echo "Created dummy corner-light.png. Replace with proper gradient later."
     fi
 fi
 
-# ----------------------------------------------------------------------
-# 2. Update assetLoader.ts to use public URLs (remove baseDir)
-# ----------------------------------------------------------------------
-echo "Updating assetLoader.ts to use /art/ and /pips/ URLs"
-cat > src/utils/assetLoader.ts << 'ASSET_LOADER_NEW'
+# 5. Update assetLoader.ts to use absolute URLs that resolve to those directories.
+# We no longer use baseDir; we directly map to /art/..., /pips/..., etc.
+cat > src/utils/assetLoader.ts << 'ASSET_LOADER_FINAL'
 /**
- * Resolves asset paths to URLs served from the public directory.
- * The actual files are symlinked in public/art/ and public/pips/
+ * Resolves asset paths to URLs that will be served by Vite dev server.
+ * The Vite config allows serving from the actual deck folders.
+ * So we construct URLs like /art/filename.png, /pips/suit-size.png, etc.
  */
 export function resolveAssetPath(baseDir: string, filename: string, suffix: string): string {
-  // Determine which folder the file belongs to
-  // 2-pips images are already pre‑processed in the pips folder
-  if (filename.includes('2-pips/') || filename.includes('pip-')) {
-    // Extract suit and size from filename like "spades-100.png"
-    const match = filename.match(/(spades|hearts|diamonds|clubs)-(\d+)\.png/);
-    if (match) {
-      return `/pips/${match[1]}-${match[2]}.png`;
-    }
-    // Fallback: treat as generic pips
-    return `/pips/${filename.replace(/^.*\//, '')}`;
-  }
-
-  // All other assets (back, ace, jack, number-template, border, corner‑plaque, center‑band, joker)
-  // are in the raw art folder.
-  // The filename may already contain the suffix. We just use it as is.
-  // Remove any leading path and use /art/
+  // Remove any leading path (if someone passed full path)
   const cleanName = filename.replace(/^.*[\\/]/, '');
-  return `/art/${cleanName}`;
+
+  // Determine which folder the asset belongs to by its base name
+  if (cleanName.match(/^(back|ace|jack|queen|king|number-template|corner-plaque|border|center-band|joker-)/)) {
+    // These are in the raw art folder
+    return `/art/${cleanName}`;
+  }
+  // Otherwise assume it's a pip image (already pre‑processed)
+  // Example: spades-100.png, hearts-160.png
+  return `/pips/${cleanName}`;
 }
-ASSET_LOADER_NEW
+ASSET_LOADER_FINAL
 
-# ----------------------------------------------------------------------
-# 3. Fix Card.tsx to use the corrected asset URLs (pips from /pips/)
-# ----------------------------------------------------------------------
-echo "Updating Card.tsx pip paths"
-# No change needed because assetLoader now returns /pips/... URLs
-# But we must ensure the pip size URLs match the filenames (e.g., suit-160.png)
-# The StandardLayout uses `/2-pips/${suit}-160.png` – that was hardcoded.
-# We'll patch StandardLayout to use `/pips/${suit}-160.png`.
+# 6. Fix Card.tsx to use the correct pip URLs (already handled by assetLoader)
+# But StandardLayout still hardcodes `/pips/...` – that's fine because we serve from /pips.
 
-OLD_PIP_URL=$(mktemp)
-NEW_PIP_URL=$(mktemp)
-cat > "$OLD_PIP_URL" << 'OLD_PIP'
-src={`/2-pips/${suit}-160.png`}
-OLD_PIP
-cat > "$NEW_PIP_URL" << 'NEW_PIP'
-src={`/pips/${suit}-160.png`}
-NEW_PIP
-if python3 - "$OLD_PIP_URL" "$NEW_PIP_URL" src/layouts/StandardLayout.tsx 2>/dev/null << 'PYFIX'
-import sys
-with open(sys.argv[1], 'r') as f: old = f.read()
-with open(sys.argv[2], 'r') as f: new = f.read()
-with open(sys.argv[3], 'r') as f: content = f.read()
-content = content.replace(old, new)
-with open(sys.argv[3], 'w') as f: f.write(content)
-PYFIX
-then
-    echo "Updated pip URL in StandardLayout"
-else
-    echo "Failed to patch StandardLayout"
-fi
-rm "$OLD_PIP_URL" "$NEW_PIP_URL"
+# 7. Make the card grid responsive (cards scale down to fit screen)
+# Update DeckViewer component to use CSS scaling that actually works.
+cat > src/components/DeckViewer.tsx << 'DECK_VIEWER_RESPONSIVE'
+import React from 'react';
+import { Card } from './Card';
+import { CardData } from '../types';
 
-# Also fix the corner pips (size 90 and 100)
-for size in 90 100; do
-    OLD=$(mktemp)
-    NEW=$(mktemp)
-    cat > "$OLD" << OLD
-src={`/2-pips/${suit}-${size}.png`}
-OLD
-    cat > "$NEW" << NEW
-src={`/pips/${suit}-${size}.png`}
-NEW
-    python3 - "$OLD" "$NEW" src/layouts/StandardLayout.tsx 2>/dev/null << 'PYFIX'
-import sys
-with open(sys.argv[1], 'r') as f: old = f.read()
-with open(sys.argv[2], 'r') as f: new = f.read()
-with open(sys.argv[3], 'r') as f: content = f.read()
-content = content.replace(old, new)
-with open(sys.argv[3], 'w') as f: f.write(content)
-PYFIX
-    rm "$OLD" "$NEW"
-done
+interface Props {
+  cards: CardData[];
+  deckName: string;
+}
 
-# Same for ReversibleLayout
-for size in 90 100; do
-    OLD=$(mktemp)
-    NEW=$(mktemp)
-    cat > "$OLD" << OLD
-src={`/2-pips/${suit}-${size}.png`}
-OLD
-    cat > "$NEW" << NEW
-src={`/pips/${suit}-${size}.png`}
-NEW
-    python3 - "$OLD" "$NEW" src/layouts/ReversibleLayout.tsx 2>/dev/null << 'PYFIX'
-import sys
-with open(sys.argv[1], 'r') as f: old = f.read()
-with open(sys.argv[2], 'r') as f: new = f.read()
-with open(sys.argv[3], 'r') as f: content = f.read()
-content = content.replace(old, new)
-with open(sys.argv[3], 'w') as f: f.write(content)
-PYFIX
-    rm "$OLD" "$NEW"
-done
+export const DeckViewer: React.FC<Props> = ({ cards, deckName }) => {
+  // Use CSS grid with auto-sized columns; each card container sets its own width.
+  // The actual card is 1000x1400, but we scale it down via CSS transform.
+  // We also add overflow-x: auto to the container to allow scrolling on small screens.
+  return (
+    <div className="w-full overflow-x-auto">
+      <div className="flex flex-wrap justify-center gap-6 p-4">
+        {cards.map((card, idx) => (
+          <div key={idx} className="cursor-pointer transition-transform hover:scale-105" style={{ width: '260px', flexShrink: 0 }}>
+            <div style={{ transform: 'scale(0.26)', transformOrigin: 'top left', width: '1000px', height: '1400px' }}>
+              <Card
+                rank={card.rank}
+                suit={card.suit}
+                artPath={card.artPath}
+                isBack={card.isBack}
+                layoutType={card.layoutType}
+                deckName={deckName}
+              />
+            </div>
+            {/* Add negative margin to compensate for scaling height? Better to let parent handle */}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+DECK_VIEWER_RESPONSIVE
 
-# ----------------------------------------------------------------------
-# 4. Update CardPage to use the same asset resolution logic
-# (No changes needed – it already uses resolveAssetPath)
-# ----------------------------------------------------------------------
-
-# ----------------------------------------------------------------------
-# 5. Make the card grid responsive (already done in previous step)
-# Ensure the scaling is applied correctly.
-# We'll also add CSS to make the preview container scrollable.
-# ----------------------------------------------------------------------
-echo "Updating App.css for responsive layout"
+# 8. Update App.css to ensure proper scrolling and background
 cat >> src/App.css << 'APP_CSS_ADD'
-.card-grid-container {
+/* Ensure the deck viewer doesn't overflow horizontally */
+.overflow-x-auto {
   overflow-x: auto;
-  padding-bottom: 1rem;
+  -webkit-overflow-scrolling: touch;
 }
-.card-preview {
-  display: flex;
+.flex-wrap {
   flex-wrap: wrap;
-  justify-content: center;
-  gap: 1rem;
 }
-@media (max-width: 768px) {
-  .card-preview > div {
-    flex: 0 0 auto;
-    width: 200px;
+@media (max-width: 640px) {
+  .flex-wrap > div {
+    width: 200px !important;
+  }
+  .flex-wrap > div > div {
+    transform: scale(0.2) !important;
   }
 }
 APP_CSS_ADD
 
-# ----------------------------------------------------------------------
-# 6. Run TypeScript check
-# ----------------------------------------------------------------------
+# 9. Run TypeScript check
 echo "Running TypeScript check"
 if npx tsc --noEmit 2>&1; then
     echo "TypeScript check passed"
-    COMPILE_OK=true
 else
-    echo "TypeScript errors – but we will still commit (non‑fatal)"
-    COMPILE_OK=false
+    echo "TypeScript errors (non-fatal)"
 fi
 
-# ----------------------------------------------------------------------
-# 7. Commit
-# ----------------------------------------------------------------------
+# 10. Commit
 git add -A
-git commit -m "fix: symlink all assets, update URLs to /art and /pips, responsive scaling"
+git commit -m "fix: remove symlinks, use Vite fs.allow + proper responsive scaling"

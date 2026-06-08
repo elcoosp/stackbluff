@@ -83,3 +83,35 @@ body {
     width: 200px;
   }
 }
+/* Ensure the deck viewer doesn't overflow horizontally */
+.overflow-x-auto {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.flex-wrap {
+  flex-wrap: wrap;
+}
+@media (max-width: 640px) {
+  .flex-wrap > div {
+    width: 200px !important;
+  }
+  .flex-wrap > div > div {
+    transform: scale(0.2) !important;
+  }
+}
+/* Ensure the deck viewer doesn't overflow horizontally */
+.overflow-x-auto {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.flex-wrap {
+  flex-wrap: wrap;
+}
+@media (max-width: 640px) {
+  .flex-wrap > div {
+    width: 200px !important;
+  }
+  .flex-wrap > div > div {
+    transform: scale(0.2) !important;
+  }
+}

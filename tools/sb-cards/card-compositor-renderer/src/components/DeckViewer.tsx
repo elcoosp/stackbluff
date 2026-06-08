@@ -8,34 +8,28 @@ interface Props {
 }
 
 export const DeckViewer: React.FC<Props> = ({ cards, deckName }) => {
-  const cardWidth = 260; // pixels for preview
-  const scale = cardWidth / 1000; // 1000 is original card width
-  const scaledHeight = 1400 * scale;
-
+  // Use CSS grid with auto-sized columns; each card container sets its own width.
+  // The actual card is 1000x1400, but we scale it down via CSS transform.
+  // We also add overflow-x: auto to the container to allow scrolling on small screens.
   return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-8 justify-items-center p-4">
-      {cards.map((card, idx) => (
-        <div key={idx} className="cursor-pointer transition-transform hover:scale-105" style={{ width: cardWidth }}>
-          <div
-            style={{
-              width: 1000,
-              height: 1400,
-              transform: `scale(${scale})`,
-              transformOrigin: 'top left',
-            }}
-          >
-            <Card
-              rank={card.rank}
-              suit={card.suit}
-              artPath={card.artPath}
-              isBack={card.isBack}
-              layoutType={card.layoutType}
-              deckName={deckName}
-            />
+    <div className="w-full overflow-x-auto">
+      <div className="flex flex-wrap justify-center gap-6 p-4">
+        {cards.map((card, idx) => (
+          <div key={idx} className="cursor-pointer transition-transform hover:scale-105" style={{ width: '260px', flexShrink: 0 }}>
+            <div style={{ transform: 'scale(0.26)', transformOrigin: 'top left', width: '1000px', height: '1400px' }}>
+              <Card
+                rank={card.rank}
+                suit={card.suit}
+                artPath={card.artPath}
+                isBack={card.isBack}
+                layoutType={card.layoutType}
+                deckName={deckName}
+              />
+            </div>
+            {/* Add negative margin to compensate for scaling height? Better to let parent handle */}
           </div>
-          <div style={{ height: scaledHeight - 1400 * scale }} /> {/* maintain spacing */}
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 };
