@@ -1,6 +1,4 @@
 //! Pure poker game engine – deterministic, stateless.
-//! Provides deck, hand evaluation, and game state transitions.
-
 pub mod deck;
 pub mod evaluate;
 pub mod game_state;
