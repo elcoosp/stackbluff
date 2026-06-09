@@ -233,7 +233,8 @@ impl GameState {
                 winners.push(self.players[i].player_id);
             }
         }
-        let share = self.pot / ChipAmount::new(winners.len() as i64).expect("positive length");
+        let total = self.pot.as_i64();
+        let share = ChipAmount::new(total / winners.len() as i64).expect("share must be positive");
         winners.into_iter().map(|pid| Winner { player_id: pid, amount: share, hand_rank: best_rank }).collect()
     }
 }
