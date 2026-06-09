@@ -1,12 +1,18 @@
+use std::sync::LazyLock;
+
 use chrono::{Duration, Utc};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use jsonwebtoken::crypto::CryptoProvider;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+/// A static crypto provider that will be installed once.
+static CRYPTO: LazyLock<CryptoProvider> =
+    LazyLock::new(|| CryptoProvider::rust_crypto());
+
 /// Must be called once before any JWT operations.
 pub fn init_crypto() {
-    let _ = CryptoProvider::install_default();
+    let _ = CRYPTO.install_default();
 }
 
 #[derive(Debug, Serialize, Deserialize)]
