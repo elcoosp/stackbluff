@@ -6,7 +6,7 @@ rust-version = "1.94"
 
 [dependencies]
 sb-shared-types = { path = "../sb-shared-types" }
-rand = { workspace = true, features = ["std_rng", "getrandom"] }
+rand = { workspace = true }
 strum = { workspace = true }
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
