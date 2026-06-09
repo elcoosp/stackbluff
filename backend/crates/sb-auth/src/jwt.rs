@@ -3,6 +3,11 @@ use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation}
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+/// Must be called once before any JWT operations.
+pub fn init_crypto() {
+    let _ = jsonwebtoken::CryptoProvider::install_default();
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
     pub sub: Uuid,

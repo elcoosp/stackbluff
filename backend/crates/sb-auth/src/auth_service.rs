@@ -5,7 +5,6 @@ use async_trait::async_trait;
 use argon2::{PasswordHasher, PasswordVerifier};
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
-use uuid::Uuid;
 
 use sb_contracts::repo_api::UserRepo;
 use sb_contracts::service_api::{AuthResult, AuthService, TokenClaims};
@@ -25,6 +24,7 @@ pub struct AuthServiceImpl {
 
 impl AuthServiceImpl {
     pub fn new(user_repo: Arc<dyn UserRepo>, config: AuthConfig) -> Self {
+        crate::jwt::init_crypto();
         Self { user_repo, config }
     }
 
