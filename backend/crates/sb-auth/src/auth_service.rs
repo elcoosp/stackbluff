@@ -5,6 +5,7 @@ use async_trait::async_trait;
 use argon2::{PasswordHasher, PasswordVerifier};
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
+use uuid::Uuid;
 
 use sb_contracts::repo_api::UserRepo;
 use sb_contracts::service_api::{AuthResult, AuthService, TokenClaims};
@@ -40,7 +41,7 @@ impl AuthServiceImpl {
             }
         }
 
-        let hash = hash.ok_or_else(|| AppError::BadRequest("Missing hash in initData"))?;
+        let hash = hash.ok_or_else(|| AppError::BadRequest("Missing hash in initData".into()))?;
 
         params.sort_by(|a, b| a.0.cmp(b.0));
         let data_check_string = params
@@ -62,14 +63,14 @@ impl AuthServiceImpl {
         let computed = hex::encode(mac.finalize().into_bytes());
 
         if computed != hash {
-            return Err(AppError::Unauthorized("Invalid initData hash"));
+            return Err(AppError::Unauthorized("Invalid initData hash".into()));
         }
 
         let user_field = params.iter().find(|(k, _)| *k == "user");
         let user_json: serde_json::Value = if let Some((_, v)) = user_field {
             serde_json::from_str(v).map_err(|e| AppError::BadRequest(format!("Invalid user JSON: {}", e)))?
         } else {
-            return Err(AppError::BadRequest("initData missing user field"));
+            return Err(AppError::BadRequest("initData missing user field".into()));
         };
 
         Ok(user_json)
@@ -78,6 +79,12 @@ impl AuthServiceImpl {
 
 #[async_trait]
 impl AuthService for AuthServiceImpl {
+    // Implement the existing authenticate method by delegating to verify_token
+    async fn authenticate(&self, token: &str, _ctx: &RequestContext) -> Result<uuid::Uuid, AppError> {
+        let claims = self.verify_token(token).await?;
+        Ok(claims.user_id)
+    }
+
     async fn telegram_auth(
         &self,
         ctx: &RequestContext,
@@ -88,7 +95,7 @@ impl AuthService for AuthServiceImpl {
         let tg_id = user_json
             .get("id")
             .and_then(|v| v.as_i64())
-            .ok_or_else(|| AppError::BadRequest("initData user missing id"))?;
+            .ok_or_else(|| AppError::BadRequest("initData user missing id".into()))?;
 
         let user = self.user_repo.find_or_create_by_telegram(ctx, tg_id).await?;
 
@@ -112,17 +119,13 @@ impl AuthService for AuthServiceImpl {
         password: &str,
     ) -> Result<AuthResult, AppError> {
         if email.is_empty() || password.is_empty() {
-            return Err(AppError::BadRequest("Email and password required"));
+            return Err(AppError::BadRequest("Email and password required".into()));
         }
 
-        let password_hash = {
-            let salt = password_hash::SaltString::generate(&mut rand::rng());
-            let argon = argon2_instance();
-            argon
-                .hash_password(password.as_bytes(), &salt)
-                .map_err(|e| AppError::Internal(format!("Password hash error: {}", e)))?
-                .to_string()
-        };
+        let password_hash = argon2_instance()
+            .hash_password(password.as_bytes())
+            .map_err(|e| AppError::Internal(format!("Password hash error: {}", e)))?
+            .to_string();
 
         let user = self.user_repo.create_email_user(ctx, email, &password_hash).await?;
 
@@ -146,13 +149,13 @@ impl AuthService for AuthServiceImpl {
         password: &str,
     ) -> Result<AuthResult, AppError> {
         let user = self.user_repo.find_by_email(ctx, email).await?;
-        let user = user.ok_or_else(|| AppError::Unauthorized("Invalid email or password"))?;
+        let user = user.ok_or_else(|| AppError::Unauthorized("Invalid email or password".into()))?;
 
         let parsed_hash = argon2::PasswordHash::new(&user.password_hash)
             .map_err(|e| AppError::Internal(format!("Invalid password hash format: {}", e)))?;
         argon2_instance()
             .verify_password(password.as_bytes(), &parsed_hash)
-            .map_err(|_| AppError::Unauthorized("Invalid email or password"))?;
+            .map_err(|_| AppError::Unauthorized("Invalid email or password".into()))?;
 
         let token = create_jwt(
             user.id,

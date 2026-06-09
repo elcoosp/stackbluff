@@ -1,4 +1,4 @@
-use argon2::{Argon2, Params, Version, PasswordHasher, PasswordVerifier};
+use argon2::{Argon2, Params, Version};
 use once_cell::sync::Lazy;
 
 pub static ARGON2_INSTANCE: Lazy<Argon2<'static>> = Lazy::new(|| {

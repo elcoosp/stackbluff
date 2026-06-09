@@ -8,7 +8,6 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use sb_contracts::service_api::AuthService;
 use sb_shared_types::request_context::RequestContext;
 use crate::SharedAuthService;
 
@@ -25,7 +24,10 @@ struct EmailPasswordRequest { email: String, password: String }
 #[derive(Serialize)]
 struct AuthResponse { jwt: String, user_id: String }
 
-async fn telegram_auth(State(svc): State<SharedAuthService>, Json(req): Json<TelegramAuthRequest>) -> impl IntoResponse {
+async fn telegram_auth(
+    State(svc): State<SharedAuthService>,
+    Json(req): Json<TelegramAuthRequest>,
+) -> impl IntoResponse {
     let ctx = dummy_ctx();
     match svc.telegram_auth(&ctx, &req.init_data).await {
         Ok(r) => (StatusCode::OK, Json(AuthResponse { jwt: r.jwt, user_id: r.user_id.to_string() })).into_response(),
@@ -33,7 +35,10 @@ async fn telegram_auth(State(svc): State<SharedAuthService>, Json(req): Json<Tel
     }
 }
 
-async fn register(State(svc): State<SharedAuthService>, Json(req): Json<EmailPasswordRequest>) -> impl IntoResponse {
+async fn register(
+    State(svc): State<SharedAuthService>,
+    Json(req): Json<EmailPasswordRequest>,
+) -> impl IntoResponse {
     let ctx = dummy_ctx();
     match svc.register(&ctx, &req.email, &req.password).await {
         Ok(r) => (StatusCode::OK, Json(AuthResponse { jwt: r.jwt, user_id: r.user_id.to_string() })).into_response(),
@@ -41,7 +46,10 @@ async fn register(State(svc): State<SharedAuthService>, Json(req): Json<EmailPas
     }
 }
 
-async fn login(State(svc): State<SharedAuthService>, Json(req): Json<EmailPasswordRequest>) -> impl IntoResponse {
+async fn login(
+    State(svc): State<SharedAuthService>,
+    Json(req): Json<EmailPasswordRequest>,
+) -> impl IntoResponse {
     let ctx = dummy_ctx();
     match svc.login(&ctx, &req.email, &req.password).await {
         Ok(r) => (StatusCode::OK, Json(AuthResponse { jwt: r.jwt, user_id: r.user_id.to_string() })).into_response(),
