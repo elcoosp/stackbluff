@@ -3,7 +3,6 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
-use tracing::info;
 use uuid::Uuid;
 
 use sb_contracts::repo_api::UserRepo;
