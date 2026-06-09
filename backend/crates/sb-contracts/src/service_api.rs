@@ -1,6 +1,17 @@
 use async_trait::async_trait;
 use sb_shared_types::{AppError, RequestContext, TableId, UserId};
 
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct AuthResult {
+    pub jwt: String,
+    pub user_id: uuid::Uuid,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct TokenClaims {
+    pub user_id: uuid::Uuid,
+    pub platform: String,
+}
 #[async_trait]
 pub trait TableService: Send + Sync {
     async fn join_table(
@@ -20,6 +31,11 @@ pub trait TableService: Send + Sync {
 #[async_trait]
 pub trait AuthService: Send + Sync {
     async fn authenticate(&self, token: &str, ctx: &RequestContext) -> Result<UserId, AppError>;
+    async fn telegram_auth(&self, ctx: &RequestContext, init_data: &str) -> Result<AuthResult, AppError>;
+    async fn register(&self, ctx: &RequestContext, email: &str, password: &str) -> Result<AuthResult, AppError>;
+    async fn login(&self, ctx: &RequestContext, email: &str, password: &str) -> Result<AuthResult, AppError>;
+    async fn verify_token(&self, token: &str) -> Result<TokenClaims, AppError>;
+
 }
 
 #[async_trait]
