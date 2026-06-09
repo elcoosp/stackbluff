@@ -19,12 +19,12 @@ tracing = { workspace = true }
 async-trait = { workspace = true }
 uuid = { workspace = true, features = ["v4", "v7"] }
 chrono = { workspace = true }
+rand = { workspace = true }
+hex = { workspace = true }
 
 sb-shared-types = { path = "../sb-shared-types" }
 sb-contracts = { path = "../sb-contracts" }
 axum = { workspace = true }
-rand = { workspace = true }
-hex = "0.4"
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }
