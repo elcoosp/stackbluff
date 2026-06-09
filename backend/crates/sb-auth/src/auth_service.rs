@@ -10,6 +10,7 @@ use uuid::Uuid;
 use sb_contracts::repo_api::UserRepo;
 use sb_contracts::service_api::{AuthResult, AuthService, TokenClaims};
 use sb_shared_types::errors::AppError;
+use sb_shared_types::ids::UserId;
 use sb_shared_types::request_context::RequestContext;
 
 use crate::config::{argon2_instance, AuthConfig};
@@ -41,15 +42,14 @@ impl AuthServiceImpl {
             }
         }
 
-        let hash = hash.ok_or_else(|| AppError::BadRequest("Missing hash in initData".into()))?;
+        let hash = hash.ok_or_else(|| AppError::InvalidInput("Missing hash in initData".into()))?;
 
         params.sort_by(|a, b| a.0.cmp(b.0));
         let data_check_string = params
             .iter()
             .map(|(k, v)| format!("{}={}", k, v))
             .collect::<Vec<_>>()
-            .join("
-");
+            .join("\n");
 
         let mut secret_key =
             HmacSha256::new_from_slice(self.config.bot_token.as_bytes())
@@ -68,9 +68,9 @@ impl AuthServiceImpl {
 
         let user_field = params.iter().find(|(k, _)| *k == "user");
         let user_json: serde_json::Value = if let Some((_, v)) = user_field {
-            serde_json::from_str(v).map_err(|e| AppError::BadRequest(format!("Invalid user JSON: {}", e)))?
+            serde_json::from_str(v).map_err(|e| AppError::InvalidInput(format!("Invalid user JSON: {}", e)))?
         } else {
-            return Err(AppError::BadRequest("initData missing user field".into()));
+            return Err(AppError::InvalidInput("initData missing user field".into()));
         };
 
         Ok(user_json)
@@ -79,10 +79,9 @@ impl AuthServiceImpl {
 
 #[async_trait]
 impl AuthService for AuthServiceImpl {
-    // Implement the existing authenticate method by delegating to verify_token
-    async fn authenticate(&self, token: &str, _ctx: &RequestContext) -> Result<uuid::Uuid, AppError> {
+    async fn authenticate(&self, token: &str, _ctx: &RequestContext) -> Result<UserId, AppError> {
         let claims = self.verify_token(token).await?;
-        Ok(claims.user_id)
+        Ok(UserId(claims.user_id))
     }
 
     async fn telegram_auth(
@@ -95,7 +94,7 @@ impl AuthService for AuthServiceImpl {
         let tg_id = user_json
             .get("id")
             .and_then(|v| v.as_i64())
-            .ok_or_else(|| AppError::BadRequest("initData user missing id".into()))?;
+            .ok_or_else(|| AppError::InvalidInput("initData user missing id".into()))?;
 
         let user = self.user_repo.find_or_create_by_telegram(ctx, tg_id).await?;
 
@@ -119,7 +118,7 @@ impl AuthService for AuthServiceImpl {
         password: &str,
     ) -> Result<AuthResult, AppError> {
         if email.is_empty() || password.is_empty() {
-            return Err(AppError::BadRequest("Email and password required".into()));
+            return Err(AppError::InvalidInput("Email and password required".into()));
         }
 
         let password_hash = argon2_instance()

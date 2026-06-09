@@ -62,7 +62,7 @@ async fn telegram_invalid() {
     let (svc, _) = test_service();
     let ctx = RequestContext::new(Uuid::new_v4(), None);
     let err = svc.telegram_auth(&ctx, "invalid").await.unwrap_err();
-    assert!(format!("{:?}", err).contains("BadRequest"));
+    assert!(format!("{:?}", err).contains("InvalidInput"));
 }
 
 #[tokio::test]
