@@ -370,3 +370,24 @@ mod tests {
         );
     }
 }
+
+    #[test]
+    fn test_high_card_tie_breaker() {
+        let hole1 = [card(Suit::Hearts, Rank::Ten), card(Suit::Clubs, Rank::Five)];
+        let community1 = [
+            card(Suit::Diamonds, Rank::Two),
+            card(Suit::Spades, Rank::Three),
+            card(Suit::Hearts, Rank::Four),
+            card(Suit::Clubs, Rank::Six),
+            card(Suit::Diamonds, Rank::Seven),
+        ];
+        let hole2 = [card(Suit::Hearts, Rank::Ten), card(Suit::Clubs, Rank::Four)];
+        let community2 = [
+            card(Suit::Diamonds, Rank::Two),
+            card(Suit::Spades, Rank::Three),
+            card(Suit::Hearts, Rank::Five),
+            card(Suit::Clubs, Rank::Six),
+            card(Suit::Diamonds, Rank::Seven),
+        ];
+        assert_eq!(compare_hands(&hole1, &community1, &hole2, &community2), Ordering::Greater);
+    }
