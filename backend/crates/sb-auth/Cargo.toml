@@ -28,6 +28,8 @@ sb-shared-types = { path = "../sb-shared-types" }
 sb-contracts = { path = "../sb-contracts" }
 axum = { workspace = true }
 
+url = { workspace = true }
+secrecy = { workspace = true }
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }
 mockall = { workspace = true }
