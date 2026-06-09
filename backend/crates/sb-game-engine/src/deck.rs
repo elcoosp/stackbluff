@@ -11,14 +11,14 @@ pub struct Deck {
 impl Deck {
     pub fn new() -> Self {
         let mut cards = Vec::with_capacity(52);
-        for suit in [Suit::Club, Suit::Diamond, Suit::Heart, Suit::Spade] {
+        for suit in [Suit::Clubs, Suit::Diamonds, Suit::Hearts, Suit::Spades] {
             for value in 2..=14 {
                 let rank = match value {
                     11 => Rank::Jack,
                     12 => Rank::Queen,
                     13 => Rank::King,
                     14 => Rank::Ace,
-                    v => Rank::Number(v),
+                    v => Self::int_to_rank(v),
                 };
                 cards.push(Card { suit, rank });
             }
@@ -26,7 +26,23 @@ impl Deck {
         Deck { cards }
     }
 
+    fn int_to_rank(v: u8) -> Rank {
+        match v {
+            2 => Rank::Two,
+            3 => Rank::Three,
+            4 => Rank::Four,
+            5 => Rank::Five,
+            6 => Rank::Six,
+            7 => Rank::Seven,
+            8 => Rank::Eight,
+            9 => Rank::Nine,
+            10 => Rank::Ten,
+            _ => panic!("Invalid rank value"),
+        }
+    }
+
     pub fn shuffle(&mut self) {
+        use rand::Rng;
         let mut rng = rand::rngs::OsRng;
         self.cards.shuffle(&mut rng);
     }
@@ -57,14 +73,11 @@ impl Default for Deck {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sb_shared_types::Rank;
-
     #[test]
     fn test_new_deck_has_52_cards() {
         let deck = Deck::new();
         assert_eq!(deck.len(), 52);
     }
-
     #[test]
     fn test_shuffle_changes_order() {
         let mut deck = Deck::new();
@@ -72,23 +85,18 @@ mod tests {
         deck.shuffle();
         assert_ne!(deck.cards, original);
     }
-
     #[test]
     fn test_deal_removes_card() {
         let mut deck = Deck::new();
-        let card = deck.deal().unwrap();
+        let _ = deck.deal().unwrap();
         assert_eq!(deck.len(), 51);
     }
-
     #[test]
     fn test_deal_empty() {
         let mut deck = Deck::new();
-        for _ in 0..52 {
-            deck.deal();
-        }
+        for _ in 0..52 { deck.deal(); }
         assert!(deck.deal().is_none());
     }
-
     #[test]
     fn test_reset() {
         let mut deck = Deck::new();
