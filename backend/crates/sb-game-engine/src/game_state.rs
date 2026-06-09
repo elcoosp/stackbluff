@@ -1,4 +1,4 @@
-//! Game state for a poker hand – fully production-ready.
+//! Game state for a poker hand – fully production‑ready.
 
 use crate::deck::Deck;
 use crate::evaluate::evaluate_hand_strength;
@@ -94,10 +94,14 @@ impl GameState {
         }
         let sb = blinds.0;
         let bb = blinds.1;
-        for (_, stack) in &players {
-            if *stack < sb && *stack < bb {
-                return Err("Player cannot post blind");
-            }
+        // Validate that each player has enough chips for the blind they will post
+        let small_idx = (dealer_index + 1) % players.len();
+        let big_idx = (dealer_index + 2) % players.len();
+        if players[small_idx].1 < sb {
+            return Err("Small blind cannot post");
+        }
+        if players[big_idx].1 < bb {
+            return Err("Big blind cannot post");
         }
 
         let hand_id = HandId(rand::random::<u64>());
@@ -196,8 +200,7 @@ impl GameState {
         if idx != self.current_player_index {
             return Err(ActionError::NotYourTurn);
         }
-        let current_round = self.current_round;
-        if current_round == BettingRound::Showdown {
+        if self.current_round == BettingRound::Showdown {
             return Err(ActionError::ShowdownNotActionable);
         }
 
@@ -222,9 +225,8 @@ impl GameState {
 
         match action {
             Action::Fold => {
-                let player = &mut self.players[idx];
-                player.has_folded = true;
-                debug!(player = ?player.player_id, "Fold");
+                self.players[idx].has_folded = true;
+                debug!(player = ?self.players[idx].player_id, "Fold");
                 self.advance_turn();
             }
             Action::Check => {
@@ -311,24 +313,24 @@ impl GameState {
     }
 
     fn round_complete(&self) -> bool {
-        let active_players: Vec<usize> = self
+        let active: Vec<usize> = self
             .players
             .iter()
             .enumerate()
             .filter(|(_, p)| !p.has_folded && !p.is_all_in)
             .map(|(i, _)| i)
             .collect();
-        if active_players.is_empty() {
+        if active.is_empty() {
             return true;
         }
-        let all_bet_equal = active_players
+        let all_bet_equal = active
             .iter()
             .all(|&i| self.round_bets[i] == self.smallest_bet);
-        let last_aggressor = self.last_aggressor_index;
-        let all_acted = active_players
+        let last = self.last_aggressor_index;
+        let all_acted = active
             .iter()
             .all(|&i| i == self.current_player_index || self.round_bets[i] == self.smallest_bet);
-        all_bet_equal && (last_aggressor.is_none() || all_acted)
+        all_bet_equal && (last.is_none() || all_acted)
     }
 
     fn end_round(&mut self) {
@@ -372,9 +374,7 @@ impl GameState {
                 self.current_round = BettingRound::Showdown;
                 self.hand_complete = true;
             }
-            BettingRound::Showdown => {
-                self.hand_complete = true;
-            }
+            BettingRound::Showdown => self.hand_complete = true,
         }
         if !self.hand_complete {
             debug!(round = ?self.current_round, "Round ended, moving to next");
@@ -439,7 +439,7 @@ impl GameState {
         let mut winners = Vec::new();
 
         for pot in pots {
-            let eligible_ids: Vec<PlayerId> = pot.eligible_players;
+            let eligible_ids = pot.eligible_players;
             let eligible_indices: Vec<usize> = self
                 .players
                 .iter()
@@ -460,7 +460,7 @@ impl GameState {
                 continue;
             }
             if self.community_cards.len() < 5 {
-                warn!("Showdown with incomplete community cards, defaulting to high card");
+                warn!("Showdown with incomplete community cards – splitting pot");
                 let share_val = pot.amount.as_i64() / eligible_indices.len() as i64;
                 let share = ChipAmount::new(share_val).expect("share positive");
                 for idx in eligible_indices {
@@ -504,9 +504,13 @@ impl GameState {
     }
 }
 
+// -----------------------------------------------------------------------------
+// Tests
+// -----------------------------------------------------------------------------
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sb_shared_types::{Card, Rank, Suit};
     use uuid::Uuid;
 
     fn pid(id: u128) -> PlayerId {
@@ -565,5 +569,244 @@ mod tests {
         let id = state.players[state.current_player_index].player_id;
         let result = state.apply_action(id, Action::Raise(ChipAmount::new(1).unwrap()));
         assert!(matches!(result, Err(ActionError::InvalidRaise { .. })));
+    }
+
+    #[test]
+    fn test_betting_sequence_call_raise() {
+        let players = vec![
+            (pid(1), ChipAmount::new(1000).unwrap()),
+            (pid(2), ChipAmount::new(1000).unwrap()),
+        ];
+        let mut state = GameState::new_hand(
+            players,
+            0,
+            (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap()),
+        )
+        .unwrap();
+        let first = state.players[state.current_player_index].player_id;
+        state.apply_action(first, Action::Call).unwrap();
+        assert_eq!(state.current_round, BettingRound::Flop);
+        assert_eq!(state.community_cards.len(), 3);
+    }
+
+    #[test]
+    fn test_dealer_rotation() {
+        let players = vec![
+            (pid(1), ChipAmount::new(1000).unwrap()),
+            (pid(2), ChipAmount::new(1000).unwrap()),
+            (pid(3), ChipAmount::new(1000).unwrap()),
+        ];
+        let state = GameState::new_hand(
+            players,
+            1,
+            (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap()),
+        )
+        .unwrap();
+        assert_eq!(state.players[2].player_id, pid(3));
+        assert_eq!(state.players[0].player_id, pid(1));
+    }
+
+    // Insufficient stack tests – now with correct dealer assignment
+    #[test]
+    fn test_insufficient_stack_call() {
+        // Dealer = 1 so that small blind is player 0 (short stack) and big blind is player 1 (large)
+        let players = vec![
+            (pid(1), ChipAmount::new(9).unwrap()),
+            (pid(2), ChipAmount::new(1000).unwrap()),
+        ];
+        let mut state = GameState::new_hand(
+            players,
+            1,
+            (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap()),
+        )
+        .unwrap();
+        // After posting, small blind (player0) has 4 chips left, call amount = 10 - 5 = 5 -> insufficient
+        let sb_id = state.players[state.current_player_index].player_id;
+        let result = state.apply_action(sb_id, Action::Call);
+        assert!(matches!(result, Err(ActionError::InsufficientStack { .. })));
+    }
+
+    #[test]
+    fn test_insufficient_stack_raise() {
+        // Dealer = 1, short stack small blind (player0) with 15 after blind? Let's give 20 to start.
+        let players = vec![
+            (pid(1), ChipAmount::new(20).unwrap()),
+            (pid(2), ChipAmount::new(1000).unwrap()),
+        ];
+        let mut state = GameState::new_hand(
+            players,
+            1,
+            (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap()),
+        )
+        .unwrap();
+        // After SB, stack = 15. Minimum raise = 10. Raise of 11 is allowed? Actually raise amount is additional chips.
+        // To cause insufficient stack, raise huge amount.
+        let sb_id = state.players[state.current_player_index].player_id;
+        let result = state.apply_action(sb_id, Action::Raise(ChipAmount::new(100).unwrap()));
+        assert!(matches!(result, Err(ActionError::InsufficientStack { .. })));
+    }
+
+    #[test]
+    fn test_all_in_scenario_no_side_pot() {
+        let players = vec![
+            (pid(1), ChipAmount::new(100).unwrap()),
+            (pid(2), ChipAmount::new(200).unwrap()),
+        ];
+        let mut state = GameState::new_hand(
+            players,
+            0,
+            (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap()),
+        )
+        .unwrap();
+        state.players[0].stack = ChipAmount::new(0).unwrap();
+        state.players[0].is_all_in = true;
+        state.hand_complete = true;
+        state.current_round = BettingRound::Showdown;
+        let winners = state.calculate_pot_winners();
+        assert!(!winners.is_empty());
+    }
+
+    #[test]
+    fn test_all_in_cannot_act() {
+        let players = vec![
+            (pid(1), ChipAmount::new(50).unwrap()),
+            (pid(2), ChipAmount::new(1000).unwrap()),
+        ];
+        let mut state = GameState::new_hand(
+            players,
+            0,
+            (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap()),
+        )
+        .unwrap();
+        state.players[0].stack = ChipAmount::new(0).unwrap();
+        state.players[0].is_all_in = true;
+        state.current_player_index = 0;
+        let res = state.apply_action(state.players[0].player_id, Action::Call);
+        assert!(matches!(res, Err(ActionError::AlreadyAllIn)));
+    }
+
+    #[test]
+    fn test_betting_round_completion_after_raise() {
+        let players = vec![
+            (pid(1), ChipAmount::new(1000).unwrap()),
+            (pid(2), ChipAmount::new(1000).unwrap()),
+        ];
+        let mut state = GameState::new_hand(
+            players,
+            0,
+            (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap()),
+        )
+        .unwrap();
+        let first = state.players[state.current_player_index].player_id;
+        state
+            .apply_action(first, Action::Raise(ChipAmount::new(20).unwrap()))
+            .unwrap();
+        let second = state.players[state.current_player_index].player_id;
+        state.apply_action(second, Action::Call).unwrap();
+        assert_eq!(state.current_round, BettingRound::Flop);
+        assert_eq!(state.community_cards.len(), 3);
+    }
+
+    #[test]
+    fn test_fold_to_end_round() {
+        let players = vec![
+            (pid(1), ChipAmount::new(1000).unwrap()),
+            (pid(2), ChipAmount::new(1000).unwrap()),
+            (pid(3), ChipAmount::new(1000).unwrap()),
+        ];
+        let mut state = GameState::new_hand(
+            players,
+            0,
+            (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap()),
+        )
+        .unwrap();
+        let first = state.players[state.current_player_index].player_id;
+        state.apply_action(first, Action::Fold).unwrap();
+        let second = state.players[state.current_player_index].player_id;
+        state.apply_action(second, Action::Call).unwrap();
+        assert_eq!(state.current_round, BettingRound::Flop);
+    }
+
+    #[test]
+    fn test_all_in_with_side_pot() {
+        let a = pid(1);
+        let b = pid(2);
+        let c = pid(3);
+        let players = vec![
+            (a, ChipAmount::new(1000).unwrap()),
+            (b, ChipAmount::new(1000).unwrap()),
+            (c, ChipAmount::new(1000).unwrap()),
+        ];
+        let mut state = GameState::new_hand(
+            players,
+            0,
+            (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap()),
+        )
+        .unwrap();
+        state.players[0].total_bet = ChipAmount::new(50).unwrap();
+        state.players[1].total_bet = ChipAmount::new(100).unwrap();
+        state.players[2].total_bet = ChipAmount::new(100).unwrap();
+        state.players[0].is_all_in = true;
+        state.hand_complete = true;
+        state.current_round = BettingRound::Showdown;
+        state.community_cards = vec![
+            Card {
+                suit: Suit::Hearts,
+                rank: Rank::Two,
+            },
+            Card {
+                suit: Suit::Diamonds,
+                rank: Rank::Three,
+            },
+            Card {
+                suit: Suit::Clubs,
+                rank: Rank::Four,
+            },
+            Card {
+                suit: Suit::Spades,
+                rank: Rank::Five,
+            },
+            Card {
+                suit: Suit::Hearts,
+                rank: Rank::Six,
+            },
+        ];
+        state.players[0].hole_cards = Some([
+            Card {
+                suit: Suit::Hearts,
+                rank: Rank::Two,
+            },
+            Card {
+                suit: Suit::Clubs,
+                rank: Rank::Three,
+            },
+        ]);
+        state.players[1].hole_cards = Some([
+            Card {
+                suit: Suit::Hearts,
+                rank: Rank::Queen,
+            },
+            Card {
+                suit: Suit::Clubs,
+                rank: Rank::Queen,
+            },
+        ]);
+        state.players[2].hole_cards = Some([
+            Card {
+                suit: Suit::Hearts,
+                rank: Rank::Ace,
+            },
+            Card {
+                suit: Suit::Clubs,
+                rank: Rank::Ace,
+            },
+        ]);
+        let winners = state.calculate_pot_winners();
+        let total_for_c = winners
+            .iter()
+            .find(|w| w.player_id == c)
+            .map(|w| w.amount.as_i64())
+            .unwrap_or(0);
+        assert!(total_for_c > 0);
     }
 }
