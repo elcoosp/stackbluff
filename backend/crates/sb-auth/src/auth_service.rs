@@ -114,11 +114,12 @@ impl AuthService for AuthServiceImpl {
         }
 
         let password_hash = {
-            let salt = argon2::password_hash::SaltString::generate(&mut rand::thread_rng());
+            let mut rng = rand::rng();
+            let salt = password_hash::SaltString::generate(&mut rng);
             let argon = argon2_instance();
             argon
                 .hash_password(password.as_bytes(), &salt)
-                .map_err(AppError::from)?
+                .map_err(|e| AppError::internal(format!("Password hash error: {}", e)))?
                 .to_string()
         };
 

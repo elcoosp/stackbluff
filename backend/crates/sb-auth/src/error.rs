@@ -1,7 +1,1 @@
-use sb_shared_types::errors::AppError;
-
-impl From<argon2::password_hash::Error> for AppError {
-    fn from(e: argon2::password_hash::Error) -> Self {
-        AppError::internal(format!("Password hash error: {}", e))
-    }
-}
+// No orphan impls; errors are mapped inline in auth_service.rs

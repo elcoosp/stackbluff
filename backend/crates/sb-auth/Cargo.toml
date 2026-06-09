@@ -21,6 +21,7 @@ uuid = { workspace = true, features = ["v4", "v7"] }
 chrono = { workspace = true }
 rand = { workspace = true }
 hex = { workspace = true }
+password-hash = { workspace = true }
 
 sb-shared-types = { path = "../sb-shared-types" }
 sb-contracts = { path = "../sb-contracts" }
