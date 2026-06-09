@@ -242,9 +242,13 @@ impl GameState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use uuid::Uuid;
+
     #[test]
     fn test_fold_action() {
-        let players = vec![PlayerId(1), PlayerId(2)];
+        let p1 = PlayerId(Uuid::from_u128(1));
+        let p2 = PlayerId(Uuid::from_u128(2));
+        let players = vec![p1, p2];
         let mut state = GameState::new_hand(players, (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap()));
         let pid = state.players[state.current_player_index].player_id;
         assert!(state.apply_action(pid, Action::Fold).is_ok());
