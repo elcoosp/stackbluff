@@ -11,6 +11,7 @@ members = [
 ]
 
 [workspace.dependencies]
+password-hash = "0.6.1"
 mockall = "0.14.0"
 axum = "0.8.9"
 hex = "0.4"
