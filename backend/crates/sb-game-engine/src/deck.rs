@@ -1,6 +1,5 @@
 //! Standard 52-card deck.
-
-use rand::seq::SliceRandom;
+use rand::Rng;
 use sb_shared_types::{Card, Suit, Rank};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -41,9 +40,15 @@ impl Deck {
         }
     }
 
+    /// Shuffles the deck using the given RNG.
+    pub fn shuffle_with<R: Rng>(&mut self, rng: &mut R) {
+        use rand::seq::SliceRandom;
+        self.cards.shuffle(rng);
+    }
+
+    /// Shuffles using the default CSPRNG ().
     pub fn shuffle(&mut self) {
-        let mut rng = rand::rng();
-        self.cards.shuffle(&mut rng);
+        self.shuffle_with(&mut rand::rng());
     }
 
     pub fn deal(&mut self) -> Option<Card> {
@@ -72,11 +77,15 @@ impl Default for Deck {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand::SeedableRng;
+    use rand::rngs::StdRng;
+
     #[test]
     fn test_new_deck_has_52_cards() {
         let deck = Deck::new();
         assert_eq!(deck.len(), 52);
     }
+
     #[test]
     fn test_shuffle_changes_order() {
         let mut deck = Deck::new();
@@ -84,18 +93,33 @@ mod tests {
         deck.shuffle();
         assert_ne!(deck.cards, original);
     }
+
+    #[test]
+    fn test_deterministic_shuffle() {
+        let mut deck = Deck::new();
+        let mut rng = StdRng::seed_from_u64(42);
+        deck.shuffle_with(&mut rng);
+        let first_card = deck.cards[0];
+        let mut deck2 = Deck::new();
+        let mut rng2 = StdRng::seed_from_u64(42);
+        deck2.shuffle_with(&mut rng2);
+        assert_eq!(first_card, deck2.cards[0]);
+    }
+
     #[test]
     fn test_deal_removes_card() {
         let mut deck = Deck::new();
         let _ = deck.deal().unwrap();
         assert_eq!(deck.len(), 51);
     }
+
     #[test]
     fn test_deal_empty() {
         let mut deck = Deck::new();
         for _ in 0..52 { deck.deal(); }
         assert!(deck.deal().is_none());
     }
+
     #[test]
     fn test_reset() {
         let mut deck = Deck::new();
