@@ -1,9 +1,27 @@
 //! 7-card hand evaluation.
 
 use crate::hand_rank::HandRank;
-use sb_shared_types::{Card, Rank, Suit};
+use sb_shared_types::{Card, Suit};
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
+
+fn rank_value(rank: &sb_shared_types::Rank) -> u8 {
+    match rank {
+        sb_shared_types::Rank::Two => 2,
+        sb_shared_types::Rank::Three => 3,
+        sb_shared_types::Rank::Four => 4,
+        sb_shared_types::Rank::Five => 5,
+        sb_shared_types::Rank::Six => 6,
+        sb_shared_types::Rank::Seven => 7,
+        sb_shared_types::Rank::Eight => 8,
+        sb_shared_types::Rank::Nine => 9,
+        sb_shared_types::Rank::Ten => 10,
+        sb_shared_types::Rank::Jack => 11,
+        sb_shared_types::Rank::Queen => 12,
+        sb_shared_types::Rank::King => 13,
+        sb_shared_types::Rank::Ace => 14,
+    }
+}
 
 pub fn evaluate_hand(hole_cards: &[Card; 2], community: &[Card; 5]) -> HandRank {
     let mut all_cards = Vec::with_capacity(7);
@@ -37,7 +55,7 @@ fn combinations<T: Clone>(items: &[T], k: usize) -> Vec<Vec<T>> {
 }
 
 fn evaluate_5_card_hand(cards: &[Card]) -> HandRank {
-    let ranks: Vec<u8> = cards.iter().map(|c| c.rank.value()).collect();
+    let ranks: Vec<u8> = cards.iter().map(|c| rank_value(&c.rank)).collect();
     let suits: Vec<Suit> = cards.iter().map(|c| c.suit).collect();
     let is_flush = suits.iter().all(|&s| s == suits[0]);
     let mut rank_counts: HashMap<u8, u8> = HashMap::new();
@@ -83,8 +101,11 @@ pub fn compare_hands(
 ) -> Ordering {
     let rank1 = evaluate_hand(hole1, community1);
     let rank2 = evaluate_hand(hole2, community2);
-    if rank1 != rank2 { rank1.cmp(&rank2) }
-    else { best_5_card_hand(hole1, community1).cmp(&best_5_card_hand(hole2, community2)) }
+    if rank1 != rank2 {
+        rank1.cmp(&rank2)
+    } else {
+        best_5_card_hand(hole1, community1).cmp(&best_5_card_hand(hole2, community2))
+    }
 }
 
 fn best_5_card_hand(hole: &[Card; 2], community: &[Card; 5]) -> Vec<u8> {
@@ -94,9 +115,11 @@ fn best_5_card_hand(hole: &[Card; 2], community: &[Card; 5]) -> Vec<u8> {
     let indices: Vec<usize> = (0..7).collect();
     let mut best = vec![0;5];
     for comb in combinations(&indices, 5) {
-        let mut ranks: Vec<u8> = comb.iter().map(|&i| all[i].rank.value()).collect();
-        ranks.sort_unstable_by(|a,b| b.cmp(a));
-        if ranks > best { best = ranks; }
+        let mut ranks: Vec<u8> = comb.iter().map(|&i| rank_value(&all[i].rank)).collect();
+        ranks.sort_unstable_by(|a, b| b.cmp(a));
+        if ranks > best {
+            best = ranks;
+        }
     }
     best
 }
@@ -105,20 +128,16 @@ fn best_5_card_hand(hole: &[Card; 2], community: &[Card; 5]) -> Vec<u8> {
 mod tests {
     use super::*;
     use sb_shared_types::{Rank, Suit};
-
-    fn card(suit: Suit, rank: Rank) -> Card {
-        Card { suit, rank }
-    }
+    fn card(suit: Suit, rank: Rank) -> Card { Card { suit, rank } }
 
     #[test]
     fn test_high_card() {
-        let hole = [card(Suit::Heart, Rank::Number(2)), card(Suit::Club, Rank::Number(3))];
+        let hole = [card(Suit::Hearts, Rank::Two), card(Suit::Clubs, Rank::Three)];
         let community = [
-            card(Suit::Diamond, Rank::Number(5)), card(Suit::Spade, Rank::Number(7)),
-            card(Suit::Heart, Rank::Number(9)), card(Suit::Club, Rank::Jack),
-            card(Suit::Diamond, Rank::King),
+            card(Suit::Diamonds, Rank::Five), card(Suit::Spades, Rank::Seven),
+            card(Suit::Hearts, Rank::Nine), card(Suit::Clubs, Rank::Jack),
+            card(Suit::Diamonds, Rank::King),
         ];
         assert_eq!(evaluate_hand(&hole, &community), HandRank::HighCard);
     }
-    // other tests omitted for brevity but can be added similarly
 }
