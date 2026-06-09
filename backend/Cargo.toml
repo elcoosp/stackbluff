@@ -10,6 +10,11 @@ members = [
 ]
 
 [workspace.dependencies]
+base64 = "0.22"
+sha2 = "0.10"
+hmac = "0.12"
+jsonwebtoken = "10.3.0"
+argon2 = "0.6.0-rc.8"
 sqlx = { version = "0.9.0", features = ["sqlite", "runtime-tokio", "tls-rustls"] }
 moka = { version = "0.12", features = ["sync"] }
 async-trait = "0.1.89"
@@ -30,3 +35,23 @@ strum = { version = "0.28.0", features = ["derive"] }
 [workspace.package]
 edition = "2024"
 rust-version = "1.94"
+[workspace.dependencies]
+base64 = "0.22"
+sha2 = "0.10"
+hmac = "0.12"
+jsonwebtoken = "10.3.0"
+argon2 = "0.6.0-rc.8"
+[workspace.dependencies]
+base64 = "0.22"
+sha2 = "0.10"
+hmac = "0.12"
+jsonwebtoken = "10.3.0"
+[workspace.dependencies]
+base64 = "0.22"
+sha2 = "0.10"
+hmac = "0.12"
+[workspace.dependencies]
+base64 = "0.22"
+sha2 = "0.10"
+[workspace.dependencies]
+base64 = "0.22"
