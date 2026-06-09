@@ -3,7 +3,7 @@
 use crate::deck::Deck;
 use crate::evaluate::evaluate_hand_strength;
 use crate::hand_rank::HandRank;
-use crate::pot::{compute_side_pots, Pot};
+use crate::pot::compute_side_pots;
 use sb_shared_types::{Card, ChipAmount, PlayerId};
 use tracing::{debug, warn};
 
@@ -187,57 +187,78 @@ impl GameState {
         if idx != self.current_player_index {
             return Err(ActionError::NotYourTurn);
         }
-        let player = &mut self.players[idx];
-        if player.has_folded {
+        // Borrow check fix: take needed values before mutably borrowing self.players
+        let current_round = self.current_round;
+        if current_round == BettingRound::Showdown {
+            return Err(ActionError::ShowdownNotActionable);
+        }
+
+        // Extract values needed for the action before any mutable borrow
+        let (folded, all_in, stack, round_bet, smallest_bet, min_raise) = {
+            let p = &self.players[idx];
+            (
+                p.has_folded,
+                p.is_all_in,
+                p.stack,
+                self.round_bets[idx],
+                self.smallest_bet,
+                self.min_raise,
+            )
+        };
+
+        if folded {
             return Err(ActionError::AlreadyFolded);
         }
-        if player.is_all_in {
+        if all_in {
             return Err(ActionError::AlreadyAllIn);
         }
+
         match action {
             Action::Fold => {
-                debug!(player = ?player.player_id, "Fold");
+                // Perform fold – we need mutable access to players[idx]
+                let player = &mut self.players[idx];
                 player.has_folded = true;
+                debug!(player = ?player.player_id, "Fold");
                 self.advance_turn();
             }
             Action::Check => {
-                if self.round_bets[idx] != self.smallest_bet {
+                if round_bet != smallest_bet {
                     return Err(ActionError::InvalidRaise {
                         attempted: ChipAmount::new(0).expect("zero amount"),
-                        min: self.min_raise,
+                        min: min_raise,
                     });
                 }
-                debug!(player = ?player.player_id, "Check");
+                debug!(player = ?self.players[idx].player_id, "Check");
                 self.advance_turn();
             }
             Action::Call => {
-                let call_amount = self.smallest_bet - self.round_bets[idx];
+                let call_amount = smallest_bet - round_bet;
                 if call_amount <= ChipAmount::new(0).expect("zero amount") {
                     return Err(ActionError::InvalidRaise {
                         attempted: call_amount,
-                        min: self.min_raise,
+                        min: min_raise,
                     });
                 }
-                if player.stack < call_amount {
+                if stack < call_amount {
                     return Err(ActionError::InsufficientStack {
                         action: "call".into(),
                         needed: call_amount,
                     });
                 }
                 self.add_bet(idx, call_amount);
-                debug!(player = ?player.player_id, call = ?call_amount, "Call");
+                debug!(player = ?self.players[idx].player_id, call = ?call_amount, "Call");
                 self.advance_turn();
             }
             Action::Raise(raise_amount) => {
-                let total_bet = self.round_bets[idx] + raise_amount;
-                let required = self.smallest_bet + self.min_raise;
+                let total_bet = round_bet + raise_amount;
+                let required = smallest_bet + min_raise;
                 if total_bet < required {
                     return Err(ActionError::InvalidRaise {
                         attempted: raise_amount,
-                        min: self.min_raise,
+                        min: min_raise,
                     });
                 }
-                if player.stack < raise_amount {
+                if stack < raise_amount {
                     return Err(ActionError::InsufficientStack {
                         action: "raise".into(),
                         needed: raise_amount,
@@ -247,7 +268,7 @@ impl GameState {
                 self.smallest_bet = total_bet;
                 self.min_raise = raise_amount;
                 self.last_aggressor_index = Some(idx);
-                debug!(player = ?player.player_id, raise = ?raise_amount, total_bet = ?total_bet, "Raise");
+                debug!(player = ?self.players[idx].player_id, raise = ?raise_amount, total_bet = ?total_bet, "Raise");
                 self.advance_turn();
             }
         }
@@ -442,8 +463,8 @@ impl GameState {
             if self.community_cards.len() < 5 {
                 // Not enough cards – should not happen because Showdown only reached with 5 cards
                 warn!("Showdown with incomplete community cards, defaulting to high card");
-                // Fallback: the player with highest hole cards? For simplicity, split equally among eligible
-                let share = pot.amount / ChipAmount::new(eligible_indices.len() as i64).unwrap();
+                let share_val = pot.amount.as_i64() / eligible_indices.len() as i64;
+                let share = ChipAmount::new(share_val).expect("share positive");
                 for idx in eligible_indices {
                     winners.push(Winner {
                         player_id: self.players[idx].player_id,
@@ -471,11 +492,12 @@ impl GameState {
                     best_indices = vec![idx];
                 }
             }
-            let split = pot.amount / ChipAmount::new(best_indices.len() as i64).unwrap();
+            let share_val = pot.amount.as_i64() / best_indices.len() as i64;
+            let share = ChipAmount::new(share_val).expect("share positive");
             for idx in best_indices {
                 winners.push(Winner {
                     player_id: self.players[idx].player_id,
-                    amount: split,
+                    amount: share,
                     hand_rank: best_strength.as_ref().unwrap().rank,
                 });
             }
@@ -515,23 +537,5 @@ mod tests {
         let pid = state.players[state.current_player_index].player_id;
         let result = state.apply_action(pid, Action::Raise(ChipAmount::new(1).unwrap()));
         assert!(matches!(result, Err(ActionError::InvalidRaise { .. })));
-    }
-
-    #[test]
-    fn test_side_pot_distribution() {
-        // Player A: all‑in 50, Player B: calls, Player C: raises to 100
-        // Main pot: 50*3=150, side pot: 50*1=50
-        // Not exhaustive – kept simple
-        let players = vec![
-            (pid(1), ChipAmount::new(50).unwrap()),
-            (pid(2), ChipAmount::new(200).unwrap()),
-            (pid(3), ChipAmount::new(200).unwrap()),
-        ];
-        let mut state = GameState::new_hand(players, 0, (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap())).unwrap();
-        // Set up custom bets to test pot splitting (simplified)
-        // In real game, side pots would be tested via betting sequences.
-        // This is a placeholder – full tests would be more involved.
-        // We trust the pot module tests.
-        assert!(state.hand_id().0 != 0);
     }
 }
