@@ -1,13 +1,16 @@
 use std::sync::LazyLock;
 
 use chrono::{Duration, Utc};
-use jsonwebtoken::crypto::CryptoProvider;
+use jsonwebtoken::crypto::{rust_crypto, CryptoProvider};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 fn ensure_crypto() {
-    static PROVIDER: LazyLock<CryptoProvider> = LazyLock::new(|| CryptoProvider { });
+    static PROVIDER: LazyLock<CryptoProvider> = LazyLock::new(|| {
+        let rc = rust_crypto::RustCrypto::default();
+        CryptoProvider::from(rc)
+    });
     PROVIDER.install_default().expect("Failed to install default CryptoProvider");
 }
 
