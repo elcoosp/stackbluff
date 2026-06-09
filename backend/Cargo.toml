@@ -11,6 +11,8 @@ members = [
 ]
 
 [workspace.dependencies]
+mockall = "0.14.0"
+axum = "0.8.9"
 hex = "0.4"
 base64 = "0.22"
 sha2 = "0.10"
