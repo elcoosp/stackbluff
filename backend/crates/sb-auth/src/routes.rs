@@ -9,7 +9,6 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use sb_shared_types::errors::AppError;
-use sb_shared_types::ids::UserId;
 use sb_shared_types::request_context::RequestContext;
 use crate::SharedAuthService;
 

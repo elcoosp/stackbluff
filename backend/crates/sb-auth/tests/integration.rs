@@ -42,8 +42,8 @@ impl UserRepo for MockUserRepo {
 fn test_service() -> (Arc<AuthServiceImpl>, Arc<MockUserRepo>) {
     let repo = Arc::new(MockUserRepo::new());
     let config = AuthConfig {
-        jwt_secret: SecretString::from("secret"),
-        bot_token: SecretString::from("bot"),
+        jwt_secret: SecretString::from("secret".to_string()),
+        bot_token: SecretString::from("bot".to_string()),
         jwt_expiry_days: 30,
     };
     (Arc::new(AuthServiceImpl::new(repo.clone(), config)), repo)

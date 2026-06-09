@@ -5,7 +5,6 @@ use argon2::{PasswordHasher, PasswordVerifier};
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
 use tracing::{info, warn};
-use uuid::Uuid;
 
 use sb_contracts::repo_api::UserRepo;
 use sb_contracts::service_api::{AuthResult, AuthService, TokenClaims};
