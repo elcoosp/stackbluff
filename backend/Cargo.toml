@@ -7,6 +7,7 @@ members = [
     "crates/sb-shared-types",
     "crates/sb-contracts",
     "migration",
+    "crates/sb-auth",
 ]
 
 [workspace.dependencies]
