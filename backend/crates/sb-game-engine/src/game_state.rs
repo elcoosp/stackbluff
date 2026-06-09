@@ -63,8 +63,8 @@ pub struct GameState {
 }
 
 impl GameState {
-    pub fn new_hand(players: Vec<PlayerId>, blinds: (ChipAmount, ChipAmount)) -> HandId {
-        let hand_id = HandId(rand::random());
+    pub fn new_hand(players: Vec<PlayerId>, blinds: (ChipAmount, ChipAmount)) -> Self {
+        let hand_id = HandId(rand::random::<u64>());
         let mut deck = Deck::new();
         deck.shuffle();
         let mut player_states: Vec<PlayerHandState> = players
@@ -72,8 +72,8 @@ impl GameState {
             .map(|pid| PlayerHandState {
                 player_id: pid,
                 hole_cards: None,
-                bet_this_round: ChipAmount::new(0),
-                total_bet: ChipAmount::new(0),
+                bet_this_round: ChipAmount::new(0).expect("zero amount"),
+                total_bet: ChipAmount::new(0).expect("zero amount"),
                 is_all_in: false,
                 has_folded: false,
             })
@@ -88,7 +88,7 @@ impl GameState {
         let big_blind_index = (dealer_index + 2) % player_states.len();
         let sb_amount = blinds.0;
         let bb_amount = blinds.1;
-        let mut round_bets = vec![ChipAmount::new(0); player_states.len()];
+        let mut round_bets = vec![ChipAmount::new(0).expect("zero amount"); player_states.len()];
         round_bets[small_blind_index] = sb_amount;
         round_bets[big_blind_index] = bb_amount;
         let pot = sb_amount + bb_amount;
@@ -128,7 +128,7 @@ impl GameState {
             }
             Action::Call => {
                 let call_amount = self.smallest_bet - self.round_bets[idx];
-                if call_amount <= ChipAmount::new(0) { return Err(ActionError::InvalidRaise); }
+                if call_amount <= ChipAmount::new(0).expect("zero amount") { return Err(ActionError::InvalidRaise); }
                 self.add_bet(idx, call_amount);
                 self.advance_turn();
             }
@@ -198,9 +198,9 @@ impl GameState {
     }
 
     fn reset_round(&mut self) {
-        for p in &mut self.players { p.bet_this_round = ChipAmount::new(0); }
-        for b in &mut self.round_bets { *b = ChipAmount::new(0); }
-        self.smallest_bet = ChipAmount::new(0);
+        for p in &mut self.players { p.bet_this_round = ChipAmount::new(0).expect("zero amount"); }
+        for b in &mut self.round_bets { *b = ChipAmount::new(0).expect("zero amount"); }
+        self.smallest_bet = ChipAmount::new(0).expect("zero amount");
         self.min_raise = self.blinds.1;
         self.last_aggressor_index = None;
         let mut start = (self.dealer_index + 1) % self.players.len();
@@ -212,6 +212,8 @@ impl GameState {
     }
 
     pub fn is_hand_complete(&self) -> bool { self.hand_complete }
+    pub fn hand_id(&self) -> HandId { self.hand_id }
+
     pub fn calculate_pot_winners(&self) -> Vec<Winner> {
         let active: Vec<usize> = self.players.iter().enumerate().filter(|(_,p)| !p.has_folded).map(|(i,_)| i).collect();
         if active.is_empty() { return vec![]; }
@@ -231,7 +233,7 @@ impl GameState {
                 winners.push(self.players[i].player_id);
             }
         }
-        let share = self.pot / ChipAmount::new(winners.len() as i64);
+        let share = self.pot / ChipAmount::new(winners.len() as i64).expect("positive length");
         winners.into_iter().map(|pid| Winner { player_id: pid, amount: share, hand_rank: best_rank }).collect()
     }
 }
@@ -242,7 +244,7 @@ mod tests {
     #[test]
     fn test_fold_action() {
         let players = vec![PlayerId(1), PlayerId(2)];
-        let mut state = GameState::new_hand(players, (ChipAmount::new(5), ChipAmount::new(10)));
+        let mut state = GameState::new_hand(players, (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap()));
         let pid = state.players[state.current_player_index].player_id;
         assert!(state.apply_action(pid, Action::Fold).is_ok());
     }
