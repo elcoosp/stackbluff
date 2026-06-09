@@ -1,8 +1,8 @@
-
 use std::sync::Arc;
 use uuid::Uuid;
 use async_trait::async_trait;
 
+use secrecy::SecretString;
 use sb_contracts::repo_api::{UserInfo, UserRepo};
 use sb_contracts::service_api::AuthService;
 use sb_shared_types::errors::AppError;
@@ -41,7 +41,11 @@ impl UserRepo for MockUserRepo {
 
 fn test_service() -> (Arc<AuthServiceImpl>, Arc<MockUserRepo>) {
     let repo = Arc::new(MockUserRepo::new());
-    let config = AuthConfig { jwt_secret: "secret".into(), bot_token: "bot".into(), jwt_expiry_days: 30 };
+    let config = AuthConfig {
+        jwt_secret: SecretString::from("secret"),
+        bot_token: SecretString::from("bot"),
+        jwt_expiry_days: 30,
+    };
     (Arc::new(AuthServiceImpl::new(repo.clone(), config)), repo)
 }
 
@@ -49,12 +53,12 @@ fn test_service() -> (Arc<AuthServiceImpl>, Arc<MockUserRepo>) {
 async fn register_login_flow() {
     let (svc, _) = test_service();
     let ctx = RequestContext::new(Uuid::new_v4(), None);
-    let r = svc.register(&ctx, "a@b.com", "Pass1!").await.unwrap();
+    let r = svc.register(&ctx, "a@b.com", "Pass1234!").await.unwrap();
     assert!(!r.jwt.is_empty());
-    let r2 = svc.login(&ctx, "a@b.com", "Pass1!").await.unwrap();
+    let r2 = svc.login(&ctx, "a@b.com", "Pass1234!").await.unwrap();
     assert!(!r2.jwt.is_empty());
     let err = svc.login(&ctx, "a@b.com", "wrong").await.unwrap_err();
-    assert!(format!("{:?}", err).contains("Unauthorized"));
+    assert!(matches!(err, AppError::Unauthorized(_)));
 }
 
 #[tokio::test]
@@ -62,14 +66,14 @@ async fn telegram_invalid() {
     let (svc, _) = test_service();
     let ctx = RequestContext::new(Uuid::new_v4(), None);
     let err = svc.telegram_auth(&ctx, "invalid").await.unwrap_err();
-    assert!(format!("{:?}", err).contains("InvalidInput"));
+    assert!(matches!(err, AppError::InvalidInput(_)));
 }
 
 #[tokio::test]
 async fn jwt_verify() {
     let (svc, _) = test_service();
     let ctx = RequestContext::new(Uuid::new_v4(), None);
-    let r = svc.register(&ctx, "j@j.com", "secret").await.unwrap();
+    let r = svc.register(&ctx, "j@j.com", "secret123").await.unwrap();
     let claims = svc.verify_token(&r.jwt).await.unwrap();
     assert_eq!(claims.platform, "email");
 }
@@ -80,9 +84,26 @@ async fn expired_token() {
     use jsonwebtoken::{EncodingKey, Header};
     let (svc, _) = test_service();
     let claims = sb_auth::jwt::Claims {
-        sub: Uuid::new_v4(), platform: "email".into(), exp: (Utc::now() - Duration::days(1)).timestamp() as usize, iat: 0
+        sub: Uuid::new_v4(), platform: "email".into(),
+        exp: (Utc::now() - Duration::days(1)).timestamp() as usize, iat: 0
     };
     let token = jsonwebtoken::encode(&Header::default(), &claims, &EncodingKey::from_secret(b"secret")).unwrap();
     let err = svc.verify_token(&token).await.unwrap_err();
-    assert!(format!("{:?}", err).contains("Unauthorized"));
+    assert!(matches!(err, AppError::Unauthorized(_)));
+}
+
+#[tokio::test]
+async fn password_validation() {
+    let (svc, _) = test_service();
+    let ctx = RequestContext::new(Uuid::new_v4(), None);
+    let err = svc.register(&ctx, "a@b.com", "short").await.unwrap_err();
+    assert!(matches!(err, AppError::InvalidInput(_)));
+}
+
+#[tokio::test]
+async fn email_validation() {
+    let (svc, _) = test_service();
+    let ctx = RequestContext::new(Uuid::new_v4(), None);
+    let err = svc.register(&ctx, "notanemail", "password123").await.unwrap_err();
+    assert!(matches!(err, AppError::InvalidInput(_)));
 }

@@ -1,10 +1,11 @@
-
 use std::sync::Arc;
 
 use async_trait::async_trait;
 use argon2::{PasswordHasher, PasswordVerifier};
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
+use tracing::{info, warn};
+use uuid::Uuid;
 
 use sb_contracts::repo_api::UserRepo;
 use sb_contracts::service_api::{AuthResult, AuthService, TokenClaims};
@@ -27,13 +28,17 @@ impl AuthServiceImpl {
         Self { user_repo, config }
     }
 
+    /// Validates Telegram initData HMAC using the bot token.
     fn validate_telegram_init_data(&self, init_data: &str) -> Result<serde_json::Value, AppError> {
-        let mut params: Vec<(&str, &str)> = Vec::new();
+        // Properly decode the URL-encoded init data (Telegram sends it as application/x-www-form-urlencoded)
+        let parsed: Vec<(String, String)> =
+            url::form_urlencoded::parse(init_data.as_bytes())
+                .into_owned()
+                .collect();
+
         let mut hash = None;
-        for pair in init_data.split('&') {
-            let mut kv = pair.splitn(2, '=');
-            let key = kv.next().unwrap_or("");
-            let val = kv.next().unwrap_or("");
+        let mut params = Vec::new();
+        for (key, val) in parsed {
             if key == "hash" {
                 hash = Some(val);
             } else {
@@ -43,7 +48,7 @@ impl AuthServiceImpl {
 
         let hash = hash.ok_or_else(|| AppError::InvalidInput("Missing hash in initData".into()))?;
 
-        params.sort_by(|a, b| a.0.cmp(b.0));
+        params.sort_by(|a, b| a.0.cmp(&b.0));
         let data_check_string = params
             .iter()
             .map(|(k, v)| format!("{}={}", k, v))
@@ -51,7 +56,7 @@ impl AuthServiceImpl {
             .join("\n");
 
         let mut secret_key =
-            HmacSha256::new_from_slice(self.config.bot_token.as_bytes())
+            HmacSha256::new_from_slice(self.config.bot_token_str().as_bytes())
                 .map_err(|e| AppError::Internal(format!("HMAC error: {}", e)))?;
         secret_key.update(b"WebAppData");
         let secret_key = secret_key.finalize().into_bytes();
@@ -62,12 +67,14 @@ impl AuthServiceImpl {
         let computed = hex::encode(mac.finalize().into_bytes());
 
         if computed != hash {
+            warn!("Invalid initData hash");
             return Err(AppError::Unauthorized("Invalid initData hash".into()));
         }
 
-        let user_field = params.iter().find(|(k, _)| *k == "user");
+        let user_field = params.iter().find(|(k, _)| k == "user");
         let user_json: serde_json::Value = if let Some((_, v)) = user_field {
-            serde_json::from_str(v).map_err(|e| AppError::InvalidInput(format!("Invalid user JSON: {}", e)))?
+            serde_json::from_str(v)
+                .map_err(|e| AppError::InvalidInput(format!("Invalid user JSON: {}", e)))?
         } else {
             return Err(AppError::InvalidInput("initData missing user field".into()));
         };
@@ -100,10 +107,12 @@ impl AuthService for AuthServiceImpl {
         let token = create_jwt(
             user.id,
             "telegram",
-            &self.config.jwt_secret,
+            self.config.jwt_secret_str(),
             self.config.jwt_expiry_days,
-        ).map_err(|e| AppError::Internal(format!("JWT creation error: {}", e)))?;
+        )
+        .map_err(|e| AppError::Internal(format!("JWT creation error: {}", e)))?;
 
+        info!(user_id = %user.id, "Telegram authentication succeeded");
         Ok(AuthResult {
             jwt: token,
             user_id: user.id,
@@ -116,8 +125,12 @@ impl AuthService for AuthServiceImpl {
         email: &str,
         password: &str,
     ) -> Result<AuthResult, AppError> {
-        if email.is_empty() || password.is_empty() {
-            return Err(AppError::InvalidInput("Email and password required".into()));
+        // Basic email and password validation
+        if email.is_empty() || !email.contains('@') {
+            return Err(AppError::InvalidInput("Invalid email address".into()));
+        }
+        if password.len() < 8 {
+            return Err(AppError::InvalidInput("Password must be at least 8 characters".into()));
         }
 
         let password_hash = argon2_instance()
@@ -125,15 +138,20 @@ impl AuthService for AuthServiceImpl {
             .map_err(|e| AppError::Internal(format!("Password hash error: {}", e)))?
             .to_string();
 
-        let user = self.user_repo.create_email_user(ctx, email, &password_hash).await?;
+        let user = self
+            .user_repo
+            .create_email_user(ctx, email, &password_hash)
+            .await?;
 
         let token = create_jwt(
             user.id,
             "email",
-            &self.config.jwt_secret,
+            self.config.jwt_secret_str(),
             self.config.jwt_expiry_days,
-        ).map_err(|e| AppError::Internal(format!("JWT creation error: {}", e)))?;
+        )
+        .map_err(|e| AppError::Internal(format!("JWT creation error: {}", e)))?;
 
+        info!(user_id = %user.id, "User registered successfully");
         Ok(AuthResult {
             jwt: token,
             user_id: user.id,
@@ -158,10 +176,12 @@ impl AuthService for AuthServiceImpl {
         let token = create_jwt(
             user.id,
             "email",
-            &self.config.jwt_secret,
+            self.config.jwt_secret_str(),
             self.config.jwt_expiry_days,
-        ).map_err(|e| AppError::Internal(format!("JWT creation error: {}", e)))?;
+        )
+        .map_err(|e| AppError::Internal(format!("JWT creation error: {}", e)))?;
 
+        info!(user_id = %user.id, "Login succeeded");
         Ok(AuthResult {
             jwt: token,
             user_id: user.id,
@@ -169,7 +189,7 @@ impl AuthService for AuthServiceImpl {
     }
 
     async fn verify_token(&self, token: &str) -> Result<TokenClaims, AppError> {
-        let claims = verify_jwt(token, &self.config.jwt_secret)
+        let claims = verify_jwt(token, self.config.jwt_secret_str())
             .map_err(|e| AppError::Unauthorized(format!("Invalid token: {}", e)))?;
         Ok(TokenClaims {
             user_id: claims.sub,
