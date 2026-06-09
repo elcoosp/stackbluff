@@ -17,7 +17,7 @@ pub struct PlayerHandState {
     pub bet_this_round: ChipAmount,
     pub total_bet: ChipAmount,
     pub is_all_in: bool,
-    pub stack: ChipAmount, // chips remaining
+    pub stack: ChipAmount,
     pub has_folded: bool,
 }
 
@@ -84,10 +84,8 @@ pub struct GameState {
 }
 
 impl GameState {
-    /// Creates a new hand with given players, dealer index, and blinds.
-    /// Players must have enough chips to post blinds (validated).
     pub fn new_hand(
-        players: Vec<(PlayerId, ChipAmount)>, // (player, starting stack)
+        players: Vec<(PlayerId, ChipAmount)>,
         dealer_index: usize,
         blinds: (ChipAmount, ChipAmount),
     ) -> Result<Self, &'static str> {
@@ -96,7 +94,6 @@ impl GameState {
         }
         let sb = blinds.0;
         let bb = blinds.1;
-        // Validate stacks
         for (_, stack) in &players {
             if *stack < sb && *stack < bb {
                 return Err("Player cannot post blind");
@@ -112,15 +109,14 @@ impl GameState {
             .map(|(pid, stack)| PlayerHandState {
                 player_id: pid,
                 hole_cards: None,
-                bet_this_round: ChipAmount::new(0).expect("zero amount"),
-                total_bet: ChipAmount::new(0).expect("zero amount"),
+                bet_this_round: ChipAmount::new(0).unwrap(),
+                total_bet: ChipAmount::new(0).unwrap(),
                 is_all_in: false,
                 stack,
                 has_folded: false,
             })
             .collect();
 
-        // Deal hole cards
         for state in &mut player_states {
             let c1 = deck.deal().ok_or("Not enough cards")?;
             let c2 = deck.deal().ok_or("Not enough cards")?;
@@ -130,8 +126,7 @@ impl GameState {
         let small_blind_index = (dealer_index + 1) % player_states.len();
         let big_blind_index = (dealer_index + 2) % player_states.len();
 
-        let mut round_bets = vec![ChipAmount::new(0).expect("zero amount"); player_states.len()];
-        // Post blinds (subtract from stacks)
+        let mut round_bets = vec![ChipAmount::new(0).unwrap(); player_states.len()];
         Self::post_blind(
             &mut player_states[small_blind_index],
             sb,
@@ -183,7 +178,7 @@ impl GameState {
         player.total_bet = player.total_bet + amount;
         player.bet_this_round = player.bet_this_round + amount;
         *round_bet = *round_bet + amount;
-        if player.stack == ChipAmount::new(0).expect("zero amount") {
+        if player.stack == ChipAmount::new(0).unwrap() {
             player.is_all_in = true;
         }
         Ok(())
@@ -201,13 +196,11 @@ impl GameState {
         if idx != self.current_player_index {
             return Err(ActionError::NotYourTurn);
         }
-        // Borrow check fix: take needed values before mutably borrowing self.players
         let current_round = self.current_round;
         if current_round == BettingRound::Showdown {
             return Err(ActionError::ShowdownNotActionable);
         }
 
-        // Extract values needed for the action before any mutable borrow
         let (folded, all_in, stack, round_bet, smallest_bet, min_raise) = {
             let p = &self.players[idx];
             (
@@ -229,7 +222,6 @@ impl GameState {
 
         match action {
             Action::Fold => {
-                // Perform fold – we need mutable access to players[idx]
                 let player = &mut self.players[idx];
                 player.has_folded = true;
                 debug!(player = ?player.player_id, "Fold");
@@ -238,7 +230,7 @@ impl GameState {
             Action::Check => {
                 if round_bet != smallest_bet {
                     return Err(ActionError::InvalidRaise {
-                        attempted: ChipAmount::new(0).expect("zero amount"),
+                        attempted: ChipAmount::new(0).unwrap(),
                         min: min_raise,
                     });
                 }
@@ -247,7 +239,7 @@ impl GameState {
             }
             Action::Call => {
                 let call_amount = smallest_bet - round_bet;
-                if call_amount <= ChipAmount::new(0).expect("zero amount") {
+                if call_amount <= ChipAmount::new(0).unwrap() {
                     return Err(ActionError::InvalidRaise {
                         attempted: call_amount,
                         min: min_raise,
@@ -296,7 +288,7 @@ impl GameState {
         p.total_bet = p.total_bet + amount;
         self.round_bets[idx] = self.round_bets[idx] + amount;
         self.pot = self.pot + amount;
-        if p.stack == ChipAmount::new(0).expect("zero amount") {
+        if p.stack == ChipAmount::new(0).unwrap() {
             p.is_all_in = true;
             debug!(player = ?p.player_id, "All-in");
         }
@@ -308,7 +300,6 @@ impl GameState {
         while self.players[next].has_folded || self.players[next].is_all_in {
             next = (next + 1) % self.players.len();
             if next == initial {
-                // Only all-in/folded players left – end the round
                 self.end_round();
                 return;
             }
@@ -392,14 +383,12 @@ impl GameState {
 
     fn reset_round(&mut self) {
         for p in &mut self.players {
-            p.bet_this_round = ChipAmount::new(0).expect("zero amount");
+            p.bet_this_round = ChipAmount::new(0).unwrap();
         }
-        self.round_bets
-            .fill(ChipAmount::new(0).expect("zero amount"));
-        self.smallest_bet = ChipAmount::new(0).expect("zero amount");
+        self.round_bets.fill(ChipAmount::new(0).unwrap());
+        self.smallest_bet = ChipAmount::new(0).unwrap();
         self.min_raise = self.blinds.1;
         self.last_aggressor_index = None;
-        // Find first active player after dealer
         let mut start = (self.dealer_index + 1) % self.players.len();
         let initial = start;
         while self.players[start].has_folded || self.players[start].is_all_in {
@@ -423,7 +412,6 @@ impl GameState {
         if !self.hand_complete {
             return vec![];
         }
-        // Determine players still in hand (not folded)
         let active: Vec<usize> = self
             .players
             .iter()
@@ -435,7 +423,6 @@ impl GameState {
             return vec![];
         }
         if active.len() == 1 {
-            // Last player standing wins entire pot
             let winner = &self.players[active[0]];
             return vec![Winner {
                 player_id: winner.player_id,
@@ -444,7 +431,6 @@ impl GameState {
             }];
         }
 
-        // Build total bets per player (for side pots)
         let total_bets: Vec<(PlayerId, ChipAmount)> = active
             .iter()
             .map(|&i| (self.players[i].player_id, self.players[i].total_bet))
@@ -452,7 +438,6 @@ impl GameState {
         let pots = compute_side_pots(&total_bets);
         let mut winners = Vec::new();
 
-        // For each pot, evaluate hands among eligible players
         for pot in pots {
             let eligible_ids: Vec<PlayerId> = pot.eligible_players;
             let eligible_indices: Vec<usize> = self
@@ -474,9 +459,7 @@ impl GameState {
                 });
                 continue;
             }
-            // Evaluate hands using community cards (if enough)
             if self.community_cards.len() < 5 {
-                // Not enough cards – should not happen because Showdown only reached with 5 cards
                 warn!("Showdown with incomplete community cards, defaulting to high card");
                 let share_val = pot.amount.as_i64() / eligible_indices.len() as i64;
                 let share = ChipAmount::new(share_val).expect("share positive");
@@ -525,6 +508,7 @@ impl GameState {
 mod tests {
     use super::*;
     use uuid::Uuid;
+
     fn pid(id: u128) -> PlayerId {
         PlayerId(Uuid::from_u128(id))
     }
@@ -556,25 +540,12 @@ mod tests {
             (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap()),
         )
         .unwrap();
-        let pid = state.players[state.current_player_index].player_id;
-        assert!(state.apply_action(pid, Action::Fold).is_ok());
-        assert!(state.players[state.current_player_index].has_folded);
-        let players = vec![
-            (pid(1), ChipAmount::new(1000).unwrap()),
-            (pid(2), ChipAmount::new(1000).unwrap()),
-        ];
-        let mut state = GameState::new_hand(
-            players,
-            0,
-            (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap()),
-        )
-        .unwrap();
-        let folded_pid = state.players[state.current_player_index].player_id;
-        assert!(state.apply_action(folded_pid, Action::Fold).is_ok());
+        let folded_id = state.players[state.current_player_index].player_id;
+        assert!(state.apply_action(folded_id, Action::Fold).is_ok());
         let folded_idx = state
             .players
             .iter()
-            .position(|p| p.player_id == folded_pid)
+            .position(|p| p.player_id == folded_id)
             .unwrap();
         assert!(state.players[folded_idx].has_folded);
     }
@@ -591,8 +562,8 @@ mod tests {
             (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap()),
         )
         .unwrap();
-        let pid = state.players[state.current_player_index].player_id;
-        let result = state.apply_action(pid, Action::Raise(ChipAmount::new(1).unwrap()));
+        let id = state.players[state.current_player_index].player_id;
+        let result = state.apply_action(id, Action::Raise(ChipAmount::new(1).unwrap()));
         assert!(matches!(result, Err(ActionError::InvalidRaise { .. })));
     }
 }
