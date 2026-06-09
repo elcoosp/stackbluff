@@ -10,7 +10,6 @@ use sb_shared_types::request_context::RequestContext;
 
 use sb_auth::{AuthConfig, AuthServiceImpl};
 
-// ── Mock UserRepo ──────────────────────────
 struct MockUserRepo {
     users: std::sync::Mutex<Vec<UserInfo>>,
 }
