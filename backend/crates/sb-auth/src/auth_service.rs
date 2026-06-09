@@ -1,6 +1,8 @@
+
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use argon2::{PasswordHasher, PasswordVerifier};
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
 
@@ -38,35 +40,36 @@ impl AuthServiceImpl {
             }
         }
 
-        let hash = hash.ok_or_else(|| AppError::bad_request("Missing hash in initData"))?;
+        let hash = hash.ok_or_else(|| AppError::BadRequest("Missing hash in initData"))?;
 
         params.sort_by(|a, b| a.0.cmp(b.0));
         let data_check_string = params
             .iter()
             .map(|(k, v)| format!("{}={}", k, v))
             .collect::<Vec<_>>()
-            .join("\n");
+            .join("
+");
 
         let mut secret_key =
             HmacSha256::new_from_slice(self.config.bot_token.as_bytes())
-                .map_err(|e| AppError::internal(format!("HMAC error: {}", e)))?;
+                .map_err(|e| AppError::Internal(format!("HMAC error: {}", e)))?;
         secret_key.update(b"WebAppData");
         let secret_key = secret_key.finalize().into_bytes();
 
         let mut mac = HmacSha256::new_from_slice(&secret_key)
-            .map_err(|e| AppError::internal(format!("HMAC error: {}", e)))?;
+            .map_err(|e| AppError::Internal(format!("HMAC error: {}", e)))?;
         mac.update(data_check_string.as_bytes());
         let computed = hex::encode(mac.finalize().into_bytes());
 
         if computed != hash {
-            return Err(AppError::unauthorized("Invalid initData hash"));
+            return Err(AppError::Unauthorized("Invalid initData hash"));
         }
 
         let user_field = params.iter().find(|(k, _)| *k == "user");
         let user_json: serde_json::Value = if let Some((_, v)) = user_field {
-            serde_json::from_str(v).map_err(|e| AppError::bad_request(format!("Invalid user JSON: {}", e)))?
+            serde_json::from_str(v).map_err(|e| AppError::BadRequest(format!("Invalid user JSON: {}", e)))?
         } else {
-            return Err(AppError::bad_request("initData missing user field"));
+            return Err(AppError::BadRequest("initData missing user field"));
         };
 
         Ok(user_json)
@@ -85,7 +88,7 @@ impl AuthService for AuthServiceImpl {
         let tg_id = user_json
             .get("id")
             .and_then(|v| v.as_i64())
-            .ok_or_else(|| AppError::bad_request("initData user missing id"))?;
+            .ok_or_else(|| AppError::BadRequest("initData user missing id"))?;
 
         let user = self.user_repo.find_or_create_by_telegram(ctx, tg_id).await?;
 
@@ -94,7 +97,7 @@ impl AuthService for AuthServiceImpl {
             "telegram",
             &self.config.jwt_secret,
             self.config.jwt_expiry_days,
-        ).map_err(|e| AppError::internal(format!("JWT creation error: {}", e)))?;
+        ).map_err(|e| AppError::Internal(format!("JWT creation error: {}", e)))?;
 
         Ok(AuthResult {
             jwt: token,
@@ -109,16 +112,15 @@ impl AuthService for AuthServiceImpl {
         password: &str,
     ) -> Result<AuthResult, AppError> {
         if email.is_empty() || password.is_empty() {
-            return Err(AppError::bad_request("Email and password required"));
+            return Err(AppError::BadRequest("Email and password required"));
         }
 
         let password_hash = {
-            let mut rng = rand::rng();
-            let salt = password_hash::SaltString::generate(&mut rng);
+            let salt = password_hash::SaltString::generate(&mut rand::rng());
             let argon = argon2_instance();
             argon
                 .hash_password(password.as_bytes(), &salt)
-                .map_err(|e| AppError::internal(format!("Password hash error: {}", e)))?
+                .map_err(|e| AppError::Internal(format!("Password hash error: {}", e)))?
                 .to_string()
         };
 
@@ -129,7 +131,7 @@ impl AuthService for AuthServiceImpl {
             "email",
             &self.config.jwt_secret,
             self.config.jwt_expiry_days,
-        ).map_err(|e| AppError::internal(format!("JWT creation error: {}", e)))?;
+        ).map_err(|e| AppError::Internal(format!("JWT creation error: {}", e)))?;
 
         Ok(AuthResult {
             jwt: token,
@@ -144,20 +146,20 @@ impl AuthService for AuthServiceImpl {
         password: &str,
     ) -> Result<AuthResult, AppError> {
         let user = self.user_repo.find_by_email(ctx, email).await?;
-        let user = user.ok_or_else(|| AppError::unauthorized("Invalid email or password"))?;
+        let user = user.ok_or_else(|| AppError::Unauthorized("Invalid email or password"))?;
 
         let parsed_hash = argon2::PasswordHash::new(&user.password_hash)
-            .map_err(|e| AppError::internal(format!("Invalid password hash format: {}", e)))?;
+            .map_err(|e| AppError::Internal(format!("Invalid password hash format: {}", e)))?;
         argon2_instance()
             .verify_password(password.as_bytes(), &parsed_hash)
-            .map_err(|_| AppError::unauthorized("Invalid email or password"))?;
+            .map_err(|_| AppError::Unauthorized("Invalid email or password"))?;
 
         let token = create_jwt(
             user.id,
             "email",
             &self.config.jwt_secret,
             self.config.jwt_expiry_days,
-        ).map_err(|e| AppError::internal(format!("JWT creation error: {}", e)))?;
+        ).map_err(|e| AppError::Internal(format!("JWT creation error: {}", e)))?;
 
         Ok(AuthResult {
             jwt: token,
@@ -167,7 +169,7 @@ impl AuthService for AuthServiceImpl {
 
     async fn verify_token(&self, token: &str) -> Result<TokenClaims, AppError> {
         let claims = verify_jwt(token, &self.config.jwt_secret)
-            .map_err(|e| AppError::unauthorized(format!("Invalid token: {}", e)))?;
+            .map_err(|e| AppError::Unauthorized(format!("Invalid token: {}", e)))?;
         Ok(TokenClaims {
             user_id: claims.sub,
             platform: claims.platform,

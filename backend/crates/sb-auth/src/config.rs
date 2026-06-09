@@ -1,14 +1,13 @@
-use argon2::{Argon2, Params, Version};
+use argon2::{Argon2, Params, Version, PasswordHasher, PasswordVerifier};
+use once_cell::sync::Lazy;
 
-pub const ARGON2_PARAMS: Params = Params::new(
-    65536,    // memory (KB)
-    2,        // iterations
-    1,        // parallelism
-    None,
-).unwrap();
+pub static ARGON2_INSTANCE: Lazy<Argon2<'static>> = Lazy::new(|| {
+    let params = Params::new(65536, 2, 1, None).unwrap();
+    Argon2::new(argon2::Algorithm::Argon2id, Version::V0x13, params)
+});
 
-pub fn argon2_instance() -> Argon2<'static> {
-    Argon2::new(argon2::Algorithm::Argon2id, Version::V0x13, ARGON2_PARAMS)
+pub fn argon2_instance() -> &'static Argon2<'static> {
+    &ARGON2_INSTANCE
 }
 
 #[derive(Clone, Debug)]

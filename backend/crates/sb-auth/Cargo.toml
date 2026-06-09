@@ -2,7 +2,7 @@
 name = "sb-auth"
 version = "0.1.0"
 edition = "2024"
-description = "Authentication service (Telegram initData, password Argon2id, JWT)"
+description = "Authentication service"
 license = "MIT"
 
 [dependencies]
@@ -22,6 +22,7 @@ chrono = { workspace = true }
 rand = { workspace = true }
 hex = { workspace = true }
 password-hash = { workspace = true }
+once_cell = { workspace = true }
 
 sb-shared-types = { path = "../sb-shared-types" }
 sb-contracts = { path = "../sb-contracts" }
