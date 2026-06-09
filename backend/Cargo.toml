@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "crates/sb-game-engine",
     "crates/sb-db-repos",
     "crates/sb-db-entities",
     "crates/sb-shared-types",
