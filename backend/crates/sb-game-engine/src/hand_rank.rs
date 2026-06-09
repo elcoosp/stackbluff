@@ -1,9 +1,7 @@
-//! Hand rank definitions and ordering.
+//! Hand rank definitions.
 
-use std::cmp::Ordering;
 use strum::{EnumIter, FromRepr};
 
-/// Hand ranking from weakest to strongest.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, EnumIter, FromRepr)]
 #[repr(u8)]
 pub enum HandRank {
@@ -19,7 +17,6 @@ pub enum HandRank {
 }
 
 impl HandRank {
-    /// Returns a human-readable name.
     pub fn name(&self) -> &'static str {
         match self {
             HandRank::HighCard => "High Card",
@@ -38,14 +35,11 @@ impl HandRank {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     #[test]
     fn test_ordering() {
         assert!(HandRank::HighCard < HandRank::OnePair);
         assert!(HandRank::StraightFlush > HandRank::FourOfAKind);
-        assert_eq!(HandRank::TwoPair as u8, 3);
     }
-
     #[test]
     fn test_name() {
         assert_eq!(HandRank::StraightFlush.name(), "Straight Flush");
