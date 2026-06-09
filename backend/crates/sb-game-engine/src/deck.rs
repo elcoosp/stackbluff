@@ -121,3 +121,4 @@ mod tests {
         assert_ne!(deck.cards, shuffled);
     }
 }
+
