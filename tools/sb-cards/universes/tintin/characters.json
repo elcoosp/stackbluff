@@ -1,0 +1,252 @@
+{
+  "haddock": {
+    "character_id": "haddock",
+    "name": "Captain Archibald Haddock",
+    "clan": "marlinspike_hall",
+    "title": "Master of the Karaboudjan",
+    "personality": [
+      "irascible",
+      "loyal",
+      "whisky‑loving",
+      "heroic",
+      "explosive"
+    ],
+    "backstory": "A retired Merchant Marine captain, Haddock inherited a cursed treasure and Marlinspike Hall. Despite his fiery temper and creative insults, he becomes Tintin's most steadfast friend and a truly courageous adventurer.",
+    "visual_description": {
+      "base_appearance": {
+        "face": "rugged, heavy‑jawed, with a thick black beard",
+        "eyes": "small, piercing blue, often narrowed",
+        "hair": "wild, dark, with a receding hairline",
+        "build": "stout, barrel‑chested"
+      },
+      "clothing": {
+        "primary": "blue knit sweater with an anchor emblem",
+        "details": "worn captain's cap, brass buttons",
+        "accessories": "whisky flask, ship's telescope"
+      },
+      "weapon": "cutlass or belaying pin",
+      "distinctive_marks": "scar on his left cheek, pipe (when not smoking)",
+      "mannerisms": "gestures wildly, stomps, tugs at beard"
+    },
+    "evolution_track": {
+      "deck_1": {
+        "state_name": "Red Sea Rage",
+        "visual_changes": "veins throbbing, eyes wild, gripping a belaying pin"
+      },
+      "deck_2": {
+        "state_name": "Silent Sobriety",
+        "visual_changes": "clear eyes, stern jaw, holding his pipe"
+      },
+      "deck_3": {
+        "state_name": "Gallant Hero",
+        "visual_changes": "full captain's uniform, polished boots, standing tall"
+      }
+    },
+    "fixed_traits": {
+      "hairstyle": "wild, dark, receding",
+      "weapon": "cutlass or belaying pin",
+      "clothing": "blue knit sweater, captain's cap",
+      "distinct_mark": "scar on left cheek"
+    }
+  },
+  "castafiore": {
+    "character_id": "castafiore",
+    "name": "Bianca Castafiore",
+    "clan": "syldavian_court",
+    "title": "The Milanese Nightingale",
+    "personality": [
+      "narcissistic",
+      "whimsical",
+      "kind‑hearted",
+      "loud",
+      "iron‑willed"
+    ],
+    "backstory": "A world‑renowned opera diva, Castafiore is adored by audiences but dreaded by Haddock. Her booming voice and scatterbrained charm have saved the day more than once, often by accident.",
+    "visual_description": {
+      "base_appearance": {
+        "face": "round, heavily powdered, with thick eyelashes",
+        "eyes": "large, expressive, often tearful during arias",
+        "hair": "voluminous dark curls, often pinned up",
+        "build": "plump, imposing presence"
+      },
+      "clothing": {
+        "primary": "elaborate opera gown with fur stole",
+        "details": "diamond necklace, feathered tiara",
+        "accessories": "lorgnette, silk fan"
+      },
+      "weapon": "her voice (literally shatters glass)",
+      "distinctive_marks": "mole above her lip",
+      "mannerisms": "dramatic hand gestures, over‑the‑bow curtsey"
+    },
+    "evolution_track": {
+      "deck_1": {
+        "state_name": "Jewel of Milan",
+        "visual_changes": "full regalia, holding a jewel‑encrusted sceptre"
+      },
+      "deck_2": {
+        "state_name": "The Touring Diva",
+        "visual_changes": "travel cloak, luggage label dangling"
+      },
+      "deck_3": {
+        "state_name": "Back‑Stage Fury",
+        "visual_changes": "sweat and smudged makeup, clutching a broken fan"
+      }
+    },
+    "fixed_traits": {
+      "hairstyle": "dark, voluminous, pinned",
+      "weapon": "voice (symbolised by a musical note)",
+      "clothing": "opera gown, diamond necklace",
+      "distinct_mark": "mole above lip"
+    }
+  },
+  "tintin": {
+    "character_id": "tintin",
+    "name": "Tintin",
+    "clan": "marlinspike_hall",
+    "title": "The Boy Reporter",
+    "personality": [
+      "courageous",
+      "clever",
+      "selfless",
+      "inquisitive",
+      "unflappable"
+    ],
+    "backstory": "A young Belgian reporter whose curiosity drives him into one adventure after another. He solves international mysteries, fights villains, and always fights for what is right.",
+    "visual_description": {
+      "base_appearance": {
+        "face": "round, youthful, determined",
+        "eyes": "sharp, observant",
+        "hair": "ginger quiff, swept upward",
+        "build": "slim, athletic"
+      },
+      "clothing": {
+        "primary": "blue shirt, white collar, brown plus‑fours",
+        "details": "beige trench coat, lace‑up shoes",
+        "accessories": "camera, notepad"
+      },
+      "weapon": "fists or a revolver (seldom used)",
+      "distinctive_marks": "no obvious marks – the everyman hero",
+      "mannerisms": "thoughtful frown, quick sprint"
+    },
+    "evolution_track": {
+      "deck_1": {
+        "state_name": "In the Field",
+        "visual_changes": "coat flapping, camera ready"
+      },
+      "deck_2": {
+        "state_name": "Disguised Sleuth",
+        "visual_changes": "disguise hat, moustache"
+      },
+      "deck_3": {
+        "state_name": "Celebrated Hero",
+        "visual_changes": "medal on lapel, confident smile"
+      }
+    },
+    "fixed_traits": {
+      "hairstyle": "ginger quiff",
+      "weapon": "fists or revolver",
+      "clothing": "blue shirt, white collar",
+      "distinct_mark": "none"
+    }
+  },
+  "snowy": {
+    "character_id": "snowy",
+    "name": "Snowy (Milou)",
+    "clan": "marlinspike_hall",
+    "title": "Tintin's Faithful Wire Fox Terrier",
+    "personality": [
+      "loyal",
+      "cynical",
+      "curious",
+      "greedy",
+      "brave"
+    ],
+    "backstory": "Tintin's constant four‑legged companion. Snowy often provides sarcastic internal commentary and has a weakness for treats and adventure. His sharp nose and courage have saved Tintin countless times.",
+    "visual_description": {
+      "base_appearance": {
+        "face": "pointed muzzle, alert ears",
+        "eyes": "dark, intelligent",
+        "hair": "white, wiry fur",
+        "build": "small but sturdy"
+      },
+      "clothing": {
+        "primary": "none",
+        "details": "sometimes a collar",
+        "accessories": ""
+      },
+      "weapon": "teeth",
+      "distinctive_marks": "white coat, black nose",
+      "mannerisms": "tilts head, sniffs, scratches"
+    },
+    "evolution_track": {
+      "deck_1": {
+        "state_name": "On the Trail",
+        "visual_changes": "ears up, paw lifted"
+      },
+      "deck_2": {
+        "state_name": "Bone Seeker",
+        "visual_changes": "sniffing ground, wagging tail"
+      },
+      "deck_3": {
+        "state_name": "Sleeping Hero",
+        "visual_changes": "curled up, snoring"
+      }
+    },
+    "fixed_traits": {
+      "hairstyle": "short, wiry white fur",
+      "weapon": "teeth",
+      "clothing": "none",
+      "distinct_mark": "black nose"
+    }
+  },
+  "calculus": {
+    "character_id": "calculus",
+    "name": "Professor Cuthbert Calculus",
+    "clan": "marlinspike_hall",
+    "title": "The Eccentric Physicist",
+    "personality": [
+      "absent‑minded",
+      "brilliant",
+      "deaf",
+      "sentimental",
+      "short‑tempered"
+    ],
+    "backstory": "A half‑deaf physicist who invents devices like the shark submarine and moon rocket. Despite his genius, he misinterprets conversations, leading to hilarious misunderstandings, but his heart is pure.",
+    "visual_description": {
+      "base_appearance": {
+        "face": "wrinkled, with a large bald dome and fringe",
+        "eyes": "wide, unfocused, magnified by glasses",
+        "hair": "scraggly white sideburns and a thin fringe",
+        "build": "frail, slightly hunched"
+      },
+      "clothing": {
+        "primary": "dark green velvet jacket, cravat",
+        "details": "worn lapels, a pin for his Legion of Honour",
+        "accessories": "ear trumpet"
+      },
+      "weapon": "pendulum or ear trumpet",
+      "distinctive_marks": "ear trumpet, wild fringe",
+      "mannerisms": "cups ear, bobs head, pulls at collar"
+    },
+    "evolution_track": {
+      "deck_1": {
+        "state_name": "Calculating Inventor",
+        "visual_changes": "holding plans, pocket full of pencils"
+      },
+      "deck_2": {
+        "state_name": "Embarrassed Genius",
+        "visual_changes": "frizzy hair, torn jacket, red face"
+      },
+      "deck_3": {
+        "state_name": "Vindicated Scientist",
+        "visual_changes": "neatly dressed, medal displayed, smiling"
+      }
+    },
+    "fixed_traits": {
+      "hairstyle": "bald with white fringe",
+      "weapon": "ear trumpet",
+      "clothing": "green velvet jacket",
+      "distinct_mark": "ear trumpet"
+    }
+  }
+}

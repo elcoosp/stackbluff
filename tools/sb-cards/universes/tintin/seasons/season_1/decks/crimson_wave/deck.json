@@ -1,0 +1,96 @@
+{
+  "deck_id": "crimson_wave",
+  "deck_name": "Crimson Wave",
+  "season_id": "season_1",
+  "release_order": 1,
+  "theme": "Nautical peril meets theatrical drama under a blood‑red sky",
+  "global_event": "The Crimson Tide – a mysterious wave turns the sea red and unsettles both sailors and singers",
+  "character_state_map": {
+    "haddock": "deck_1",
+    "castafiore": "deck_1",
+    "tintin": "deck_1",
+    "snowy": "deck_1",
+    "calculus": "deck_1"
+  },
+  "clan_per_suit": {
+    "spades": "marlinspike_hall",
+    "hearts": "nightingale",
+    "diamonds": "syldavian_court",
+    "clubs": "marlinspike_hall"
+  },
+  "face_card_assignment": {
+    "king": {
+      "spades": "haddock",
+      "hearts": "haddock",
+      "diamonds": "haddock",
+      "clubs": "haddock"
+    },
+    "queen": {
+      "spades": "castafiore",
+      "hearts": "castafiore",
+      "diamonds": "castafiore",
+      "clubs": "castafiore"
+    },
+    "jack": {
+      "spades": "snowy",
+      "hearts": "snowy",
+      "diamonds": "snowy",
+      "clubs": "snowy"
+    },
+    "ace": {
+      "spades": "tintin",
+      "hearts": "tintin",
+      "diamonds": "tintin",
+      "clubs": "tintin"
+    }
+  },
+  "narrative_arc_suit": "spades",
+  "narrative_steps": [
+    "A single drop of crimson water drips from a sailor’s beard.",
+    "A torn opera programme floats on the red waves.",
+    "A whisky bottle, half‑empty, washed ashore.",
+    "An ear trumpet lies abandoned on the deck.",
+    "A paw print in the red sand.",
+    "The diva's lost diamond glints in the moonlight.",
+    "A cutlass stuck in the mast, reflecting the red sky.",
+    "The ship’s wheel spins wildly, unmanned.",
+    "A white quiff emerges from the crimson tide – Tintin returns."
+  ],
+  "recurring_mascot": {
+    "name": "Crimson Gull",
+    "description": "A red‑eyed gull with a small captain's cap",
+    "hidden_on": "every face card (once each) and the typography grid (once)"
+  },
+  "reflection_secret": {
+    "joker_left": "Professor Calculus holding his ear trumpet, looking puzzled",
+    "joker_right": "The same figure, now wearing a crown of sea shells, laughing"
+  },
+  "rarity_assignment": {
+    "common_cards": [
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10"
+    ],
+    "rare_cards": [
+      "J",
+      "Q",
+      "K"
+    ],
+    "epic_cards": [
+      "A"
+    ],
+    "legendary_cards": [
+      "joker-left",
+      "joker-right"
+    ]
+  },
+  "card_specific_rarity_overrides": {
+    "ace-spades": "epic"
+  }
+}

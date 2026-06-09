@@ -1,0 +1,59 @@
+{
+  "marlinspike_hall": {
+    "name": "Marlinspike Hall",
+    "tagline": "Adventure, seafaring, and whisky‑fuelled courage",
+    "first_appearance_season": 1,
+    "visual_dna": {
+      "silhouette": "nautical, robust, with anchor motifs",
+      "border_accent": "rope‑like filigree",
+      "typography_hint": "serif, slightly weathered",
+      "pip_texture": "woodgrain or canvas",
+      "primary_dark": "#1F2A36",
+      "primary_accent": "#C17B3E",
+      "secondary": "#4B6E5C",
+      "sigil": "crossed anchors below a ship's wheel"
+    },
+    "character_ids": [
+      "haddock",
+      "tintin",
+      "snowy",
+      "calculus"
+    ]
+  },
+  "syldavian_court": {
+    "name": "Syldavian Court",
+    "tagline": "Royalty, nobility, and old‑world intrigue",
+    "first_appearance_season": 1,
+    "visual_dna": {
+      "silhouette": "regal, upright, with heraldic details",
+      "border_accent": "crown‑tipped corners",
+      "typography_hint": "classical serif with swashes",
+      "pip_texture": "polished marble",
+      "primary_dark": "#3E2A2F",
+      "primary_accent": "#B8860B",
+      "secondary": "#9E6B5B",
+      "sigil": "a double‑headed eagle over a sceptre"
+    },
+    "character_ids": [
+      "castafiore"
+    ]
+  },
+  "nightingale": {
+    "name": "The Milanese Nightingale",
+    "tagline": "Operatic glamour, drama, and a will of iron",
+    "first_appearance_season": 1,
+    "visual_dna": {
+      "silhouette": "theatrical, with sweeping gestures",
+      "border_accent": "musical staff motifs",
+      "typography_hint": "flowing script",
+      "pip_texture": "velvet or satin",
+      "primary_dark": "#4F2D3F",
+      "primary_accent": "#D4AF37",
+      "secondary": "#9B6A6A",
+      "sigil": "a nightingale perched on a musical note"
+    },
+    "character_ids": [
+      "castafiore"
+    ]
+  }
+}

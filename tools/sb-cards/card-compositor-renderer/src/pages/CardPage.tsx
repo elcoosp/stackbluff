@@ -10,6 +10,8 @@ export const CardPage: React.FC = () => {
   const isBack = params.get('back') === 'true';
   const deckName = params.get('deck') || '';
   const artPath = params.get('art') || '';
+  const fallbackArtPath = params.get('fallback') || undefined;
+  const hasCustomArt = params.get('custom') === 'true';
 
   return (
     <div style={{ width: 1000, height: 1400 }}>
@@ -17,9 +19,11 @@ export const CardPage: React.FC = () => {
         rank={rank}
         suit={suit}
         artPath={artPath}
+        fallbackArtPath={fallbackArtPath}
         isBack={isBack}
         layoutType={layoutType}
         deckName={deckName}
+        hasCustomArt={hasCustomArt}
       />
     </div>
   );

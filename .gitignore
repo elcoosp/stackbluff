@@ -8,3 +8,7 @@ dist/
 *~
 target/
 Cargo.lock
+
+*.jpg
+*.jpeg
+*.png

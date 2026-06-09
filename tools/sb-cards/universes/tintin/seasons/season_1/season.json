@@ -1,0 +1,13 @@
+{
+  "season_id": "season_1",
+  "name": "The Crimson Sea",
+  "global_event": "A mysterious crimson tide is spreading across the oceans, affecting ships, wildlife, and even opera performances.",
+  "decks": [
+    {
+      "deck_id": "crimson_wave",
+      "release_order": 1,
+      "deck_name": "Crimson Wave",
+      "theme": "Nautical peril meets theatrical drama under a blood‑red sky"
+    }
+  ]
+}

@@ -24,7 +24,7 @@ function App() {
 
   useEffect(() => {
     if (!selectedDeck) return;
-    const basePath = `/decks/${selectedDeck}/art/`;
+    const basePath = `/decks/${selectedDeck}/art/all_background_removal_results/`;
     const suffix = '_inspyrenet';
     const newCards: any[] = [];
 
@@ -37,17 +37,18 @@ function App() {
       layoutType: 'standard',
     });
 
-    // Aces
+    // Aces (custom art always)
     for (const suit of SUITS) {
       newCards.push({
         rank: 'A',
         suit,
         artPath: `${basePath}ace-${suit}${suffix}.png`,
         layoutType: 'standard',
+        hasCustomArt: true,
       });
     }
 
-    // Face cards
+    // Face cards (reversible)
     for (const suit of SUITS) {
       for (const rank of FACE_RANKS) {
         const rankMap: Record<string, string> = { J: 'jack', Q: 'queen', K: 'king' };
@@ -60,14 +61,18 @@ function App() {
       }
     }
 
-    // Number cards
+    // Number cards (2-10) – assume custom art exists; provide fallback
+    const templatePath = `${basePath}number-template${suffix}.png`;
     for (const suit of SUITS) {
       for (const rank of RANKS.slice(0, 9)) {
+        const specificPath = `${basePath}${rank}-${suit}${suffix}.png`;
         newCards.push({
           rank,
           suit,
-          artPath: `${basePath}${rank}-${suit}${suffix}.png`,
+          artPath: specificPath,
+          fallbackArtPath: templatePath,
           layoutType: 'standard',
+          hasCustomArt: true, // try custom first, fallback on error
         });
       }
     }
@@ -97,10 +102,11 @@ function App() {
                   <button
                     key={deck}
                     onClick={() => setSelectedDeck(deck)}
-                    className={`px-6 py-2 rounded-full transition ${selectedDeck === deck
+                    className={`px-6 py-2 rounded-full transition ${
+                      selectedDeck === deck
                         ? 'bg-amber-500 text-gray-900'
                         : 'bg-gray-800 hover:bg-gray-700'
-                      }`}
+                    }`}
                   >
                     {deck.replace(/^\d+-/, '').replace(/-/g, ' ')}
                   </button>

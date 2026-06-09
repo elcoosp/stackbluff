@@ -3,229 +3,163 @@ set -uo pipefail
 
 cd tools/sb-cards/card-compositor-renderer || exit 1
 
-echo "=== Make corner light gradients heavier for better text contrast ==="
+echo "=== Force all assets to load from decks/*/art/all_background_removal_results ==="
 
-# Patch StandardLayout – increase gradient opacity and radius
-cat > src/layouts/StandardLayout.tsx << 'STD_LAYOUT_HEAVY'
-import React from 'react';
-import { PIP_GRID_COLS, PIP_GRID_ROWS, pipLayouts } from '../utils/pipGrid';
+# 1. Copy all required assets (border, corner‑plaque, etc.) into the subfolder for each deck
+for deck in ../2026-Q1/*/; do
+    deck_name=$(basename "$deck")
+    target_sub="public/decks/$deck_name/art/all_background_removal_results"
+    mkdir -p "$target_sub"
+    src_art="$deck/1-raw/art"
+    src_sub="$src_art/all_background_removal_results"
+
+    # List of asset base names (without suffix)
+    assets=("back" "border" "corner-plaque" "center-band" "number-template"
+            "ace-spades" "ace-hearts" "ace-diamonds" "ace-clubs"
+            "jack-spades" "jack-hearts" "jack-diamonds" "jack-clubs"
+            "queen-spades" "queen-hearts" "queen-diamonds" "queen-clubs"
+            "king-spades" "king-hearts" "king-diamonds" "king-clubs"
+            "joker-1" "joker-2")
+
+    for base in "${assets[@]}"; do
+        filename="${base}_inspyrenet.png"
+        # Prefer from src_sub first, then from src_art
+        if [ -f "$src_sub/$filename" ]; then
+            cp "$src_sub/$filename" "$target_sub/"
+            echo "Copied $filename (from sub) for $deck_name"
+        elif [ -f "$src_art/$filename" ]; then
+            cp "$src_art/$filename" "$target_sub/"
+            echo "Copied $filename (from root) for $deck_name"
+        else
+            echo "⚠️ Missing $filename for $deck_name"
+        fi
+    done
+done
+
+# 2. Update assetLoader.ts to always use all_background_removal_results (no fallback, no detection)
+cat > src/utils/assetLoader.ts << 'ASSET_LOADER_FIXED'
+export function resolveAssetPath(deckName: string, filename: string): string {
+  // Always serve from the background-removal subfolder
+  return `/decks/${deckName}/art/all_background_removal_results/${filename}`;
+}
+ASSET_LOADER_FIXED
+
+# 3. Update Card.tsx: rank images still use the same base path but without _inspyrenet suffix
+# The rank images should have been generated already and placed in the same subfolder without suffix.
+# We'll also ensure that rank image URL is built correctly.
+cat > src/components/Card.tsx << 'CARD_FINAL_ALL'
+import React, { useState, useEffect } from 'react';
+import { StandardLayout } from '../layouts/StandardLayout';
+import { ReversibleLayout } from '../layouts/ReversibleLayout';
+import { resolveAssetPath } from '../utils/assetLoader';
 
 interface Props {
   rank: string;
   suit: string;
-  artUrl: string;
-  cornerPlaqueUrl?: string;
-  borderUrl?: string;
-  showPipPattern: boolean;
-  artOpacity: number;
-  noPadding: boolean;
-  isBack: boolean;
-  pipBaseUrl: string;
-  onImageError?: (url: string) => void;
+  artPath: string;
+  fallbackArtPath?: string;
+  isBack?: boolean;
+  layoutType: 'standard' | 'reversible';
+  deckName: string;
+  hasCustomArt?: boolean;
 }
 
-export const StandardLayout: React.FC<Props> = ({
-  rank,
-  suit,
-  artUrl,
-  cornerPlaqueUrl,
-  borderUrl,
-  showPipPattern,
-  artOpacity,
-  noPadding,
-  isBack,
-  pipBaseUrl,
-  onImageError,
-}) => {
-  const suitColor = suit === 'hearts' || suit === 'diamonds' ? '#B82B4B' : '#1C1B1E';
-  const pipPositions = showPipPattern && pipLayouts[rank] ? pipLayouts[rank] : [];
-  const handleError = (url: string) => () => onImageError?.(url);
-
-  const artStyle = noPadding || isBack
-    ? { top: 0, left: 0, width: 1000, height: 1400 }
-    : { top: 200, left: 50, width: 900, height: 1000 };
-
-  return (
-    <div className="relative w-[1000px] h-[1400px] bg-white shadow-2xl rounded-[32px] overflow-hidden">
-      {/* Heavy corner light gradients – larger radius, higher opacity */}
-      <div className="absolute top-0 left-0 w-[500px] h-[500px] pointer-events-none z-15"
-        style={{ background: 'radial-gradient(circle at top left, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.6) 40%, rgba(255,255,255,0) 80%)' }} />
-      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] pointer-events-none z-15"
-        style={{ background: 'radial-gradient(circle at bottom right, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.6) 40%, rgba(255,255,255,0) 80%)' }} />
-
-      {borderUrl && !isBack && (
-        <img src={borderUrl} onError={handleError(borderUrl)} className="absolute inset-0 w-full h-full pointer-events-none z-10" alt="border" />
-      )}
-
-      <div className="absolute flex items-center justify-center pointer-events-none z-20"
-        style={{ top: artStyle.top, left: artStyle.left, width: artStyle.width, height: artStyle.height, opacity: artOpacity }}>
-        <img src={artUrl} onError={handleError(artUrl)} className="max-w-full max-h-full object-contain" alt="art" />
-      </div>
-
-      {pipPositions.map(([col, row], idx) => {
-        const left = PIP_GRID_COLS[col] - 80;
-        const top = PIP_GRID_ROWS[row] - 80;
-        const shouldRotate = row === 3 || row === 4;
-        const pipUrl = `${pipBaseUrl}${suit}-160.png`;
-        return (
-          <img key={idx} src={pipUrl} onError={handleError(pipUrl)}
-            className="absolute w-[160px] h-[160px] pointer-events-none z-30"
-            style={{ left, top, transform: shouldRotate ? 'rotate(180deg)' : 'none' }}
-            alt="pip" />
-        );
-      })}
-
-      {!isBack && rank && (
-        <>
-          <div className="absolute top-[35px] left-[35px] z-40">
-            {cornerPlaqueUrl ? (
-              <div className="flex flex-col items-center">
-                <div className="relative w-[160px] h-[160px]">
-                  <img src={cornerPlaqueUrl} onError={handleError(cornerPlaqueUrl)} className="absolute inset-0 w-full h-full" alt="plaque" />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-[120px] font-bold leading-none" style={{ color: suitColor, textShadow: '2px 2px white' }}>
-                      {rank}
-                    </span>
-                  </div>
-                </div>
-                {suit && <img src={`${pipBaseUrl}${suit}-90.png`} onError={handleError(`${pipBaseUrl}${suit}-90.png`)} className="w-[90px] h-[90px] mt-2" alt="suit" />}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center">
-                <span className="text-[120px] font-bold leading-none" style={{ color: suitColor }}>{rank}</span>
-                {suit && <img src={`${pipBaseUrl}${suit}-100.png`} onError={handleError(`${pipBaseUrl}${suit}-100.png`)} className="w-[100px] h-[100px]" alt="suit" />}
-              </div>
-            )}
-          </div>
-
-          <div className="absolute bottom-[35px] right-[35px] rotate-180 z-40">
-            {cornerPlaqueUrl ? (
-              <div className="flex flex-col items-center">
-                <div className="relative w-[160px] h-[160px]">
-                  <img src={cornerPlaqueUrl} onError={handleError(cornerPlaqueUrl)} className="absolute inset-0 w-full h-full" alt="plaque" />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-[120px] font-bold leading-none" style={{ color: suitColor, textShadow: '2px 2px white' }}>
-                      {rank}
-                    </span>
-                  </div>
-                </div>
-                {suit && <img src={`${pipBaseUrl}${suit}-90.png`} onError={handleError(`${pipBaseUrl}${suit}-90.png`)} className="w-[90px] h-[90px] mt-2" alt="suit" />}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center">
-                <span className="text-[120px] font-bold leading-none" style={{ color: suitColor }}>{rank}</span>
-                {suit && <img src={`${pipBaseUrl}${suit}-100.png`} onError={handleError(`${pipBaseUrl}${suit}-100.png`)} className="w-[100px] h-[100px]" alt="suit" />}
-              </div>
-            )}
-          </div>
-        </>
-      )}
-    </div>
-  );
-};
-STD_LAYOUT_HEAVY
-
-# Same for ReversibleLayout – heavier gradients
-cat > src/layouts/ReversibleLayout.tsx << 'REV_LAYOUT_HEAVY'
-import React from 'react';
-
-interface Props {
-  rank: string;
-  suit: string;
-  artUrl: string;
-  cornerPlaqueUrl?: string;
-  borderUrl?: string;
-  centerBandUrl?: string;
-  pipBaseUrl: string;
-  onImageError?: (url: string) => void;
+function rankToBaseName(rank: string): string {
+  const lower = rank.toLowerCase();
+  if (lower === 'j') return 'char-j';
+  if (lower === 'q') return 'char-q';
+  if (lower === 'k') return 'char-k';
+  if (lower === 'a') return 'char-a';
+  if (lower === '10') return 'num-10';
+  return `num-${lower}`;
 }
 
-export const ReversibleLayout: React.FC<Props> = ({
+export const Card: React.FC<Props> = ({
   rank,
   suit,
-  artUrl,
-  cornerPlaqueUrl,
-  borderUrl,
-  centerBandUrl,
-  pipBaseUrl,
-  onImageError,
+  artPath,
+  fallbackArtPath,
+  isBack = false,
+  layoutType,
+  deckName,
+  hasCustomArt = false,
 }) => {
-  const suitColor = suit === 'hearts' || suit === 'diamonds' ? '#B82B4B' : '#1C1B1E';
-  const handleError = (url: string) => () => onImageError?.(url);
+  const [currentArtPath, setCurrentArtPath] = useState(artPath);
+  const [usingTemplate, setUsingTemplate] = useState(!hasCustomArt);
+  const [imageError, setImageError] = useState(false);
+  const [rankImageOk, setRankImageOk] = useState<Record<string, boolean>>({});
 
-  return (
-    <div className="relative w-[1000px] h-[1400px] bg-white shadow-2xl rounded-[32px] overflow-hidden">
-      {/* Heavy corner light gradients */}
-      <div className="absolute top-0 left-0 w-[500px] h-[500px] pointer-events-none z-15"
-        style={{ background: 'radial-gradient(circle at top left, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.6) 40%, rgba(255,255,255,0) 80%)' }} />
-      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] pointer-events-none z-15"
-        style={{ background: 'radial-gradient(circle at bottom right, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.6) 40%, rgba(255,255,255,0) 80%)' }} />
+  const cornerPlaqueUrl = resolveAssetPath(deckName, `corner-plaque_inspyrenet.png`);
+  const borderUrl = resolveAssetPath(deckName, `border_inspyrenet.png`);
+  const centerBandUrl = resolveAssetPath(deckName, `center-band_inspyrenet.png`);
+  const pipBaseUrl = `/decks/${deckName}/pips/`;
+  const artBasePath = `/decks/${deckName}/art/all_background_removal_results/`;
 
-      {borderUrl && (
-        <img src={borderUrl} onError={handleError(borderUrl)} className="absolute inset-0 w-full h-full pointer-events-none z-10" alt="border" />
-      )}
+  const isRed = suit === 'hearts' || suit === 'diamonds';
+  const variant = isRed ? 'accent' : 'dark';
+  const baseName = rankToBaseName(rank);
+  const rankImageUrl = `${artBasePath}${baseName}_${variant}.png`;
 
-      <div className="absolute flex items-center justify-center pointer-events-none z-20"
-           style={{ bottom: 'calc(50% + 10px)', left: '50%', transform: 'translateX(-50%)', width: '900px', height: 'auto', maxHeight: '620px', marginTop: '20px' }}>
-        <img src={artUrl} onError={handleError(artUrl)} className="max-w-full max-h-full object-contain" alt="art top" />
-      </div>
+  const handleImageError = () => {
+    if (!imageError && fallbackArtPath && currentArtPath !== fallbackArtPath) {
+      console.log(`Falling back to template for ${rank} of ${suit}`);
+      setCurrentArtPath(fallbackArtPath);
+      setUsingTemplate(true);
+      setImageError(true);
+    }
+  };
 
-      <div className="absolute flex items-center justify-center pointer-events-none z-20"
-           style={{ top: 'calc(50% + 10px)', left: '50%', transform: 'translateX(-50%)', width: '900px', height: 'auto', maxHeight: '620px', marginBottom: '20px' }}>
-        <img src={artUrl} onError={handleError(artUrl)} className="max-w-full max-h-full object-contain rotate-180" alt="art bottom" />
-      </div>
+  const handleRankImageError = () => {
+    console.warn(`Rank image missing: ${rankImageUrl}, using text fallback`);
+    setRankImageOk(prev => ({ ...prev, [variant]: false }));
+  };
 
-      {centerBandUrl && (
-        <img src={centerBandUrl} onError={handleError(centerBandUrl)} className="absolute top-1/2 left-0 w-full -translate-y-1/2 pointer-events-none z-30" alt="center band" />
-      )}
+  const handleRankImageLoad = () => {
+    setRankImageOk(prev => ({ ...prev, [variant]: true }));
+  };
 
-      <div className="absolute top-[35px] left-[35px] z-40">
-        {cornerPlaqueUrl ? (
-          <div className="flex flex-col items-center">
-            <div className="relative w-[160px] h-[160px]">
-              <img src={cornerPlaqueUrl} onError={handleError(cornerPlaqueUrl)} className="absolute inset-0 w-full h-full" alt="plaque" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-[120px] font-bold leading-none" style={{ color: suitColor, textShadow: '2px 2px white' }}>
-                  {rank}
-                </span>
-              </div>
-            </div>
-            <img src={`${pipBaseUrl}${suit}-90.png`} onError={handleError(`${pipBaseUrl}${suit}-90.png`)} className="w-[90px] h-[90px] mt-2" alt="suit" />
-          </div>
-        ) : (
-          <div className="flex flex-col items-center">
-            <span className="text-[120px] font-bold leading-none" style={{ color: suitColor }}>{rank}</span>
-            <img src={`${pipBaseUrl}${suit}-100.png`} onError={handleError(`${pipBaseUrl}${suit}-100.png`)} className="w-[100px] h-[100px]" alt="suit" />
-          </div>
-        )}
-      </div>
+  let showPipPattern = false;
+  let artOpacity = 1.0;
+  let noPadding = false;
 
-      <div className="absolute bottom-[35px] right-[35px] rotate-180 z-40">
-        {cornerPlaqueUrl ? (
-          <div className="flex flex-col items-center">
-            <div className="relative w-[160px] h-[160px]">
-              <img src={cornerPlaqueUrl} onError={handleError(cornerPlaqueUrl)} className="absolute inset-0 w-full h-full" alt="plaque" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-[120px] font-bold leading-none" style={{ color: suitColor, textShadow: '2px 2px white' }}>
-                  {rank}
-                </span>
-              </div>
-            </div>
-            <img src={`${pipBaseUrl}${suit}-90.png`} onError={handleError(`${pipBaseUrl}${suit}-90.png`)} className="w-[90px] h-[90px] mt-2" alt="suit" />
-          </div>
-        ) : (
-          <div className="flex flex-col items-center">
-            <span className="text-[120px] font-bold leading-none" style={{ color: suitColor }}>{rank}</span>
-            <img src={`${pipBaseUrl}${suit}-100.png`} onError={handleError(`${pipBaseUrl}${suit}-100.png`)} className="w-[100px] h-[100px]" alt="suit" />
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  if (layoutType === 'standard' && !isBack && rank !== 'JOKER') {
+    if (usingTemplate) {
+      showPipPattern = true;
+      artOpacity = 0.5;
+      noPadding = true;
+    } else {
+      showPipPattern = false;
+      artOpacity = 1.0;
+      noPadding = false;
+    }
+  }
+
+  const layoutProps = {
+    rank,
+    suit,
+    artUrl: currentArtPath,
+    cornerPlaqueUrl,
+    borderUrl,
+    centerBandUrl,
+    pipBaseUrl,
+    onImageError: handleImageError,
+    rankImageUrl,
+    useRankImage: rankImageOk[variant] ?? true,
+    onRankImageError: handleRankImageError,
+    onRankImageLoad: handleRankImageLoad,
+  };
+
+  if (layoutType === 'reversible') {
+    return <ReversibleLayout {...layoutProps} />;
+  }
+  return <StandardLayout {...layoutProps} showPipPattern={showPipPattern} artOpacity={artOpacity} noPadding={noPadding} isBack={isBack} />;
 };
-REV_LAYOUT_HEAVY
+CARD_FINAL_ALL
 
-echo "✅ Corner light gradients: radius 500px, opacity up to 0.95 – rank text now highly readable."
+# 4. StandardLayout and ReversibleLayout already use rankImageUrl and useRankImage props – no changes needed.
+
+# 5. Restart dev server
+echo "✅ All assets now served from all_background_removal_results, including rank images (without suffix)."
 echo "Restart dev server: pnpm dev"
 pkill -f "vite" || true
 pnpm dev &

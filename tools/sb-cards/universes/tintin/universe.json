@@ -1,0 +1,13 @@
+{
+  "universe_id": "herge_tintin",
+  "name": "Hergé’s Tintin Universe",
+  "description": "A collection of decks inspired by the timeless characters, settings, and atmosphere of Hergé’s Adventures of Tintin.",
+  "clans": [
+    "marlinspike_hall",
+    "syldavian_court",
+    "nightingale"
+  ],
+  "clan_additions_allowed": true,
+  "created_at": "2026-06-08",
+  "version": "1.0"
+}
