@@ -1,1 +1,1 @@
-// No orphan impls; errors are mapped inline in auth_service.rs
+// Error mappings are handled inline; this file exists to satisfy module declaration.
