@@ -10,13 +10,6 @@ use sb_shared_types::request_context::RequestContext;
 
 use sb_auth::{AuthConfig, AuthServiceImpl};
 
-use std::sync::Once;
-static INIT: Once = Once::new();
-fn init() {
-    INIT.call_once(|| {
-        sb_auth::jwt::init_crypto();
-    });
-}
 struct MockUserRepo {
     users: std::sync::Mutex<Vec<UserInfo>>,
 }
@@ -54,7 +47,6 @@ fn test_service() -> (Arc<AuthServiceImpl>, Arc<MockUserRepo>) {
 
 #[tokio::test]
 async fn register_login_flow() {
-    init();
     let (svc, _) = test_service();
     let ctx = RequestContext::new(Uuid::new_v4(), None);
     let r = svc.register(&ctx, "a@b.com", "Pass1!").await.unwrap();
@@ -67,7 +59,6 @@ async fn register_login_flow() {
 
 #[tokio::test]
 async fn telegram_invalid() {
-    init();
     let (svc, _) = test_service();
     let ctx = RequestContext::new(Uuid::new_v4(), None);
     let err = svc.telegram_auth(&ctx, "invalid").await.unwrap_err();
@@ -76,7 +67,6 @@ async fn telegram_invalid() {
 
 #[tokio::test]
 async fn jwt_verify() {
-    init();
     let (svc, _) = test_service();
     let ctx = RequestContext::new(Uuid::new_v4(), None);
     let r = svc.register(&ctx, "j@j.com", "secret").await.unwrap();
@@ -86,7 +76,6 @@ async fn jwt_verify() {
 
 #[tokio::test]
 async fn expired_token() {
-    init();
     use chrono::{Duration, Utc};
     use jsonwebtoken::{EncodingKey, Header};
     let (svc, _) = test_service();

@@ -24,7 +24,6 @@ pub struct AuthServiceImpl {
 
 impl AuthServiceImpl {
     pub fn new(user_repo: Arc<dyn UserRepo>, config: AuthConfig) -> Self {
-        crate::jwt::init_crypto();
         Self { user_repo, config }
     }
 
