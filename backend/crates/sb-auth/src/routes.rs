@@ -5,47 +5,29 @@ use axum::{
     routing::post,
     Json, Router,
 };
-use axum::extract::FromRequestParts;
-use axum::http::request::Parts;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use sb_contracts::service_api::AuthService;
 use sb_shared_types::errors::AppError;
 use sb_shared_types::ids::UserId;
 use sb_shared_types::request_context::RequestContext;
 use crate::SharedAuthService;
 
-/// Custom Axum extractor that builds a RequestContext.
-/// In production this should be enriched by middleware that sets request_id and optional user_id.
-pub struct ExtractedCtx(pub RequestContext);
-
-#[async_trait::async_trait]
-impl<S: Send + Sync> FromRequestParts<S> for ExtractedCtx {
-    type Rejection = std::convert::Infallible;
-
-    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        // Attempt to retrieve request ID and user ID from extensions (set by middleware).
-        let request_id = parts
-            .extensions
-            .get::<Uuid>()
-            .copied()
-            .unwrap_or_else(Uuid::new_v4);
-        let user_id = parts.extensions.get::<Option<UserId>>().copied().flatten();
-        Ok(ExtractedCtx(RequestContext::new(request_id, user_id)))
-    }
+/// Temporary helper to build a RequestContext.
+/// TODO: replace with a middleware that extracts request_id and optional user_id from headers.
+fn dummy_ctx() -> RequestContext {
+    // In production, request_id and user_id should come from request extensions/headers.
+    RequestContext::new(Uuid::new_v4(), None)
 }
 
 fn app_error_to_status(e: &AppError) -> StatusCode {
-    // Match on the enum variants defined in sb-shared-types
     match e {
         AppError::InvalidInput(_) => StatusCode::BAD_REQUEST,
         AppError::NotFound(_) => StatusCode::NOT_FOUND,
         AppError::Unauthorized(_) => StatusCode::UNAUTHORIZED,
         AppError::Conflict(_) => StatusCode::CONFLICT,
         AppError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
-        // Fallback (should never happen, but exhaustive)
-        _ => StatusCode::INTERNAL_SERVER_ERROR,
+        // Exhaustive – no need for catch‑all
     }
 }
 
@@ -60,9 +42,9 @@ struct AuthResponse { jwt: String, user_id: String }
 
 async fn telegram_auth(
     State(svc): State<SharedAuthService>,
-    ExtractedCtx(ctx): ExtractedCtx,
     Json(req): Json<TelegramAuthRequest>,
 ) -> impl IntoResponse {
+    let ctx = dummy_ctx();
     match svc.telegram_auth(&ctx, &req.init_data).await {
         Ok(r) => (StatusCode::OK, Json(AuthResponse { jwt: r.jwt, user_id: r.user_id.to_string() })).into_response(),
         Err(e) => (app_error_to_status(&e), Json(serde_json::json!({"error": e.to_string()}))).into_response(),
@@ -71,9 +53,9 @@ async fn telegram_auth(
 
 async fn register(
     State(svc): State<SharedAuthService>,
-    ExtractedCtx(ctx): ExtractedCtx,
     Json(req): Json<EmailPasswordRequest>,
 ) -> impl IntoResponse {
+    let ctx = dummy_ctx();
     match svc.register(&ctx, &req.email, &req.password).await {
         Ok(r) => (StatusCode::OK, Json(AuthResponse { jwt: r.jwt, user_id: r.user_id.to_string() })).into_response(),
         Err(e) => (app_error_to_status(&e), Json(serde_json::json!({"error": e.to_string()}))).into_response(),
@@ -82,9 +64,9 @@ async fn register(
 
 async fn login(
     State(svc): State<SharedAuthService>,
-    ExtractedCtx(ctx): ExtractedCtx,
     Json(req): Json<EmailPasswordRequest>,
 ) -> impl IntoResponse {
+    let ctx = dummy_ctx();
     match svc.login(&ctx, &req.email, &req.password).await {
         Ok(r) => (StatusCode::OK, Json(AuthResponse { jwt: r.jwt, user_id: r.user_id.to_string() })).into_response(),
         Err(e) => (app_error_to_status(&e), Json(serde_json::json!({"error": e.to_string()}))).into_response(),

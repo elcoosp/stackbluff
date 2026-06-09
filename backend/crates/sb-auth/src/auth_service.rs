@@ -28,9 +28,8 @@ impl AuthServiceImpl {
         Self { user_repo, config }
     }
 
-    /// Validates Telegram initData HMAC using the bot token.
     fn validate_telegram_init_data(&self, init_data: &str) -> Result<serde_json::Value, AppError> {
-        // Properly decode the URL-encoded init data (Telegram sends it as application/x-www-form-urlencoded)
+        // Properly decode URL-encoded initData
         let parsed: Vec<(String, String)> =
             url::form_urlencoded::parse(init_data.as_bytes())
                 .into_owned()
@@ -125,7 +124,6 @@ impl AuthService for AuthServiceImpl {
         email: &str,
         password: &str,
     ) -> Result<AuthResult, AppError> {
-        // Basic email and password validation
         if email.is_empty() || !email.contains('@') {
             return Err(AppError::InvalidInput("Invalid email address".into()));
         }
@@ -138,10 +136,7 @@ impl AuthService for AuthServiceImpl {
             .map_err(|e| AppError::Internal(format!("Password hash error: {}", e)))?
             .to_string();
 
-        let user = self
-            .user_repo
-            .create_email_user(ctx, email, &password_hash)
-            .await?;
+        let user = self.user_repo.create_email_user(ctx, email, &password_hash).await?;
 
         let token = create_jwt(
             user.id,
@@ -151,7 +146,7 @@ impl AuthService for AuthServiceImpl {
         )
         .map_err(|e| AppError::Internal(format!("JWT creation error: {}", e)))?;
 
-        info!(user_id = %user.id, "User registered successfully");
+        info!(user_id = %user.id, "User registered");
         Ok(AuthResult {
             jwt: token,
             user_id: user.id,
