@@ -1,6 +1,7 @@
 //! Standard 52-card deck.
 
 use rand::seq::SliceRandom;
+use rand::rngs::OsRng;
 use sb_shared_types::{Card, Suit, Rank};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -42,8 +43,7 @@ impl Deck {
     }
 
     pub fn shuffle(&mut self) {
-        use rand::Rng;
-        let mut rng = rand::rngs::OsRng;
+        let mut rng = OsRng;
         self.cards.shuffle(&mut rng);
     }
 
