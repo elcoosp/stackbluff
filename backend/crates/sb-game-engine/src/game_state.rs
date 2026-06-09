@@ -47,7 +47,10 @@ pub enum ActionError {
     #[error("Player already all-in")]
     AlreadyAllIn,
     #[error("Invalid raise amount: {attempted:?} (minimum {min:?})")]
-    InvalidRaise { attempted: ChipAmount, min: ChipAmount },
+    InvalidRaise {
+        attempted: ChipAmount,
+        min: ChipAmount,
+    },
     #[error("Game already finished")]
     HandComplete,
     #[error("Cannot act in showdown")]
@@ -129,8 +132,16 @@ impl GameState {
 
         let mut round_bets = vec![ChipAmount::new(0).expect("zero amount"); player_states.len()];
         // Post blinds (subtract from stacks)
-        Self::post_blind(&mut player_states[small_blind_index], sb, &mut round_bets[small_blind_index])?;
-        Self::post_blind(&mut player_states[big_blind_index], bb, &mut round_bets[big_blind_index])?;
+        Self::post_blind(
+            &mut player_states[small_blind_index],
+            sb,
+            &mut round_bets[small_blind_index],
+        )?;
+        Self::post_blind(
+            &mut player_states[big_blind_index],
+            bb,
+            &mut round_bets[big_blind_index],
+        )?;
 
         let pot = sb + bb;
         let smallest_bet = bb;
@@ -139,8 +150,7 @@ impl GameState {
 
         debug!(
             hand_id = hand_id.0,
-            "New hand created, dealer={}, blinds={:?}",
-            dealer_index, blinds
+            "New hand created, dealer={}, blinds={:?}", dealer_index, blinds
         );
 
         Ok(GameState {
@@ -161,7 +171,11 @@ impl GameState {
         })
     }
 
-    fn post_blind(player: &mut PlayerHandState, amount: ChipAmount, round_bet: &mut ChipAmount) -> Result<(), &'static str> {
+    fn post_blind(
+        player: &mut PlayerHandState,
+        amount: ChipAmount,
+        round_bet: &mut ChipAmount,
+    ) -> Result<(), &'static str> {
         if player.stack < amount {
             return Err("Insufficient stack for blind");
         }
@@ -380,7 +394,8 @@ impl GameState {
         for p in &mut self.players {
             p.bet_this_round = ChipAmount::new(0).expect("zero amount");
         }
-        self.round_bets.fill(ChipAmount::new(0).expect("zero amount"));
+        self.round_bets
+            .fill(ChipAmount::new(0).expect("zero amount"));
         self.smallest_bet = ChipAmount::new(0).expect("zero amount");
         self.min_raise = self.blinds.1;
         self.last_aggressor_index = None;
@@ -516,24 +531,66 @@ mod tests {
 
     #[test]
     fn test_new_hand_ok() {
-        let players = vec![(pid(1), ChipAmount::new(1000).unwrap()), (pid(2), ChipAmount::new(1000).unwrap())];
-        let state = GameState::new_hand(players, 0, (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap())).unwrap();
+        let players = vec![
+            (pid(1), ChipAmount::new(1000).unwrap()),
+            (pid(2), ChipAmount::new(1000).unwrap()),
+        ];
+        let state = GameState::new_hand(
+            players,
+            0,
+            (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap()),
+        )
+        .unwrap();
         assert!(!state.is_hand_complete());
     }
 
     #[test]
     fn test_fold_action() {
-        let players = vec![(pid(1), ChipAmount::new(1000).unwrap()), (pid(2), ChipAmount::new(1000).unwrap())];
-        let mut state = GameState::new_hand(players, 0, (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap())).unwrap();
+        let players = vec![
+            (pid(1), ChipAmount::new(1000).unwrap()),
+            (pid(2), ChipAmount::new(1000).unwrap()),
+        ];
+        let mut state = GameState::new_hand(
+            players,
+            0,
+            (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap()),
+        )
+        .unwrap();
         let pid = state.players[state.current_player_index].player_id;
         assert!(state.apply_action(pid, Action::Fold).is_ok());
         assert!(state.players[state.current_player_index].has_folded);
+        let players = vec![
+            (pid(1), ChipAmount::new(1000).unwrap()),
+            (pid(2), ChipAmount::new(1000).unwrap()),
+        ];
+        let mut state = GameState::new_hand(
+            players,
+            0,
+            (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap()),
+        )
+        .unwrap();
+        let folded_pid = state.players[state.current_player_index].player_id;
+        assert!(state.apply_action(folded_pid, Action::Fold).is_ok());
+        let folded_idx = state
+            .players
+            .iter()
+            .position(|p| p.player_id == folded_pid)
+            .unwrap();
+        assert!(state.players[folded_idx].has_folded);
     }
 
     #[test]
     fn test_invalid_raise() {
-        let players = vec![(pid(1), ChipAmount::new(1000).unwrap()), (pid(2), ChipAmount::new(1000).unwrap())];
-        let mut state = GameState::new_hand(players, 0, (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap())).unwrap();
+        let players = vec![
+            (pid(1), ChipAmount::new(1000).unwrap()),
+            (pid(2), ChipAmount::new(1000).unwrap()),
+        ];
+        let mut state = GameState::new_hand(
+            players,
+            0,
+            (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap()),
+        )
+        .unwrap();
         let pid = state.players[state.current_player_index].player_id;
         let result = state.apply_action(pid, Action::Raise(ChipAmount::new(1).unwrap()));
         assert!(matches!(result, Err(ActionError::InvalidRaise { .. })));

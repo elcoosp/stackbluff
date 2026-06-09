@@ -28,7 +28,7 @@ fn rank_value(rank: &sb_shared_types::Rank) -> u8 {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HandStrength {
     pub rank: HandRank,
-    pub kickers: Vec<u8>, // highest to lowest
+    pub kickers: Vec<u8>, // highest to lowest, with pair/trip ranks first
 }
 
 impl PartialOrd for HandStrength {
@@ -100,9 +100,7 @@ fn evaluate_5_card_strength(cards: &[Card]) -> HandStrength {
     let mut count_rank_pairs: Vec<(u8, u8)> = rank_counts.into_iter().collect();
     count_rank_pairs.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| b.0.cmp(&a.0)));
 
-    // Determine hand rank
     let rank = evaluate_rank(&count_rank_pairs, is_flush, &ranks);
-    // Build kickers: all ranks sorted descending, but for full house/four/three/two pair we need special handling
     let kickers = build_kickers(&count_rank_pairs, rank);
     HandStrength { rank, kickers }
 }
@@ -156,8 +154,10 @@ fn build_kickers(count_pairs: &[(u8, u8)], rank: HandRank) -> Vec<u8> {
     let mut kickers = Vec::new();
     match rank {
         HandRank::StraightFlush | HandRank::Straight | HandRank::Flush => {
-            // Just the five ranks in descending order
-            let mut all_ranks: Vec<u8> = count_pairs.iter().flat_map(|(r, _)| vec![*r; *r as usize]).collect();
+            let mut all_ranks: Vec<u8> = count_pairs
+                .iter()
+                .flat_map(|(r, _)| vec![*r; *r as usize])
+                .collect();
             all_ranks.sort_unstable_by(|a, b| b.cmp(a));
             kickers = all_ranks.into_iter().take(5).collect();
         }
@@ -189,12 +189,11 @@ fn build_kickers(count_pairs: &[(u8, u8)], rank: HandRank) -> Vec<u8> {
         }
         HandRank::OnePair => {
             let pair_rank = count_pairs[0].0;
+            let mut other_ranks: Vec<u8> = count_pairs.iter().skip(1).map(|(r, _)| *r).collect();
+            other_ranks.sort_unstable_by(|a, b| b.cmp(a));
             kickers.push(pair_rank);
             kickers.push(pair_rank);
-            for &(r, _) in count_pairs.iter().skip(1) {
-                kickers.push(r);
-            }
-            kickers.sort_unstable_by(|a, b| b.cmp(a));
+            kickers.extend(other_ranks);
             kickers.truncate(5);
         }
         HandRank::HighCard => {
@@ -228,7 +227,10 @@ mod tests {
 
     #[test]
     fn test_high_card() {
-        let hole = [card(Suit::Hearts, Rank::Two), card(Suit::Clubs, Rank::Three)];
+        let hole = [
+            card(Suit::Hearts, Rank::Two),
+            card(Suit::Clubs, Rank::Three),
+        ];
         let community = [
             card(Suit::Diamonds, Rank::Five),
             card(Suit::Spades, Rank::Seven),
@@ -238,12 +240,15 @@ mod tests {
         ];
         let strength = evaluate_hand_strength(&hole, &community);
         assert_eq!(strength.rank, HandRank::HighCard);
-        assert_eq!(strength.kickers, vec![13, 11, 9, 7, 5]); // K,J,9,7,5
+        assert_eq!(strength.kickers, vec![13, 11, 9, 7, 5]);
     }
 
     #[test]
     fn test_one_pair_kickers() {
-        let hole = [card(Suit::Hearts, Rank::Five), card(Suit::Clubs, Rank::Five)];
+        let hole = [
+            card(Suit::Hearts, Rank::Five),
+            card(Suit::Clubs, Rank::Five),
+        ];
         let community = [
             card(Suit::Diamonds, Rank::Two),
             card(Suit::Spades, Rank::Three),
@@ -258,8 +263,10 @@ mod tests {
 
     #[test]
     fn test_compare_hands_with_kickers() {
-        // Hand1: pair of 5s with K,8,7 kickers
-        let hole1 = [card(Suit::Hearts, Rank::Five), card(Suit::Clubs, Rank::Five)];
+        let hole1 = [
+            card(Suit::Hearts, Rank::Five),
+            card(Suit::Clubs, Rank::Five),
+        ];
         let community1 = [
             card(Suit::Diamonds, Rank::Two),
             card(Suit::Spades, Rank::Three),
@@ -267,8 +274,10 @@ mod tests {
             card(Suit::Clubs, Rank::Eight),
             card(Suit::Diamonds, Rank::King),
         ];
-        // Hand2: pair of 5s with K,8,6 kickers (lower)
-        let hole2 = [card(Suit::Hearts, Rank::Five), card(Suit::Clubs, Rank::Five)];
+        let hole2 = [
+            card(Suit::Hearts, Rank::Five),
+            card(Suit::Clubs, Rank::Five),
+        ];
         let community2 = [
             card(Suit::Diamonds, Rank::Two),
             card(Suit::Spades, Rank::Three),
@@ -276,6 +285,9 @@ mod tests {
             card(Suit::Clubs, Rank::Eight),
             card(Suit::Diamonds, Rank::King),
         ];
-        assert_eq!(compare_hands(&hole1, &community1, &hole2, &community2), Ordering::Greater);
+        assert_eq!(
+            compare_hands(&hole1, &community1, &hole2, &community2),
+            Ordering::Greater
+        );
     }
 }
