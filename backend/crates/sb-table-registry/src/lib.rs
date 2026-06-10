@@ -41,6 +41,12 @@ impl Registry {
     }
 }
 
+impl Default for Registry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 async fn table_actor(table_id: TableId, mut rx: mpsc::Receiver<TableCommand>, _config: TableConfig) {
     info!(%table_id, "table actor started");
     while let Some(cmd) = rx.recv().await {
