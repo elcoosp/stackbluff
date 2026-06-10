@@ -13,3 +13,5 @@ pub use errors::AppError;
 pub use game_types::{ActionType, GameVariant, StakeLevel, TableConfig};
 pub use ids::{ClubId, PlayerId, TableId, UserId};
 pub use request_context::RequestContext;
+impl TableId { pub fn new() -> Self { Self(Uuid::new_v4()) } }
+impl TableId { pub fn new() -> Self { Self(Uuid::new_v4()) } }
