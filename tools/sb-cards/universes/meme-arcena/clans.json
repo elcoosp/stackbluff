@@ -1,0 +1,86 @@
+{
+  "feels_clan": {
+    "name": "Feels Clan",
+    "tagline": "Emotions run deep in the heart of the memescape",
+    "first_appearance_season": 1,
+    "visual_dna": {
+      "silhouette": "soft, rounded, organic",
+      "border_accent": "heart-shaped corner flourishes",
+      "typography_hint": "serif with emotional swashes",
+      "pip_texture": "subtle wavy lines",
+      "primary_dark": "#4A1D3D",
+      "primary_accent": "#E25E7C",
+      "secondary": "#F4C3C3",
+      "sigil": "a cracked heart wrapped in thorns"
+    },
+    "character_ids": [
+      "wojak_average",
+      "pepe_sadge",
+      "wifejak",
+      "pepe_smug"
+    ]
+  },
+  "chaos_clan": {
+    "name": "Chaos Clan",
+    "tagline": "Laughter is the only law in the Banlands",
+    "first_appearance_season": 1,
+    "visual_dna": {
+      "silhouette": "jagged, unpredictable, asymmetrical",
+      "border_accent": "shattered mirror fragments",
+      "typography_hint": "erratic hand-drawn caps",
+      "pip_texture": "splatter / drip",
+      "primary_dark": "#1F1A24",
+      "primary_accent": "#F4C542",
+      "secondary": "#D94F30",
+      "sigil": "a laughing mouth with spiral tongue"
+    },
+    "character_ids": [
+      "wojak_laughing",
+      "pepe_clown_honkler",
+      "wojak_flex",
+      "pepe_wide"
+    ]
+  },
+  "grind_clan": {
+    "name": "Grind Clan",
+    "tagline": "No rest, no regret, just the climb",
+    "first_appearance_season": 1,
+    "visual_dna": {
+      "silhouette": "geometric, rigid, angular",
+      "border_accent": "gear teeth and rivets",
+      "typography_hint": "bold sans-serif, all caps",
+      "pip_texture": "crosshatch / steel grain",
+      "primary_dark": "#0F0F12",
+      "primary_accent": "#6AB04A",
+      "secondary": "#2C3E4E",
+      "sigil": "a clenched fist gripping a gear"
+    },
+    "character_ids": [
+      "wojak_doomer",
+      "gigachad",
+      "wojak_npc",
+      "stonks"
+    ]
+  },
+  "brain_clan": {
+    "name": "Brain Clan",
+    "tagline": "Perception is the only power",
+    "first_appearance_season": 1,
+    "visual_dna": {
+      "silhouette": "puzzle pieces, sharp edges",
+      "border_accent": "eye motifs and question marks",
+      "typography_hint": "slab serif, precise",
+      "pip_texture": "grid of tiny dots",
+      "primary_dark": "#1A2B3C",
+      "primary_accent": "#5D9B9B",
+      "secondary": "#E0D68A",
+      "sigil": "an open third eye inside a brain"
+    },
+    "character_ids": [
+      "monkey_puppet",
+      "wojak_smug",
+      "pepe_smadge",
+      "brainlet"
+    ]
+  }
+}

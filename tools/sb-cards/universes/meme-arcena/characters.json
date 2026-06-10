@@ -1,0 +1,770 @@
+{
+  "wojak_average": {
+    "character_id": "wojak_average",
+    "name": "Average Wojak",
+    "clan": "feels_clan",
+    "title": "The Neuraliminal Netizen",
+    "personality": [
+      "relatable",
+      "melancholic",
+      "hopeful"
+    ],
+    "backstory": "An everyman lost in the infinite scroll, searching for meaning beyond the algorithm. He represents the quiet longing for connection in a digital wasteland.",
+    "visual_description": {
+      "base_appearance": {
+        "face": "oval, blank but gentle expression",
+        "eyes": "dark circles, slightly hollow",
+        "hair": "messy brown fringe",
+        "build": "average, slouched"
+      },
+      "clothing": {
+        "primary": "hoodie, grey",
+        "details": "drawstrings uneven",
+        "accessories": "none"
+      },
+      "weapon": "a cracked smartphone",
+      "distinctive_marks": "single tear tattoo under left eye",
+      "mannerisms": "scrolling with thumb, sighing quietly"
+    },
+    "evolution_track": {
+      "deck_1": {
+        "state_name": "Lost Scroll",
+        "visual_changes": "hoodie pulled tight, phone screen cracked"
+      },
+      "deck_2": {
+        "state_name": "Awakened",
+        "visual_changes": "posture straighter, tear tattoo faded"
+      },
+      "deck_3": {
+        "state_name": "Ascended Feels Guy",
+        "visual_changes": "subtle smile, phone replaced by a compass"
+      }
+    },
+    "fixed_traits": {
+      "hairstyle": "messy brown fringe",
+      "weapon": "smartphone (cracked in early states)",
+      "clothing": "grey hoodie",
+      "distinct_mark": "tear tattoo"
+    }
+  },
+  "pepe_sadge": {
+    "character_id": "pepe_sadge",
+    "name": "Sadge Pepe",
+    "clan": "feels_clan",
+    "title": "The Weeping Frog",
+    "personality": [
+      "sorrowful",
+      "sincere",
+      "vulnerable"
+    ],
+    "backstory": "Born from a single tear in a forgotten chat room, Sadge Pepe is the embodiment of relatable loss. He cries so others know it's okay to feel.",
+    "visual_description": {
+      "base_appearance": {
+        "face": "frog-like, downturned mouth, moist eyes",
+        "eyes": "large, wet, overflowing with tears",
+        "hair": "none",
+        "build": "small, hunched"
+      },
+      "clothing": {
+        "primary": "oversized raincoat, yellow",
+        "details": "dripping wet",
+        "accessories": "none"
+      },
+      "weapon": "a soggy tissue",
+      "distinctive_marks": "tear streaks down both cheeks",
+      "mannerisms": "sniffling, wiping eyes with sleeve"
+    },
+    "evolution_track": {
+      "deck_1": {
+        "state_name": "Drowning",
+        "visual_changes": "tears flood the raincoat collar"
+      },
+      "deck_2": {
+        "state_name": "Puddle",
+        "visual_changes": "standing in a small puddle of tears"
+      },
+      "deck_3": {
+        "state_name": "Sunbreak",
+        "visual_changes": "tears slow, faint rainbow above"
+      }
+    },
+    "fixed_traits": {
+      "hairstyle": "bald",
+      "weapon": "tissue",
+      "clothing": "yellow raincoat",
+      "distinct_mark": "tear streaks"
+    }
+  },
+  "wifejak": {
+    "character_id": "wifejak",
+    "name": "Wifejak",
+    "clan": "feels_clan",
+    "title": "The Steadfast Partner",
+    "personality": [
+      "supportive",
+      "calm",
+      "wise"
+    ],
+    "backstory": "The quiet anchor of the memescape, Wifejak remembers every kind word ever typed. She appears when lost souls need gentle guidance.",
+    "visual_description": {
+      "base_appearance": {
+        "face": "soft, round, kind eyes",
+        "eyes": "warm brown, slight crow's feet",
+        "hair": "shoulder-length, tied back, light brown",
+        "build": "average, solid"
+      },
+      "clothing": {
+        "primary": "sweater, cream",
+        "details": "rolled sleeves",
+        "accessories": "simple silver locket"
+      },
+      "weapon": "a warm cup of tea",
+      "distinctive_marks": "a small freckle above right eyebrow",
+      "mannerisms": "tilts head when listening, pats shoulder"
+    },
+    "evolution_track": {
+      "deck_1": {
+        "state_name": "Patience",
+        "visual_changes": "locket closed"
+      },
+      "deck_2": {
+        "state_name": "Encourager",
+        "visual_changes": "locket open, inside a tiny heart"
+      },
+      "deck_3": {
+        "state_name": "Matriarch",
+        "visual_changes": "hair greyed, smile deeper, holding a lantern"
+      }
+    },
+    "fixed_traits": {
+      "hairstyle": "shoulder-length tied back",
+      "weapon": "cup of tea",
+      "clothing": "cream sweater",
+      "distinct_mark": "freckle above eyebrow"
+    }
+  },
+  "pepe_smug": {
+    "character_id": "pepe_smug",
+    "name": "Smug Pepe",
+    "clan": "feels_clan",
+    "title": "The Satisfied Amphibian",
+    "personality": [
+      "self-assured",
+      "playful",
+      "mischievous"
+    ],
+    "backstory": "Once a humble frog, Smug Pepe discovered the power of a well-timed smirk. He now haunts forums where arguments are won with a single image.",
+    "visual_description": {
+      "base_appearance": {
+        "face": "frog-like, tilted smirk, half-lidded eyes",
+        "eyes": "narrowed, knowing",
+        "hair": "none",
+        "build": "lean, lounging"
+      },
+      "clothing": {
+        "primary": "hoodie unzipped, black",
+        "details": "thumbs hooked in pockets",
+        "accessories": "sunglasses pushed up on forehead"
+      },
+      "weapon": "a folded paper fan",
+      "distinctive_marks": "one tooth showing",
+      "mannerisms": "slow blink, subtle head tilt"
+    },
+    "evolution_track": {
+      "deck_1": {
+        "state_name": "Smirk",
+        "visual_changes": "mouth slightly upturned"
+      },
+      "deck_2": {
+        "state_name": "Grin",
+        "visual_changes": "tooth visible, eyes crinkled"
+      },
+      "deck_3": {
+        "state_name": "Feels Good",
+        "visual_changes": "full smug, sunglasses down, leaning back"
+      }
+    },
+    "fixed_traits": {
+      "hairstyle": "bald",
+      "weapon": "paper fan",
+      "clothing": "black hoodie",
+      "distinct_mark": "one visible tooth"
+    }
+  },
+  "wojak_laughing": {
+    "character_id": "wojak_laughing",
+    "name": "Laughing Wojak",
+    "clan": "chaos_clan",
+    "title": "The Uncontrollable Chuckler",
+    "personality": [
+      "manic",
+      "carefree",
+      "infectious"
+    ],
+    "backstory": "He laughed once at a typo and never stopped. Now he roams the Banlands, spreading chaotic giggles and breaking tension with absurdity.",
+    "visual_description": {
+      "base_appearance": {
+        "face": "round, mouth wide open in laughter, eyes squeezed shut",
+        "eyes": "closed, crescent shaped",
+        "hair": "messy, bright orange",
+        "build": "average, shaking with laughter"
+      },
+      "clothing": {
+        "primary": "t-shirt with 'LOL' printed crookedly",
+        "details": "wrinkled from shaking",
+        "accessories": "party hat askew"
+      },
+      "weapon": "a whoopee cushion",
+      "distinctive_marks": "tears of joy streaming",
+      "mannerisms": "slaps knee, points at nothing"
+    },
+    "evolution_track": {
+      "deck_1": {
+        "state_name": "Giggle",
+        "visual_changes": "shoulders bounce slightly"
+      },
+      "deck_2": {
+        "state_name": "Belly Laugh",
+        "visual_changes": "head thrown back, hands on stomach"
+      },
+      "deck_3": {
+        "state_name": "Silent Shake",
+        "visual_changes": "eyes wide, no sound, body convulsing"
+      }
+    },
+    "fixed_traits": {
+      "hairstyle": "messy orange",
+      "weapon": "whoopee cushion",
+      "clothing": "LOL t-shirt",
+      "distinct_mark": "joy tears"
+    }
+  },
+  "pepe_clown_honkler": {
+    "character_id": "pepe_clown_honkler",
+    "name": "Clown Pepe (Honkler)",
+    "clan": "chaos_clan",
+    "title": "The Court Jester of Chaos",
+    "personality": [
+      "absurd",
+      "subversive",
+      "unpredictable"
+    ],
+    "backstory": "Honkler emerged from a deep‑fried meme thread, dressed in rainbow wig and red nose. He exists to remind everyone that nothing is sacred and everything is funny.",
+    "visual_description": {
+      "base_appearance": {
+        "face": "frog-like, exaggerated makeup, red nose",
+        "eyes": "wide, manic, different sizes",
+        "hair": "rainbow wig",
+        "build": "lanky, twitchy"
+      },
+      "clothing": {
+        "primary": "ruffled clown collar",
+        "details": "polka dots, oversized buttons",
+        "accessories": "squeaky horn on a string"
+      },
+      "weapon": "a banana that squirts water",
+      "distinctive_marks": "painted frown that's actually a smile",
+      "mannerisms": "honks horn randomly, trips over own feet"
+    },
+    "evolution_track": {
+      "deck_1": {
+        "state_name": "Gigglepuss",
+        "visual_changes": "nose slightly smaller, wig neater"
+      },
+      "deck_2": {
+        "state_name": "Honkmaster",
+        "visual_changes": "holding three horns, wearing a crown"
+      },
+      "deck_3": {
+        "state_name": "Clown God",
+        "visual_changes": "floating, eyes replaced by spinning wheels"
+      }
+    },
+    "fixed_traits": {
+      "hairstyle": "rainbow wig",
+      "weapon": "squeaky horn / banana",
+      "clothing": "ruffled collar",
+      "distinct_mark": "red nose"
+    }
+  },
+  "wojak_flex": {
+    "character_id": "wojak_flex",
+    "name": "Flex Wojak",
+    "clan": "chaos_clan",
+    "title": "The Ostentatious Earner",
+    "personality": [
+      "flashy",
+      "boastful",
+      "insecure deep down"
+    ],
+    "backstory": "After a lucky crypto trade, Flex Wojak bought a gold chain and never looked back. He represents the chaotic energy of new money and the desperate need for validation.",
+    "visual_description": {
+      "base_appearance": {
+        "face": "square jaw, smug grin, sunglasses",
+        "eyes": "hidden behind reflective lenses",
+        "hair": "slicked back, greasy",
+        "build": "muscular but fake"
+      },
+      "clothing": {
+        "primary": "tracksuit, velour, gold",
+        "details": "zipped halfway, chest hair visible",
+        "accessories": "thick gold chain, diamond watch"
+      },
+      "weapon": "a stack of cash",
+      "distinctive_marks": "tattoo of dollar sign on neck",
+      "mannerisms": "flashes watch, adjusts chain"
+    },
+    "evolution_track": {
+      "deck_1": {
+        "state_name": "Humblebrag",
+        "visual_changes": "cash stack small"
+      },
+      "deck_2": {
+        "state_name": "Full Flex",
+        "visual_changes": "two diamond chains, money gun"
+      },
+      "deck_3": {
+        "state_name": "Bankrupt",
+        "visual_changes": "tracksuit torn, empty pockets, sunglasses cracked"
+      }
+    },
+    "fixed_traits": {
+      "hairstyle": "slicked back",
+      "weapon": "cash stack / money gun",
+      "clothing": "gold tracksuit",
+      "distinct_mark": "dollar sign tattoo"
+    }
+  },
+  "pepe_wide": {
+    "character_id": "pepe_wide",
+    "name": "WidePeepoHappy",
+    "clan": "chaos_clan",
+    "title": "The Euphoric Frog",
+    "personality": [
+      "ecstatic",
+      "childlike",
+      "pure"
+    ],
+    "backstory": "When something truly wonderful happens, WidePeepoHappy appears. His giant eyes and grin capture the unfiltered joy of a perfect moment.",
+    "visual_description": {
+      "base_appearance": {
+        "face": "frog-like, mouth stretched wide, eyes enormous",
+        "eyes": "huge, sparkling",
+        "hair": "none",
+        "build": "small, bouncing"
+      },
+      "clothing": {
+        "primary": "party shirt, untucked",
+        "details": "confetti stuck to it",
+        "accessories": "party blower"
+      },
+      "weapon": "confetti cannon",
+      "distinctive_marks": "dimples",
+      "mannerisms": "bounces on heels, claps hands"
+    },
+    "evolution_track": {
+      "deck_1": {
+        "state_name": "Smile",
+        "visual_changes": "eyes slightly wide"
+      },
+      "deck_2": {
+        "state_name": "Wide",
+        "visual_changes": "eyes double size, mouth open"
+      },
+      "deck_3": {
+        "state_name": "Overload",
+        "visual_changes": "eyes become spirals, floating"
+      }
+    },
+    "fixed_traits": {
+      "hairstyle": "bald",
+      "weapon": "confetti cannon",
+      "clothing": "party shirt",
+      "distinct_mark": "dimples"
+    }
+  },
+  "wojak_doomer": {
+    "character_id": "wojak_doomer",
+    "name": "Doomer Wojak",
+    "clan": "grind_clan",
+    "title": "The Nihilistic Worker",
+    "personality": [
+      "pessimistic",
+      "tired",
+      "resigned"
+    ],
+    "backstory": "Doomer Wojak has seen too much. He works the 9-to-5 grind, smokes to cope, and knows that nothing really matters. Yet he still shows up.",
+    "visual_description": {
+      "base_appearance": {
+        "face": "thin, gaunt, sunken eyes",
+        "eyes": "dark rimmed, unfocused",
+        "hair": "unkempt, black, hanging over forehead",
+        "build": "skinny, slouched"
+      },
+      "clothing": {
+        "primary": "black beanie, grey hoodie",
+        "details": "cigarette tucked behind ear",
+        "accessories": "cheap wristwatch"
+      },
+      "weapon": "a worn‑out shovel",
+      "distinctive_marks": "scar on left cheek",
+      "mannerisms": "deep sigh, rubs temples"
+    },
+    "evolution_track": {
+      "deck_1": {
+        "state_name": "Tired",
+        "visual_changes": "eyes barely open"
+      },
+      "deck_2": {
+        "state_name": "Burnt Out",
+        "visual_changes": "cigarette smoke cloud, hoodie frayed"
+      },
+      "deck_3": {
+        "state_name": "Void Gaze",
+        "visual_changes": "eyes pure black, faint static around him"
+      }
+    },
+    "fixed_traits": {
+      "hairstyle": "unkempt black",
+      "weapon": "shovel",
+      "clothing": "grey hoodie",
+      "distinct_mark": "scar on cheek"
+    }
+  },
+  "gigachad": {
+    "character_id": "gigachad",
+    "name": "GigaChad",
+    "clan": "grind_clan",
+    "title": "The Alpha Ideal",
+    "personality": [
+      "confident",
+      "stoic",
+      "achieving"
+    ],
+    "backstory": "Born from a thousand motivational memes, GigaChad is the physical and mental peak. He represents the grind's ultimate reward: unwavering self‑belief.",
+    "visual_description": {
+      "base_appearance": {
+        "face": "chiseled jaw, strong brow, slight smile",
+        "eyes": "piercing blue, determined",
+        "hair": "short, perfect, blonde",
+        "build": "hyper‑muscular, upright"
+      },
+      "clothing": {
+        "primary": "black tank top",
+        "details": "fitted, showing muscles",
+        "accessories": "gold chain with a 'W' pendant"
+      },
+      "weapon": "a dumbbell",
+      "distinctive_marks": "veins on arms",
+      "mannerisms": "folds arms, nods slowly"
+    },
+    "evolution_track": {
+      "deck_1": {
+        "state_name": "Rookie",
+        "visual_changes": "smaller muscles, no chain"
+      },
+      "deck_2": {
+        "state_name": "Chad",
+        "visual_changes": "muscles defined, chain appears"
+      },
+      "deck_3": {
+        "state_name": "Giga",
+        "visual_changes": "glowing aura, chin even sharper"
+      }
+    },
+    "fixed_traits": {
+      "hairstyle": "short blonde",
+      "weapon": "dumbbell",
+      "clothing": "black tank top",
+      "distinct_mark": "veins"
+    }
+  },
+  "wojak_npc": {
+    "character_id": "wojak_npc",
+    "name": "NPC Wojak",
+    "clan": "grind_clan",
+    "title": "The Mindless Automaton",
+    "personality": [
+      "blank",
+      "repetitive",
+      "hive‑minded"
+    ],
+    "backstory": "NPC Wojak never had an original thought. He repeats slogans, follows trends, and stands in the way of those who seek true self‑awareness.",
+    "visual_description": {
+      "base_appearance": {
+        "face": "perfectly symmetrical, utterly blank",
+        "eyes": "grey, lifeless, fixed ahead",
+        "hair": "generic brown, parted",
+        "build": "average, stiff"
+      },
+      "clothing": {
+        "primary": "polo shirt, beige",
+        "details": "collar popped",
+        "accessories": "clip‑on sunglasses"
+      },
+      "weapon": "a clipboard",
+      "distinctive_marks": "no visible pores",
+      "mannerisms": "repeats 'I agree' and 'That's interesting'"
+    },
+    "evolution_track": {
+      "deck_1": {
+        "state_name": "Default",
+        "visual_changes": "expressionless"
+      },
+      "deck_2": {
+        "state_name": "Glitch",
+        "visual_changes": "eye twitch, static lines"
+      },
+      "deck_3": {
+        "state_name": "Reboot",
+        "visual_changes": "eyes briefly show color, then revert"
+      }
+    },
+    "fixed_traits": {
+      "hairstyle": "generic brown",
+      "weapon": "clipboard",
+      "clothing": "beige polo",
+      "distinct_mark": "no pores"
+    }
+  },
+  "stonks": {
+    "character_id": "stonks",
+    "name": "Stonks Meme",
+    "clan": "grind_clan",
+    "title": "The Market Mystic",
+    "personality": [
+      "enigmatic",
+      "smug",
+      "profitable"
+    ],
+    "backstory": "Stonks was born from a poorly drawn chart and a typo. He represents the chaotic wisdom of markets only going up.",
+    "visual_description": {
+      "base_appearance": {
+        "face": "crudely drawn, large forehead, neutral smile",
+        "eyes": "tiny dots, expressionless",
+        "hair": "few wispy strands",
+        "build": "thin, elongated neck"
+      },
+      "clothing": {
+        "primary": "suit, grey, poorly fitted",
+        "details": "tie crooked",
+        "accessories": "pocket square with dollar sign"
+      },
+      "weapon": "a stock chart going up",
+      "distinctive_marks": "oversized head",
+      "mannerisms": "points up, nods knowingly"
+    },
+    "evolution_track": {
+      "deck_1": {
+        "state_name": "Clip Art",
+        "visual_changes": "crudest drawing"
+      },
+      "deck_2": {
+        "state_name": "Refined",
+        "visual_changes": "slightly better lines, tie straight"
+      },
+      "deck_3": {
+        "state_name": "Market God",
+        "visual_changes": "glowing chart, floating"
+      }
+    },
+    "fixed_traits": {
+      "hairstyle": "few strands",
+      "weapon": "stock chart",
+      "clothing": "grey suit",
+      "distinct_mark": "huge forehead"
+    }
+  },
+  "monkey_puppet": {
+    "character_id": "monkey_puppet",
+    "name": "Monkey Puppet",
+    "clan": "brain_clan",
+    "title": "The Side‑Eye Witness",
+    "personality": [
+      "perceptive",
+      "judgmental",
+      "silent"
+    ],
+    "backstory": "The Monkey Puppet sees everything. It never speaks, but its sideways glance exposes hypocrisy and ulterior motives instantly.",
+    "visual_description": {
+      "base_appearance": {
+        "face": "stuffed animal, unblinking eyes, stitched smile",
+        "eyes": "large, brown, always looking sideways",
+        "hair": "brown fur",
+        "build": "small, rigid"
+      },
+      "clothing": {
+        "primary": "tiny waistcoat, red",
+        "details": "gold buttons",
+        "accessories": "monocle"
+      },
+      "weapon": "a magnifying glass",
+      "distinctive_marks": "always in profile",
+      "mannerisms": "slowly turns head, raises eyebrow"
+    },
+    "evolution_track": {
+      "deck_1": {
+        "state_name": "Noticing",
+        "visual_changes": "one eye slightly narrowed"
+      },
+      "deck_2": {
+        "state_name": "Sus",
+        "visual_changes": "both eyes squinting, magnifying glass raised"
+      },
+      "deck_3": {
+        "state_name": "All‑Seeing",
+        "visual_changes": "eyes follow viewer, floating"
+      }
+    },
+    "fixed_traits": {
+      "hairstyle": "fur",
+      "weapon": "magnifying glass",
+      "clothing": "red waistcoat",
+      "distinct_mark": "side‑eye stare"
+    }
+  },
+  "wojak_smug": {
+    "character_id": "wojak_smug",
+    "name": "Smug Wojak",
+    "clan": "brain_clan",
+    "title": "The Ironic Superior",
+    "personality": [
+      "overconfident",
+      "clever",
+      "condescending"
+    ],
+    "backstory": "Smug Wojak knows he's right, even when he's wrong. He represents the intellectual superiority complex that fuels endless online debates.",
+    "visual_description": {
+      "base_appearance": {
+        "face": "thin, raised eyebrow, half‑smile",
+        "eyes": "half‑lidded, knowing",
+        "hair": "combed over",
+        "build": "lanky, leaning back"
+      },
+      "clothing": {
+        "primary": "turtleneck, black",
+        "details": "glasses on chain",
+        "accessories": "fountain pen"
+      },
+      "weapon": "a rolled‑up diploma",
+      "distinctive_marks": "tiny beauty mark above lip",
+      "mannerisms": "steeples fingers, adjusts glasses"
+    },
+    "evolution_track": {
+      "deck_1": {
+        "state_name": "Hint of Smirk",
+        "visual_changes": "mouth barely upturned"
+      },
+      "deck_2": {
+        "state_name": "Full Smug",
+        "visual_changes": "eyebrow high, chin raised"
+      },
+      "deck_3": {
+        "state_name": "Omniscient",
+        "visual_changes": "floating above a chessboard"
+      }
+    },
+    "fixed_traits": {
+      "hairstyle": "combed over",
+      "weapon": "diploma",
+      "clothing": "black turtleneck",
+      "distinct_mark": "beauty mark"
+    }
+  },
+  "pepe_smadge": {
+    "character_id": "pepe_smadge",
+    "name": "Smadge Pepe",
+    "clan": "brain_clan",
+    "title": "The Angry Sad Frog",
+    "personality": [
+      "frustrated",
+      "emotional",
+      "volatile"
+    ],
+    "backstory": "When sadness and anger collide, Smadge Pepe is born. He cannot decide whether to cry or scream, so he does both simultaneously.",
+    "visual_description": {
+      "base_appearance": {
+        "face": "frog-like, twisted, tearful but frowning",
+        "eyes": "red‑rimmed, angry eyebrows",
+        "hair": "none",
+        "build": "puffed up"
+      },
+      "clothing": {
+        "primary": "torn hoodie",
+        "details": "sleeves shredded",
+        "accessories": "none"
+      },
+      "weapon": "a stress ball that's already popped",
+      "distinctive_marks": "steam rising from head",
+      "mannerisms": "clenches fists, sniffles, growls"
+    },
+    "evolution_track": {
+      "deck_1": {
+        "state_name": "Frustrated",
+        "visual_changes": "single tear, slight frown"
+      },
+      "deck_2": {
+        "state_name": "Smadge",
+        "visual_changes": "many tears, deep frown, steam"
+      },
+      "deck_3": {
+        "state_name": "Eruption",
+        "visual_changes": "eyes red, floating debris"
+      }
+    },
+    "fixed_traits": {
+      "hairstyle": "bald",
+      "weapon": "popped stress ball",
+      "clothing": "torn hoodie",
+      "distinct_mark": "steam"
+    }
+  },
+  "brainlet": {
+    "character_id": "brainlet",
+    "name": "Brainlet",
+    "clan": "brain_clan",
+    "title": "The Overconfident Fool",
+    "personality": [
+      "arrogant",
+      "ignorant",
+      "loud"
+    ],
+    "backstory": "Brainlet believes he is the smartest in the room, but his arguments collapse under the slightest scrutiny. He is a cautionary meme.",
+    "visual_description": {
+      "base_appearance": {
+        "face": "round, small brain visible through skull, smug grin",
+        "eyes": "tiny, misplaced",
+        "hair": "thin, wispy",
+        "build": "chubby, leaning forward"
+      },
+      "clothing": {
+        "primary": "fedora",
+        "details": "trench coat",
+        "accessories": "a fake diploma"
+      },
+      "weapon": "a broken keyboard",
+      "distinctive_marks": "visible small brain",
+      "mannerisms": "adjusts fedora, types aggressively"
+    },
+    "evolution_track": {
+      "deck_1": {
+        "state_name": "Confident",
+        "visual_changes": "grin wide"
+      },
+      "deck_2": {
+        "state_name": "Debated",
+        "visual_changes": "sweat drops, fedora askew"
+      },
+      "deck_3": {
+        "state_name": "Exposed",
+        "visual_changes": "brain shrinks further, face red"
+      }
+    },
+    "fixed_traits": {
+      "hairstyle": "thin wispy",
+      "weapon": "broken keyboard",
+      "clothing": "fedora + trench coat",
+      "distinct_mark": "visible small brain"
+    }
+  }
+}

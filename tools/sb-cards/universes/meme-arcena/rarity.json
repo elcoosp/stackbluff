@@ -1,0 +1,43 @@
+{
+  "common": {
+    "name": "Common",
+    "drop_weight": 70,
+    "visual_modifiers": {
+      "border": "standard",
+      "background": "pure white",
+      "special_effects": "none",
+      "foil": false
+    }
+  },
+  "rare": {
+    "name": "Rare",
+    "drop_weight": 20,
+    "visual_modifiers": {
+      "border": "ornate with clan sigil",
+      "background": "subtle themed pattern",
+      "special_effects": "one hidden mascot",
+      "foil": false
+    }
+  },
+  "epic": {
+    "name": "Epic",
+    "drop_weight": 8,
+    "visual_modifiers": {
+      "border": "highly ornate, animated in digital version",
+      "background": "dynamic scene element",
+      "special_effects": "glowing accents, additional mascot",
+      "foil": true
+    }
+  },
+  "legendary": {
+    "name": "Legendary",
+    "drop_weight": 2,
+    "visual_modifiers": {
+      "border": "unique legendary frame, full‑bleed art",
+      "background": "full illustration extending beyond standard crop",
+      "special_effects": "animated particle effects, hidden lore text",
+      "foil": true,
+      "alternate_art": true
+    }
+  }
+}

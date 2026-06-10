@@ -1,0 +1,14 @@
+{
+  "universe_id": "meme_arcana",
+  "name": "Meme Arcana",
+  "description": "A chaos‑driven multiverse where internet memes evolve, battle, and ascend through the suits of a poker deck.",
+  "clans": [
+    "feels_clan",
+    "chaos_clan",
+    "grind_clan",
+    "brain_clan"
+  ],
+  "clan_additions_allowed": true,
+  "created_at": "2026-06-09",
+  "version": "1.0"
+}

@@ -1,0 +1,13 @@
+{
+  "season_id": "season_1",
+  "name": "The Meme Awakening",
+  "global_event": "A crack forms in the digital sky, and raw meme energy rains down, transforming the Banlands forever.",
+  "decks": [
+    {
+      "deck_id": "meme_awakening",
+      "release_order": 1,
+      "deck_name": "Meme Awakening",
+      "theme": "The origin story of the Meme Arcana – Wojak’s journey from normie to legend"
+    }
+  ]
+}

@@ -1,0 +1,109 @@
+{
+  "deck_id": "meme_awakening",
+  "deck_name": "Meme Awakening",
+  "season_id": "season_1",
+  "release_order": 1,
+  "theme": "The origin story of the Meme Arcana – Wojak’s journey from normie to legend",
+  "global_event": "A crack forms in the digital sky, and raw meme energy rains down, transforming the Banlands forever.",
+  "character_state_map": {
+    "wojak_average": "deck_1",
+    "pepe_sadge": "deck_1",
+    "wifejak": "deck_1",
+    "pepe_smug": "deck_1",
+    "wojak_laughing": "deck_1",
+    "pepe_clown_honkler": "deck_1",
+    "wojak_flex": "deck_1",
+    "pepe_wide": "deck_1",
+    "wojak_doomer": "deck_1",
+    "gigachad": "deck_1",
+    "wojak_npc": "deck_1",
+    "stonks": "deck_1",
+    "monkey_puppet": "deck_1",
+    "wojak_smug": "deck_1",
+    "pepe_smadge": "deck_1",
+    "brainlet": "deck_1"
+  },
+  "clan_per_suit": {
+    "spades": "brain_clan",
+    "hearts": "feels_clan",
+    "diamonds": "chaos_clan",
+    "clubs": "grind_clan"
+  },
+  "face_card_assignment": {
+    "king": {
+      "spades": "stonks",
+      "hearts": "pepe_smug",
+      "diamonds": "pepe_clown_honkler",
+      "clubs": "gigachad"
+    },
+    "queen": {
+      "spades": "monkey_puppet",
+      "hearts": "wifejak",
+      "diamonds": "wojak_laughing",
+      "clubs": "wojak_doomer"
+    },
+    "jack": {
+      "spades": "wojak_npc",
+      "hearts": "pepe_sadge",
+      "diamonds": "wojak_flex",
+      "clubs": "wojak_average"
+    },
+    "ace": {
+      "spades": "brainlet",
+      "hearts": "pepe_wide",
+      "diamonds": "pepe_wide",
+      "clubs": "wojak_smug"
+    }
+  },
+  "narrative_arc_suit": "spades",
+  "narrative_steps": [
+    "Average Wojak stares at a cracked phone screen, trapped in an endless scroll of normie content.",
+    "Doomer Wojak appears, whispering that the grind is pointless and the void is inevitable.",
+    "The protagonist tries to escape his feelings, morphing into a Soyjak – exaggerated tears and flailing.",
+    "Wifejak gently places a hand on his shoulder, offering a warm cup of tea and a knowing smile.",
+    "Smug Wojak challenges an NPC in a debate, winning with a single raised eyebrow and a folded paper fan.",
+    "Clown Pepe (Honkler) appears, honking a horn and scattering chaotic energy, confusing both hero and enemy.",
+    "The hero is tempted by the Stonks Meme, who presents a rising chart and whispers of easy wealth.",
+    "Monkey Puppet slowly turns its head, giving the side‑eye that exposes the hero’s self‑deception.",
+    "GigaChad emerges from the rift – jaw sharp, aura glowing – representing the final ascension from normie to legend."
+  ],
+  "recurring_mascot": {
+    "name": "Glitch Sparrow",
+    "description": "A tiny pixelated bird with one glowing blue eye and one red, leaving faint digital afterimages",
+    "hidden_on": "every face card (once each) and the typography grid (once)"
+  },
+  "reflection_secret": {
+    "joker_left": "Sadge Pepe, crying alone in a dark room, face half‑visible",
+    "joker_right": "WidePeepoHappy, ecstatic and glowing, facing the opposite direction"
+  },
+  "rarity_assignment": {
+    "common_cards": [
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10"
+    ],
+    "rare_cards": [
+      "J",
+      "Q",
+      "K"
+    ],
+    "epic_cards": [
+      "A"
+    ],
+    "legendary_cards": [
+      "joker-1",
+      "joker-2"
+    ]
+  },
+  "card_specific_rarity_overrides": {
+    "king-spades": "epic",
+    "joker-1": "legendary",
+    "joker-2": "legendary"
+  }
+}
