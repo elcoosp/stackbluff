@@ -9,13 +9,10 @@ sb-table-registry = { path = "../sb-table-registry" }
 sb-auth = { path = "../sb-auth" }
 axum = { workspace = true, features = ["ws"] }
 tokio = { workspace = true, features = ["rt", "macros", "time", "sync"] }
-tower = { workspace = true }
-tower-http = { workspace = true, features = ["auth"] }
 futures = { workspace = true }
 tracing = { workspace = true }
-serde = { version = "1.0.228", features = ["derive"] }
+serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
-tokio-tungstenite = { workspace = true }
 http = { workspace = true }
