@@ -13,15 +13,3 @@ pub struct ClubId(pub Uuid);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, From, Into)]
 pub struct PlayerId(pub Uuid);
-
-impl TableId {
-    pub fn new() -> Self {
-        Self(uuid::Uuid::new_v4())
-    }
-}
-
-impl Default for TableId {
-    fn default() -> Self {
-        Self::new()
-    }
-}
