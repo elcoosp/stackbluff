@@ -51,3 +51,5 @@ pub trait MissionRepository: Send + Sync {
 }
 pub mod service_api;
 pub mod repo_api;
+// Auto-generated stub for #005 - TableCommand
+#[derive(Debug)] pub enum TableCommand { Join { player_id: sb_shared_types::PlayerId, table_id: sb_shared_types::TableId } }
