@@ -7,9 +7,22 @@ members = [
     "crates/sb-shared-types",
     "crates/sb-contracts",
     "migration",
+    "crates/sb-auth",
 ]
 
 [workspace.dependencies]
+secrecy = "0.8"
+url = "2.5"
+once_cell = "1.21.4"
+password-hash = "0.6.1"
+mockall = "0.14.0"
+axum = "0.8.9"
+hex = "0.4"
+base64 = "0.22"
+sha2 = "0.10"
+hmac = "0.12"
+jsonwebtoken = { version = "=10.3.0", features = ["rust_crypto"] }
+argon2 = "0.6.0-rc.8"
 sqlx = { version = "0.9.0", features = ["sqlite", "runtime-tokio", "tls-rustls"] }
 moka = { version = "0.12", features = ["sync"] }
 async-trait = "0.1.89"

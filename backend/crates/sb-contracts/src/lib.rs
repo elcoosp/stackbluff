@@ -49,3 +49,5 @@ pub trait UserRepository: Send + Sync {
 pub trait MissionRepository: Send + Sync {
     async fn complete_mission(&self, user_id: UserId, mission_type: String) -> PersistenceResult<()>;
 }
+pub mod service_api;
+pub mod repo_api;

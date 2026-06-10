@@ -1,36 +1,34 @@
-use crate::persistence_error::PersistenceError;
 use async_trait::async_trait;
-use sb_shared_types::{ChipAmount, ClubId, RequestContext, UserId};
+use uuid::Uuid;
+use sb_shared_types::errors::AppError;
+use sb_shared_types::request_context::RequestContext;
+
+#[derive(Debug, Clone)]
+pub struct UserInfo {
+    pub id: Uuid,
+    pub telegram_id: Option<i64>,
+    pub email: Option<String>,
+    pub password_hash: String,
+}
 
 #[async_trait]
 pub trait UserRepo: Send + Sync {
-    async fn get_balance(
+    async fn find_or_create_by_telegram(
         &self,
-        user_id: UserId,
         ctx: &RequestContext,
-    ) -> Result<ChipAmount, PersistenceError>;
-    async fn update_balance(
-        &self,
-        user_id: UserId,
-        amount: ChipAmount,
-        ctx: &RequestContext,
-    ) -> Result<(), PersistenceError>;
-}
+        tg_id: i64,
+    ) -> Result<UserInfo, AppError>;
 
-#[async_trait]
-pub trait HandHistoryRepo: Send + Sync {
-    async fn record_hand(
+    async fn create_email_user(
         &self,
-        hand_data: &str,
         ctx: &RequestContext,
-    ) -> Result<(), PersistenceError>;
-}
+        email: &str,
+        password_hash: &str,
+    ) -> Result<UserInfo, AppError>;
 
-#[async_trait]
-pub trait ClubRepo: Send + Sync {
-    async fn get_club_members(
+    async fn find_by_email(
         &self,
-        club_id: ClubId,
         ctx: &RequestContext,
-    ) -> Result<Vec<UserId>, PersistenceError>;
+        email: &str,
+    ) -> Result<Option<UserInfo>, AppError>;
 }
