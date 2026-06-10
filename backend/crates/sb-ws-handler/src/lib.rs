@@ -25,7 +25,7 @@ async fn ws_handler(ws: WebSocketUpgrade, req: Request<axum::body::Body>) -> Res
         }
     };
     info!(%user_id, "WebSocket upgrade authenticated");
-    ws.on_upgrade(move |socket| handle_websocket(socket))
+    ws.on_upgrade(handle_websocket)
 }
 
 async fn handle_websocket(socket: axum::extract::ws::WebSocket) {
@@ -46,16 +46,15 @@ async fn handle_websocket(socket: axum::extract::ws::WebSocket) {
             }
             msg = receiver.next() => match msg {
                 Some(Ok(axum::extract::ws::Message::Text(text))) => {
-                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text) {
-                        if json.get("type").and_then(|t| t.as_str()) == Some("ping") {
-                            let _ = sender.send(axum::extract::ws::Message::Text(r#"{"type":"pong"}"#.into())).await;
-                        }
+                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text)
+                        && json.get("type").and_then(|t| t.as_str()) == Some("ping")
+                    {
+                        let _ = sender.send(axum::extract::ws::Message::Text(r#"{"type":"pong"}"#.into())).await;
                     }
                 }
                 Some(Ok(axum::extract::ws::Message::Close(_))) => break,
                 Some(Ok(axum::extract::ws::Message::Binary(_))) => { /* ignore binary messages */ }
                 Some(Ok(axum::extract::ws::Message::Ping(data))) => {
-                    // respond to ping with pong
                     let _ = sender.send(axum::extract::ws::Message::Pong(data)).await;
                 }
                 Some(Ok(axum::extract::ws::Message::Pong(_))) => { /* pong already handled by tick loop */ }
