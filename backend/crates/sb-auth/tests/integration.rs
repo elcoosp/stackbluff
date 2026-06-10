@@ -107,3 +107,102 @@ async fn email_validation() {
     let err = svc.register(&ctx, "notanemail", "password123").await.unwrap_err();
     assert!(matches!(err, AppError::InvalidInput(_)));
 }
+
+#[tokio::test]
+async fn login_nonexistent_email() {
+    let (svc, _) = test_service();
+    let ctx = RequestContext::new(Uuid::new_v4(), None);
+    let err = svc.login(&ctx, "ghost@example.com", "anything").await.unwrap_err();
+    assert!(matches!(err, AppError::Unauthorized(_)));
+}
+
+#[tokio::test]
+async fn register_duplicate_email() {
+    let (svc, _) = test_service();
+    let ctx = RequestContext::new(Uuid::new_v4(), None);
+    svc.register(&ctx, "dup@test.com", "Password1!").await.unwrap();
+    let err = svc.register(&ctx, "dup@test.com", "Password1!").await.unwrap_err();
+    assert!(matches!(err, AppError::Conflict(_)));
+}
+
+#[tokio::test]
+async fn register_empty_email() {
+    let (svc, _) = test_service();
+    let ctx = RequestContext::new(Uuid::new_v4(), None);
+    let err = svc.register(&ctx, "", "Password1!").await.unwrap_err();
+    assert!(matches!(err, AppError::InvalidInput(_)));
+}
+
+#[tokio::test]
+async fn register_empty_password() {
+    let (svc, _) = test_service();
+    let ctx = RequestContext::new(Uuid::new_v4(), None);
+    let err = svc.register(&ctx, "a@b.com", "").await.unwrap_err();
+    assert!(matches!(err, AppError::InvalidInput(_)));
+}
+
+#[tokio::test]
+async fn verify_malformed_token() {
+    let (svc, _) = test_service();
+    let err = svc.verify_token("not-a-valid-jwt").await.unwrap_err();
+    assert!(matches!(err, AppError::Unauthorized(_)));
+}
+
+#[tokio::test]
+async fn verify_token_wrong_secret() {
+    use jsonwebtoken::{EncodingKey, Header};
+    let (svc, _) = test_service();
+    let claims = sb_auth::jwt::Claims {
+        sub: Uuid::new_v4(),
+        platform: "email".into(),
+        exp: (chrono::Utc::now() + chrono::Duration::days(1)).timestamp() as usize,
+        iat: 0,
+    };
+    let token = jsonwebtoken::encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(b"wrong-secret"),
+    ).unwrap();
+    let err = svc.verify_token(&token).await.unwrap_err();
+    assert!(matches!(err, AppError::Unauthorized(_)));
+}
+
+#[tokio::test]
+async fn authenticate_valid_token() {
+    use sb_contracts::service_api::AuthService;
+    let (svc, _) = test_service();
+    let ctx = RequestContext::new(Uuid::new_v4(), None);
+    let reg = svc.register(&ctx, "auth-test@test.com", "Secret123").await.unwrap();
+    let user_id = svc.authenticate(&reg.jwt, &ctx).await.unwrap();
+    assert_eq!(user_id.0, reg.user_id);
+}
+
+#[tokio::test]
+async fn authenticate_expired_token() {
+    use chrono::{Duration, Utc};
+    use jsonwebtoken::{EncodingKey, Header};
+    use sb_contracts::service_api::AuthService;
+    let (svc, _) = test_service();
+    let ctx = RequestContext::new(Uuid::new_v4(), None);
+    let expired_claims = sb_auth::jwt::Claims {
+        sub: Uuid::new_v4(),
+        platform: "email".into(),
+        exp: (Utc::now() - Duration::days(1)).timestamp() as usize,
+        iat: 0,
+    };
+    let token = jsonwebtoken::encode(
+        &Header::default(),
+        &expired_claims,
+        &EncodingKey::from_secret(b"secret"),
+    ).unwrap();
+    let err = svc.authenticate(&token, &ctx).await.unwrap_err();
+    assert!(matches!(err, AppError::Unauthorized(_)));
+}
+
+#[tokio::test]
+async fn telegram_auth_empty_initdata() {
+    let (svc, _) = test_service();
+    let ctx = RequestContext::new(Uuid::new_v4(), None);
+    let err = svc.telegram_auth(&ctx, "").await.unwrap_err();
+    assert!(matches!(err, AppError::InvalidInput(_)));
+}
