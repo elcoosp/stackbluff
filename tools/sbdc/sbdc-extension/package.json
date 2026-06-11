@@ -1,0 +1,14 @@
+{
+  "name": "sbdc-extension",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "devDependencies": {
+    "@crxjs/vite-plugin": "^2.0.0-beta.28",
+    "typescript": "^5.8.3",
+    "vite": "^6.2.4"
+  }
+}
