@@ -51,8 +51,11 @@ export function CreateTableModal({ open, onClose }: CreateTableModalProps) {
         <h2 className="text-xl font-semibold mb-4">Create New Table</h2>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label className="block text-sm font-medium mb-1">Stake Level</label>
+            <label htmlFor="stake" className="block text-sm font-medium mb-1">
+              Stake Level
+            </label>
             <select
+              id="stake"
               value={stakeLevel}
               onChange={(e) => setStakeLevel(e.target.value)}
               className="w-full border rounded-md p-2 bg-white dark:bg-gray-800"
@@ -65,10 +68,11 @@ export function CreateTableModal({ open, onClose }: CreateTableModalProps) {
             </select>
           </div>
           <div className="mb-4">
-            <label className="block text-sm font-medium mb-1">
+            <label htmlFor="maxPlayers" className="block text-sm font-medium mb-1">
               Max Players ({maxPlayers})
             </label>
             <input
+              id="maxPlayers"
               type="range"
               min={2}
               max={9}
@@ -77,16 +81,18 @@ export function CreateTableModal({ open, onClose }: CreateTableModalProps) {
               className="w-full"
             />
             <div className="flex justify-between text-xs text-gray-500">
-              <span>2</span><span>3</span><span>4</span><span>5</span>
-              <span>6</span><span>7</span><span>8</span><span>9</span>
+              <span>2</span>
+              <span>3</span>
+              <span>4</span>
+              <span>5</span>
+              <span>6</span>
+              <span>7</span>
+              <span>8</span>
+              <span>9</span>
             </div>
           </div>
           <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border rounded-md"
-            >
+            <button type="button" onClick={onClose} className="px-4 py-2 border rounded-md">
               Cancel
             </button>
             <button

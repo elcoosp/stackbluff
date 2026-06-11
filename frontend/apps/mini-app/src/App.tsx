@@ -1,7 +1,5 @@
 import { getPlatform, useUserStore } from '@stackbluff/shared';
-import { LobbyPage } from "./pages/LobbyPage";
 import { useEffect } from 'react';
-import { LobbyPage } from "./pages/LobbyPage";
 
 function App() {
   const { user, loading, loadUser } = useUserStore();

@@ -45,6 +45,6 @@ export const useTableStore = create<TableStore>()(
     {
       name: 'table-storage',
       partialize: (state) => ({ tables: state.tables, lastFetched: state.lastFetched }),
-    }
-  )
+    },
+  ),
 );

@@ -1,16 +1,34 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTableStore } from '../stores/tableStore';
 import { CreateTableModal } from '../components/CreateTableModal';
+import { useTableStore } from '../stores/tableStore';
 
-// Simple fallback components (shadcn/ui will be used if available)
-const Card = ({ children, className, onClick }: any) => (
-  <div className={`border rounded-lg p-4 bg-white dark:bg-gray-800 shadow ${className}`} onClick={onClick}>{children}</div>
+interface CardProps {
+  children: React.ReactNode;
+  className?: string;
+  onClick?: () => void;
+}
+const Card = ({ children, className, onClick }: CardProps) => (
+  <button
+    type="button"
+    className={`border rounded-lg p-4 bg-white dark:bg-gray-800 shadow text-left w-full ${className}`}
+    onClick={onClick}
+  >
+    {children}
+  </button>
 );
-const CardHeader = ({ children }: any) => <div className="mb-2">{children}</div>;
-const CardTitle = ({ children }: any) => <h3 className="font-semibold text-lg">{children}</h3>;
-const CardContent = ({ children }: any) => <div className="text-sm">{children}</div>;
-const Skeleton = ({ className }: any) => <div className={`animate-pulse bg-gray-200 dark:bg-gray-700 rounded ${className}`} />;
+const CardHeader = ({ children }: { children: React.ReactNode }) => (
+  <div className="mb-2">{children}</div>
+);
+const CardTitle = ({ children }: { children: React.ReactNode }) => (
+  <h3 className="font-semibold text-lg">{children}</h3>
+);
+const CardContent = ({ children }: { children: React.ReactNode }) => (
+  <div className="text-sm">{children}</div>
+);
+const Skeleton = ({ className }: { className?: string }) => (
+  <div className={`animate-pulse bg-gray-200 dark:bg-gray-700 rounded ${className}`} />
+);
 
 export function LobbyPage() {
   const navigate = useNavigate();
@@ -34,6 +52,7 @@ export function LobbyPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Lobby</h1>
         <button
+          type="button"
           onClick={() => setModalOpen(true)}
           className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
         >
@@ -43,10 +62,14 @@ export function LobbyPage() {
 
       {isLoading && tables.length === 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(3)].map((_, i) => (
-            <Card key={i}>
-              <CardHeader><Skeleton className="h-6 w-32" /></CardHeader>
-              <CardContent><Skeleton className="h-4 w-full" /></CardContent>
+          {[1, 2, 3].map((num) => (
+            <Card key={num}>
+              <CardHeader>
+                <Skeleton className="h-6 w-32" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-4 w-full" />
+              </CardContent>
             </Card>
           ))}
         </div>
@@ -63,12 +86,14 @@ export function LobbyPage() {
               onClick={() => handleTableClick(table.id)}
             >
               <CardHeader>
-                <CardTitle>{table.name || `Table ${table.id.slice(0,8)}`}</CardTitle>
+                <CardTitle>{table.name || `Table ${table.id.slice(0, 8)}`}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-1">
                   <div>Stake: {table.stake_level}</div>
-                  <div>Players: {table.current_players}/{table.max_players}</div>
+                  <div>
+                    Players: {table.current_players}/{table.max_players}
+                  </div>
                   <div>Status: {table.status}</div>
                 </div>
               </CardContent>
