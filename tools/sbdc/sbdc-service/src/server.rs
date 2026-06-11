@@ -164,9 +164,9 @@ pub async fn run_server(db: sea_orm::DatabaseConnection, project_dir: PathBuf, p
     });
 
     let app = Router::new()
-        .route("/start/:deck_id", post(start_generation))
-        .route("/next/:session_id", get(next_prompt))
-        .route("/result/:session_id", post(submit_result))
+        .route("/start/{deck_id}", post(start_generation))
+        .route("/next/{session_id}", get(next_prompt))
+        .route("/result/{session_id}", post(submit_result))
         .layer(
             CorsLayer::new()
                 .allow_origin(Any)
