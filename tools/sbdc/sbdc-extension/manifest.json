@@ -10,9 +10,9 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://perchance.org/*"],
+      "matches": ["https://perchance.org/fluxgen*"],
       "js": ["src/content.ts"],
-      "run_at": "document_idle",
+      "run_at": "document_end",
       "all_frames": true
     }
   ],

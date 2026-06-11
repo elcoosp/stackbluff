@@ -1,18 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head><title>SBDC</title></head>
-<body style="width:350px;padding:10px;font-family:sans-serif">
-  <h3>SBDC Generator - Debug</h3>
-  <label>Rust server URL:</label>
-  <input id="serverUrl" type="text" value="http://localhost:8899" style="width:100%; margin-bottom:8px" />
-  <label>Deck ID:</label>
-  <input id="deckId" type="text" style="width:100%; margin-bottom:8px" />
-  <label>Takes:</label>
-  <input id="takes" type="number" value="4" style="width:100%; margin-bottom:12px" />
-  <button id="start" style="width:100%; margin-bottom:5px">Start Generation</button>
-  <button id="testPing" style="width:100%; margin-bottom:5px; background:#6c757d; color:white">Test Ping Content Script</button>
-  <button id="manualFill" style="width:100%; background:#28a745; color:white">Manual Fill Test Prompt</button>
-  <div id="status" style="margin-top:10px; font-size:12px; color:#666"></div>
-  <script src="./popup.ts"></script>
+<body style="width:300px;padding:10px">
+  <input id="serverUrl" placeholder="Server URL" value="http://localhost:8899" style="width:100%">
+  <input id="deckId" placeholder="Deck ID" style="width:100%;margin-top:5px">
+  <input id="takes" placeholder="Takes" value="4" style="width:100%;margin-top:5px">
+  <button id="start" style="margin-top:10px;width:100%">Start</button>
+  <div id="status" style="margin-top:10px"></div>
+  <script src="popup.ts"></script>
 </body>
 </html>
