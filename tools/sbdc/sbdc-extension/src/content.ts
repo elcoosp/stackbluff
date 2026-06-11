@@ -119,20 +119,17 @@ function fillTextarea(selector: string, value: string): boolean {
 
 // ============================================================
 // MODE 2: Image-generation iframe monitor
-// Our content script runs inside image-generation iframes too
-// (all_frames: true on *.perchance.org). We detect when the
-// image finishes rendering and send the data to the parent.
 // ============================================================
+
+function isImageIframe(): boolean {
+  return !!(document.getElementById("waitingEl") && document.getElementById("outputEl"));
+}
 
 function runIframeMonitor(): void {
   log("Image iframe detected — monitoring for completion");
 
-  const outputEl = document.getElementById("outputEl");
-  const waitingEl = document.getElementById("waitingEl");
-  if (!outputEl || !waitingEl) {
-    log("Missing #outputEl or #waitingEl — not an image iframe");
-    return;
-  }
+  const outputEl = document.getElementById("outputEl")!;
+  const waitingEl = document.getElementById("waitingEl")!;
 
   // Check if already loaded
   if (outputEl.style.display !== "none") {
@@ -141,37 +138,28 @@ function runIframeMonitor(): void {
     return;
   }
 
-  // Watch for display change using MutationObserver
+  // Watch for outputEl to become visible
   const observer = new MutationObserver(() => {
     if (outputEl.style.display !== "none") {
       log("outputEl became visible!");
       observer.disconnect();
-
-      // Small delay to let the image render
-      setTimeout(() => {
-        sendImageData();
-      }, 2000);
+      setTimeout(() => sendImageData(), 2000);
     }
   });
-
   observer.observe(outputEl, { attributes: true, attributeFilter: ["style"] });
 
-  // Also observe waitingEl as backup
+  // Also watch waitingEl becoming hidden
   const waitObserver = new MutationObserver(() => {
     if (waitingEl.style.display === "none") {
       log("waitingEl became hidden!");
       waitObserver.disconnect();
       observer.disconnect();
-
-      setTimeout(() => {
-        sendImageData();
-      }, 2000);
+      setTimeout(() => sendImageData(), 2000);
     }
   });
-
   waitObserver.observe(waitingEl, { attributes: true, attributeFilter: ["style"] });
 
-  // Fallback: poll every 5s in case MutationObserver misses something
+  // Fallback poll
   let pollCount = 0;
   const pollInterval = setInterval(() => {
     pollCount++;
@@ -180,13 +168,9 @@ function runIframeMonitor(): void {
       clearInterval(pollInterval);
       observer.disconnect();
       waitObserver.disconnect();
-
-      setTimeout(() => {
-        sendImageData();
-      }, 2000);
+      setTimeout(() => sendImageData(), 2000);
     }
     if (pollCount > 60) {
-      log("Poll timeout — giving up");
       clearInterval(pollInterval);
     }
   }, 5000);
@@ -196,77 +180,55 @@ function sendImageData(): void {
   const outputEl = document.getElementById("outputEl");
   if (!outputEl) return;
 
-  // Try canvas first
   const canvas = outputEl.querySelector("canvas") as HTMLCanvasElement | null;
   if (canvas && canvas.width > 0 && canvas.height > 0) {
-    log(`Found canvas ${canvas.width}x${canvas.height} — extracting`);
     try {
       const dataUrl = canvas.toDataURL("image/png");
-      window.parent.postMessage({
-        type: "sbdc-image-ready",
-        data: dataUrl,
-      }, "*");
-      log("Sent canvas image data to parent");
+      window.parent.postMessage({ type: "sbdc-image-ready", data: dataUrl }, "*");
+      log("Sent canvas image to parent");
       return;
-    } catch (e: Error) {
-      log(`Canvas toDataURL failed: ${e.message}`);
-    }
+    } catch { /* fall through */ }
   }
 
-  // Try img element
   const img = outputEl.querySelector("img") as HTMLImageElement | null;
-  if (img) {
-    log(`Found img element src=${img.src?.substring(0, 80)}...`);
-    if (img.src && img.complete && img.naturalHeight > 0) {
+  if (img && img.src) {
+    if (img.complete && img.naturalHeight > 0) {
       if (img.src.startsWith("data:")) {
-        window.parent.postMessage({
-          type: "sbdc-image-ready",
-          data: img.src,
-        }, "*");
+        window.parent.postMessage({ type: "sbdc-image-ready", data: img.src }, "*");
         log("Sent img data URL to parent");
         return;
       }
-
-      // Fetch the image and convert to data URL
       fetch(img.src)
-        .then((resp) => resp.blob())
-        .then((blob) => {
-          return new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.readAsDataURL(blob);
-          });
-        })
+        .then((r) => r.blob())
+        .then((blob) => new Promise<string>((res) => {
+          const reader = new FileReader();
+          reader.onload = () => res(reader.result as string);
+          reader.readAsDataURL(blob);
+        }))
         .then((dataUrl) => {
-          window.parent.postMessage({
-            type: "sbdc-image-ready",
-            data: dataUrl,
-          }, "*");
-          log("Sent fetched img data to parent");
+          window.parent.postMessage({ type: "sbdc-image-ready", data: dataUrl }, "*");
+          log("Sent fetched img to parent");
         })
-        .catch((e: Error) => {
-          log(`Failed to fetch img: ${e.message}`);
-        });
+        .catch((e: Error) => log(`Fetch failed: ${e.message}`));
       return;
     }
-
-    // Image not yet complete — wait for load
-    log("Image not yet loaded, waiting...");
-    img.addEventListener("load", () => {
-      log("Image loaded!");
-      sendImageData();
-    }, { once: true });
+    img.addEventListener("load", () => sendImageData(), { once: true });
     return;
   }
 
-  // Nothing found yet — retry after delay
-  log("No canvas or img found in outputEl — retrying in 3s");
   setTimeout(sendImageData, 3000);
 }
 
 // ============================================================
-// MODE 1: Main frame generation loop
+// MODE 1: Generator UI — fill prompts and generate
 // ============================================================
+
+function isGeneratorUI(): boolean {
+  return !!(
+    document.querySelector('textarea[data-name="description"]') ||
+    document.querySelector("#generateButtonEl")
+  );
+}
 
 async function waitForUI(): Promise<boolean> {
   for (let i = 0; i < 120; i++) {
@@ -276,9 +238,10 @@ async function waitForUI(): Promise<boolean> {
       log(`Scanning ${FRAME_ID}...`);
       log(`  textarea: ${desc ? "FOUND" : "not found"}`);
       log(`  generateBtn: ${genBtn ? "FOUND" : "not found"}`);
+      log(`  URL: ${window.location.href}`);
     }
     if (desc && genBtn) {
-      log(`UI found in ${FRAME_ID}`);
+      log(`Generator UI found in ${FRAME_ID}`);
       return true;
     }
     if (i % 10 === 0 && i > 0) log(`Waiting for UI... (${i}s)`);
@@ -290,11 +253,12 @@ async function waitForUI(): Promise<boolean> {
 function waitForImagesViaPostMessage(numImages: number): Promise<ImageData[]> {
   return new Promise((resolve) => {
     const images: ImageData[] = [];
+    const timeout = 180000;
 
     function handler(event: MessageEvent) {
       if (event.data?.type === "sbdc-image-ready" && event.data?.data) {
         images.push({ index: images.length, data: event.data.data });
-        log(`Received image ${images.length}/${numImages} from iframe`);
+        log(`Received image ${images.length}/${numImages}`);
         if (images.length >= numImages) {
           window.removeEventListener("message", handler);
           resolve(images);
@@ -304,12 +268,11 @@ function waitForImagesViaPostMessage(numImages: number): Promise<ImageData[]> {
 
     window.addEventListener("message", handler);
 
-    // Timeout after 180s
     setTimeout(() => {
       window.removeEventListener("message", handler);
-      log(`Image wait timeout — got ${images.length}/${numImages}`);
+      log(`Timeout — got ${images.length}/${numImages} images`);
       resolve(images);
-    }, 180000);
+    }, timeout);
   });
 }
 
@@ -393,7 +356,6 @@ async function runGeneration(): Promise<void> {
     setIndicator("darkgreen", `[SBDC] Generating ${item.target_card}...`);
     document.querySelector("#generateButtonEl")!.click();
 
-    // Wait for images via postMessage from iframe content scripts
     log(`Waiting for ${NUM_IMAGES} images from iframes...`);
     const images = await waitForImagesViaPostMessage(NUM_IMAGES);
     log(`Got ${images.length} images`);
@@ -418,48 +380,43 @@ async function runGeneration(): Promise<void> {
 }
 
 // ============================================================
-// Entry point — detect which mode to run
+// Entry point — detect which mode based on content
 // ============================================================
 
 async function main(): Promise<void> {
-  // MODE 2: Check if we're inside an image-generation iframe
-  const waitingEl = document.getElementById("waitingEl");
-  const outputEl = document.getElementById("outputEl");
+  log(`Content script loaded. URL: ${window.location.href}`);
 
-  if (waitingEl && outputEl && window !== window.top) {
-    // We're inside an image-generation iframe — run monitor
+  // MODE 2: Image-generation iframe (has #waitingEl + #outputEl)
+  if (isImageIframe()) {
     runIframeMonitor();
     return;
   }
 
-  // MODE 1: Main frame
-  setIndicator("red", `[SBDC] Loaded in ${FRAME_ID}`);
-  log(`Content script loaded. URL: ${window.location.href}`);
+  // MODE 1: Generator UI (has textarea + generate button)
+  if (isGeneratorUI()) {
+    setIndicator("red", `[SBDC] Generator UI in ${FRAME_ID}`);
+    if (!(await waitForUI())) return;
+    setIndicator("green", "[SBDC] UI ready!");
 
-  if (window !== window.top) {
-    // Some other iframe on perchance — skip
+    const deckId = await getDeckId();
+    if (deckId) {
+      log(`Deck ID: ${deckId}`);
+      await runGeneration();
+    } else {
+      log("No deck ID. Waiting for popup...");
+      setIndicator("orange", "[SBDC] Configure in popup");
+      chrome.storage.onChanged.addListener((changes, area) => {
+        if (area === "local" && changes.deckId && changes.deckId.newValue) {
+          log(`Deck ID set: ${changes.deckId.newValue}`);
+          runGeneration().catch((e: Error) => log(`Fatal: ${e.message}`));
+        }
+      });
+    }
     return;
   }
 
-  if (!(await waitForUI())) return;
-
-  setIndicator("green", "[SBDC] UI ready!");
-  log("UI ready!");
-
-  const deckId = await getDeckId();
-  if (deckId) {
-    log(`Deck ID: ${deckId}`);
-    await runGeneration();
-  } else {
-    log("No deck ID. Waiting for popup...");
-    setIndicator("orange", "[SBDC] Configure in popup");
-    chrome.storage.onChanged.addListener((changes, area) => {
-      if (area === "local" && changes.deckId && changes.deckId.newValue) {
-        log(`Deck ID set: ${changes.deckId.newValue}`);
-        runGeneration().catch((e: Error) => log(`Fatal: ${e.message}`));
-      }
-    });
-  }
+  // Not a recognized frame — skip
+  log(`Not a generator or image frame — skipping`);
 }
 
 main().catch((e: Error) => {
