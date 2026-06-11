@@ -1,10 +1,10 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { getPlatform, PwaPlatform, TelegramPlatform } from './index';
 
 describe('Platform API', () => {
   it('returns PwaPlatform when not in Telegram', () => {
     const originalWindow = global.window;
-    // @ts-ignore
+    // @ts-expect-error
     delete global.window;
     global.window = {} as Window;
 
