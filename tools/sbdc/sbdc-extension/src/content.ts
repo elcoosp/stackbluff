@@ -39,9 +39,7 @@ function log(m: string): void {
   try {
     const ind = document.getElementById("sbdc-indicator");
     if (ind) ind.textContent = line;
-  } catch {
-    // ignore
-  }
+  } catch { /* ignore */ }
 }
 
 function setIndicator(color: string, text: string): void {
@@ -56,9 +54,7 @@ function setIndicator(color: string, text: string): void {
     }
     ind.style.background = color;
     ind.textContent = text;
-  } catch {
-    // ignore
-  }
+  } catch { /* ignore */ }
 }
 
 async function getServerUrl(): Promise<string> {
@@ -109,14 +105,11 @@ function setNativeValue(element: HTMLTextAreaElement, value: string): void {
 function fillTextarea(selector: string, value: string): boolean {
   const el = document.querySelector(selector) as HTMLTextAreaElement | null;
   if (!el) return false;
-
   el.focus();
   el.blur();
   el.focus();
-
   setNativeValue(el, "");
   el.dispatchEvent(new Event("input", { bubbles: true }));
-
   setNativeValue(el, value);
   el.dispatchEvent(new InputEvent("input", {
     bubbles: true,
@@ -125,95 +118,70 @@ function fillTextarea(selector: string, value: string): boolean {
     inputType: "insertText",
   }));
   el.dispatchEvent(new Event("change", { bubbles: true }));
-
   return true;
 }
 
 function countOutputImages(): number {
   const iframes = document.querySelectorAll("iframe.text-to-image-plugin-image-iframe");
+  if (iframes.length > 0) return iframes.length;
   const imgs = document.querySelectorAll("#outputAreaEl img");
+  if (imgs.length > 0) return imgs.length;
   const containers = document.querySelectorAll(".t2i-image-ctn");
-  return iframes.length || imgs.length || containers.length;
+  return containers.length;
 }
 
 async function waitForUI(): Promise<boolean> {
   for (let i = 0; i < 120; i++) {
     const desc = document.querySelector('textarea[data-name="description"]');
     const genBtn = document.querySelector("#generateButtonEl");
-
     if (i === 0) {
       log(`Scanning ${FRAME_ID}...`);
       log(`  textarea: ${desc ? "FOUND" : "not found"}`);
       log(`  generateBtn: ${genBtn ? "FOUND" : "not found"}`);
-      log(`  iframes: ${document.querySelectorAll("iframe.text-to-image-plugin-image-iframe").length}`);
-      log(`  .t2i-image-ctn: ${document.querySelectorAll(".t2i-image-ctn").length}`);
-      log(`  #outputAreaEl img: ${document.querySelectorAll("#outputAreaEl img").length}`);
     }
-
     if (desc && genBtn) {
       log(`UI found in ${FRAME_ID}`);
       return true;
     }
-
-    if (i % 10 === 0 && i > 0) {
-      log(`Waiting for UI... (${i}s)`);
-    }
+    if (i % 10 === 0 && i > 0) log(`Waiting for UI... (${i}s)`);
     await new Promise((r) => setTimeout(r, 1000));
   }
   return false;
 }
 
-async function waitForImagesToLoad(beforeCount: number, expected: number): Promise<boolean> {
+async function waitForNewImages(expectedCount: number): Promise<boolean> {
+  // Perchance clears old images when Generate is clicked.
+  // Strategy: wait for output to stabilize at exactly expectedCount images.
   const timeout = 180;
+  let stableCount = 0;
+  let lastCount = -1;
+
   for (let i = 0; i < timeout; i++) {
     const currentCount = countOutputImages();
-    if (currentCount >= beforeCount + expected) {
-      log(`All ${expected} iframes appeared after ${i}s`);
 
-      await new Promise((r) => setTimeout(r, 3000));
-
-      let allLoaded = true;
-      const iframes = document.querySelectorAll("iframe.text-to-image-plugin-image-iframe");
-      for (let j = beforeCount; j < beforeCount + expected; j++) {
-        const iframe = iframes[j] as HTMLIFrameElement;
-        if (iframe) {
-          try {
-            const doc = iframe.contentDocument;
-            if (doc) {
-              const canvas = doc.querySelector("canvas");
-              const img = doc.querySelector("img");
-              if (!canvas && !img) {
-                allLoaded = false;
-                if (i % 10 === 0) {
-                  log(`Iframe ${j}: no canvas/img yet`);
-                }
-              }
-            }
-          } catch {
-            // CORS - iframe loaded but we can't access content
-            // That's OK, the image is still generated
-          }
-        }
+    if (currentCount === expectedCount) {
+      if (currentCount !== lastCount) {
+        log(`Count reached ${currentCount}, confirming stable...`);
+        lastCount = currentCount;
       }
-
-      if (allLoaded) {
-        log("All images fully rendered");
+      stableCount++;
+      if (stableCount >= 3) {
+        log(`Confirmed ${expectedCount} images stable after ${i}s`);
+        // Extra wait for images to fully render inside iframes
+        await new Promise((r) => setTimeout(r, 3000));
         return true;
       }
-
-      if (i > 30) {
-        log("Images appeared, proceeding even if some iframes not fully accessible");
-        return true;
+    } else {
+      stableCount = 0;
+      if (i % 10 === 0) {
+        log(`Waiting for images... count=${currentCount} (expect ${expectedCount}) (${i}s)`);
       }
     }
 
-    if (i % 10 === 0 && i > 0) {
-      log(`Waiting for images... ${currentCount}/${beforeCount + expected} (${i}s)`);
-    }
     await new Promise((r) => setTimeout(r, 1000));
   }
 
-  log(`Timeout waiting for images after ${timeout}s`);
+  log(`Timeout after ${timeout}s. Final count: ${countOutputImages()}`);
   return false;
 }
 
@@ -221,19 +189,11 @@ async function extractImageFromIframe(iframe: HTMLIFrameElement): Promise<string
   try {
     const doc = iframe.contentDocument;
     if (!doc) return null;
-
     const canvas = doc.querySelector("canvas");
-    if (canvas) {
-      log("Extracting from canvas inside iframe");
-      return canvas.toDataURL("image/png");
-    }
-
+    if (canvas) return canvas.toDataURL("image/png");
     const img = doc.querySelector("img");
     if (img && img.src) {
-      log("Extracting from img inside iframe");
-      if (img.src.startsWith("data:")) {
-        return img.src;
-      }
+      if (img.src.startsWith("data:")) return img.src;
       try {
         const resp = await fetch(img.src);
         const blob = await resp.blob();
@@ -242,65 +202,48 @@ async function extractImageFromIframe(iframe: HTMLIFrameElement): Promise<string
           reader.onload = () => resolve(reader.result as string);
           reader.readAsDataURL(blob);
         });
-      } catch {
-        log("Failed to fetch img src from iframe");
-      }
+      } catch { /* fall through */ }
     }
-  } catch {
-    // CORS blocked - try alternative method
-    log("CORS blocked iframe content access, trying alternative extraction");
-  }
+  } catch { /* CORS blocked */ }
 
+  // Try fetching the iframe URL directly
   try {
     const iframeSrc = iframe.src || iframe.getAttribute("data-src") || "";
     if (iframeSrc.includes("image-generation.perchance.org")) {
-      log("Attempting to fetch iframe page directly");
       const resp = await fetch(iframeSrc);
       const html = await resp.text();
-
-      const dataUrlMatch = html.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/);
-      if (dataUrlMatch) {
-        log("Found data URL in iframe HTML");
-        return dataUrlMatch[0];
-      }
-
-      const srcMatch = html.match(/src=["'](data:image\/[^"']+)["']/);
-      if (srcMatch) {
-        log("Found src data URL in iframe HTML");
-        return srcMatch[1];
-      }
+      const match = html.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/);
+      if (match) return match[0];
     }
-  } catch (e: Error) {
-    log(`Alternative extraction failed: ${e.message}`);
-  }
+  } catch { /* fall through */ }
 
   return null;
 }
 
-async function extractImagesFromOutput(beforeCount: number, count: number): Promise<ImageData[]> {
+async function extractAllImages(): Promise<ImageData[]> {
   const images: ImageData[] = [];
 
+  // Try iframes first
   const iframes = document.querySelectorAll("iframe.text-to-image-plugin-image-iframe");
-  const iframeList = Array.from(iframes);
-
-  for (let i = beforeCount; i < beforeCount + count && i < iframeList.length; i++) {
-    const iframe = iframeList[i] as HTMLIFrameElement;
-    const data = await extractImageFromIframe(iframe);
-    if (data) {
-      images.push({ index: i - beforeCount, data });
-      log(`Extracted image ${images.length}/${count} from iframe[${i}]`);
-    } else {
-      log(`Could not extract image from iframe[${i}]`);
+  if (iframes.length > 0) {
+    for (let i = 0; i < iframes.length; i++) {
+      const data = await extractImageFromIframe(iframes[i] as HTMLIFrameElement);
+      if (data) {
+        images.push({ index: i, data });
+        log(`Extracted image ${images.length} from iframe[${i}]`);
+      } else {
+        log(`Could not extract from iframe[${i}]`);
+      }
     }
   }
 
+  // Fallback: img tags
   if (images.length === 0) {
-    log("No images from iframes, trying #outputAreaEl img fallback");
     const imgs = document.querySelectorAll("#outputAreaEl img");
-    for (let i = beforeCount; i < beforeCount + count && i < imgs.length; i++) {
+    for (let i = 0; i < imgs.length; i++) {
       const src = (imgs[i] as HTMLImageElement).src;
       if (src.startsWith("data:")) {
-        images.push({ index: i - beforeCount, data: src });
+        images.push({ index: i, data: src });
       } else {
         try {
           const resp = await fetch(src);
@@ -310,10 +253,8 @@ async function extractImagesFromOutput(beforeCount: number, count: number): Prom
             rd.onload = () => res(rd.result as string);
             rd.readAsDataURL(blob);
           });
-          images.push({ index: i - beforeCount, data });
-        } catch {
-          log("Image fetch failed");
-        }
+          images.push({ index: i, data });
+        } catch { /* skip */ }
       }
     }
   }
@@ -381,12 +322,9 @@ async function runGeneration(): Promise<void> {
       ns.dispatchEvent(new Event("change", { bubbles: true }));
     }
 
-    const positiveStr = String(item.positive);
-    const negativeStr = String(item.negative || "");
+    fillTextarea('textarea[data-name="description"]', String(item.positive));
 
-    fillTextarea('textarea[data-name="description"]', positiveStr);
-
-    if (negativeStr) {
+    if (item.negative) {
       const neg = document.querySelector('textarea[data-name="negative"]') as HTMLTextAreaElement | null;
       if (neg) {
         const ctn = neg.closest(".input-ctn") as HTMLElement | null;
@@ -394,47 +332,36 @@ async function runGeneration(): Promise<void> {
           ctn.dataset.foldToggleState = "shown";
           await new Promise((r) => setTimeout(r, 500));
         }
-        fillTextarea('textarea[data-name="negative"]', negativeStr);
+        fillTextarea('textarea[data-name="negative"]', String(item.negative));
       }
     }
 
     await new Promise((r) => setTimeout(r, 500));
 
-    const beforeCount = countOutputImages();
-    log(`Clicking Generate (before: ${beforeCount} images)...`);
+    log(`Clicking Generate...`);
     setIndicator("darkgreen", `[SBDC] Generating ${item.target_card}...`);
     document.querySelector("#generateButtonEl")!.click();
 
-    const loaded = await waitForImagesToLoad(beforeCount, NUM_IMAGES);
+    // Wait for exactly NUM_IMAGES new images to appear and stabilize
+    const loaded = await waitForNewImages(NUM_IMAGES);
     if (!loaded) {
       log("Image load timeout, moving to next prompt");
       continue;
     }
 
     log("Extracting images...");
-    const images = await extractImagesFromOutput(beforeCount, NUM_IMAGES);
-    log(`Extracted ${images.length}/${NUM_IMAGES} images`);
+    const images = await extractAllImages();
+    log(`Extracted ${images.length} images`);
 
-    if (images.length > 0) {
-      try {
-        await serverFetch(
-          `/api/decks/${deckId}/prompts/${item.prompt_id}/takes`,
-          "POST",
-          JSON.stringify({ images }),
-        );
-        log(`Submitted ${images.length} takes for prompt ${item.prompt_id}`);
-      } catch (e: Error) {
-        log(`Submit failed: ${e.message}`);
-      }
-    } else {
-      log("No images extracted — skipping submission for this prompt");
-      try {
-        const resultUrl = `/api/decks/${deckId}/prompts/${item.prompt_id}/takes`;
-        await serverFetch(resultUrl, "POST", JSON.stringify({ images: [] as ImageData[] }));
-        log("Submitted empty takes to mark prompt as processed");
-      } catch {
-        // ignore
-      }
+    try {
+      await serverFetch(
+        `/api/decks/${deckId}/prompts/${item.prompt_id}/takes`,
+        "POST",
+        JSON.stringify({ images }),
+      );
+      log(`Submitted ${images.length} takes for prompt ${item.prompt_id}`);
+    } catch (e: Error) {
+      log(`Submit failed: ${e.message}`);
     }
 
     await new Promise((r) => setTimeout(r, 2000 + Math.random() * 3000));
