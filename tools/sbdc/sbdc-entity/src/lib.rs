@@ -15,4 +15,3 @@ pub mod prompt_template;
 pub mod season;
 pub mod universe;
 pub mod virality_mechanic;
-pub mod take;
