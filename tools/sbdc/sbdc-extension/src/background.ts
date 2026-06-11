@@ -27,22 +27,25 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 });
 
 async function ensureContentScript(tabId: number) {
+  // Try to ping first
   try {
     await chrome.tabs.sendMessage(tabId, { type: 'PING' });
     console.log('[SBDC Background] Content script already active');
     return true;
   } catch {
     console.log('[SBDC Background] Content script not active, injecting...');
-    await chrome.scripting.executeScript({
-      target: { tabId: tabId },
-      files: ['src/content.ts']
-    });
-    await chrome.scripting.insertCSS({
-      target: { tabId: tabId },
-      css: '/* no-op */'
-    });
-    console.log('[SBDC Background] Injected content script');
-    return true;
+    try {
+      // For Manifest V3 with scripting permission
+      await chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        files: ['src/content.ts']
+      });
+      console.log('[SBDC Background] Injected content script');
+      return true;
+    } catch (err) {
+      console.error('[SBDC Background] Injection failed:', err);
+      return false;
+    }
   }
 }
 
@@ -62,20 +65,25 @@ async function startGeneration(deckId: string, takes: number) {
     currentSessionId = data.session_id;
     console.log('[SBDC Background] Got session ID:', currentSessionId);
 
-    const tabs = await chrome.tabs.query({ url: 'https://perchance.org/fluxgen*' });
+    let tabs = await chrome.tabs.query({ url: 'https://perchance.org/fluxgen*' });
+    let tabId: number;
     if (tabs.length === 0) {
-      console.error('[SBDC Background] No tab with perchance.org/fluxgen found. Please open https://perchance.org/fluxgen');
-      // Try to open the tab automatically
+      console.log('[SBDC Background] No perchance tab, opening new one...');
       const newTab = await chrome.tabs.create({ url: 'https://perchance.org/fluxgen' });
-      await new Promise(r => setTimeout(r, 3000)); // wait for page load
-      await ensureContentScript(newTab.id!);
-      await chrome.tabs.sendMessage(newTab.id!, { type: 'START_POLLING' });
+      tabId = newTab.id!;
+      await new Promise(r => setTimeout(r, 5000)); // wait for load
     } else {
-      const tab = tabs[0];
-      await ensureContentScript(tab.id!);
-      console.log(`[SBDC Background] Sending START_POLLING to tab ${tab.id}`);
-      await chrome.tabs.sendMessage(tab.id!, { type: 'START_POLLING' });
+      tabId = tabs[0].id!;
     }
+
+    const injected = await ensureContentScript(tabId);
+    if (!injected) {
+      console.error('[SBDC Background] Could not inject content script');
+      return;
+    }
+
+    console.log(`[SBDC Background] Sending START_POLLING to tab ${tabId}`);
+    await chrome.tabs.sendMessage(tabId, { type: 'START_POLLING' });
   } catch (err) {
     console.error('[SBDC Background] Error in startGeneration:', err);
   }
