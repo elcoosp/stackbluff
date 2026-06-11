@@ -1,75 +1,57 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-COMPILE_OK=true
-INCOMPLETE=false
+echo "Cleaning up backup files and providing final summary"
 
-echo "Removing duplicate Ok(()) in main.rs"
+cd /Users/adm/Documents/Repos/stackbluff || { echo "ERROR: cannot cd to repo root"; exit 1; }
 
-cd tools/sbdc || { echo "ERROR: cannot cd to tools/sbdc"; exit 1; }
+# Remove backup files
+rm -f tools/sbdc/sbdc-cli/src/main.rs.bak
+rm -f wr.sh.bak 2>/dev/null || true
 
-# Find and delete the extra Ok(()) line that appears after the match block
-# The current structure: match result, then result?; then Ok(()) twice?
-# We'll rewrite the tail end of main to ensure only one Ok(()) and proper semicolon.
+# Remove any other .bak files in tools/sbdc
+find tools/sbdc -name "*.bak" -type f -delete 2>/dev/null || true
 
-OLD_TAIL=$(mktemp)
-NEW_TAIL=$(mktemp)
-cat > "$OLD_TAIL" << 'TAIL_OLD'
-    result?;
-    Ok(())
-    Ok(())
-TAIL_OLD
+echo "Backup files removed."
 
-cat > "$NEW_TAIL" << 'TAIL_NEW'
-    result?;
-    Ok(())
-TAIL_NEW
-
-if python3 - "$OLD_TAIL" "$NEW_TAIL" sbdc-cli/src/main.rs << 'PYEOF'
-import sys
-with open(sys.argv[1], 'r') as f: old = f.read()
-with open(sys.argv[2], 'r') as f: new = f.read()
-with open(sys.argv[3], 'r') as f: content = f.read()
-if old in content:
-    content = content.replace(old, new)
-else:
-    print("Pattern not found, trying more precise fix", file=sys.stderr)
-    # Fallback: remove extra Ok(()) line
-    lines = content.split('\n')
-    new_lines = []
-    skip_next = False
-    for i, line in enumerate(lines):
-        if line.strip() == 'Ok(())' and i > 0 and lines[i-1].strip() == 'Ok(())':
-            continue
-        new_lines.append(line)
-    content = '\n'.join(new_lines)
-with open(sys.argv[3], 'w') as f: f.write(content)
-PYEOF
-then
-    echo "Fixed duplicate Ok(())"
-    rm "$OLD_TAIL" "$NEW_TAIL"
+# Ensure all changes are committed (if any remain)
+git add -A
+if ! git diff --cached --quiet; then
+    git commit -m "chore: remove backup files and finalize sbdc-gen-node removal"
 else
-    echo "ERROR: Failed to fix"
-    rm -f "$OLD_TAIL" "$NEW_TAIL"
-    exit 1
+    echo "No additional changes to commit."
 fi
 
-echo "Re-checking compilation"
-if ! cargo check --workspace 2>&1; then
-    echo "Compilation failed – will skip commit"
-    COMPILE_OK=false
-fi
-
-if [ "$COMPILE_OK" = true ]; then
-    echo "Running tests"
-    if ! cargo nextest run --workspace 2>&1; then
-        echo "Tests failed. Fix errors then run the next script."
-        exit 1
-    fi
-    echo "All tests passed. Committing."
-    git add -A
-    git commit -m "fix(cli): remove duplicate Ok(()) in main"
-else
-    echo "Compilation still failing. Provide error log for surgical fix."
-    exit 1
-fi
+echo ""
+echo "════════════════════════════════════════════════════════════"
+echo "✅ Migration complete!"
+echo "════════════════════════════════════════════════════════════"
+echo ""
+echo "What was done:"
+echo "  • Removed sbdc-gen-node (Node bridge) completely"
+echo "  • Added axum HTTP server to sbdc-service"
+echo "  • Created Chrome extension with Vite + CRXJS"
+echo "  • Updated CLI with 'serve' command"
+echo ""
+echo "To use the new pipeline:"
+echo ""
+echo "1. Build the extension:"
+echo "   cd tools/sbdc/sbdc-extension && ./build.sh"
+echo ""
+echo "2. Load extension in Chrome:"
+echo "   chrome://extensions/ → Developer mode → Load unpacked"
+echo "   Select tools/sbdc/sbdc-extension/dist"
+echo ""
+echo "3. Start the Rust server for your deck:"
+echo "   cd tools/sbdc"
+echo "   cargo run --bin sbdc -- serve --deck YOUR_DECK_ID --port 8899"
+echo ""
+echo "4. Open https://perchance.org/fluxgen in Chrome"
+echo ""
+echo "5. Click extension icon, set server URL (http://localhost:8899),"
+echo "   deck ID, takes, and click Start Generation."
+echo ""
+echo "The extension will automatically fill prompts, generate images,"
+echo "and save them to decks/<season>/<deck_id>/0-takes/"
+echo ""
+echo "════════════════════════════════════════════════════════════"
