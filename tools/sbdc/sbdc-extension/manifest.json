@@ -1,21 +1,13 @@
 {
   "manifest_version": 3,
   "name": "SBDC Generator",
-  "version": "1.0",
-  "permissions": ["storage", "tabs"],
+  "version": "2.0",
+  "permissions": ["storage", "tabs", "scripting", "webNavigation"],
   "host_permissions": ["http://localhost:*/*", "https://perchance.org/*"],
   "background": {
-    "service_worker": "src/background.ts",
+    "service_worker": "src/background.js",
     "type": "module"
   },
-  "content_scripts": [
-    {
-      "matches": ["https://perchance.org/fluxgen*"],
-      "js": ["src/content.ts"],
-      "run_at": "document_end",
-      "all_frames": true
-    }
-  ],
   "action": {
     "default_popup": "src/popup.html"
   }
