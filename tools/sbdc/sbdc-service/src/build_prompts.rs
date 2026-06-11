@@ -1,10 +1,9 @@
-#![allow(clippy::format_in_format_args)]
 use crate::error::{Result, SbdcError};
 use sbdc_entity::{
-    character, clan, deck, deck_narrative_arc, framing_instruction, generated_prompt,
-    junction_type, lore_entry, season, universe,
+    character, clan, deck, deck_narrative_arc, generated_prompt, junction_type, lore_entry, season,
+    universe,
 };
-use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, Set};
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
 use std::collections::HashMap;
 
 fn suit_to_clan_id(suit: &str) -> String {
@@ -25,6 +24,30 @@ fn parse_card(target_card: &str) -> (String, String) {
         ("10".to_string(), target_card[2..3].to_string())
     } else {
         ("2".to_string(), "s".to_string())
+    }
+}
+
+fn strip_non_visual(text: &str) -> String {
+    text.split_whitespace()
+        .filter(|w| !w.starts_with('#'))
+        .filter(|w| !w.contains("invariant"))
+        .filter(|w| !w.contains("philosophy"))
+        .filter(|w| !w.contains("animation"))
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn is_placeholder_arc(desc: &str) -> bool {
+    desc.contains("placeholder") || desc.starts_with("Card ")
+}
+
+fn rank_label(rank: &str) -> &'static str {
+    match rank {
+        "K" => "King",
+        "Q" => "Queen",
+        "J" => "Jack",
+        "A" => "Ace",
+        _ => "",
     }
 }
 
@@ -68,11 +91,14 @@ pub async fn run_build_prompts(db: &sea_orm::DatabaseConnection, deck_id: &str) 
         .filter(lore_entry::Column::Status.eq("approved"))
         .all(db)
         .await?;
-    let lore_injection: String = lore_entries
+
+    let lore_visual: String = lore_entries
         .iter()
-        .map(|l| l.content.as_str())
+        .map(|l| strip_non_visual(&l.content))
+        .filter(|s| !s.is_empty())
+        .take(2)
         .collect::<Vec<_>>()
-        .join(" ");
+        .join(", ");
 
     let arcs = deck_narrative_arc::Entity::find()
         .filter(deck_narrative_arc::Column::DeckId.eq(deck_id))
@@ -108,39 +134,45 @@ pub async fn run_build_prompts(db: &sea_orm::DatabaseConnection, deck_id: &str) 
             let char_desc = character_opt
                 .map(|c| c.bust_prompt_description.as_str())
                 .unwrap_or("majestic figure");
-            let artifact_desc = character_opt
+            let artifact = character_opt
                 .map(|c| c.artifact_default_desc.as_str())
                 .unwrap_or("holding artifact");
+            let label = rank_label(&rank);
 
             format!(
-                "{}, {}, {} {}, {}, {}",
+                "{}, {} {} {}, {}, {}",
                 deck_model.art_style,
-                clan.silhouette,
-                rank,
+                label,
                 char_desc,
-                artifact_desc,
+                clan.silhouette,
+                artifact,
                 junction.prompt_fragment,
             )
         } else {
-            let mut parts = vec![
-                format!("{}, {}", deck_model.art_style, clan.silhouette),
-            ];
+            let scene = if is_placeholder_arc(arc_desc) {
+                String::new()
+            } else {
+                format!("{}, ", arc_desc)
+            };
 
-            if !arc_desc.is_empty() {
-                parts.push(format!("scene: {}", arc_desc));
-            }
+            let lore_part = if lore_visual.is_empty() {
+                String::new()
+            } else {
+                let capped: String = lore_visual.chars().take(80).collect();
+                format!("{}, ", capped)
+            };
 
-            if !lore_injection.is_empty() {
-                let lore_short: String = lore_injection.chars().take(120).collect();
-                parts.push(lore_short);
-            }
-
-            parts.push(junction.prompt_fragment.clone());
-
-            parts.join(", ")
+            format!(
+                "{}, {}{}{}{}",
+                deck_model.art_style,
+                scene,
+                lore_part,
+                clan.silhouette,
+                junction.prompt_fragment,
+            )
         };
 
-        let negative = universe_model.default_negative.clone();
+        let negative = "text, watermark, blurry, deformed, ugly, writing, letters, words, signature".to_string();
 
         let mut active: generated_prompt::ActiveModel = prompt.clone().into();
         active.final_positive = Set(positive);
@@ -195,21 +227,29 @@ mod tests {
             face_prompt.final_positive.contains("stern king"),
             "Face card missing character injection"
         );
+        assert!(
+            !face_prompt.final_positive.contains('#'),
+            "Prompt should not contain hex codes"
+        );
+        assert!(
+            !face_prompt.final_positive.contains("invariant"),
+            "Prompt should not contain 'invariant'"
+        );
     }
 
     #[tokio::test]
-    async fn prompts_are_reasonable_length() {
+    async fn prompts_are_short_and_visual() {
         let db = setup_test_db().await;
         let dir = tempdir().unwrap();
         run_init(&db, dir.path()).await.unwrap();
-        run_scaffold(&db, dir.path(), "len-test", "default_season")
+        run_scaffold(&db, dir.path(), "short-test", "default_season")
             .await
             .unwrap();
 
-        run_build_prompts(&db, "len-test").await.unwrap();
+        run_build_prompts(&db, "short-test").await.unwrap();
 
         let prompts = generated_prompt::Entity::find()
-            .filter(generated_prompt::Column::DeckId.eq("len-test"))
+            .filter(generated_prompt::Column::DeckId.eq("short-test"))
             .filter(generated_prompt::Column::Status.eq("ready_to_generate"))
             .all(&db)
             .await
@@ -217,10 +257,23 @@ mod tests {
 
         for p in &prompts {
             assert!(
-                p.final_positive.len() < 500,
-                "Prompt for {} too long: {} chars",
+                p.final_positive.len() < 300,
+                "Prompt for {} too long ({} chars): {}",
                 p.target_card,
-                p.final_positive.len()
+                p.final_positive.len(),
+                p.final_positive
+            );
+            assert!(
+                !p.final_positive.contains('#'),
+                "Hex code in prompt for {}: {}",
+                p.target_card,
+                p.final_positive
+            );
+            assert!(
+                !p.final_positive.contains("placeholder"),
+                "Placeholder in prompt for {}: {}",
+                p.target_card,
+                p.final_positive
             );
         }
     }
