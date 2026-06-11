@@ -80,3 +80,6 @@ pub enum TableCommand {
         table_id: TableId,
     },
 }
+
+pub mod lobby_api;
+pub use lobby_api::{TableInfo, TableRepo, TableService};

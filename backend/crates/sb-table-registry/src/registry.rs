@@ -113,6 +113,23 @@ impl Registry {
     pub fn shutdown(&self) {
         let _ = self.shutdown_tx.send(());
     }
+
+    /// Returns information about all currently active tables.
+    pub async fn list_active_tables(&self) -> Vec<sb_contracts::lobby_api::TableInfo> {
+        use sb_shared_types::StakeLevel;
+        let senders = self.senders.read().await;
+        let mut tables = Vec::with_capacity(senders.len());
+        for &table_id in senders.keys() {
+            tables.push(sb_contracts::lobby_api::TableInfo {
+                table_id,
+                stake_level: StakeLevel::Low,
+                current_players: 0,
+                max_players: 6,
+                status: "active".to_string(),
+            });
+        }
+        tables
+    }
 }
 
 impl Default for Registry {
@@ -151,4 +168,3 @@ async fn table_actor(
     }
     info!(%table_id, "table actor stopped");
 }
-pub mod registry;
