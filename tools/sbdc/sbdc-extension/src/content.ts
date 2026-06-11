@@ -94,21 +94,48 @@ async function serverFetch(urlPath: string, method?: string, body?: string): Pro
   }
 }
 
+function setNativeValue(element: HTMLTextAreaElement, value: string): void {
+  const valueSetter = Object.getOwnPropertyDescriptor(
+    window.HTMLTextAreaElement.prototype,
+    "value",
+  )?.set;
+  if (valueSetter) {
+    valueSetter.call(element, value);
+  } else {
+    element.value = value;
+  }
+}
+
 function fillTextarea(selector: string, value: string): boolean {
   const el = document.querySelector(selector) as HTMLTextAreaElement | null;
   if (!el) return false;
+
   el.focus();
-  el.setSelectionRange(0, el.value.length);
-  const ok = document.execCommand("insertText", false, value);
-  if (!ok) {
-    const setter = Object.getOwnPropertyDescriptor(
-      window.HTMLTextAreaElement.prototype,
-      "value",
-    )!.set!;
-    setter.call(el, value);
-    el.dispatchEvent(new Event("input", { bubbles: true }));
-    el.dispatchEvent(new Event("change", { bubbles: true }));
+  el.blur();
+  el.focus();
+
+  setNativeValue(el, "");
+
+  el.dispatchEvent(new Event("input", { bubbles: true }));
+  el.dispatchEvent(new Event("change", { bubbles: true }));
+
+  setNativeValue(el, value);
+
+  el.dispatchEvent(new InputEvent("input", {
+    bubbles: true,
+    cancelable: false,
+    data: value,
+    inputType: "insertText",
+  }));
+  el.dispatchEvent(new Event("change", { bubbles: true }));
+
+  const actualValue = el.value;
+  if (actualValue !== value) {
+    log(`WARNING: value mismatch! Set ${value.length} chars, got ${actualValue.length}`);
+    log(`  Expected: "${value.substring(0, 100)}..."`);
+    log(`  Got:      "${actualValue.substring(0, 100)}..."`);
   }
+
   return true;
 }
 
@@ -118,26 +145,19 @@ async function waitForUI(): Promise<boolean> {
     const genBtn = document.querySelector("#generateButtonEl");
 
     if (i === 0) {
-      log(`Scanning UI in ${FRAME_ID}...`);
+      log(`Scanning ${FRAME_ID}...`);
       log(`  textarea[data-name="description"]: ${desc ? "FOUND" : "not found"}`);
       log(`  #generateButtonEl: ${genBtn ? "FOUND" : "not found"}`);
       log(`  URL: ${window.location.href}`);
-      log(`  textareas: ${document.querySelectorAll("textarea").length}`);
-      log(`  buttons: ${document.querySelectorAll("button").length}`);
       document.querySelectorAll("textarea").forEach((t, idx) => {
         if (idx < 5) {
           log(`  ta[${idx}]: data-name="${t.getAttribute("data-name")}" id="${t.id}"`);
         }
       });
-      document.querySelectorAll("button").forEach((b, idx) => {
-        if (idx < 5) {
-          log(`  btn[${idx}]: id="${b.id}" text="${b.textContent?.substring(0, 30)}"`);
-        }
-      });
     }
 
     if (desc && genBtn) {
-      log(`UI found after ${i}s in ${FRAME_ID}`);
+      log(`UI found in ${FRAME_ID}`);
       return true;
     }
 
@@ -146,37 +166,30 @@ async function waitForUI(): Promise<boolean> {
     }
     await new Promise((r) => setTimeout(r, 1000));
   }
-  log(`No UI in ${FRAME_ID} — this frame doesn't have the generator`);
   return false;
 }
 
 async function runGeneration(): Promise<void> {
   const deckId = await getDeckId();
   if (!deckId) {
-    log("No deck ID — open popup to configure");
-    setIndicator("orange", "[SBDC] Open popup to configure");
+    log("No deck ID — open popup");
+    setIndicator("orange", "[SBDC] Configure in popup");
     return;
   }
 
-  log(`Starting generation for deck: ${deckId}`);
+  log(`Deck: ${deckId}`);
 
   let ready = false;
   while (!ready) {
     try {
       const status = (await serverFetch(`/api/decks/${deckId}/status`)) as StatusData;
-      log(`Status: ready=${status.ready_to_generate} status=${status.status}`);
-
-      if (status.ready_to_generate > 0) {
+      if (status.ready_to_generate > 0 || status.status === "generating") {
         ready = true;
-        setIndicator("green", `[SBDC] ${status.ready_to_generate} prompts!`);
-      } else if (status.status === "generating") {
-        ready = true;
-        setIndicator("green", "[SBDC] Resuming...");
+        setIndicator("green", `[SBDC] Ready!`);
       } else {
         setIndicator("orange", "[SBDC] Click Start in popup!");
       }
     } catch (e: Error) {
-      log(`Server unreachable: ${e.message}`);
       setIndicator("darkred", "[SBDC] No server");
     }
     if (!ready) await new Promise((r) => setTimeout(r, 3000));
@@ -190,7 +203,6 @@ async function runGeneration(): Promise<void> {
       const data = await serverFetch(`/api/decks/${deckId}/prompts/next`);
       item = data as PromptData;
     } catch (e: Error) {
-      log(`Server lost: ${e.message}`);
       setIndicator("darkred", "[SBDC] Server lost");
       await new Promise((r) => setTimeout(r, 5000));
       continue;
@@ -203,12 +215,20 @@ async function runGeneration(): Promise<void> {
     }
 
     if (!item || !item.prompt_id) {
-      log("ALL PROMPTS COMPLETE!");
+      log("ALL DONE!");
       setIndicator("blue", "[SBDC] ALL DONE!");
       break;
     }
 
-    log(`prompt_id=${item.prompt_id} card=${item.target_card}/${item.target_layer}`);
+    log(`=== PROMPT ${item.prompt_id} (${item.target_card}/${item.target_layer}) ===`);
+
+    log(`TYPE OF positive: ${typeof item.positive}`);
+    log(`POSITIVE (${item.positive.length} chars): "${item.positive.substring(0, 200)}"`);
+    log(`NEGATIVE (${item.negative?.length || 0} chars): "${(item.negative || "").substring(0, 200)}"`);
+
+    const positiveStr = String(item.positive);
+    const negativeStr = String(item.negative || "");
+
     setIndicator("green", `[SBDC] ${item.target_card}/${item.target_layer}`);
 
     const ns = document.querySelector('select[data-name="numImages"]') as HTMLSelectElement | null;
@@ -217,25 +237,37 @@ async function runGeneration(): Promise<void> {
       ns.dispatchEvent(new Event("change", { bubbles: true }));
     }
 
-    fillTextarea('textarea[data-name="description"]', item.positive);
-    const v = document.querySelector('textarea[data-name="description"]') as HTMLTextAreaElement | null;
-    log(`Positive: "${v ? v.value.substring(0, 80) : "NULL"}..."`);
+    fillTextarea('textarea[data-name="description"]', positiveStr);
 
-    if (item.negative) {
+    const verifyEl = document.querySelector('textarea[data-name="description"]') as HTMLTextAreaElement | null;
+    if (verifyEl) {
+      log(`VERIFY textarea value (${verifyEl.value.length} chars): "${verifyEl.value.substring(0, 200)}"`);
+      if (verifyEl.value !== positiveStr) {
+        log(`MISMATCH! textarea has ${verifyEl.value.length} chars, expected ${positiveStr.length}`);
+      }
+    } else {
+      log("VERIFY: textarea not found after fill!");
+    }
+
+    if (negativeStr) {
       const neg = document.querySelector('textarea[data-name="negative"]') as HTMLTextAreaElement | null;
       if (neg) {
         const ctn = neg.closest(".input-ctn") as HTMLElement | null;
         if (ctn && ctn.dataset.foldToggleState === "hidden") {
           ctn.dataset.foldToggleState = "shown";
-          await new Promise((r) => setTimeout(r, 300));
+          await new Promise((r) => setTimeout(r, 500));
         }
-        fillTextarea('textarea[data-name="negative"]', item.negative);
-        log("Negative set.");
+        fillTextarea('textarea[data-name="negative"]', negativeStr);
+        log(`Negative set (${neg.value.length} chars)`);
+      } else {
+        log("Negative textarea not found");
       }
     }
 
+    await new Promise((r) => setTimeout(r, 500));
+
     const before = document.querySelectorAll("#outputAreaEl img").length;
-    log(`Generating ${NUM_IMAGES} (before: ${before})...`);
+    log(`Clicking Generate (before: ${before})...`);
     setIndicator("darkgreen", `[SBDC] Generating ${item.target_card}...`);
     document.querySelector("#generateButtonEl")!.click();
 
@@ -288,7 +320,7 @@ async function runGeneration(): Promise<void> {
         "POST",
         JSON.stringify({ images }),
       );
-      log(`Takes submitted for prompt ${item.prompt_id}`);
+      log(`Submitted ${images.length} takes for prompt ${item.prompt_id}`);
     } catch (e: Error) {
       log(`Submit failed: ${e.message}`);
     }
@@ -298,13 +330,13 @@ async function runGeneration(): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  setIndicator("red", `[SBDC] Script loaded in ${FRAME_ID}`);
+  setIndicator("red", `[SBDC] Loaded in ${FRAME_ID}`);
   log(`Content script loaded. URL: ${window.location.href}`);
 
   if (!(await waitForUI())) return;
 
   setIndicator("green", "[SBDC] UI ready!");
-  log("UI ready! Checking server...");
+  log("UI ready!");
 
   const deckId = await getDeckId();
   if (deckId) {
@@ -313,7 +345,6 @@ async function main(): Promise<void> {
   } else {
     log("No deck ID. Waiting for popup...");
     setIndicator("orange", "[SBDC] Configure in popup");
-
     chrome.storage.onChanged.addListener((changes, area) => {
       if (area === "local" && changes.deckId && changes.deckId.newValue) {
         log(`Deck ID set: ${changes.deckId.newValue}`);
