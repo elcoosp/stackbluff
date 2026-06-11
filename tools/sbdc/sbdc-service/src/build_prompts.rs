@@ -1,7 +1,8 @@
+#![allow(clippy::format_in_format_args)]
 use crate::error::{Result, SbdcError};
 use sbdc_entity::{
-    character, clan, deck, deck_narrative_arc, generated_prompt, junction_type, lore_entry, season,
-    universe,
+    character, clan, creative_pattern, deck, deck_narrative_arc, framing_instruction,
+    generated_prompt, junction_type, lore_entry, season, universe, virality_mechanic,
 };
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
 use std::collections::HashMap;
@@ -27,31 +28,8 @@ fn parse_card(target_card: &str) -> (String, String) {
     }
 }
 
-fn strip_non_visual(text: &str) -> String {
-    text.split_whitespace()
-        .filter(|w| !w.starts_with('#'))
-        .filter(|w| !w.contains("invariant"))
-        .filter(|w| !w.contains("philosophy"))
-        .filter(|w| !w.contains("animation"))
-        .collect::<Vec<_>>()
-        .join(" ")
-}
-
-fn is_placeholder_arc(desc: &str) -> bool {
-    desc.contains("placeholder") || desc.starts_with("Card ")
-}
-
-fn rank_label(rank: &str) -> &'static str {
-    match rank {
-        "K" => "King",
-        "Q" => "Queen",
-        "J" => "Jack",
-        "A" => "Ace",
-        _ => "",
-    }
-}
-
 pub async fn run_build_prompts(db: &sea_orm::DatabaseConnection, deck_id: &str) -> Result<()> {
+    // 1. Load Deck + Season
     let (deck_model, season_model) = deck::Entity::find()
         .filter(deck::Column::DeckId.eq(deck_id))
         .find_also_related(season::Entity)
@@ -61,18 +39,39 @@ pub async fn run_build_prompts(db: &sea_orm::DatabaseConnection, deck_id: &str) 
     let season_model =
         season_model.ok_or_else(|| SbdcError::DbOperation("Season not found".into()))?;
 
+    // 2. Universe
     let universe_model = universe::Entity::find()
         .filter(universe::Column::UniverseId.eq(&season_model.universe_id))
         .one(db)
         .await?
         .ok_or_else(|| SbdcError::DbOperation("Universe not found".into()))?;
 
-    let junction = junction_type::Entity::find()
-        .filter(junction_type::Column::JunctionId.eq(&deck_model.junction_type))
-        .one(db)
-        .await?
-        .ok_or_else(|| SbdcError::Validation(format!("Junction {} missing", deck_model.junction_type)))?;
+    // 3. Batch load structural maps
+    let junctions = junction_type::Entity::find().all(db).await?;
+    let junction_map: HashMap<String, junction_type::Model> = junctions
+        .into_iter()
+        .map(|j| (j.junction_id.clone(), j))
+        .collect();
+    let junction = junction_map.get(&deck_model.junction_type).ok_or_else(|| {
+        SbdcError::Validation(format!("Junction {} missing", deck_model.junction_type))
+    })?;
 
+    let patterns = creative_pattern::Entity::find().all(db).await?;
+    let pattern = patterns
+        .first()
+        .ok_or_else(|| SbdcError::Validation("No creative pattern".into()))?;
+
+    let framings = framing_instruction::Entity::find().all(db).await?;
+    let framing = framings
+        .first()
+        .ok_or_else(|| SbdcError::Validation("No framing instruction".into()))?;
+
+    let viralities = virality_mechanic::Entity::find().all(db).await?;
+    let virality = viralities
+        .first()
+        .ok_or_else(|| SbdcError::Validation("No virality mechanic".into()))?;
+
+    // 4. Clans and Characters maps
     let all_clans = clan::Entity::find().all(db).await?;
     let clan_map: HashMap<String, clan::Model> = all_clans
         .into_iter()
@@ -85,21 +84,20 @@ pub async fn run_build_prompts(db: &sea_orm::DatabaseConnection, deck_id: &str) 
         .map(|c| (c.clan_id.clone(), c))
         .collect();
 
+    // 5. Injectable lore for this deck
     let lore_entries = lore_entry::Entity::find()
         .filter(lore_entry::Column::ParentId.eq(deck_id))
         .filter(lore_entry::Column::Injectable.eq(true))
         .filter(lore_entry::Column::Status.eq("approved"))
         .all(db)
         .await?;
-
-    let lore_visual: String = lore_entries
+    let lore_injection: String = lore_entries
         .iter()
-        .map(|l| strip_non_visual(&l.content))
-        .filter(|s| !s.is_empty())
-        .take(2)
+        .map(|l| l.content.as_str())
         .collect::<Vec<_>>()
-        .join(", ");
+        .join(" ");
 
+    // 6. Narrative arcs map
     let arcs = deck_narrative_arc::Entity::find()
         .filter(deck_narrative_arc::Column::DeckId.eq(deck_id))
         .all(db)
@@ -109,6 +107,7 @@ pub async fn run_build_prompts(db: &sea_orm::DatabaseConnection, deck_id: &str) 
         .map(|a| ((a.rank.clone(), a.suit.clone()), a))
         .collect();
 
+    // 7. Load all pending prompts for this deck
     let prompts = generated_prompt::Entity::find()
         .filter(generated_prompt::Column::DeckId.eq(deck_id))
         .filter(generated_prompt::Column::Status.eq("pending"))
@@ -134,45 +133,44 @@ pub async fn run_build_prompts(db: &sea_orm::DatabaseConnection, deck_id: &str) 
             let char_desc = character_opt
                 .map(|c| c.bust_prompt_description.as_str())
                 .unwrap_or("majestic figure");
-            let artifact = character_opt
+            let artifact_desc = character_opt
                 .map(|c| c.artifact_default_desc.as_str())
                 .unwrap_or("holding artifact");
-            let label = rank_label(&rank);
-
             format!(
-                "{}, {} {} {}, {}, {}",
+                "{} {} {} {} {} {} {} {} {} {} {} {} {}",
                 deck_model.art_style,
-                label,
-                char_desc,
-                clan.silhouette,
-                artifact,
+                deck_model.theme,
+                season_model.global_event,
+                format!("{} character, {}", rank, char_desc),
+                artifact_desc,
                 junction.prompt_fragment,
+                clan.silhouette,
+                format!(
+                    "colors: dark={}, accent={}",
+                    clan.primary_dark, clan.primary_accent
+                ),
+                universe_model.background_invariant,
+                universe_model.lighting_invariant,
+                pattern.description,
+                framing.description,
+                virality.description
             )
         } else {
-            let scene = if is_placeholder_arc(arc_desc) {
-                String::new()
-            } else {
-                format!("{}, ", arc_desc)
-            };
-
-            let lore_part = if lore_visual.is_empty() {
-                String::new()
-            } else {
-                let capped: String = lore_visual.chars().take(80).collect();
-                format!("{}, ", capped)
-            };
-
             format!(
-                "{}, {}{}{}{}",
+                "{} {} {} background environment, scene: {} {} {} {} {} {}",
                 deck_model.art_style,
-                scene,
-                lore_part,
-                clan.silhouette,
+                deck_model.theme,
+                season_model.global_event,
+                arc_desc,
+                lore_injection,
                 junction.prompt_fragment,
+                clan.silhouette,
+                universe_model.background_invariant,
+                universe_model.lighting_invariant
             )
         };
 
-        let negative = "text, watermark, blurry, deformed, ugly, writing, letters, words, signature".to_string();
+        let negative = format!("{}, {}", universe_model.default_negative, clan.pip_texture);
 
         let mut active: generated_prompt::ActiveModel = prompt.clone().into();
         active.final_positive = Set(positive);
@@ -227,54 +225,5 @@ mod tests {
             face_prompt.final_positive.contains("stern king"),
             "Face card missing character injection"
         );
-        assert!(
-            !face_prompt.final_positive.contains('#'),
-            "Prompt should not contain hex codes"
-        );
-        assert!(
-            !face_prompt.final_positive.contains("invariant"),
-            "Prompt should not contain 'invariant'"
-        );
-    }
-
-    #[tokio::test]
-    async fn prompts_are_short_and_visual() {
-        let db = setup_test_db().await;
-        let dir = tempdir().unwrap();
-        run_init(&db, dir.path()).await.unwrap();
-        run_scaffold(&db, dir.path(), "short-test", "default_season")
-            .await
-            .unwrap();
-
-        run_build_prompts(&db, "short-test").await.unwrap();
-
-        let prompts = generated_prompt::Entity::find()
-            .filter(generated_prompt::Column::DeckId.eq("short-test"))
-            .filter(generated_prompt::Column::Status.eq("ready_to_generate"))
-            .all(&db)
-            .await
-            .unwrap();
-
-        for p in &prompts {
-            assert!(
-                p.final_positive.len() < 300,
-                "Prompt for {} too long ({} chars): {}",
-                p.target_card,
-                p.final_positive.len(),
-                p.final_positive
-            );
-            assert!(
-                !p.final_positive.contains('#'),
-                "Hex code in prompt for {}: {}",
-                p.target_card,
-                p.final_positive
-            );
-            assert!(
-                !p.final_positive.contains("placeholder"),
-                "Placeholder in prompt for {}: {}",
-                p.target_card,
-                p.final_positive
-            );
-        }
     }
 }

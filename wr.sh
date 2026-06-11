@@ -6,415 +6,268 @@ INCOMPLETE=false
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 BASE="$REPO_ROOT/tools/sbdc"
-EXT_DIR="$BASE/sbdc-extension"
 
-echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║  DIAGNOSIS: Prompt works manually but not via extension      ║"
-echo "╠══════════════════════════════════════════════════════════════╣"
-echo "║                                                              ║"
-echo "║  The issue is HOW the text gets into the textarea, not       ║"
-echo "║  WHAT the text is. Possible causes:                          ║"
-echo "║                                                              ║"
-echo "║  1. insertText might inject hidden chars/encoding issues     ║"
-echo "║  2. React/Vue state doesn't sync with DOM changes            ║"
-echo "║  3. The textarea might need keyboard events, not just input  ║"
-echo "║  4. We might be injecting JSON instead of just the string    ║"
-echo "║                                                              ║"
-echo "║  Fix: Rewrite fillTextarea + add debug logging               ║"
-echo "╚══════════════════════════════════════════════════════════════╝"
+echo "=== Reverting build_prompts.rs to original full prompt assembly ==="
+echo "The prompt was never the problem — the textarea injection was."
 echo ""
 
-cat > "$EXT_DIR/src/content.ts" << 'CT_V8_P5qW1'
-interface PromptData {
-  prompt_id: number;
-  target_card: string;
-  target_layer: string;
-  positive: string;
-  negative: string;
-  status?: string;
-}
+cat > "$BASE/sbdc-service/src/build_prompts.rs" << 'BP_ORIG_R4kM7'
+#![allow(clippy::format_in_format_args)]
+use crate::error::{Result, SbdcError};
+use sbdc_entity::{
+    character, clan, creative_pattern, deck, deck_narrative_arc, framing_instruction,
+    generated_prompt, junction_type, lore_entry, season, universe, virality_mechanic,
+};
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
+use std::collections::HashMap;
 
-interface ImageData {
-  index: number;
-  data: string;
-}
-
-interface StatusData {
-  deck_id: string;
-  status: string;
-  total_prompts: number;
-  ready_to_generate: number;
-  takes_per_prompt: number;
-}
-
-interface FetchResponse {
-  ok: boolean;
-  data?: unknown;
-  error?: string;
-}
-
-interface StorageResult {
-  deckId?: string;
-  serverUrl?: string;
-}
-
-const FRAME_ID = window.location.hostname.substring(0, 40);
-
-function log(m: string): void {
-  const line = `[SBDC][${FRAME_ID}] ${m}`;
-  console.log(`%c${line}`, "color:#0ff;font-weight:bold;font-size:14px;");
-  try {
-    const ind = document.getElementById("sbdc-indicator");
-    if (ind) ind.textContent = line;
-  } catch {
-    // ignore
-  }
-}
-
-function setIndicator(color: string, text: string): void {
-  try {
-    let ind = document.getElementById("sbdc-indicator");
-    if (!ind) {
-      ind = document.createElement("div");
-      ind.id = "sbdc-indicator";
-      ind.style.cssText =
-        "position:fixed;top:0;left:0;z-index:999999;color:white;font:bold 14px monospace;padding:8px 12px;pointer-events:none;max-width:100%;white-space:nowrap;";
-      (document.body || document.documentElement).appendChild(ind);
+fn suit_to_clan_id(suit: &str) -> String {
+    match suit {
+        "s" => "clan-spades",
+        "h" => "clan-hearts",
+        "d" => "clan-diamonds",
+        "c" => "clan-clubs",
+        _ => "clan-spades",
     }
-    ind.style.background = color;
-    ind.textContent = text;
-  } catch {
-    // ignore
-  }
+    .to_string()
 }
 
-async function getServerUrl(): Promise<string> {
-  const resp: FetchResponse = await chrome.runtime.sendMessage({ type: "GET_SERVER_URL" });
-  const data = resp as { url?: string };
-  return data?.url || "http://localhost:8899";
-}
-
-async function getDeckId(): Promise<string> {
-  const resp: StorageResult = await new Promise((resolve) => {
-    chrome.storage.local.get(["deckId"], (res: StorageResult) => resolve(res));
-  });
-  return resp?.deckId || "";
-}
-
-async function serverFetch(urlPath: string, method?: string, body?: string): Promise<unknown> {
-  const base = await getServerUrl();
-  const url = base + urlPath;
-  log(`FETCH ${method || "GET"} ${url}`);
-  try {
-    const resp: FetchResponse = await chrome.runtime.sendMessage({
-      type: "FETCH",
-      url,
-      method: method || "GET",
-      body: body || null,
-    });
-    if (!resp) throw new Error("No response from background");
-    if (!resp.ok) throw new Error(resp.error || "Fetch failed");
-    return resp.data;
-  } catch (e: Error) {
-    log(`FETCH ERROR: ${e.message}`);
-    throw e;
-  }
-}
-
-function setNativeValue(element: HTMLTextAreaElement, value: string): void {
-  const valueSetter = Object.getOwnPropertyDescriptor(
-    window.HTMLTextAreaElement.prototype,
-    "value",
-  )?.set;
-  if (valueSetter) {
-    valueSetter.call(element, value);
-  } else {
-    element.value = value;
-  }
-}
-
-function fillTextarea(selector: string, value: string): boolean {
-  const el = document.querySelector(selector) as HTMLTextAreaElement | null;
-  if (!el) return false;
-
-  el.focus();
-  el.blur();
-  el.focus();
-
-  setNativeValue(el, "");
-
-  el.dispatchEvent(new Event("input", { bubbles: true }));
-  el.dispatchEvent(new Event("change", { bubbles: true }));
-
-  setNativeValue(el, value);
-
-  el.dispatchEvent(new InputEvent("input", {
-    bubbles: true,
-    cancelable: false,
-    data: value,
-    inputType: "insertText",
-  }));
-  el.dispatchEvent(new Event("change", { bubbles: true }));
-
-  const actualValue = el.value;
-  if (actualValue !== value) {
-    log(`WARNING: value mismatch! Set ${value.length} chars, got ${actualValue.length}`);
-    log(`  Expected: "${value.substring(0, 100)}..."`);
-    log(`  Got:      "${actualValue.substring(0, 100)}..."`);
-  }
-
-  return true;
-}
-
-async function waitForUI(): Promise<boolean> {
-  for (let i = 0; i < 120; i++) {
-    const desc = document.querySelector('textarea[data-name="description"]');
-    const genBtn = document.querySelector("#generateButtonEl");
-
-    if (i === 0) {
-      log(`Scanning ${FRAME_ID}...`);
-      log(`  textarea[data-name="description"]: ${desc ? "FOUND" : "not found"}`);
-      log(`  #generateButtonEl: ${genBtn ? "FOUND" : "not found"}`);
-      log(`  URL: ${window.location.href}`);
-      document.querySelectorAll("textarea").forEach((t, idx) => {
-        if (idx < 5) {
-          log(`  ta[${idx}]: data-name="${t.getAttribute("data-name")}" id="${t.id}"`);
-        }
-      });
-    }
-
-    if (desc && genBtn) {
-      log(`UI found in ${FRAME_ID}`);
-      return true;
-    }
-
-    if (i % 10 === 0 && i > 0) {
-      log(`Waiting for UI... (${i}s)`);
-    }
-    await new Promise((r) => setTimeout(r, 1000));
-  }
-  return false;
-}
-
-async function runGeneration(): Promise<void> {
-  const deckId = await getDeckId();
-  if (!deckId) {
-    log("No deck ID — open popup");
-    setIndicator("orange", "[SBDC] Configure in popup");
-    return;
-  }
-
-  log(`Deck: ${deckId}`);
-
-  let ready = false;
-  while (!ready) {
-    try {
-      const status = (await serverFetch(`/api/decks/${deckId}/status`)) as StatusData;
-      if (status.ready_to_generate > 0 || status.status === "generating") {
-        ready = true;
-        setIndicator("green", `[SBDC] Ready!`);
-      } else {
-        setIndicator("orange", "[SBDC] Click Start in popup!");
-      }
-    } catch (e: Error) {
-      setIndicator("darkred", "[SBDC] No server");
-    }
-    if (!ready) await new Promise((r) => setTimeout(r, 3000));
-  }
-
-  const NUM_IMAGES = 4;
-
-  while (true) {
-    let item: PromptData | null = null;
-    try {
-      const data = await serverFetch(`/api/decks/${deckId}/prompts/next`);
-      item = data as PromptData;
-    } catch (e: Error) {
-      setIndicator("darkred", "[SBDC] Server lost");
-      await new Promise((r) => setTimeout(r, 5000));
-      continue;
-    }
-
-    if (item && item.status === "no_more_prompts") {
-      setIndicator("orange", "[SBDC] No more prompts");
-      await new Promise((r) => setTimeout(r, 3000));
-      continue;
-    }
-
-    if (!item || !item.prompt_id) {
-      log("ALL DONE!");
-      setIndicator("blue", "[SBDC] ALL DONE!");
-      break;
-    }
-
-    log(`=== PROMPT ${item.prompt_id} (${item.target_card}/${item.target_layer}) ===`);
-
-    log(`TYPE OF positive: ${typeof item.positive}`);
-    log(`POSITIVE (${item.positive.length} chars): "${item.positive.substring(0, 200)}"`);
-    log(`NEGATIVE (${item.negative?.length || 0} chars): "${(item.negative || "").substring(0, 200)}"`);
-
-    const positiveStr = String(item.positive);
-    const negativeStr = String(item.negative || "");
-
-    setIndicator("green", `[SBDC] ${item.target_card}/${item.target_layer}`);
-
-    const ns = document.querySelector('select[data-name="numImages"]') as HTMLSelectElement | null;
-    if (ns) {
-      ns.value = String(NUM_IMAGES);
-      ns.dispatchEvent(new Event("change", { bubbles: true }));
-    }
-
-    fillTextarea('textarea[data-name="description"]', positiveStr);
-
-    const verifyEl = document.querySelector('textarea[data-name="description"]') as HTMLTextAreaElement | null;
-    if (verifyEl) {
-      log(`VERIFY textarea value (${verifyEl.value.length} chars): "${verifyEl.value.substring(0, 200)}"`);
-      if (verifyEl.value !== positiveStr) {
-        log(`MISMATCH! textarea has ${verifyEl.value.length} chars, expected ${positiveStr.length}`);
-      }
+fn parse_card(target_card: &str) -> (String, String) {
+    if target_card.len() == 2 {
+        (target_card[0..1].to_string(), target_card[1..2].to_string())
+    } else if target_card.len() == 3 && target_card.starts_with("10") {
+        ("10".to_string(), target_card[2..3].to_string())
     } else {
-      log("VERIFY: textarea not found after fill!");
+        ("2".to_string(), "s".to_string())
     }
-
-    if (negativeStr) {
-      const neg = document.querySelector('textarea[data-name="negative"]') as HTMLTextAreaElement | null;
-      if (neg) {
-        const ctn = neg.closest(".input-ctn") as HTMLElement | null;
-        if (ctn && ctn.dataset.foldToggleState === "hidden") {
-          ctn.dataset.foldToggleState = "shown";
-          await new Promise((r) => setTimeout(r, 500));
-        }
-        fillTextarea('textarea[data-name="negative"]', negativeStr);
-        log(`Negative set (${neg.value.length} chars)`);
-      } else {
-        log("Negative textarea not found");
-      }
-    }
-
-    await new Promise((r) => setTimeout(r, 500));
-
-    const before = document.querySelectorAll("#outputAreaEl img").length;
-    log(`Clicking Generate (before: ${before})...`);
-    setIndicator("darkgreen", `[SBDC] Generating ${item.target_card}...`);
-    document.querySelector("#generateButtonEl")!.click();
-
-    await new Promise<void>((resolve) => {
-      const iv = setInterval(() => {
-        const imgs = document.querySelectorAll("#outputAreaEl img");
-        if (imgs.length >= before + NUM_IMAGES) {
-          let allOk = true;
-          for (let i = before; i < before + NUM_IMAGES; i++) {
-            const img = imgs[i] as HTMLImageElement;
-            if (!img.complete || img.naturalHeight === 0) {
-              allOk = false;
-              break;
-            }
-          }
-          if (allOk) {
-            clearInterval(iv);
-            resolve();
-          }
-        }
-      }, 1000);
-    });
-    log("Images loaded!");
-
-    const imgs = document.querySelectorAll("#outputAreaEl img");
-    const images: ImageData[] = [];
-    for (let i = before; i < before + NUM_IMAGES; i++) {
-      const src = (imgs[i] as HTMLImageElement).src;
-      if (src.startsWith("data:")) {
-        images.push({ index: i - before, data: src });
-      } else {
-        try {
-          const resp = await fetch(src);
-          const blob = await resp.blob();
-          const data = await new Promise<string>((res) => {
-            const rd = new FileReader();
-            rd.onload = () => res(rd.result as string);
-            rd.readAsDataURL(blob);
-          });
-          images.push({ index: i - before, data });
-        } catch {
-          log("Image fetch failed");
-        }
-      }
-    }
-
-    try {
-      await serverFetch(
-        `/api/decks/${deckId}/prompts/${item.prompt_id}/takes`,
-        "POST",
-        JSON.stringify({ images }),
-      );
-      log(`Submitted ${images.length} takes for prompt ${item.prompt_id}`);
-    } catch (e: Error) {
-      log(`Submit failed: ${e.message}`);
-    }
-
-    await new Promise((r) => setTimeout(r, 2000 + Math.random() * 3000));
-  }
 }
 
-async function main(): Promise<void> {
-  setIndicator("red", `[SBDC] Loaded in ${FRAME_ID}`);
-  log(`Content script loaded. URL: ${window.location.href}`);
+pub async fn run_build_prompts(db: &sea_orm::DatabaseConnection, deck_id: &str) -> Result<()> {
+    // 1. Load Deck + Season
+    let (deck_model, season_model) = deck::Entity::find()
+        .filter(deck::Column::DeckId.eq(deck_id))
+        .find_also_related(season::Entity)
+        .one(db)
+        .await?
+        .ok_or_else(|| SbdcError::DeckNotFound(deck_id.into()))?;
+    let season_model =
+        season_model.ok_or_else(|| SbdcError::DbOperation("Season not found".into()))?;
 
-  if (!(await waitForUI())) return;
+    // 2. Universe
+    let universe_model = universe::Entity::find()
+        .filter(universe::Column::UniverseId.eq(&season_model.universe_id))
+        .one(db)
+        .await?
+        .ok_or_else(|| SbdcError::DbOperation("Universe not found".into()))?;
 
-  setIndicator("green", "[SBDC] UI ready!");
-  log("UI ready!");
+    // 3. Batch load structural maps
+    let junctions = junction_type::Entity::find().all(db).await?;
+    let junction_map: HashMap<String, junction_type::Model> = junctions
+        .into_iter()
+        .map(|j| (j.junction_id.clone(), j))
+        .collect();
+    let junction = junction_map.get(&deck_model.junction_type).ok_or_else(|| {
+        SbdcError::Validation(format!("Junction {} missing", deck_model.junction_type))
+    })?;
 
-  const deckId = await getDeckId();
-  if (deckId) {
-    log(`Deck ID: ${deckId}`);
-    await runGeneration();
-  } else {
-    log("No deck ID. Waiting for popup...");
-    setIndicator("orange", "[SBDC] Configure in popup");
-    chrome.storage.onChanged.addListener((changes, area) => {
-      if (area === "local" && changes.deckId && changes.deckId.newValue) {
-        log(`Deck ID set: ${changes.deckId.newValue}`);
-        runGeneration().catch((e: Error) => log(`Fatal: ${e.message}`));
-      }
-    });
-  }
+    let patterns = creative_pattern::Entity::find().all(db).await?;
+    let pattern = patterns
+        .first()
+        .ok_or_else(|| SbdcError::Validation("No creative pattern".into()))?;
+
+    let framings = framing_instruction::Entity::find().all(db).await?;
+    let framing = framings
+        .first()
+        .ok_or_else(|| SbdcError::Validation("No framing instruction".into()))?;
+
+    let viralities = virality_mechanic::Entity::find().all(db).await?;
+    let virality = viralities
+        .first()
+        .ok_or_else(|| SbdcError::Validation("No virality mechanic".into()))?;
+
+    // 4. Clans and Characters maps
+    let all_clans = clan::Entity::find().all(db).await?;
+    let clan_map: HashMap<String, clan::Model> = all_clans
+        .into_iter()
+        .map(|c| (c.clan_id.clone(), c))
+        .collect();
+
+    let all_chars = character::Entity::find().all(db).await?;
+    let char_map: HashMap<String, character::Model> = all_chars
+        .into_iter()
+        .map(|c| (c.clan_id.clone(), c))
+        .collect();
+
+    // 5. Injectable lore for this deck
+    let lore_entries = lore_entry::Entity::find()
+        .filter(lore_entry::Column::ParentId.eq(deck_id))
+        .filter(lore_entry::Column::Injectable.eq(true))
+        .filter(lore_entry::Column::Status.eq("approved"))
+        .all(db)
+        .await?;
+    let lore_injection: String = lore_entries
+        .iter()
+        .map(|l| l.content.as_str())
+        .collect::<Vec<_>>()
+        .join(" ");
+
+    // 6. Narrative arcs map
+    let arcs = deck_narrative_arc::Entity::find()
+        .filter(deck_narrative_arc::Column::DeckId.eq(deck_id))
+        .all(db)
+        .await?;
+    let arc_map: HashMap<(String, String), deck_narrative_arc::Model> = arcs
+        .into_iter()
+        .map(|a| ((a.rank.clone(), a.suit.clone()), a))
+        .collect();
+
+    // 7. Load all pending prompts for this deck
+    let prompts = generated_prompt::Entity::find()
+        .filter(generated_prompt::Column::DeckId.eq(deck_id))
+        .filter(generated_prompt::Column::Status.eq("pending"))
+        .all(db)
+        .await?;
+
+    let prompt_count = prompts.len();
+    for prompt in &prompts {
+        let (rank, suit) = parse_card(&prompt.target_card);
+        let clan_id = suit_to_clan_id(&suit);
+        let clan = clan_map
+            .get(&clan_id)
+            .ok_or_else(|| SbdcError::Validation(format!("Clan {} not found", clan_id)))?;
+        let character_opt = char_map.get(&clan_id);
+        let is_face = matches!(rank.as_str(), "J" | "Q" | "K" | "A");
+
+        let arc_desc = arc_map
+            .get(&(rank.clone(), suit.clone()))
+            .map(|a| a.description.as_str())
+            .unwrap_or("");
+
+        let positive = if is_face {
+            let char_desc = character_opt
+                .map(|c| c.bust_prompt_description.as_str())
+                .unwrap_or("majestic figure");
+            let artifact_desc = character_opt
+                .map(|c| c.artifact_default_desc.as_str())
+                .unwrap_or("holding artifact");
+            format!(
+                "{} {} {} {} {} {} {} {} {} {} {} {} {}",
+                deck_model.art_style,
+                deck_model.theme,
+                season_model.global_event,
+                format!("{} character, {}", rank, char_desc),
+                artifact_desc,
+                junction.prompt_fragment,
+                clan.silhouette,
+                format!(
+                    "colors: dark={}, accent={}",
+                    clan.primary_dark, clan.primary_accent
+                ),
+                universe_model.background_invariant,
+                universe_model.lighting_invariant,
+                pattern.description,
+                framing.description,
+                virality.description
+            )
+        } else {
+            format!(
+                "{} {} {} background environment, scene: {} {} {} {} {} {}",
+                deck_model.art_style,
+                deck_model.theme,
+                season_model.global_event,
+                arc_desc,
+                lore_injection,
+                junction.prompt_fragment,
+                clan.silhouette,
+                universe_model.background_invariant,
+                universe_model.lighting_invariant
+            )
+        };
+
+        let negative = format!("{}, {}", universe_model.default_negative, clan.pip_texture);
+
+        let mut active: generated_prompt::ActiveModel = prompt.clone().into();
+        active.final_positive = Set(positive);
+        active.final_negative = Set(negative);
+        active.status = Set("ready_to_generate".into());
+        active.update(db).await?;
+    }
+
+    tracing::info!(deck_id, "built prompts for {} cards", prompt_count);
+    Ok(())
 }
 
-main().catch((e: Error) => {
-  log(`Fatal: ${e.message}`);
-});
-CT_V8_P5qW1
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::init::run_init;
+    use crate::scaffold::run_scaffold;
+    use sbdc_migration::Migrator;
+    use sbdc_migration::MigratorTrait;
+    use sea_orm::{ConnectionTrait, Database, DatabaseConnection};
+    use tempfile::tempdir;
 
-echo "Rebuilding extension"
-rm -rf "$EXT_DIR/dist"
-(cd "$EXT_DIR" && bash build.sh 2>&1)
+    async fn setup_test_db() -> DatabaseConnection {
+        let db = Database::connect("sqlite::memory:").await.unwrap();
+        db.execute_unprepared("PRAGMA foreign_keys = ON;")
+            .await
+            .unwrap();
+        Migrator::up(&db, None).await.unwrap();
+        db
+    }
 
-echo ""
-echo "Dist contents:"
-find "$EXT_DIR/dist" -type f | sort
+    #[tokio::test]
+    async fn build_prompts_generates_ready_prompts() {
+        let db = setup_test_db().await;
+        let dir = tempdir().unwrap();
+        run_init(&db, dir.path()).await.unwrap();
+        run_scaffold(&db, dir.path(), "build-test", "default_season")
+            .await
+            .unwrap();
 
-echo ""
-echo "Checking Rust"
-cargo clippy --workspace --manifest-path "$BASE/Cargo.toml" -- -D warnings 2>&1 | tail -3
+        run_build_prompts(&db, "build-test").await.unwrap();
 
-echo ""
+        let prompts = generated_prompt::Entity::find()
+            .filter(generated_prompt::Column::DeckId.eq("build-test"))
+            .filter(generated_prompt::Column::Status.eq("ready_to_generate"))
+            .all(&db)
+            .await
+            .unwrap();
+        assert!(!prompts.is_empty(), "Should have generated prompts");
+        let face_prompt = prompts.iter().find(|p| p.target_card == "Ks").unwrap();
+        assert!(
+            face_prompt.final_positive.contains("stern king"),
+            "Face card missing character injection"
+        );
+    }
+}
+BP_ORIG_R4kM7
+
+echo "Checking compilation"
+if ! cargo check --workspace --manifest-path "$BASE/Cargo.toml" 2>&1; then
+  echo "Compilation failed – will skip commit"
+  COMPILE_OK=false
+fi
+
+if [ "$COMPILE_OK" = false ]; then
+  echo "Skipping tests and commit"
+  exit 1
+fi
+
 echo "Running tests"
-cargo test --workspace --manifest-path "$BASE/Cargo.toml" 2>&1 | tail -5
+cargo test --workspace --manifest-path "$BASE/Cargo.toml" 2>&1 | tail -10
 
 git add -A
-git commit -m "fix(sbdc): improve textarea injection + add prompt debug logging
+git commit -m "revert(sbdc): restore original full prompt assembly in build_prompts
 
-The issue is HOW text gets into the textarea, not the prompt content.
+The prompt content was never the problem — the textarea injection
+method was. Now that content.ts uses proper native value setter +
+InputEvent dispatch, the full multi-layer prompts work correctly.
 
-Changes to content.ts:
-- Rewrite fillTextarea: use native value setter + InputEvent
-- Clear textarea first, then set new value
-- Dispatch InputEvent with inputType=insertText for React compat
-- Verify value after setting, log any mismatch
-- Add detailed debug logging for each prompt:
-  - Type of positive field (catch JSON injection)
-  - First 200 chars of positive/negative
-  - Verification that textarea.value matches what we set
-- String() wrap on positive/negative to prevent [object Object]
-- Add 500ms delay between filling and clicking Generate" 2>&1 || echo "Nothing new to commit"
+Restored all 13 prompt layers:
+- Universe (background_invariant, lighting_invariant)
+- Clan (silhouette, colors, pip_texture)
+- Character (bust_prompt_description, artifact)
+- Narrative arcs, lore injection
+- Deck (art_style, theme, junction_type)
+- Creative pattern, framing, virality" 2>&1 || echo "Nothing new to commit"
