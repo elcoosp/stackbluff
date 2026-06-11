@@ -53,3 +53,7 @@ http = { version = "1.1.0" }
 [workspace.package]
 edition = "2024"
 rust-version = "1.94"
+sb-shared-types = { path = "crates/sb-shared-types" }
+sb-game-engine = { path = "crates/sb-game-engine" }
+sb-ws-messages = { path = "crates/sb-ws-messages" }
+sb-ws-handler = { path = "crates/sb-ws-handler" }
