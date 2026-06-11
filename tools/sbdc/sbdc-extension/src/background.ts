@@ -26,6 +26,23 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   return false;
 });
 
+async function ensureContentScriptReady(tabId: number, maxRetries = 10): Promise<boolean> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const response = await chrome.tabs.sendMessage(tabId, { type: 'PING' });
+      if (response && response.status === 'alive') {
+        console.log(`[SBDC Background] Content script ready after ${i+1} attempts`);
+        return true;
+      }
+    } catch (err) {
+      console.log(`[SBDC Background] Ping attempt ${i+1} failed, retrying...`);
+    }
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  console.error('[SBDC Background] Content script not ready after retries');
+  return false;
+}
+
 async function startGeneration(deckId: string, takes: number) {
   console.log(`[SBDC Background] Starting generation for deck ${deckId}, takes ${takes}`);
   try {
@@ -42,13 +59,18 @@ async function startGeneration(deckId: string, takes: number) {
     currentSessionId = data.session_id;
     console.log('[SBDC Background] Got session ID:', currentSessionId);
 
-    // Find the perchance tab
     const tabs = await chrome.tabs.query({ url: 'https://perchance.org/fluxgen*' });
     if (tabs.length === 0) {
       console.error('[SBDC Background] No perchance.org/fluxgen tab found. Please open it manually.');
       return;
     }
     const tabId = tabs[0].id!;
+    console.log(`[SBDC Background] Found tab ${tabId}, waiting for content script...`);
+    const ready = await ensureContentScriptReady(tabId);
+    if (!ready) {
+      console.error('[SBDC Background] Content script not responding. Please refresh the perchance page and try again.');
+      return;
+    }
     console.log(`[SBDC Background] Sending START_POLLING to tab ${tabId}`);
     await chrome.tabs.sendMessage(tabId, { type: 'START_POLLING' });
   } catch (err) {
