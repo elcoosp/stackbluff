@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "crates/sb-rest-router",
     "crates/sb-table-registry",
     "crates/sb-ws-handler",
     "crates/sb-table-registry",

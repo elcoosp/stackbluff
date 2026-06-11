@@ -15,3 +15,5 @@ impl Authenticator for NoopAuthenticator {
         Ok(UserId(uuid::Uuid::new_v4()))
     }
 }
+pub mod middleware;
+pub use middleware::{auth_middleware, AuthUser};

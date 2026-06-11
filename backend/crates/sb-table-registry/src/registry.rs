@@ -1,5 +1,5 @@
 use sb_contracts::{TableCommand, TableError};
-use sb_shared_types::{PlayerId, TableConfig, TableId};
+use sb_shared_types::{PlayerId, TableConfig, TableId, StakeLevel};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{RwLock, broadcast, mpsc};
@@ -8,11 +8,13 @@ use tracing::info;
 
 type SenderMap = Arc<RwLock<HashMap<TableId, mpsc::Sender<TableCommand>>>>;
 type HeartbeatMap = Arc<RwLock<HashMap<TableId, Instant>>>;
+type StakeLevelMap = Arc<RwLock<HashMap<TableId, StakeLevel>>>;
 
 #[derive(Clone)]
 pub struct Registry {
     senders: SenderMap,
     heartbeats: HeartbeatMap,
+    stake_levels: StakeLevelMap,
     shutdown_tx: broadcast::Sender<()>,
 }
 
@@ -22,6 +24,7 @@ impl Registry {
         Self {
             senders: Arc::new(RwLock::new(HashMap::new())),
             heartbeats: Arc::new(RwLock::new(HashMap::new())),
+            stake_levels: Arc::new(RwLock::new(HashMap::new())),
             shutdown_tx,
         }
     }
@@ -32,6 +35,7 @@ impl Registry {
         let (tx, rx) = mpsc::channel(32);
         let heartbeats = self.heartbeats.clone();
         let shutdown_rx = self.shutdown_tx.subscribe();
+        let stake_level = config.stake_level;
         tokio::spawn(table_actor(table_id, rx, config, heartbeats, shutdown_rx));
         {
             let mut map = self.senders.write().await;
@@ -41,33 +45,24 @@ impl Registry {
             let mut hb = self.heartbeats.write().await;
             hb.insert(table_id, Instant::now());
         }
+        {
+            let mut sl = self.stake_levels.write().await;
+            sl.insert(table_id, stake_level);
+        }
         info!(%table_id, "table created");
         table_id
     }
 
-    pub async fn join_table(
-        &self,
-        table_id: TableId,
-        player_id: PlayerId,
-    ) -> Result<(), TableError> {
+    pub async fn join_table(&self, table_id: TableId, player_id: PlayerId) -> Result<(), TableError> {
         let sender = {
             let map = self.senders.read().await;
             map.get(&table_id).cloned()
         };
         let sender = sender.ok_or(TableError::NotFound(table_id))?;
         let (resp_tx, resp_rx) = tokio::sync::oneshot::channel();
-        let cmd = TableCommand::Join {
-            player_id,
-            table_id,
-            response_tx: resp_tx,
-        };
-        sender
-            .send(cmd)
-            .await
-            .map_err(|_| TableError::ActorError("actor died".into()))?;
-        resp_rx
-            .await
-            .map_err(|_| TableError::ActorError("no response".into()))?
+        let cmd = TableCommand::Join { player_id, table_id, response_tx: resp_tx };
+        sender.send(cmd).await.map_err(|_| TableError::ActorError("actor died".into()))?;
+        resp_rx.await.map_err(|_| TableError::ActorError("no response".into()))?
     }
 
     pub async fn heartbeat(&self, table_id: TableId) {
@@ -91,14 +86,14 @@ impl Registry {
                     };
                     for table_id in stale {
                         info!(%table_id, "removing stale table (no heartbeat for 90s)");
-                        {
-                            let mut senders = registry.senders.write().await;
-                            senders.remove(&table_id);
-                        }
-                        {
-                            let mut hb = registry.heartbeats.write().await;
-                            hb.remove(&table_id);
-                        }
+                        let mut senders = registry.senders.write().await;
+                        senders.remove(&table_id);
+                        drop(senders);
+                        let mut hb = registry.heartbeats.write().await;
+                        hb.remove(&table_id);
+                        drop(hb);
+                        let mut sl = registry.stake_levels.write().await;
+                        sl.remove(&table_id);
                     }
                 }
                 _ = shutdown_rx.recv() => {
@@ -109,16 +104,30 @@ impl Registry {
         }
     }
 
-    /// Gracefully shut down all table actors and the reaper.
     pub fn shutdown(&self) {
         let _ = self.shutdown_tx.send(());
+    }
+
+    pub async fn list_active_tables(&self) -> Vec<sb_contracts::lobby_api::TableInfo> {
+        let senders = self.senders.read().await;
+        let stake_levels = self.stake_levels.read().await;
+        let mut tables = Vec::with_capacity(senders.len());
+        for (&table_id, _) in senders.iter() {
+            let stake_level = stake_levels.get(&table_id).copied().unwrap_or(StakeLevel::Low);
+            tables.push(sb_contracts::lobby_api::TableInfo {
+                table_id,
+                stake_level,
+                current_players: 0,
+                max_players: 6,
+                status: "active".to_string(),
+            });
+        }
+        tables
     }
 }
 
 impl Default for Registry {
-    fn default() -> Self {
-        Self::new()
-    }
+    fn default() -> Self { Self::new() }
 }
 
 async fn table_actor(
@@ -151,4 +160,3 @@ async fn table_actor(
     }
     info!(%table_id, "table actor stopped");
 }
-pub mod registry;

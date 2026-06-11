@@ -1,0 +1,32 @@
+[package]
+name = "sb-rest-router"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.94"
+
+[dependencies]
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+jsonwebtoken = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+async-trait = { workspace = true }
+
+sb-shared-types = { path = "../sb-shared-types" }
+sb-contracts = { path = "../sb-contracts" }
+sb-auth = { path = "../sb-auth" }
+sb-table-registry = { path = "../sb-table-registry" }
+
+[dev-dependencies]
+axum-test = "17.0.0"
+mockall = "0.14.0"
+tokio = { workspace = true, features = ["rt", "macros"] }
+jsonwebtoken = { workspace = true }
+tracing-subscriber = "0.3.23"
