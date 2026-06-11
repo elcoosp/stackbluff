@@ -1,14 +1,4 @@
 #!/usr/bin/env bash
-set -uo pipefail
-
-COMPILE_OK=true
-INCOMPLETE=false
-
-BASE="tools/sbdc"
-
-echo "Writing $BASE/sbdc-cli/src/demo.sh (end-to-end demo script)"
-cat > "$BASE/sbdc-cli/src/demo.sh" << 'DEMO_V1_F3kP8'
-#!/usr/bin/env bash
 set -euo pipefail
 
 echo "╔══════════════════════════════════════════════════════════════╗"
@@ -221,32 +211,3 @@ echo "Server is running. Press Ctrl+C to stop."
 echo ""
 
 wait $SERVER_PID
-DEMO_V1_F3kP8
-chmod +x "$BASE/sbdc-cli/src/demo.sh"
-
-echo "Checking compilation"
-if ! cargo check --workspace --manifest-path "$BASE/Cargo.toml" 2>&1; then
-  echo "Compilation failed – will skip commit"
-  COMPILE_OK=false
-fi
-
-if [ "$INCOMPLETE" = true ] || [ "$COMPILE_OK" = false ]; then
-  echo "Skipping tests and commit due to incomplete files or compilation errors"
-  exit 1
-fi
-
-echo "Running tests"
-cargo test --workspace --manifest-path "$BASE/Cargo.toml" 2>&1
-if [ $? -eq 0 ]; then
-  echo "All tests passed. Committing."
-  git add -A
-  git commit -m "feat(sbdc): add end-to-end demo script with extension setup instructions
-
-- Creates temp project, runs init/scaffold/ingest/build-prompts
-- Starts server in background
-- Prints detailed Chrome extension setup instructions
-- Includes troubleshooting and cleanup steps"
-else
-  echo "Tests failed. Fix errors then run the next script."
-  exit 1
-fi
