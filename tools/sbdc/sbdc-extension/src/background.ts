@@ -33,6 +33,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     serverUrl = msg.url;
     chrome.storage.local.set({ serverUrl });
     sendResponse({ ok: true });
+    return false;
+  }
+
+  if (msg.type === 'GET_SERVER_URL') {
+    sendResponse({ ok: true, url: serverUrl });
+    return false;
   }
 
   return false;

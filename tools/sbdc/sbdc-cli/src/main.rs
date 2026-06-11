@@ -32,25 +32,13 @@ enum Commands {
         #[arg(short, long)]
         deck_id: String,
     },
-    Generate {
-        #[arg(short, long)]
-        deck_id: String,
-        #[arg(long, default_value_t = 4)]
-        takes: u32,
-        #[arg(long, default_value = "5-15")]
-        delay: String,
-    },
     Clean {
         #[arg(short, long)]
         deck_id: String,
     },
     Serve {
-        #[arg(short, long)]
-        deck_id: String,
         #[arg(long, default_value_t = 8899)]
         port: u16,
-        #[arg(long, default_value_t = 4)]
-        takes: u32,
     },
 }
 
@@ -71,8 +59,7 @@ async fn main() -> anyhow::Result<()> {
         Commands::Scaffold { deck_id, season_id } => sbdc_service::scaffold::run_scaffold(&db, &cli.project_dir, &deck_id, &season_id).await,
         Commands::IngestJson { deck_id, file } => sbdc_service::ingest::run_ingest_json(&db, &deck_id, &file).await,
         Commands::BuildPrompts { deck_id } => sbdc_service::build_prompts::run_build_prompts(&db, &deck_id).await,
-        Commands::Generate { deck_id, takes, delay } => sbdc_service::generate::run_generate(&db, &cli.project_dir, &deck_id, takes, &delay).await,
-        Commands::Serve { deck_id: _, port, takes: _ } => sbdc_service::server::run_server(db, cli.project_dir, port).await.map_err(|e| SbdcError::DbOperation(e.to_string())),
+        Commands::Serve { port } => sbdc_service::server::run_server(db, cli.project_dir, port).await.map_err(|e| SbdcError::DbOperation(e.to_string())),
         Commands::Clean { deck_id } => sbdc_service::clean::run_clean(&db, &cli.project_dir, &deck_id).await,
     };
     result?;

@@ -6,418 +6,536 @@ INCOMPLETE=false
 
 BASE="tools/sbdc"
 
-echo "Removing leftover non-module source files from sbdc-service/src"
-rm -f "$BASE/sbdc-service/src/generate_import_fix.rs"
-rm -f "$BASE/sbdc-service/src/generate_top.rs"
-rm -f "$BASE/sbdc-service/src/scaffold_import_fix.rs"
-rm -f "$BASE/sbdc-service/src/build_prompts_test_fix.rs"
-echo "Removed 4 leftover files"
+echo "Verifying server.rs was written correctly"
+head -5 "$BASE/sbdc-service/src/server.rs" 2>&1
 
-echo "Writing $BASE/sbdc-service/src/server.rs (complete rewrite — DB-backed API)"
-cat > "$BASE/sbdc-service/src/server.rs" << 'SERVER_RS_V2_K9mN3'
-use axum::{
-    extract::{Path, State},
-    http::StatusCode,
-    routing::{get, post},
-    Json, Router,
-};
-use base64::Engine;
-use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, NotSet, PaginatorTrait,
-    QueryFilter, Set, TransactionTrait,
-};
-use serde::Deserialize;
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::sync::Arc;
-use tokio::sync::Mutex;
-use tower_http::cors::{Any, CorsLayer};
-use tracing::info;
-
-use sbdc_entity::{deck, generated_prompt, prompt_take};
-use crate::error::{Result as SbdcResult, SbdcError};
-
-#[derive(Deserialize)]
-struct StartRequest {
-    takes_per_prompt: Option<u32>,
+echo "Patching $BASE/sbdc-cli/src/main.rs: remove Generate command, fix Serve"
+OLD_TMP=$(mktemp) || { echo "ERROR: cannot create temp file"; exit 1; }
+NEW_TMP=$(mktemp)
+cat > "$OLD_TMP" << 'OLD_CLI_K8pQ2'
+#[derive(Subcommand)]
+enum Commands {
+    Init,
+    Scaffold {
+        #[arg(short, long)]
+        deck_id: String,
+        #[arg(short, long, default_value = "default_season")]
+        season_id: String,
+    },
+    IngestJson {
+        #[arg(short, long)]
+        deck_id: String,
+        #[arg(short, long)]
+        file: PathBuf,
+    },
+    BuildPrompts {
+        #[arg(short, long)]
+        deck_id: String,
+    },
+    Generate {
+        #[arg(short, long)]
+        deck_id: String,
+        #[arg(long, default_value_t = 4)]
+        takes: u32,
+        #[arg(long, default_value = "5-15")]
+        delay: String,
+    },
+    Clean {
+        #[arg(short, long)]
+        deck_id: String,
+    },
+    Serve {
+        #[arg(short, long)]
+        deck_id: String,
+        #[arg(long, default_value_t = 8899)]
+        port: u16,
+        #[arg(long, default_value_t = 4)]
+        takes: u32,
+    },
 }
-
-#[derive(Deserialize)]
-struct SubmitTakesRequest {
-    images: Vec<ImageData>,
+OLD_CLI_K8pQ2
+cat > "$NEW_TMP" << 'NEW_CLI_M3vR7'
+#[derive(Subcommand)]
+enum Commands {
+    Init,
+    Scaffold {
+        #[arg(short, long)]
+        deck_id: String,
+        #[arg(short, long, default_value = "default_season")]
+        season_id: String,
+    },
+    IngestJson {
+        #[arg(short, long)]
+        deck_id: String,
+        #[arg(short, long)]
+        file: PathBuf,
+    },
+    BuildPrompts {
+        #[arg(short, long)]
+        deck_id: String,
+    },
+    Clean {
+        #[arg(short, long)]
+        deck_id: String,
+    },
+    Serve {
+        #[arg(long, default_value_t = 8899)]
+        port: u16,
+    },
 }
+NEW_CLI_M3vR7
+if python3 - "$OLD_TMP" "$NEW_TMP" "$BASE/sbdc-cli/src/main.rs" << 'PYEOF_CLI1'
+import sys
+with open(sys.argv[1], 'r') as f: old = f.read()
+with open(sys.argv[2], 'r') as f: new = f.read()
+with open(sys.argv[3], 'r') as f: content = f.read()
+content = content.replace(old, new)
+with open(sys.argv[3], 'w') as f: f.write(content)
+PYEOF_CLI1
+then
+  echo "Python patch succeeded for CLI Commands enum"
+  rm "$OLD_TMP" "$NEW_TMP"
+else
+  echo "ERROR: Python patch failed for CLI Commands enum"
+  rm -f "$OLD_TMP" "$NEW_TMP"
+fi
 
-#[derive(Deserialize)]
-struct ImageData {
-    index: usize,
-    data: String,
-}
-
-struct AppState {
-    db: DatabaseConnection,
-    project_dir: PathBuf,
-    takes_target: Mutex<HashMap<String, u32>>,
-}
-
-async fn count_prompts(
-    db: &DatabaseConnection,
-    deck_id: &str,
-    status: Option<&str>,
-) -> Result<u64, (StatusCode, String)> {
-    let mut q = generated_prompt::Entity::find()
-        .filter(generated_prompt::Column::DeckId.eq(deck_id));
-    if let Some(s) = status {
-        q = q.filter(generated_prompt::Column::Status.eq(s));
-    }
-    q.count(db)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
-}
-
-async fn start_deck(
-    State(state): State<Arc<AppState>>,
-    Path(deck_id): Path<String>,
-    Json(payload): Json<StartRequest>,
-) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let _deck = deck::Entity::find_by_id(&deck_id)
-        .one(&state.db)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-        .ok_or_else(|| {
-            (StatusCode::NOT_FOUND, format!("Deck '{}' not found", deck_id))
-        })?;
-
-    let takes = payload.takes_per_prompt.unwrap_or(4);
-    state
-        .takes_target
-        .lock()
-        .await
-        .insert(deck_id.clone(), takes);
-
-    let ready_count = count_prompts(&state.db, &deck_id, Some("ready_to_generate")).await?;
-
-    info!(
-        "Started deck '{}' with {} takes/prompt, {} prompts ready",
-        deck_id, takes, ready_count
-    );
-
-    Ok(Json(serde_json::json!({
-        "deck_id": deck_id,
-        "takes_per_prompt": takes,
-        "prompts_ready": ready_count,
-    })))
-}
-
-async fn deck_status(
-    State(state): State<Arc<AppState>>,
-    Path(deck_id): Path<String>,
-) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let deck_model = deck::Entity::find_by_id(&deck_id)
-        .one(&state.db)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-        .ok_or_else(|| {
-            (StatusCode::NOT_FOUND, format!("Deck '{}' not found", deck_id))
-        })?;
-
-    let total = count_prompts(&state.db, &deck_id, None).await?;
-    let ready = count_prompts(&state.db, &deck_id, Some("ready_to_generate")).await?;
-    let generating = count_prompts(&state.db, &deck_id, Some("generating")).await?;
-    let takes_ready = count_prompts(&state.db, &deck_id, Some("takes_ready")).await?;
-    let cleaned = count_prompts(&state.db, &deck_id, Some("cleaned")).await?;
-
-    Ok(Json(serde_json::json!({
-        "deck_id": deck_id,
-        "status": deck_model.status,
-        "total_prompts": total,
-        "ready_to_generate": ready,
-        "generating": generating,
-        "takes_ready": takes_ready,
-        "cleaned": cleaned,
-    })))
-}
-
-async fn next_prompt(
-    State(state): State<Arc<AppState>>,
-    Path(deck_id): Path<String>,
-) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let txn = state
-        .db
-        .begin()
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    let prompt = generated_prompt::Entity::find()
-        .filter(generated_prompt::Column::DeckId.eq(&deck_id))
-        .filter(generated_prompt::Column::Status.eq("ready_to_generate"))
-        .one(&txn)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    let prompt = match prompt {
-        Some(p) => p,
-        None => {
-            return Ok(Json(serde_json::json!({"status": "no_more_prompts"})));
-        }
+echo "Patching $BASE/sbdc-cli/src/main.rs: remove Generate and fix Serve match arms"
+OLD_TMP=$(mktemp) || { echo "ERROR: cannot create temp file"; exit 1; }
+NEW_TMP=$(mktemp)
+cat > "$OLD_TMP" << 'OLD_MATCH_J5wE9'
+    let result = match cli.command {
+        Commands::Init => sbdc_service::init::run_init(&db, &cli.project_dir).await,
+        Commands::Scaffold { deck_id, season_id } => sbdc_service::scaffold::run_scaffold(&db, &cli.project_dir, &deck_id, &season_id).await,
+        Commands::IngestJson { deck_id, file } => sbdc_service::ingest::run_ingest_json(&db, &deck_id, &file).await,
+        Commands::BuildPrompts { deck_id } => sbdc_service::build_prompts::run_build_prompts(&db, &deck_id).await,
+        Commands::Generate { deck_id, takes, delay } => sbdc_service::generate::run_generate(&db, &cli.project_dir, &deck_id, takes, &delay).await,
+        Commands::Serve { deck_id: _, port, takes: _ } => sbdc_service::server::run_server(db, cli.project_dir, port).await.map_err(|e| SbdcError::DbOperation(e.to_string())),
+        Commands::Clean { deck_id } => sbdc_service::clean::run_clean(&db, &cli.project_dir, &deck_id).await,
     };
+OLD_MATCH_J5wE9
+cat > "$NEW_TMP" << 'NEW_MATCH_N2tA4'
+    let result = match cli.command {
+        Commands::Init => sbdc_service::init::run_init(&db, &cli.project_dir).await,
+        Commands::Scaffold { deck_id, season_id } => sbdc_service::scaffold::run_scaffold(&db, &cli.project_dir, &deck_id, &season_id).await,
+        Commands::IngestJson { deck_id, file } => sbdc_service::ingest::run_ingest_json(&db, &deck_id, &file).await,
+        Commands::BuildPrompts { deck_id } => sbdc_service::build_prompts::run_build_prompts(&db, &deck_id).await,
+        Commands::Serve { port } => sbdc_service::server::run_server(db, cli.project_dir, port).await.map_err(|e| SbdcError::DbOperation(e.to_string())),
+        Commands::Clean { deck_id } => sbdc_service::clean::run_clean(&db, &cli.project_dir, &deck_id).await,
+    };
+NEW_MATCH_N2tA4
+if python3 - "$OLD_TMP" "$NEW_TMP" "$BASE/sbdc-cli/src/main.rs" << 'PYEOF_CLI2'
+import sys
+with open(sys.argv[1], 'r') as f: old = f.read()
+with open(sys.argv[2], 'r') as f: new = f.read()
+with open(sys.argv[3], 'r') as f: content = f.read()
+content = content.replace(old, new)
+with open(sys.argv[3], 'w') as f: f.write(content)
+PYEOF_CLI2
+then
+  echo "Python patch succeeded for CLI match arms"
+  rm "$OLD_TMP" "$NEW_TMP"
+else
+  echo "ERROR: Python patch failed for CLI match arms"
+  rm -f "$OLD_TMP" "$NEW_TMP"
+fi
 
-    let mut active: generated_prompt::ActiveModel = prompt.clone().into();
-    active.status = Set("generating".to_string());
-    active
-        .update(&txn)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+echo "Writing $BASE/sbdc-extension/src/background.ts (updated for new API)"
+cat > "$BASE/sbdc-extension/src/background.ts" << 'BGT_V2_R7kM1'
+let serverUrl = "http://localhost:8899";
 
-    txn.commit()
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+chrome.storage.local.get(["serverUrl"], (res: any) => {
+  if (res.serverUrl) serverUrl = res.serverUrl;
+  console.log("[BG] serverUrl:", serverUrl);
+});
 
-    info!(
-        "Serving prompt {} ({}/{}) for deck {}",
-        prompt.prompt_id, prompt.target_card, prompt.target_layer, deck_id
-    );
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  console.log("[BG] msg:", msg.type);
 
-    Ok(Json(serde_json::json!({
-        "prompt_id": prompt.prompt_id,
-        "target_card": prompt.target_card,
-        "target_layer": prompt.target_layer,
-        "positive": prompt.final_positive,
-        "negative": prompt.final_negative,
-    })))
-}
-
-async fn submit_takes(
-    State(state): State<Arc<AppState>>,
-    Path((deck_id, prompt_id)): Path<(String, i32)>,
-    Json(payload): Json<SubmitTakesRequest>,
-) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let prompt = generated_prompt::Entity::find_by_id(prompt_id)
-        .one(&state.db)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-        .ok_or_else(|| {
-            (StatusCode::NOT_FOUND, format!("Prompt {} not found", prompt_id))
-        })?;
-
-    if prompt.deck_id != deck_id {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            "Prompt does not belong to deck".into(),
-        ));
+  if (msg.type === "FETCH") {
+    console.log("[BG] fetching:", msg.url);
+    const opts: RequestInit = { method: msg.method || "GET" };
+    if (msg.body) {
+      opts.body = msg.body;
+      opts.headers = { "Content-Type": "application/json" };
     }
+    fetch(msg.url, opts)
+      .then(r => r.text())
+      .then(text => {
+        console.log("[BG] response:", text.substring(0, 100));
+        try { sendResponse({ ok: true, data: JSON.parse(text) }); }
+        catch { sendResponse({ ok: true, data: text }); }
+      })
+      .catch(e => {
+        console.error("[BG] fetch error:", e);
+        sendResponse({ ok: false, error: String(e) });
+      });
+    return true;
+  }
 
-    let deck_model = deck::Entity::find_by_id(&deck_id)
-        .one(&state.db)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-        .ok_or_else(|| {
-            (StatusCode::NOT_FOUND, format!("Deck '{}' not found", deck_id))
-        })?;
+  if (msg.type === 'SET_SERVER_URL') {
+    serverUrl = msg.url;
+    chrome.storage.local.set({ serverUrl });
+    sendResponse({ ok: true });
+    return false;
+  }
 
-    let takes_dir = state
-        .project_dir
-        .join("decks")
-        .join(&deck_model.season_id)
-        .join(&deck_id)
-        .join("0-takes")
-        .join(&prompt.target_card);
+  if (msg.type === 'GET_SERVER_URL') {
+    sendResponse({ ok: true, url: serverUrl });
+    return false;
+  }
 
-    tokio::fs::create_dir_all(&takes_dir)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+  return false;
+});
+BGT_V2_R7kM1
 
-    let mut take_ids = Vec::new();
+echo "Writing $BASE/sbdc-extension/src/content.ts (updated for new API paths)"
+cat > "$BASE/sbdc-extension/src/content.ts" << 'CTS_V2_P4nL8'
+(function () {
+  const FRAME_ID = window.location.hostname.substring(0, 40);
 
-    for img in &payload.images {
-        let filename = format!("take_{}.png", img.index + 1);
-        let file_path = takes_dir.join(&filename);
+  function log(m: string) {
+    const line = `[SBDC][${FRAME_ID}] ${m}`;
+    console.log('%c' + line, 'color:#0ff;font-weight:bold;font-size:14px;');
+    try {
+      const ind = document.getElementById('sbdc-indicator');
+      if (ind) { ind.textContent = line; }
+    } catch { }
+  }
 
-        let b64 = if img.data.contains(',') {
-            img.data.split(',').last().unwrap_or(&img.data)
+  function setIndicator(color: string, text: string) {
+    try {
+      let ind = document.getElementById('sbdc-indicator');
+      if (!ind) {
+        ind = document.createElement('div');
+        ind.id = 'sbdc-indicator';
+        ind.style.cssText = 'position:fixed;top:0;left:0;z-index:999999;color:white;font:bold 14px monospace;padding:8px 12px;pointer-events:none;max-width:100%;white-space:nowrap;';
+        (document.body || document.documentElement).appendChild(ind);
+      }
+      ind.style.background = color;
+      ind.textContent = text;
+    } catch { }
+  }
+
+  setIndicator('red', '[SBDC] Script loaded in ' + FRAME_ID);
+  log('Content script loaded. URL: ' + window.location.href);
+
+  async function getServerUrl(): Promise<string> {
+    const resp: any = await chrome.runtime.sendMessage({ type: 'GET_SERVER_URL' });
+    return resp?.url || 'http://localhost:8899';
+  }
+
+  async function getDeckId(): Promise<string> {
+    const resp: any = await new Promise(resolve => {
+      chrome.storage.local.get(['deckId'], (res: any) => resolve(res));
+    });
+    return resp?.deckId || '';
+  }
+
+  async function waitForUI(): Promise<boolean> {
+    for (let i = 0; i < 120; i++) {
+      if (document.querySelector('textarea[data-name="description"]') && document.querySelector('#generateButtonEl')) {
+        log('UI found after ' + i + 's');
+        return true;
+      }
+      if (i % 5 === 0) {
+        log('Waiting for UI... (' + i + 's)');
+        setIndicator('red', '[SBDC] Waiting for UI... (' + i + 's)');
+      }
+      await new Promise(r => setTimeout(r, 1000));
+    }
+    log('No UI found. Exiting.');
+    setIndicator('orange', '[SBDC] No generator UI');
+    return false;
+  }
+
+  async function serverFetch(urlPath: string, method?: string, body?: string): Promise<any> {
+    const base = await getServerUrl();
+    const url = base + urlPath;
+    log('FETCH ' + (method || 'GET') + ' ' + url);
+    try {
+      const resp: any = await chrome.runtime.sendMessage({
+        type: 'FETCH',
+        url,
+        method: method || 'GET',
+        body: body || null
+      });
+      log('FETCH response: ' + JSON.stringify(resp).substring(0, 200));
+      if (!resp) throw new Error('No response from background');
+      if (!resp.ok) throw new Error(resp.error || 'Fetch failed');
+      return resp.data;
+    } catch (e: any) {
+      log('FETCH ERROR: ' + e.message);
+      throw e;
+    }
+  }
+
+  function fillTextarea(selector: string, value: string): boolean {
+    const el = document.querySelector(selector) as HTMLTextAreaElement | null;
+    if (!el) { log('Not found: ' + selector); return false; }
+    el.focus();
+    el.setSelectionRange(0, el.value.length);
+    const ok = document.execCommand('insertText', false, value);
+    if (!ok) {
+      log('execCommand failed, using setter');
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')!.set!;
+      setter.call(el, value);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    return true;
+  }
+
+  (async () => {
+    if (!await waitForUI()) return;
+
+    setIndicator('green', '[SBDC] UI ready! Checking server...');
+
+    const deckId = await getDeckId();
+    if (!deckId) {
+      log('No deck ID set. Use popup to configure.');
+      setIndicator('orange', '[SBDC] No deck ID — use popup');
+      return;
+    }
+    log('Using deck: ' + deckId);
+
+    let ready = false;
+    while (!ready) {
+      try {
+        const status = await serverFetch('/api/decks/' + deckId + '/status');
+        log('Status: ' + JSON.stringify(status));
+        if (status && status.ready_to_generate > 0) {
+          ready = true;
+          log(status.ready_to_generate + ' prompts ready!');
+          setIndicator('green', '[SBDC] ' + status.ready_to_generate + ' prompts! Starting...');
         } else {
-            &img.data
-        };
-        let bytes = base64::engine::general_purpose::STANDARD
-            .decode(b64)
-            .map_err(|e| (StatusCode::BAD_REQUEST, format!("Base64 decode error: {}", e)))?;
-
-        tokio::fs::write(&file_path, &bytes)
-            .await
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-        let take = prompt_take::ActiveModel {
-            take_id: NotSet,
-            prompt_id: Set(prompt_id),
-            file_path: Set(file_path.to_str().unwrap_or("").to_string()),
-            is_selected: Set(false),
-        };
-        let inserted = take
-            .insert(&state.db)
-            .await
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-        take_ids.push(inserted.take_id);
-    }
-
-    let mut active: generated_prompt::ActiveModel = prompt.into();
-    active.status = Set("takes_ready".to_string());
-    active
-        .update(&state.db)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    info!(
-        "Saved {} takes for prompt {} in deck {}",
-        payload.images.len(),
-        prompt_id,
-        deck_id
-    );
-
-    Ok(Json(serde_json::json!({
-        "take_ids": take_ids,
-        "count": take_ids.len(),
-    })))
-}
-
-async fn list_takes(
-    State(state): State<Arc<AppState>>,
-    Path(deck_id): Path<String>,
-) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let prompts = generated_prompt::Entity::find()
-        .filter(generated_prompt::Column::DeckId.eq(&deck_id))
-        .all(&state.db)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    let mut result = Vec::new();
-    for prompt in &prompts {
-        let takes = prompt_take::Entity::find()
-            .filter(prompt_take::Column::PromptId.eq(prompt.prompt_id))
-            .all(&state.db)
-            .await
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-        for take in takes {
-            result.push(serde_json::json!({
-                "take_id": take.take_id,
-                "prompt_id": take.prompt_id,
-                "target_card": prompt.target_card,
-                "target_layer": prompt.target_layer,
-                "target_file": prompt.target_file,
-                "file_path": take.file_path,
-                "selected": take.is_selected,
-            }));
+          log('Server OK but no prompts ready. Use popup to start.');
+          setIndicator('orange', '[SBDC] No prompts — click Start');
         }
+      } catch (e: any) {
+        log('Server not reachable: ' + e.message);
+        setIndicator('darkred', '[SBDC] No server');
+      }
+      if (!ready) await new Promise(r => setTimeout(r, 3000));
     }
 
-    Ok(Json(serde_json::json!({"takes": result})))
-}
+    while (true) {
+      let item: any;
+      try {
+        item = await serverFetch('/api/decks/' + deckId + '/prompts/next');
+      } catch (e: any) {
+        log('Server lost: ' + e.message);
+        setIndicator('darkred', '[SBDC] Server lost');
+        await new Promise(r => setTimeout(r, 5000));
+        continue;
+      }
 
-async fn select_take(
-    State(state): State<Arc<AppState>>,
-    Path((deck_id, take_id)): Path<(String, i32)>,
-) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let take = prompt_take::Entity::find_by_id(take_id)
-        .one(&state.db)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-        .ok_or_else(|| {
-            (StatusCode::NOT_FOUND, format!("Take {} not found", take_id))
-        })?;
+      if (item && item.status === 'no_more_prompts') {
+        setIndicator('orange', '[SBDC] No more prompts — start from popup');
+        await new Promise(r => setTimeout(r, 3000));
+        continue;
+      }
 
-    let prompt = generated_prompt::Entity::find_by_id(take.prompt_id)
-        .one(&state.db)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-        .ok_or_else(|| (StatusCode::NOT_FOUND, "Prompt not found".into()))?;
+      if (!item || !item.prompt_id) {
+        log('All prompts complete!');
+        setIndicator('blue', '[SBDC] ALL DONE!');
+        break;
+      }
 
-    if prompt.deck_id != deck_id {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            "Take does not belong to deck".into(),
-        ));
+      log('Processing prompt_id=' + item.prompt_id + ' card=' + item.target_card + ' layer=' + item.target_layer);
+      setIndicator('green', '[SBDC] Prompt ' + item.target_card + '/' + item.target_layer);
+
+      const numImages = 4;
+      const ns = document.querySelector('select[data-name="numImages"]') as HTMLSelectElement | null;
+      if (ns) { ns.value = String(numImages); ns.dispatchEvent(new Event('change', { bubbles: true })); }
+
+      fillTextarea('textarea[data-name="description"]', item.positive);
+      const v = document.querySelector('textarea[data-name="description"]') as HTMLTextAreaElement | null;
+      log('Positive: "' + (v ? v.value.substring(0, 80) : 'NULL') + '..."');
+
+      if (item.negative) {
+        const neg = document.querySelector('textarea[data-name="negative"]') as HTMLTextAreaElement | null;
+        if (neg) {
+          const ctn = neg.closest('.input-ctn') as HTMLElement | null;
+          if (ctn && ctn.dataset.foldToggleState === 'hidden') {
+            ctn.dataset.foldToggleState = 'shown';
+            await new Promise(r => setTimeout(r, 300));
+          }
+          fillTextarea('textarea[data-name="negative"]', item.negative);
+          log('Negative set.');
+        }
+      }
+
+      const before = document.querySelectorAll('#outputAreaEl img').length;
+      log('Generating ' + numImages + ' (before: ' + before + ')...');
+      setIndicator('darkgreen', '[SBDC] Generating ' + item.target_card + '...');
+      document.querySelector('#generateButtonEl')!.click();
+
+      await new Promise<void>(resolve => {
+        const iv = setInterval(() => {
+          const imgs = document.querySelectorAll('#outputAreaEl img');
+          if (imgs.length >= before + numImages) {
+            let ok = true;
+            for (let i = before; i < before + numImages; i++) {
+              if (!(imgs[i] as HTMLImageElement).complete || (imgs[i] as HTMLImageElement).naturalHeight === 0) { ok = false; break; }
+            }
+            if (ok) { clearInterval(iv); resolve(); }
+          }
+        }, 1000);
+      });
+      log('Images loaded!');
+
+      const imgs = document.querySelectorAll('#outputAreaEl img');
+      const images: Array<{ index: number; data: string }> = [];
+      for (let i = before; i < before + numImages; i++) {
+        const src = (imgs[i] as HTMLImageElement).src;
+        if (src.startsWith('data:')) {
+          images.push({ index: i - before, data: src });
+        } else {
+          try {
+            const resp = await fetch(src);
+            const blob = await resp.blob();
+            const data = await new Promise<string>(res => {
+              const rd = new FileReader();
+              rd.onload = () => res(rd.result as string);
+              rd.readAsDataURL(blob);
+            });
+            images.push({ index: i - before, data });
+          } catch { log('Image fetch failed'); }
+        }
+      }
+
+      try {
+        const resultUrl = '/api/decks/' + deckId + '/prompts/' + item.prompt_id + '/takes';
+        await serverFetch(resultUrl, 'POST', JSON.stringify({ images }));
+        log('Takes submitted for prompt ' + item.prompt_id);
+      } catch (e: any) { log('Submit failed: ' + e.message); }
+
+      await new Promise(r => setTimeout(r, 2000 + Math.random() * 3000));
     }
+  })();
+})();
+CTS_V2_P4nL8
 
-    let all_takes = prompt_take::Entity::find()
-        .filter(prompt_take::Column::PromptId.eq(take.prompt_id))
-        .all(&state.db)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+echo "Writing $BASE/sbdc-extension/src/popup.html (improved UI with status)"
+cat > "$BASE/sbdc-extension/src/popup.html" << 'POPHTM_V3_W6yT2'
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SBDC</title>
+  <style>
+    body { width: 340px; padding: 12px; font-family: system-ui, sans-serif; font-size: 13px; }
+    label { display: block; margin-top: 8px; font-weight: 600; }
+    input { width: 100%; box-sizing: border-box; padding: 4px 6px; margin-top: 2px; }
+    button { margin-top: 10px; width: 100%; padding: 8px; cursor: pointer; font-weight: 600; }
+    #status { margin-top: 10px; font-size: 12px; white-space: pre-wrap; font-family: monospace; }
+    .btn-row { display: flex; gap: 6px; }
+    .btn-row button { flex: 1; }
+  </style>
+</head>
+<body>
+  <h3 style="margin:0 0 8px">SBDC Deck Creator</h3>
+  <label>Server URL</label>
+  <input id="serverUrl" placeholder="http://localhost:8899" value="http://localhost:8899">
+  <label>Deck ID</label>
+  <input id="deckId" placeholder="my-deck">
+  <label>Takes per prompt</label>
+  <input id="takes" placeholder="4" value="4" type="number">
+  <div class="btn-row">
+    <button id="startBtn">Start</button>
+    <button id="statusBtn">Status</button>
+  </div>
+  <div id="status"></div>
+  <script src="popup.js"></script>
+</body>
+</html>
+POPHTM_V3_W6yT2
 
-    for t in all_takes {
-        let mut active: prompt_take::ActiveModel = t.into();
-        active.is_selected = Set(false);
-        active
-            .update(&state.db)
-            .await
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-    }
+echo "Writing $BASE/sbdc-extension/src/popup.ts (updated for new API)"
+cat > "$BASE/sbdc-extension/src/popup.ts" << 'POPTS_V3_Q8fN5'
+const serverUrlEl = document.getElementById('serverUrl') as HTMLInputElement;
+const deckIdEl = document.getElementById('deckId') as HTMLInputElement;
+const takesEl = document.getElementById('takes') as HTMLInputElement;
+const startBtn = document.getElementById('startBtn') as HTMLButtonElement;
+const statusBtn = document.getElementById('statusBtn') as HTMLButtonElement;
+const statusEl = document.getElementById('status')!;
 
-    let take = prompt_take::Entity::find_by_id(take_id)
-        .one(&state.db)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-        .unwrap();
+chrome.storage.local.get(['serverUrl', 'deckId', 'takes'], (res: any) => {
+  if (res.serverUrl) serverUrlEl.value = res.serverUrl;
+  if (res.deckId) deckIdEl.value = res.deckId;
+  if (res.takes) takesEl.value = res.takes;
+});
 
-    let mut active: prompt_take::ActiveModel = take.into();
-    active.is_selected = Set(true);
-    active
-        .update(&state.db)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+startBtn.addEventListener('click', async () => {
+  const url = serverUrlEl.value.replace(/\/$/, '');
+  const deck = deckIdEl.value.trim();
+  const numTakes = parseInt(takesEl.value, 10) || 4;
 
-    info!(
-        "Selected take {} for prompt {} in deck {}",
-        take_id, prompt.prompt_id, deck_id
-    );
+  if (!deck) {
+    statusEl.textContent = 'Please enter a Deck ID';
+    return;
+  }
 
-    Ok(Json(serde_json::json!({"selected": take_id})))
-}
+  chrome.storage.local.set({ serverUrl: url, deckId: deck, takes: takesEl.value });
+  chrome.runtime.sendMessage({ type: 'SET_SERVER_URL', url });
 
-pub async fn run_server(
-    db: DatabaseConnection,
-    project_dir: PathBuf,
-    port: u16,
-) -> SbdcResult<()> {
-    info!("SBDC server starting on port {}", port);
+  statusEl.textContent = 'Starting generation...';
 
-    let state = Arc::new(AppState {
-        db,
-        project_dir,
-        takes_target: Mutex::new(HashMap::new()),
+  try {
+    const resp = await fetch(url + '/api/decks/' + encodeURIComponent(deck) + '/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ takes_per_prompt: numTakes }),
     });
 
-    let cors = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods(Any)
-        .allow_headers(Any);
+    if (resp.ok) {
+      const data = await resp.json();
+      statusEl.textContent =
+        'Started! ' + (data.prompts_ready || 0) + ' prompts ready.\n' +
+        'Takes per prompt: ' + (data.takes_per_prompt || numTakes) + '\n' +
+        'Open perchance.org/fluxgen';
+    } else {
+      const text = await resp.text();
+      statusEl.textContent = 'HTTP ' + resp.status + '\n' + text;
+    }
+  } catch (e: any) {
+    statusEl.textContent =
+      'FETCH FAILED:\n' + e.message + '\n\nIs server running?\n' +
+      'cargo run --bin sbdc -- serve --port 8899';
+  }
+});
 
-    let app = Router::new()
-        .route("/api/decks/{deck_id}/start", post(start_deck))
-        .route("/api/decks/{deck_id}/status", get(deck_status))
-        .route("/api/decks/{deck_id}/prompts/next", get(next_prompt))
-        .route(
-            "/api/decks/{deck_id}/prompts/{prompt_id}/takes",
-            post(submit_takes),
-        )
-        .route("/api/decks/{deck_id}/takes", get(list_takes))
-        .route(
-            "/api/decks/{deck_id}/takes/{take_id}/select",
-            post(select_take),
-        )
-        .layer(cors)
-        .with_state(state);
+statusBtn.addEventListener('click', async () => {
+  const url = serverUrlEl.value.replace(/\/$/, '');
+  const deck = deckIdEl.value.trim();
 
-    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port))
-        .await
-        .map_err(SbdcError::Io)?;
-    info!("SBDC server listening on port {}", port);
-    axum::serve(listener, app)
-        .await
-        .map_err(|e| SbdcError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+  if (!deck) {
+    statusEl.textContent = 'Please enter a Deck ID';
+    return;
+  }
 
-    Ok(())
-}
-SERVER_RS_V2_K9mN3
+  statusEl.textContent = 'Checking...';
+
+  try {
+    const resp = await fetch(url + '/api/decks/' + encodeURIComponent(deck) + '/status');
+    if (resp.ok) {
+      const data = await resp.json();
+      statusEl.textContent =
+        'Deck: ' + data.deck_id + '\n' +
+        'Status: ' + data.status + '\n' +
+        'Total: ' + data.total_prompts + '\n' +
+        'Ready: ' + data.ready_to_generate + '\n' +
+        'Generating: ' + data.generating + '\n' +
+        'Takes ready: ' + data.takes_ready + '\n' +
+        'Cleaned: ' + data.cleaned;
+    } else {
+      statusEl.textContent = 'HTTP ' + resp.status;
+    }
+  } catch (e: any) {
+    statusEl.textContent = 'FETCH FAILED:\n' + e.message;
+  }
+});
+POPTS_V3_Q8fN5
 
 echo "Checking compilation"
 if ! cargo check --workspace --manifest-path "$BASE/Cargo.toml" 2>&1; then
@@ -435,7 +553,13 @@ cargo test --workspace --manifest-path "$BASE/Cargo.toml" 2>&1
 if [ $? -eq 0 ]; then
   echo "All tests passed. Committing."
   git add -A
-  git commit -m "feat(sbdc): rewrite server with DB-backed API — coherent extension flow"
+  git commit -m "feat(sbdc): update CLI, extension for new DB-backed API flow
+
+- Remove Generate CLI command (extension drives generation via server)
+- Fix Serve command (remove unused deck_id/takes args)
+- Rewrite extension content.ts to use /api/decks/{id}/prompts/next and /takes
+- Update popup with Status button and new API endpoints
+- Add GET_SERVER_URL message to background script"
 else
   echo "Tests failed. Fix errors then run the next script."
   exit 1
