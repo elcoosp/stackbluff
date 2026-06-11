@@ -45,4 +45,3 @@ mod tests {
         assert_eq!(HandRank::StraightFlush.name(), "Straight Flush");
     }
 }
-

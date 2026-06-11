@@ -1,15 +1,17 @@
+use async_trait::async_trait;
 use sb_shared_types::UserId;
-use uuid::Uuid;
-pub mod auth_service;
-pub mod config;
-pub mod jwt;
-pub mod routes;
 
-use std::sync::Arc;
-pub use auth_service::AuthServiceImpl;
-pub use config::AuthConfig;
-pub use routes::auth_router;
-pub type SharedAuthService = Arc<dyn sb_contracts::service_api::AuthService>;
-pub fn validate_token(_token: &str) -> Result<UserId, &'static str> {
-    Ok(UserId(Uuid::new_v4()))
+#[async_trait]
+pub trait Authenticator: Send + Sync {
+    async fn validate_token(&self, token: &str) -> Result<UserId, &'static str>;
+}
+
+pub struct NoopAuthenticator;
+
+#[async_trait]
+impl Authenticator for NoopAuthenticator {
+    async fn validate_token(&self, _token: &str) -> Result<UserId, &'static str> {
+        tracing::warn!("Using NoopAuthenticator – insecure stub");
+        Ok(UserId(uuid::Uuid::new_v4()))
+    }
 }

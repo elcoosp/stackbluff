@@ -1,8 +1,8 @@
-use sb_db_entities::*;
-use sea_orm::{Database, EntityTrait, ActiveModelTrait, IntoActiveModel, ModelTrait};
-use migration::{Migrator, MigratorTrait};
-use uuid::Uuid;
 use chrono::Utc;
+use migration::{Migrator, MigratorTrait};
+use sb_db_entities::*;
+use sea_orm::{ActiveModelTrait, Database, EntityTrait, IntoActiveModel, ModelTrait};
+use uuid::Uuid;
 
 #[tokio::test]
 async fn test_migration_and_basic_ops() {

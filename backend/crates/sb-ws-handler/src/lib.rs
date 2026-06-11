@@ -1,17 +1,17 @@
+use axum::body::Bytes;
+use axum::http::{Request, StatusCode, header};
 use axum::{
+    Router,
     extract::{State, WebSocketUpgrade},
     response::{IntoResponse, Response},
     routing::get,
-    Router,
 };
-use axum::body::Bytes;
-use axum::http::{Request, StatusCode, header};
 use futures::{SinkExt, StreamExt};
 use sb_auth::Authenticator;
 use sb_table_registry::Registry;
 use std::sync::Arc;
 use tokio::time::{self, Duration, Instant};
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 struct AppState {
     auth: Arc<dyn Authenticator>,

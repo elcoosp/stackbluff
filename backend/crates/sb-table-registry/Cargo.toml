@@ -6,8 +6,9 @@ edition.workspace = true
 [dependencies]
 sb-shared-types = { path = "../sb-shared-types" }
 sb-contracts = { path = "../sb-contracts" }
-tokio = { workspace = true, features = ["sync"] }
+tokio = { workspace = true, features = ["sync", "time"] }
 tracing = { workspace = true }
-anyhow = { workspace = true }
+thiserror = { workspace = true }
 serde = { workspace = true }
 futures = { workspace = true }
+uuid = { workspace = true }

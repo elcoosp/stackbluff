@@ -1,8 +1,8 @@
 use sb_contracts::{TableCommand, TableError};
-use sb_shared_types::{TableId, TableConfig, PlayerId};
+use sb_shared_types::{PlayerId, TableConfig, TableId};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{RwLock, mpsc, broadcast};
+use tokio::sync::{RwLock, broadcast, mpsc};
 use tokio::time::{self, Duration, Instant};
 use tracing::info;
 
@@ -45,7 +45,11 @@ impl Registry {
         table_id
     }
 
-    pub async fn join_table(&self, table_id: TableId, player_id: PlayerId) -> Result<(), TableError> {
+    pub async fn join_table(
+        &self,
+        table_id: TableId,
+        player_id: PlayerId,
+    ) -> Result<(), TableError> {
         let sender = {
             let map = self.senders.read().await;
             map.get(&table_id).cloned()
@@ -57,8 +61,13 @@ impl Registry {
             table_id,
             response_tx: resp_tx,
         };
-        sender.send(cmd).await.map_err(|_| TableError::ActorError("actor died".into()))?;
-        resp_rx.await.map_err(|_| TableError::ActorError("no response".into()))?
+        sender
+            .send(cmd)
+            .await
+            .map_err(|_| TableError::ActorError("actor died".into()))?;
+        resp_rx
+            .await
+            .map_err(|_| TableError::ActorError("no response".into()))?
     }
 
     pub async fn heartbeat(&self, table_id: TableId) {
