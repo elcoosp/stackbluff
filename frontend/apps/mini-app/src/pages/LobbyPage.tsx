@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CreateTableModal } from '../components/CreateTableModal';
+import { useToast } from '../components/ui/toast';
 import { useTableStore } from '../stores/tableStore';
 
 interface CardProps {
@@ -11,7 +12,7 @@ interface CardProps {
 const Card = ({ children, className, onClick }: CardProps) => (
   <button
     type="button"
-    className={`border rounded-lg p-4 bg-white dark:bg-gray-800 shadow text-left w-full ${className}`}
+    className={`border rounded-lg p-4 bg-white dark:bg-gray-800 shadow text-left w-full ${className || ''}`}
     onClick={onClick}
   >
     {children}
@@ -27,37 +28,99 @@ const CardContent = ({ children }: { children: React.ReactNode }) => (
   <div className="text-sm">{children}</div>
 );
 const Skeleton = ({ className }: { className?: string }) => (
-  <div className={`animate-pulse bg-gray-200 dark:bg-gray-700 rounded ${className}`} />
+  <div className={`animate-pulse bg-gray-200 dark:bg-gray-700 rounded ${className || ''}`} />
 );
 
 export function LobbyPage() {
   const navigate = useNavigate();
-  const { tables, isLoading, refresh, lastFetched } = useTableStore();
+  const { tables, isLoading, error, lastFetched, refresh, clearError } = useTableStore();
   const [modalOpen, setModalOpen] = useState(false);
+  const { show: showToast, ToastContainer } = useToast();
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  const handleTableClick = useCallback(
+    (tableId: string) => {
+      navigate(`/table/${tableId}`);
+    },
+    [navigate],
+  );
+
+  const handleRefresh = useCallback(() => {
+    refresh().catch((err) => {
+      console.error('Refresh failed:', err);
+      showToast('Failed to refresh lobby. Check network.');
+    });
+  }, [refresh, showToast]);
+
+  // Show error toasts
+  useEffect(() => {
+    if (error) {
+      showToast(error);
+      clearError();
+    }
+  }, [error, showToast, clearError]);
+
+  // Initial load if data is stale
   useEffect(() => {
     if (!lastFetched || Date.now() - lastFetched > 30000) {
-      refresh();
+      handleRefresh();
     }
-    const interval = setInterval(refresh, 30000);
-    return () => clearInterval(interval);
-  }, [refresh, lastFetched]);
+  }, [lastFetched, handleRefresh]);
 
-  const handleTableClick = (tableId: string) => {
-    navigate(`/table/${tableId}`);
-  };
+  // Visibility-aware polling
+  useEffect(() => {
+    const startPolling = () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      intervalRef.current = setInterval(() => {
+        if (document.visibilityState === 'visible') {
+          handleRefresh();
+        }
+      }, 30000);
+    };
+    const stopPolling = () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+    startPolling();
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        startPolling();
+        handleRefresh();
+      } else {
+        stopPolling();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [handleRefresh]);
 
   return (
     <div className="container mx-auto p-4">
+      <ToastContainer />
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Lobby</h1>
-        <button
-          type="button"
-          onClick={() => setModalOpen(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-        >
-          Create Table
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={isLoading}
+            className="px-3 py-2 border rounded-md disabled:opacity-50"
+          >
+            {isLoading ? 'Refreshing...' : 'Refresh'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setModalOpen(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+          >
+            Create Table
+          </button>
+        </div>
       </div>
 
       {isLoading && tables.length === 0 ? (

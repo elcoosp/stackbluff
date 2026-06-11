@@ -1,22 +1,19 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { fetchLobby, type Table } from '../lib/api';
 
-export interface Table {
-  id: string;
-  name: string;
-  stake_level: string;
-  max_players: number;
-  current_players: number;
-  status: 'waiting' | 'playing';
-}
+const MAX_CACHED_TABLES = 50;
 
 interface TableStore {
   tables: Table[];
   isLoading: boolean;
+  error: string | null;
   lastFetched: number | null;
+  abortController: AbortController | null;
   setTables: (tables: Table[]) => void;
-  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
   refresh: () => Promise<void>;
+  clearError: () => void;
 }
 
 export const useTableStore = create<TableStore>()(
@@ -24,27 +21,55 @@ export const useTableStore = create<TableStore>()(
     (set, get) => ({
       tables: [],
       isLoading: false,
+      error: null,
       lastFetched: null,
-      setTables: (tables) => set({ tables, lastFetched: Date.now() }),
-      setLoading: (loading) => set({ isLoading: loading }),
+      abortController: null,
+
+      setTables: (tables) => {
+        if (tables.length > MAX_CACHED_TABLES) {
+          console.warn(`[TableStore] Truncating ${tables.length} tables to ${MAX_CACHED_TABLES}`);
+        }
+        set({
+          tables: tables.slice(0, MAX_CACHED_TABLES),
+          lastFetched: Date.now(),
+          error: null,
+        });
+      },
+      setError: (error) => set({ error }),
+      clearError: () => set({ error: null }),
+
       refresh: async () => {
-        const { setLoading, setTables } = get();
-        setLoading(true);
+        const { abortController, setTables, setError } = get();
+        if (abortController) {
+          abortController.abort();
+        }
+        const newController = new AbortController();
+        set({ abortController: newController, isLoading: true, error: null });
+
         try {
-          const response = await fetch('/api/lobby');
-          if (!response.ok) throw new Error('Failed to fetch lobby');
-          const data = await response.json();
-          setTables(data.tables);
-        } catch (error) {
-          console.error('Lobby refresh failed:', error);
+          const data = await fetchLobby(newController.signal);
+          if (!newController.signal.aborted) {
+            setTables(data.tables);
+          }
+        } catch (err) {
+          if (!newController.signal.aborted) {
+            const message = err instanceof Error ? err.message : 'Failed to load lobby';
+            setError(message);
+            console.error('[TableStore] refresh error:', err);
+          }
         } finally {
-          setLoading(false);
+          if (!newController.signal.aborted) {
+            set({ isLoading: false, abortController: null });
+          }
         }
       },
     }),
     {
       name: 'table-storage',
-      partialize: (state) => ({ tables: state.tables, lastFetched: state.lastFetched }),
+      partialize: (state) => ({
+        tables: state.tables,
+        lastFetched: state.lastFetched,
+      }),
     },
   ),
 );
