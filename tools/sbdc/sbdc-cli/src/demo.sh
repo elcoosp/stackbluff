@@ -6,7 +6,7 @@ echo "║     SBDC Demo — Full End-to-End Setup & Extension Guide     ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
 echo ""
 
-REPO_ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "$0")/../../../.." && pwd)"
 SBDC_BIN="$REPO_ROOT/tools/sbdc/target/debug/sbdc"
 EXT_DIR="$REPO_ROOT/tools/sbdc/sbdc-extension"
 DEMO_DIR=$(mktemp -d /tmp/sbdc-demo-XXXXXX)
