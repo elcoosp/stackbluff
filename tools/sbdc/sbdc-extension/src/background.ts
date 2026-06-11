@@ -38,17 +38,17 @@ async function startGeneration(deckId: string, takes: number) {
     currentSessionId = data.session_id;
     console.log('[BG] session:', currentSessionId);
 
-    // Find perchance tab
     const tabs = await chrome.tabs.query({ url: 'https://perchance.org/fluxgen*' });
     if (tabs.length === 0) {
-      console.error('[BG] No perchance tab, open it manually.');
+      console.error('[BG] No perchance tab, opening new one');
+      await chrome.tabs.create({ url: 'https://perchance.org/fluxgen' });
       return;
     }
     const tabId = tabs[0].id!;
     console.log(`[BG] Sending START_POLLING to tab ${tabId}`);
     await chrome.tabs.sendMessage(tabId, { type: 'START_POLLING' });
   } catch (err) {
-    console.error('[BG] startGen error', err);
+    console.error('[BG] error:', err);
   }
 }
 
