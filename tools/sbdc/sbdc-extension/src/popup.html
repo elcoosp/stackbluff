@@ -1,21 +1,15 @@
 <!DOCTYPE html>
 <html>
 <head><title>SBDC</title></head>
-<body style="width: 350px; font-family: sans-serif; padding: 10px;">
-  <h3>SBDC Generator</h3>
+<body style="width: 300px; padding: 10px;">
   <label>Rust server URL:</label>
-  <input id="serverUrl" type="text" value="http://localhost:8899" style="width: 100%; margin-bottom: 8px;" />
+  <input id="serverUrl" type="text" value="http://localhost:8899" style="width:100%; margin-bottom:8px" />
   <label>Deck ID:</label>
-  <input id="deckId" type="text" style="width: 100%; margin-bottom: 8px;" />
+  <input id="deckId" type="text" style="width:100%; margin-bottom:8px" />
   <label>Takes:</label>
-  <input id="takes" type="number" value="4" style="width: 100%; margin-bottom: 12px;" />
-  <button id="start" style="width: 100%; padding: 8px; background: #007bff; color: white; border: none; border-radius: 4px; margin-bottom: 8px;">Start Generation</button>
-  <button id="refreshPage" style="width: 100%; padding: 8px; background: #6c757d; color: white; border: none; border-radius: 4px;">Refresh Perchance Page</button>
-  <div id="status" style="margin-top: 10px; font-size: 12px; word-break: break-word;"></div>
-  <div style="margin-top: 12px; font-size: 11px; color: #666; border-top: 1px solid #ddd; padding-top: 8px;">
-    ⚠️ Make sure <strong>https://perchance.org/fluxgen</strong> is open in a tab.<br>
-    If the extension doesn't work, click "Refresh Perchance Page" and then try again.
-  </div>
-  <script type="module" src="./popup.ts"></script>
+  <input id="takes" type="number" value="4" style="width:100%; margin-bottom:12px" />
+  <button id="start" style="width:100%">Start Generation</button>
+  <div id="status" style="margin-top:10px; font-size:12px"></div>
+  <script src="./popup.ts"></script>
 </body>
 </html>
