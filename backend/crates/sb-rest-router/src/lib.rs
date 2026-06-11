@@ -67,12 +67,7 @@ pub fn create_router(
     table_repo: Arc<dyn TableRepo + Send + Sync>,
     registry: Arc<Registry>,
 ) -> Router {
-    let state = Arc::new(AppState {
-        table_service,
-        table_repo,
-        registry,
-    });
-
+    let state = Arc::new(AppState { table_service, table_repo, registry });
     Router::new()
         .route("/lobby", get(lobby_handler))
         .route("/tables", post(create_table_handler))
@@ -106,11 +101,8 @@ async fn create_table_handler(
     if req.max_players < 2 || req.max_players > 9 {
         return Err(bad_request("INVALID_MAX_PLAYERS", "max_players must be between 2 and 9"));
     }
-    let table_id = state
-        .table_service
-        .create_cash_table(req.stake_level, req.max_players)
-        .await
-        .map_err(internal_error)?;
+    let table_id = state.table_service.create_cash_table(req.stake_level, req.max_players)
+        .await.map_err(internal_error)?;
     Ok(Json(CreateTableResponse { table_id }))
 }
 
@@ -118,23 +110,13 @@ fn internal_error<E: std::fmt::Display>(err: E) -> (StatusCode, Json<ErrorRespon
     error!("Internal error: {}", err);
     (
         StatusCode::INTERNAL_SERVER_ERROR,
-        Json(ErrorResponse {
-            error: ErrorDetail {
-                code: "INTERNAL_ERROR".to_string(),
-                message: "Something went wrong".to_string(),
-            },
-        }),
+        Json(ErrorResponse { error: ErrorDetail { code: "INTERNAL_ERROR".to_string(), message: "Something went wrong".to_string() } })
     )
 }
 
 fn bad_request(code: &str, msg: &str) -> (StatusCode, Json<ErrorResponse>) {
     (
         StatusCode::BAD_REQUEST,
-        Json(ErrorResponse {
-            error: ErrorDetail {
-                code: code.to_string(),
-                message: msg.to_string(),
-            },
-        }),
+        Json(ErrorResponse { error: ErrorDetail { code: code.to_string(), message: msg.to_string() } })
     )
 }
