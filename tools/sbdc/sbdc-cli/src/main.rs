@@ -96,7 +96,7 @@ async fn main() -> anyhow::Result<()> {
                         }
                     }
                 }
-                let deck_takes = takes_dir.join("*").join(&deck_id).join("0-takes");
+                let _deck_takes = takes_dir.join("*").join(&deck_id).join("0-takes");
                 let found = std::fs::read_dir(&takes_dir)
                     .ok()
                     .map(|mut e| e.any(|_| true)).unwrap_or(false);
