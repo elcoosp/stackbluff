@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")"
-pnpm install
+
+echo "Installing dependencies..."
+pnpm install --frozen-lockfile 2>/dev/null || pnpm install
+
+echo "Building extension..."
 pnpm run build
-echo "Extension built in dist/ directory. Load it in chrome://extensions/ (Developer mode -> Load unpacked)"
+
+echo ""
+echo "Build complete. Files in dist/:"
+find dist -type f | sort
+
+echo ""
+echo "Load in Chrome: chrome://extensions/ → Developer mode → Load unpacked → select dist/"

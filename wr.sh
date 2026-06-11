@@ -4,30 +4,19 @@ set -uo pipefail
 COMPILE_OK=true
 INCOMPLETE=false
 
-BASE="tools/sbdc"
+echo "=== Diagnosing CWD and repo root ==="
+echo "CWD: $(pwd)"
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+echo "Git repo root: $REPO_ROOT"
+echo "Cargo.toml exists: $(test -f $REPO_ROOT/tools/sbdc/Cargo.toml && echo YES || echo NO)"
+echo "Extension dir exists: $(test -d $REPO_ROOT/tools/sbdc/sbdc-extension && echo YES || echo NO)"
 
-echo "Diagnosing: current dist contents"
-find "$BASE/sbdc-extension/dist" -type f 2>&1 || echo "dist directory missing"
-
-echo ""
-echo "Diagnosing: current manifest.json"
-cat "$BASE/sbdc-extension/manifest.json" 2>&1
-
-echo ""
-echo "Diagnosing: source files exist?"
-for f in background.ts content.ts popup.ts popup.html; do
-  if [ -f "$BASE/sbdc-extension/src/$f" ]; then
-    echo "  ✅ src/$f exists"
-  else
-    echo "  ❌ src/$f MISSING"
-  fi
-done
+BASE="$REPO_ROOT/tools/sbdc"
+EXT_DIR="$BASE/sbdc-extension"
 
 echo ""
-echo "The @crxjs/vite-plugin requires manifest paths to point to .ts source files, not .js"
-echo "Fixing manifest.json to reference TypeScript sources"
-
-cat > "$BASE/sbdc-extension/manifest.json" << 'MANIFEST_V2_W5tK9'
+echo "=== Fixing manifest.json with .ts source paths ==="
+cat > "$EXT_DIR/manifest.json" << 'MANIFEST_V4_Q7kP1'
 {
   "manifest_version": 3,
   "name": "SBDC Generator",
@@ -58,232 +47,216 @@ cat > "$BASE/sbdc-extension/manifest.json" << 'MANIFEST_V2_W5tK9'
     "default_popup": "src/popup.html"
   }
 }
-MANIFEST_V2_W5tK9
-
-echo "Rebuilding extension"
-cd "$BASE/sbdc-extension"
-rm -rf dist
-pnpm install 2>&1 | tail -3
-pnpm run build 2>&1
+MANIFEST_V4_Q7kP1
+echo "Wrote manifest.json"
 
 echo ""
-echo "Post-build: dist contents"
-find "$BASE/sbdc-extension/dist" -type f 2>&1 || echo "dist directory missing"
+echo "=== Cleaning dist and rebuilding extension ==="
+rm -rf "$EXT_DIR/dist"
+(cd "$EXT_DIR" && pnpm run build 2>&1)
 
 echo ""
-echo "Post-build: generated manifest.json in dist"
-cat "$BASE/sbdc-extension/dist/manifest.json" 2>&1 || echo "No manifest in dist"
+echo "=== Build output ==="
+echo "Dist tree:"
+find "$EXT_DIR/dist" -type f | sort
 
 echo ""
-echo "Checking for background and content in dist"
-BG_COUNT=$(find "$BASE/sbdc-extension/dist" -name "*background*" -type f 2>/dev/null | wc -l | tr -d ' ')
-CT_COUNT=$(find "$BASE/sbdc-extension/dist" -name "*content*" -type f 2>/dev/null | wc -l | tr -d ' ')
-POP_COUNT=$(find "$BASE/sbdc-extension/dist" -name "*popup*" -type f 2>/dev/null | wc -l | tr -d ' ')
+echo "Generated manifest.json:"
+cat "$EXT_DIR/dist/manifest.json" 2>&1
+
+echo ""
+echo "Verifying all 3 entry points..."
+BG_COUNT=$(find "$EXT_DIR/dist" -name "*background*" -type f 2>/dev/null | wc -l | tr -d ' ')
+CT_COUNT=$(find "$EXT_DIR/dist" -name "*content*" -type f 2>/dev/null | wc -l | tr -d ' ')
+POP_COUNT=$(find "$EXT_DIR/dist" -name "*popup*" -type f 2>/dev/null | wc -l | tr -d ' ')
 echo "  background files: $BG_COUNT"
 echo "  content files:    $CT_COUNT"
 echo "  popup files:      $POP_COUNT"
 
-if [ "$BG_COUNT" -eq 0 ] || [ "$CT_COUNT" -eq 0 ]; then
-  echo ""
-  echo "⚠️  Background or content still missing — checking vite config"
-  cat "$BASE/sbdc-extension/vite.config.ts" 2>&1
-
-  echo ""
-  echo "Checking if @crxjs/vite-plugin is properly resolving"
-  cat "$BASE/sbdc-extension/node_modules/@crxjs/vite-plugin/package.json" 2>&1 | head -5
-
-  echo ""
-  echo "Trying alternative: explicit vite config with manual input entries"
-  cat > "$BASE/sbdc-extension/vite.config.ts" << 'VITE_V2_M8nP4'
-import { defineConfig } from 'vite';
-import { crx } from '@crxjs/vite-plugin';
-import manifest from './manifest.json';
-
-export default defineConfig({
-  plugins: [crx({ manifest })],
-  build: {
-    rollupOptions: {
-      input: {
-        content: 'src/content.ts',
-        background: 'src/background.ts',
-      },
-    },
-  },
-});
-VITE_V2_M8nP4
-
-  echo "Rebuilding with updated vite config"
-  rm -rf dist
-  pnpm run build 2>&1
-
-  echo ""
-  echo "Post-rebuild: dist contents"
-  find "$BASE/sbdc-extension/dist" -type f 2>&1
-  echo ""
-  echo "Post-rebuild: manifest"
-  cat "$BASE/sbdc-extension/dist/manifest.json" 2>&1
-
-  BG_COUNT2=$(find "$BASE/sbdc-extension/dist" -name "*background*" -type f 2>/dev/null | wc -l | tr -d ' ')
-  CT_COUNT2=$(find "$BASE/sbdc-extension/dist" -name "*content*" -type f 2>/dev/null | wc -l | tr -d ' ')
-  echo "  background files: $BG_COUNT2"
-  echo "  content files:    $CT_COUNT2"
-
-  if [ "$BG_COUNT2" -eq 0 ] || [ "$CT_COUNT2" -eq 0 ]; then
-    echo ""
-    echo "Still missing. Rolling back vite config and using manual build approach."
-    echo "The @crxjs/vite-plugin beta may not properly handle service_worker + content_scripts."
-    echo "Switching to manual Vite build without @crxjs."
-
-    cat > "$BASE/sbdc-extension/vite.config.ts" << 'VITE_V3_R2jL7'
-import { defineConfig } from 'vite';
-import { resolve } from 'path';
-
-export default defineConfig({
-  build: {
-    outDir: 'dist',
-    emptyOutDir: true,
-    rollupOptions: {
-      input: {
-        popup: resolve(__dirname, 'src/popup.html'),
-        content: resolve(__dirname, 'src/content.ts'),
-        background: resolve(__dirname, 'src/background.ts'),
-      },
-      output: {
-        entryFileNames: '[name].js',
-        chunkFileNames: 'chunks/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash][extname]',
-      },
-    },
-  },
-});
-VITE_V3_R2jL7
-
-    echo "Rebuilding with manual Vite config (no @crxjs)"
-    rm -rf dist
-    pnpm run build 2>&1
-
-    echo ""
-    echo "Post-rebuild: dist contents"
-    find "$BASE/sbdc-extension/dist" -type f 2>&1
-
-    echo ""
-    echo "Generating manifest.json in dist manually"
-    cat > "$BASE/sbdc-extension/dist/manifest.json" << 'DIST_MANIFEST_K9mW3'
-{
-  "manifest_version": 3,
-  "name": "SBDC Generator",
-  "version": "1.0",
-  "permissions": [
-    "storage"
-  ],
-  "host_permissions": [
-    "http://localhost:*/*"
-  ],
-  "background": {
-    "service_worker": "background.js"
-  },
-  "content_scripts": [
-    {
-      "matches": [
-        "*://*.perchance.org/*"
-      ],
-      "js": [
-        "content.js"
-      ],
-      "run_at": "document_idle",
-      "all_frames": true
-    }
-  ],
-  "action": {
-    "default_popup": "popup.html"
-  }
-}
-DIST_MANIFEST_K9mW3
-
-    echo ""
-    echo "Final dist contents:"
-    find "$BASE/sbdc-extension/dist" -type f | sort
-    echo ""
-    echo "Final manifest.json:"
-    cat "$BASE/sbdc-extension/dist/manifest.json"
-  fi
+if [ "$BG_COUNT" -gt 0 ] && [ "$CT_COUNT" -gt 0 ] && [ "$POP_COUNT" -gt 0 ]; then
+  echo "  ✅ All entry points present"
+else
+  echo "  ❌ Some entry points missing — extension may not work"
 fi
 
 echo ""
-echo "Verifying all 3 entry points exist in dist"
-FINAL_BG=$(find "$BASE/sbdc-extension/dist" -name "background.js" -type f 2>/dev/null | wc -l | tr -d ' ')
-FINAL_CT=$(find "$BASE/sbdc-extension/dist" -name "content.js" -type f 2>/dev/null | wc -l | tr -d ' ')
-FINAL_POP=$(find "$BASE/sbdc-extension/dist" -name "popup.html" -type f 2>/dev/null | wc -l | tr -d ' ')
-FINAL_MF=$(find "$BASE/sbdc-extension/dist" -name "manifest.json" -type f 2>/dev/null | wc -l | tr -d ' ')
-
-echo "  background.js:   $FINAL_BG"
-echo "  content.js:      $FINAL_CT"
-echo "  popup.html:      $FINAL_POP"
-echo "  manifest.json:   $FINAL_MF"
-
-if [ "$FINAL_BG" -gt 0 ] && [ "$FINAL_CT" -gt 0 ] && [ "$FINAL_POP" -gt 0 ] && [ "$FINAL_MF" -gt 0 ]; then
-  echo ""
-  echo "✅ Extension build complete — all files present"
-else
-  echo ""
-  echo "❌ Extension build incomplete — see above for errors"
-fi
-
-echo "Updating build.sh to match new config"
-cat > "$BASE/sbdc-extension/build.sh" << 'BUILDSH_V2_P4qN1'
+echo "=== Updating build.sh ==="
+cat > "$EXT_DIR/build.sh" << 'BUILDSH_V5_M3nR9'
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")"
 
 echo "Installing dependencies..."
-pnpm install
+pnpm install --frozen-lockfile 2>/dev/null || pnpm install
 
 echo "Building extension..."
 pnpm run build
 
-echo "Generating manifest.json in dist..."
-cat > dist/manifest.json << 'MANIFEST_EMBED'
+echo ""
+echo "Build complete. Files in dist/:"
+find dist -type f | sort
+
+echo ""
+echo "Load in Chrome: chrome://extensions/ → Developer mode → Load unpacked → select dist/"
+BUILDSH_V5_M3nR9
+chmod +x "$EXT_DIR/build.sh"
+
+echo ""
+echo "=== Updating demo.sh with correct paths ==="
+cat > "$BASE/sbdc-cli/src/demo.sh" << 'DEMO_V3_K8jW4'
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+SBDC_BIN="$REPO_ROOT/tools/sbdc/target/debug/sbdc"
+EXT_DIR="$REPO_ROOT/tools/sbdc/sbdc-extension"
+DEMO_DIR=$(mktemp -d /tmp/sbdc-demo-XXXXXX)
+
+echo "╔══════════════════════════════════════════════════════════════╗"
+echo "║     SBDC Demo — Full End-to-End Setup & Extension Guide     ║"
+echo "╚══════════════════════════════════════════════════════════════╝"
+echo ""
+echo "Repo root:     $REPO_ROOT"
+echo "Demo dir:      $DEMO_DIR"
+echo "Extension dir: $EXT_DIR"
+echo ""
+
+echo "═══════════════════════════════════════════════════════"
+echo "  STEP 0: Build the sbdc binary"
+echo "═══════════════════════════════════════════════════════"
+cargo build --bin sbdc --manifest-path "$REPO_ROOT/tools/sbdc/Cargo.toml" 2>&1
+echo "✅ Binary built"
+echo ""
+
+echo "═══════════════════════════════════════════════════════"
+echo "  STEP 1: Build the Chrome extension"
+echo "═══════════════════════════════════════════════════════"
+cd "$EXT_DIR"
+bash build.sh 2>&1 || { echo "⚠️  Extension build may have issues"; }
+cd "$DEMO_DIR"
+echo ""
+
+echo "═══════════════════════════════════════════════════════"
+echo "  STEP 2: Init"
+echo "═══════════════════════════════════════════════════════"
+"$SBDC_BIN" --project-dir "$DEMO_DIR" init
+echo ""
+
+echo "═══════════════════════════════════════════════════════"
+echo "  STEP 3: Scaffold"
+echo "═══════════════════════════════════════════════════════"
+"$SBDC_BIN" --project-dir "$DEMO_DIR" scaffold --deck-id demo-deck --season-id default_season
+echo ""
+
+echo "═══════════════════════════════════════════════════════"
+echo "  STEP 4: Ingest sample lore"
+echo "═══════════════════════════════════════════════════════"
+cat > "$DEMO_DIR/demo-lore.json" << 'LORE_EMBED'
 {
-  "manifest_version": 3,
-  "name": "SBDC Generator",
-  "version": "1.0",
-  "permissions": [
-    "storage"
-  ],
-  "host_permissions": [
-    "http://localhost:*/*"
-  ],
-  "background": {
-    "service_worker": "background.js"
-  },
-  "content_scripts": [
-    {
-      "matches": [
-        "*://*.perchance.org/*"
-      ],
-      "js": [
-        "content.js"
-      ],
-      "run_at": "document_idle",
-      "all_frames": true
-    }
-  ],
-  "action": {
-    "default_popup": "popup.html"
-  }
+  "lore_entries": [{
+    "parent_entity": "deck",
+    "parent_id": "demo-deck",
+    "category": "history",
+    "title": "The Great Schism",
+    "content": "The four clans once lived in harmony until the Great Schism split them forever",
+    "source": "manual",
+    "status": "approved",
+    "injectable": true,
+    "injection_weight": 10
+  }],
+  "narrative_arcs": [
+    { "rank": "2", "suit": "s", "description": "Spade scouts breach the crystal wall" },
+    { "rank": "A", "suit": "h", "description": "The Heart Queen makes the ultimate sacrifice" }
+  ]
 }
-MANIFEST_EMBED
+LORE_EMBED
+"$SBDC_BIN" --project-dir "$DEMO_DIR" ingest-json --deck-id demo-deck --file "$DEMO_DIR/demo-lore.json"
+echo ""
 
-echo "Extension built in dist/ directory."
-echo "Load it in chrome://extensions/ (Developer mode -> Load unpacked -> select dist/)"
-BUILDSH_V2_P4qN1
-chmod +x "$BASE/sbdc-extension/build.sh"
+echo "═══════════════════════════════════════════════════════"
+echo "  STEP 5: Build Prompts"
+echo "═══════════════════════════════════════════════════════"
+"$SBDC_BIN" --project-dir "$DEMO_DIR" build-prompts --deck-id demo-deck
+echo ""
 
-echo "Committing"
-git add -A
-git commit -m "fix(sbdc): fix extension build — manual Vite config, no @crxjs
+PROMPT_COUNT=$(sqlite3 "$DEMO_DIR/.sbdc/sbdc.db" "SELECT COUNT(*) FROM generated_prompts WHERE deck_id='demo-deck' AND status='ready_to_generate';" 2>/dev/null || echo "?")
+echo "✅ $PROMPT_COUNT prompts ready to generate"
+echo ""
 
-- @crxjs/vite-plugin beta doesn't properly handle service_worker + content_scripts
-- Switch to manual Vite build with explicit rollup input entries
-- Generate manifest.json in dist/ as post-build step
-- Update build.sh to include manifest generation" 2>&1 || echo "Nothing to commit or commit failed"
+echo "═══════════════════════════════════════════════════════"
+echo "  STEP 6: Start the server"
+echo "═══════════════════════════════════════════════════════"
+"$SBDC_BIN" --project-dir "$DEMO_DIR" serve --port 8899 &
+SERVER_PID=$!
+echo "Server PID: $SERVER_PID"
+sleep 2
+curl -s http://localhost:8899/api/decks/demo-deck/status | python3 -m json.tool 2>/dev/null || echo "(server starting...)"
+echo ""
+
+echo "╔══════════════════════════════════════════════════════════════╗"
+echo "║         CHROME EXTENSION SETUP INSTRUCTIONS                 ║"
+echo "╠══════════════════════════════════════════════════════════════╣"
+echo "║                                                              ║"
+echo "║  1. Open Chrome → chrome://extensions/                       ║"
+echo "║  2. Enable Developer mode (top-right toggle)                 ║"
+echo "║  3. Click 'Load unpacked'                                   ║"
+echo "║  4. Select THIS directory:                                   ║"
+echo "║     $EXT_DIR/dist"
+echo "║                                                              ║"
+echo "║  5. You should see 'SBDC Generator' in extensions list       ║"
+echo "║                                                              ║"
+echo "║  6. Open NEW TAB → https://perchance.org/fluxgen            ║"
+echo "║                                                              ║"
+echo "║  7. Click the SBDC puzzle piece icon in Chrome toolbar       ║"
+echo "║                                                              ║"
+echo "║  8. In popup enter:                                          ║"
+echo "║     Server URL:  http://localhost:8899                        ║"
+echo "║     Deck ID:     demo-deck                                   ║"
+echo "║     Takes:       4                                           ║"
+echo "║                                                              ║"
+echo "║  9. Click 'Start' → 'Started! 52 prompts ready'             ║"
+echo "║                                                              ║"
+echo "║ 10. Content script auto-generates on the perchance page      ║"
+echo "║     Look for green [SBDC] indicator at top-left              ║"
+echo "║                                                              ║"
+echo "║  11. After generation, review and select takes:              ║"
+echo "║      curl http://localhost:8899/api/decks/demo-deck/takes    ║"
+echo "║                                                              ║"
+echo "║  12. Finalize:                                               ║"
+echo "║      $SBDC_BIN --project-dir $DEMO_DIR clean --deck-id demo-deck"
+echo "║                                                              ║"
+echo "║  Stop server: kill $SERVER_PID                                ║"
+echo "║  Reset:      rm -rf $DEMO_DIR                                 ║"
+echo "║                                                              ║"
+echo "╚══════════════════════════════════════════════════════════════╝"
+
+wait $SERVER_PID
+DEMO_V3_K8jW4
+chmod +x "$BASE/sbdc-cli/src/demo.sh"
+
+echo "Checking Rust compilation"
+if ! cargo check --workspace --manifest-path "$BASE/Cargo.toml" 2>&1; then
+  echo "Compilation failed – will skip commit"
+  COMPILE_OK=false
+fi
+
+if [ "$INCOMPLETE" = true ] || [ "$COMPILE_OK" = false ]; then
+  echo "Skipping tests and commit due to incomplete files or compilation errors"
+  exit 1
+fi
+
+echo "Running tests"
+cargo test --workspace --manifest-path "$BASE/Cargo.toml" 2>&1
+if [ $? -eq 0 ]; then
+  echo "All tests passed. Committing."
+  git add -A
+  git commit -m "fix(sbdc): use git rev-parse for repo root, fix all absolute path issues
+
+- Use git rev-parse --show-toplevel instead of dirname traversal
+- Fix manifest.json with .ts source paths for @crxjs
+- Fix demo.sh, build.sh with correct path resolution
+- Rebuild extension and verify all 3 entry points in dist/"
+else
+  echo "Tests failed. Fix errors then run the next script."
+  exit 1
+fi
