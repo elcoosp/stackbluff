@@ -1,7 +1,10 @@
 use crate::error::Result;
-use sbdc_entity::{universe, clan, character, season, junction_type, creative_pattern, framing_instruction, virality_mechanic};
-use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, Set};
+use sbdc_entity::{
+    character, clan, creative_pattern, framing_instruction, junction_type, season, universe,
+    virality_mechanic,
+};
 use sbdc_migration::MigratorTrait;
+use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, Set};
 use std::path::Path;
 use tokio::fs;
 use tracing;
@@ -23,10 +26,15 @@ pub async fn run_init(db: &DatabaseConnection, project_dir: &Path) -> Result<()>
             art_direction: Set("Fantasy Illustration".into()),
             background_invariant: Set("pure white background #FFFFFF".into()),
             lighting_invariant: Set("studio lighting, no shadows cast on background".into()),
-            animation_philosophy: Set("subtle, slow motion, no camera shake, 2 seconds loop, similar start and end frame".into()),
+            animation_philosophy: Set(
+                "subtle, slow motion, no camera shake, 2 seconds loop, similar start and end frame"
+                    .into(),
+            ),
             hidden_gems_rule: Set("mascot hidden once on each face card".into()),
             default_negative: Set("text, watermark, blurry, deformed".into()),
-        }.insert(db).await?;
+        }
+        .insert(db)
+        .await?;
     }
 
     // Seed Season
@@ -37,46 +45,104 @@ pub async fn run_init(db: &DatabaseConnection, project_dir: &Path) -> Result<()>
             season_name: Set("Season 1".into()),
             global_event: Set("The Convergence".into()),
             season_order: Set(1),
-        }.insert(db).await?;
+        }
+        .insert(db)
+        .await?;
     }
 
     // Seed 4 Clans
     if clan::Entity::find().one(db).await?.is_none() {
         let clans = [
-            ("clan-spades", "Spades", "The Invasion Force", "angular, sharp silhouettes", "#111111", "#EEEEEE", "#888888"),
-            ("clan-hearts", "Hearts", "The Resistance", "flowing, organic silhouettes", "#331100", "#FF6666", "#AA4444"),
-            ("clan-diamonds", "Diamonds", "The Merchants", "geometric, faceted silhouettes", "#222200", "#FFD700", "#B8860B"),
-            ("clan-clubs", "Clubs", "The Commons", "sturdy, grounded silhouettes", "#1a2a1a", "#88AA88", "#446644"),
+            (
+                "clan-spades",
+                "Spades",
+                "The Invasion Force",
+                "angular, sharp silhouettes",
+                "#111111",
+                "#EEEEEE",
+                "#888888",
+            ),
+            (
+                "clan-hearts",
+                "Hearts",
+                "The Resistance",
+                "flowing, organic silhouettes",
+                "#331100",
+                "#FF6666",
+                "#AA4444",
+            ),
+            (
+                "clan-diamonds",
+                "Diamonds",
+                "The Merchants",
+                "geometric, faceted silhouettes",
+                "#222200",
+                "#FFD700",
+                "#B8860B",
+            ),
+            (
+                "clan-clubs",
+                "Clubs",
+                "The Commons",
+                "sturdy, grounded silhouettes",
+                "#1a2a1a",
+                "#88AA88",
+                "#446644",
+            ),
         ];
-        let models: Vec<clan::ActiveModel> = clans.into_iter().map(|(id, name, tagline, sil, dark, accent, sec)| {
-            clan::ActiveModel {
-                clan_id: Set(id.into()),
-                universe_id: Set("default".into()),
-                name: Set(name.into()),
-                tagline: Set(tagline.into()),
-                silhouette: Set(sil.into()),
-                border_accent: Set("ornate".into()),
-                typography_hint: Set("bold".into()),
-                pip_texture: Set("stone".into()),
-                primary_dark: Set(dark.into()),
-                primary_accent: Set(accent.into()),
-                secondary: Set(sec.into()),
-                sigil: Set(format!("{}_sigil", name)),
-            }
-        }).collect();
+        let models: Vec<clan::ActiveModel> = clans
+            .into_iter()
+            .map(
+                |(id, name, tagline, sil, dark, accent, sec)| clan::ActiveModel {
+                    clan_id: Set(id.into()),
+                    universe_id: Set("default".into()),
+                    name: Set(name.into()),
+                    tagline: Set(tagline.into()),
+                    silhouette: Set(sil.into()),
+                    border_accent: Set("ornate".into()),
+                    typography_hint: Set("bold".into()),
+                    pip_texture: Set("stone".into()),
+                    primary_dark: Set(dark.into()),
+                    primary_accent: Set(accent.into()),
+                    secondary: Set(sec.into()),
+                    sigil: Set(format!("{}_sigil", name)),
+                },
+            )
+            .collect();
         clan::Entity::insert_many(models).exec(db).await?;
     }
 
     // Seed 4 Characters
     if character::Entity::find().one(db).await?.is_none() {
         let chars = [
-            ("char-spade-king", "clan-spades", "Spade King", "stern king with iron crown, sharp jawline, wearing black steel armor"),
-            ("char-heart-queen", "clan-hearts", "Heart Queen", "graceful queen with flowing gown, soft eyes, wearing silver tiara"),
-            ("char-diamond-jack", "clan-diamonds", "Diamond Jack", "cunning merchant with gold-trimmed vest, smirking, holding a gem"),
-            ("char-club-joker", "clan-clubs", "Club Joker", "wild jester with wooden mask, grinning, holding a club"),
+            (
+                "char-spade-king",
+                "clan-spades",
+                "Spade King",
+                "stern king with iron crown, sharp jawline, wearing black steel armor",
+            ),
+            (
+                "char-heart-queen",
+                "clan-hearts",
+                "Heart Queen",
+                "graceful queen with flowing gown, soft eyes, wearing silver tiara",
+            ),
+            (
+                "char-diamond-jack",
+                "clan-diamonds",
+                "Diamond Jack",
+                "cunning merchant with gold-trimmed vest, smirking, holding a gem",
+            ),
+            (
+                "char-club-joker",
+                "clan-clubs",
+                "Club Joker",
+                "wild jester with wooden mask, grinning, holding a club",
+            ),
         ];
-        let models: Vec<character::ActiveModel> = chars.into_iter().map(|(id, cid, title, bust)| {
-            character::ActiveModel {
+        let models: Vec<character::ActiveModel> = chars
+            .into_iter()
+            .map(|(id, cid, title, bust)| character::ActiveModel {
                 character_id: Set(id.into()),
                 clan_id: Set(cid.into()),
                 name: Set(title.into()),
@@ -88,8 +154,8 @@ pub async fn run_init(db: &DatabaseConnection, project_dir: &Path) -> Result<()>
                 artifact_default_desc: Set("holding an ornate scepter".into()),
                 artifact_victory_desc: Set("raising scepter high".into()),
                 artifact_defeat_desc: Set("dropping scepter".into()),
-            }
-        }).collect();
+            })
+            .collect();
         character::Entity::insert_many(models).exec(db).await?;
     }
 
@@ -97,14 +163,18 @@ pub async fn run_init(db: &DatabaseConnection, project_dir: &Path) -> Result<()>
     if junction_type::Entity::find().one(db).await?.is_none() {
         let junctions = [
             ("junction-battle", "battle scene, clashing forces"),
-            ("junction-dialogue", "two characters speaking, dramatic lighting"),
+            (
+                "junction-dialogue",
+                "two characters speaking, dramatic lighting",
+            ),
         ];
-        let models: Vec<junction_type::ActiveModel> = junctions.into_iter().map(|(id, frag)| {
-            junction_type::ActiveModel {
+        let models: Vec<junction_type::ActiveModel> = junctions
+            .into_iter()
+            .map(|(id, frag)| junction_type::ActiveModel {
                 junction_id: Set(id.into()),
                 prompt_fragment: Set(frag.into()),
-            }
-        }).collect();
+            })
+            .collect();
         junction_type::Entity::insert_many(models).exec(db).await?;
     }
 
@@ -113,7 +183,9 @@ pub async fn run_init(db: &DatabaseConnection, project_dir: &Path) -> Result<()>
         creative_pattern::ActiveModel {
             pattern_id: Set("pattern-1".into()),
             description: Set("dynamic composition, rule of thirds".into()),
-        }.insert(db).await?;
+        }
+        .insert(db)
+        .await?;
     }
 
     // Seed framing instructions
@@ -121,7 +193,9 @@ pub async fn run_init(db: &DatabaseConnection, project_dir: &Path) -> Result<()>
         framing_instruction::ActiveModel {
             framing_id: Set("framing-1".into()),
             description: Set("medium shot, eye level".into()),
-        }.insert(db).await?;
+        }
+        .insert(db)
+        .await?;
     }
 
     // Seed virality mechanics
@@ -129,27 +203,29 @@ pub async fn run_init(db: &DatabaseConnection, project_dir: &Path) -> Result<()>
         virality_mechanic::ActiveModel {
             mechanic_id: Set("viral-1".into()),
             description: Set("hidden mascot triggers engagement".into()),
-        }.insert(db).await?;
+        }
+        .insert(db)
+        .await?;
     }
 
     tracing::info!("init completed with seed data");
     Ok(())
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sea_orm::{Database, DatabaseConnection, ConnectionTrait};
     use sbdc_migration::Migrator;
     use sbdc_migration::MigratorTrait;
+    use sea_orm::{ConnectionTrait, Database, DatabaseConnection};
     use tempfile::tempdir;
 
     async fn setup_test_db() -> DatabaseConnection {
         let db = Database::connect("sqlite::memory:").await.unwrap();
         // Enable foreign keys for SQLite
-        db.execute_unprepared("PRAGMA foreign_keys = ON;").await.unwrap();
+        db.execute_unprepared("PRAGMA foreign_keys = ON;")
+            .await
+            .unwrap();
         Migrator::up(&db, None).await.unwrap();
         db
     }

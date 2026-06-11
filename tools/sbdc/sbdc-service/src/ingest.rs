@@ -1,12 +1,16 @@
 use crate::error::{Result, SbdcError};
 use sbdc_dto::ingest::IngestPayload;
-use sbdc_entity::{deck, lore_entry, character_relationship, deck_narrative_arc};
+use sbdc_entity::{character_relationship, deck, deck_narrative_arc, lore_entry};
 use sea_orm::{ActiveModelTrait, EntityTrait, QueryFilter, Set};
-use std::path::Path;
 use std::collections::HashMap;
+use std::path::Path;
 use tracing;
 
-pub async fn run_ingest_json(db: &sea_orm::DatabaseConnection, deck_id: &str, file_path: &Path) -> Result<()> {
+pub async fn run_ingest_json(
+    db: &sea_orm::DatabaseConnection,
+    deck_id: &str,
+    file_path: &Path,
+) -> Result<()> {
     // Verify deck exists
     let deck_exists = deck::Entity::find()
         .filter(deck::COLUMN.deck_id.eq(deck_id))
@@ -19,12 +23,15 @@ pub async fn run_ingest_json(db: &sea_orm::DatabaseConnection, deck_id: &str, fi
 
     let content = tokio::fs::read_to_string(file_path).await?;
     let payload: IngestPayload = serde_json::from_str(&content)?;
-    payload.validate().map_err(|e| SbdcError::Validation(e.to_string()))?;
+    payload
+        .validate()
+        .map_err(|e| SbdcError::Validation(e.to_string()))?;
 
     // Batch insert lore entries
     if let Some(lores) = &payload.lore_entries {
-        let models: Vec<lore_entry::ActiveModel> = lores.iter().map(|l| {
-            lore_entry::ActiveModel {
+        let models: Vec<lore_entry::ActiveModel> = lores
+            .iter()
+            .map(|l| lore_entry::ActiveModel {
                 lore_id: Set(uuid::Uuid::new_v4().to_string()),
                 parent_entity: Set(l.parent_entity.clone()),
                 parent_id: Set(l.parent_id.clone()),
@@ -35,8 +42,8 @@ pub async fn run_ingest_json(db: &sea_orm::DatabaseConnection, deck_id: &str, fi
                 status: Set(l.status.clone()),
                 injectable: Set(l.injectable),
                 injection_weight: Set(l.injection_weight),
-            }
-        }).collect();
+            })
+            .collect();
         if !models.is_empty() {
             lore_entry::Entity::insert_many(models).exec(db).await?;
         }
@@ -44,18 +51,21 @@ pub async fn run_ingest_json(db: &sea_orm::DatabaseConnection, deck_id: &str, fi
 
     // Batch insert character relationships
     if let Some(rels) = &payload.character_relationships {
-        let models: Vec<character_relationship::ActiveModel> = rels.iter().map(|r| {
-            character_relationship::ActiveModel {
+        let models: Vec<character_relationship::ActiveModel> = rels
+            .iter()
+            .map(|r| character_relationship::ActiveModel {
                 relationship_id: Set(uuid::Uuid::new_v4().to_string()),
                 character_id_a: Set(r.character_id_a.clone()),
                 character_id_b: Set(r.character_id_b.clone()),
                 relationship_type: Set(r.relationship_type.clone()),
                 description: Set(r.description.clone()),
                 deck_id: Set(r.deck_id.clone()),
-            }
-        }).collect();
+            })
+            .collect();
         if !models.is_empty() {
-            character_relationship::Entity::insert_many(models).exec(db).await?;
+            character_relationship::Entity::insert_many(models)
+                .exec(db)
+                .await?;
         }
     }
 
@@ -84,7 +94,9 @@ pub async fn run_ingest_json(db: &sea_orm::DatabaseConnection, deck_id: &str, fi
                     suit: Set(a.suit.clone()),
                     description: Set(a.description.clone()),
                     step_order: Set(0),
-                }.insert(db).await?;
+                }
+                .insert(db)
+                .await?;
             }
         }
     }
@@ -92,7 +104,3 @@ pub async fn run_ingest_json(db: &sea_orm::DatabaseConnection, deck_id: &str, fi
     tracing::info!(deck_id, "ingest completed");
     Ok(())
 }
-
-
-
-

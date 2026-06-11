@@ -1,28 +1,39 @@
 use crate::error::{Result, SbdcError};
-use sbdc_entity::{generated_prompt, prompt_take, deck};
-use sea_orm::{ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter, Set};
+use sbdc_entity::{deck, generated_prompt, prompt_take};
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
 use std::path::Path;
 use tracing;
 
-pub async fn run_clean(db: &sea_orm::DatabaseConnection, project_dir: &Path, deck_id: &str) -> Result<()> {
+pub async fn run_clean(
+    db: &sea_orm::DatabaseConnection,
+    project_dir: &Path,
+    deck_id: &str,
+) -> Result<()> {
     let deck_model = deck::Entity::find()
         .filter(deck::Column::DeckId.eq(deck_id))
-        .one(db).await?
+        .one(db)
+        .await?
         .ok_or_else(|| SbdcError::DeckNotFound(deck_id.into()))?;
 
     let prompts = generated_prompt::Entity::find()
         .filter(generated_prompt::Column::DeckId.eq(deck_id))
         .filter(generated_prompt::Column::Status.eq("takes_ready"))
-        .all(db).await?;
+        .all(db)
+        .await?;
 
-    let clean_dir = project_dir.join("decks").join(&deck_model.season_id).join(deck_id).join("3-clean");
+    let clean_dir = project_dir
+        .join("decks")
+        .join(&deck_model.season_id)
+        .join(deck_id)
+        .join("3-clean");
     tokio::fs::create_dir_all(&clean_dir).await?;
 
     for prompt in &prompts {
         let take = prompt_take::Entity::find()
             .filter(prompt_take::Column::PromptId.eq(prompt.prompt_id))
             .filter(prompt_take::Column::IsSelected.eq(true))
-            .one(db).await?;
+            .one(db)
+            .await?;
 
         let take = match take {
             Some(t) => t,

@@ -1,7 +1,7 @@
+use crate::error::{Result, SbdcError};
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 use std::path::Path;
 use std::time::Duration;
-use crate::error::{Result, SbdcError};
 
 const DEFAULT_DB_DIR: &str = ".sbdc";
 const DEFAULT_DB_NAME: &str = "sbdc.db";

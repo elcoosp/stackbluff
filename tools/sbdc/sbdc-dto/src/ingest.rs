@@ -11,7 +11,9 @@ pub enum IngestValidationError {
     EmptyLoreContent(String),
 }
 
-const VALID_RANKS: &[&str] = &["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
+const VALID_RANKS: &[&str] = &[
+    "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A",
+];
 const VALID_SUITS: &[&str] = &["s", "h", "d", "c"];
 
 #[derive(Deserialize, Debug)]
@@ -82,7 +84,11 @@ mod tests {
         let payload = IngestPayload {
             lore_entries: None,
             character_relationships: None,
-            narrative_arcs: Some(vec![ArcPayload { rank: "A".into(), suit: "s".into(), description: "test".into() }]),
+            narrative_arcs: Some(vec![ArcPayload {
+                rank: "A".into(),
+                suit: "s".into(),
+                description: "test".into(),
+            }]),
         };
         assert!(payload.validate().is_ok());
     }
@@ -92,9 +98,16 @@ mod tests {
         let payload = IngestPayload {
             lore_entries: None,
             character_relationships: None,
-            narrative_arcs: Some(vec![ArcPayload { rank: "1".into(), suit: "s".into(), description: "test".into() }]),
+            narrative_arcs: Some(vec![ArcPayload {
+                rank: "1".into(),
+                suit: "s".into(),
+                description: "test".into(),
+            }]),
         };
-        assert!(matches!(payload.validate(), Err(IngestValidationError::InvalidRank(_))));
+        assert!(matches!(
+            payload.validate(),
+            Err(IngestValidationError::InvalidRank(_))
+        ));
     }
 
     #[test]
@@ -102,8 +115,15 @@ mod tests {
         let payload = IngestPayload {
             lore_entries: None,
             character_relationships: None,
-            narrative_arcs: Some(vec![ArcPayload { rank: "2".into(), suit: "x".into(), description: "test".into() }]),
+            narrative_arcs: Some(vec![ArcPayload {
+                rank: "2".into(),
+                suit: "x".into(),
+                description: "test".into(),
+            }]),
         };
-        assert!(matches!(payload.validate(), Err(IngestValidationError::InvalidSuit(_))));
+        assert!(matches!(
+            payload.validate(),
+            Err(IngestValidationError::InvalidSuit(_))
+        ));
     }
 }

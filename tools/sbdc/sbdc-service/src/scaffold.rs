@@ -1,11 +1,16 @@
 use crate::error::{Result, SbdcError};
 use sbdc_entity::{deck, deck_narrative_arc, generated_prompt};
-use sea_orm::{NotSet, ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter, Set, TransactionSession, TransactionTrait};
+use sea_orm::{
+    ActiveModelTrait, ConnectionTrait, EntityTrait, NotSet, QueryFilter, Set,
+    TransactionSession, TransactionTrait,
+};
 use std::path::Path;
 use tokio::fs;
 use tracing;
 
-const RANKS: [&str; 13] = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
+const RANKS: [&str; 13] = [
+    "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A",
+];
 const SUITS: [&str; 4] = ["s", "h", "d", "c"];
 
 async fn create_deck_dirs(project_dir: &Path, season_id: &str, deck_id: &str) -> Result<()> {
@@ -54,7 +59,9 @@ where
             order += 1;
         }
     }
-    deck_narrative_arc::Entity::insert_many(arcs).exec(txn).await?;
+    deck_narrative_arc::Entity::insert_many(arcs)
+        .exec(txn)
+        .await?;
     tracing::info!("inserted {} narrative arcs", order);
     Ok(())
 }
@@ -83,16 +90,24 @@ where
             });
         }
     }
-    generated_prompt::Entity::insert_many(prompts).exec(txn).await?;
+    generated_prompt::Entity::insert_many(prompts)
+        .exec(txn)
+        .await?;
     Ok(())
 }
 
-pub async fn run_scaffold(db: &impl TransactionTrait, project_dir: &Path, deck_id: &str, season_id: &str) -> Result<()> {
+pub async fn run_scaffold(
+    db: &impl TransactionTrait,
+    project_dir: &Path,
+    deck_id: &str,
+    season_id: &str,
+) -> Result<()> {
     let txn = db.begin().await?;
 
     let existing = deck::Entity::find()
         .filter(deck::COLUMN.deck_id.eq(deck_id))
-        .one(&txn).await?;
+        .one(&txn)
+        .await?;
 
     if existing.is_some() {
         return Err(SbdcError::DeckAlreadyExists(deck_id.into()));
@@ -104,10 +119,10 @@ pub async fn run_scaffold(db: &impl TransactionTrait, project_dir: &Path, deck_i
     insert_prompt_slots(&txn, deck_id).await?;
 
     txn.commit().await?;
-    tracing::info!("scaffolded deck {} with {} prompt slots", deck_id, RANKS.len() * SUITS.len());
+    tracing::info!(
+        "scaffolded deck {} with {} prompt slots",
+        deck_id,
+        RANKS.len() * SUITS.len()
+    );
     Ok(())
 }
-
-
-
-
