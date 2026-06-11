@@ -6,3 +6,4 @@ pub mod generate;
 pub mod ingest;
 pub mod init;
 pub mod scaffold;
+pub mod server;
