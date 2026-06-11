@@ -20,4 +20,10 @@ pub enum SbdcError {
     Json(#[from] serde_json::Error),
 }
 
+impl From<sea_orm::DbErr> for SbdcError {
+    fn from(err: sea_orm::DbErr) -> Self {
+        SbdcError::DbOperation(err.to_string())
+    }
+}
+
 pub type Result<T> = std::result::Result<T, SbdcError>;

@@ -6,9 +6,11 @@ edition = "2021"
 [dependencies]
 sbdc-entity = { path = "../sbdc-entity" }
 sbdc-dto = { path = "../sbdc-dto" }
+sbdc-migration = { path = "../sbdc-migration" }
 sea-orm = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 thiserror = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+uuid = { version = "1", features = ["v4"] }
