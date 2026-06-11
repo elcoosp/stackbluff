@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "SBDC Generator",
   "version": "1.0",
-  "permissions": ["storage", "activeTab", "tabs", "scripting"],
+  "permissions": ["storage", "activeTab", "tabs"],
   "host_permissions": ["http://localhost:*/*", "https://perchance.org/*"],
   "background": {
     "service_worker": "src/background.ts",

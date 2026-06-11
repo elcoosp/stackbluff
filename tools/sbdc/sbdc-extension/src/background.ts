@@ -26,29 +26,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   return false;
 });
 
-async function ensureContentScript(tabId: number) {
-  // Try to ping first
-  try {
-    await chrome.tabs.sendMessage(tabId, { type: 'PING' });
-    console.log('[SBDC Background] Content script already active');
-    return true;
-  } catch {
-    console.log('[SBDC Background] Content script not active, injecting...');
-    try {
-      // For Manifest V3 with scripting permission
-      await chrome.scripting.executeScript({
-        target: { tabId: tabId },
-        files: ['src/content.ts']
-      });
-      console.log('[SBDC Background] Injected content script');
-      return true;
-    } catch (err) {
-      console.error('[SBDC Background] Injection failed:', err);
-      return false;
-    }
-  }
-}
-
 async function startGeneration(deckId: string, takes: number) {
   console.log(`[SBDC Background] Starting generation for deck ${deckId}, takes ${takes}`);
   try {
@@ -65,23 +42,13 @@ async function startGeneration(deckId: string, takes: number) {
     currentSessionId = data.session_id;
     console.log('[SBDC Background] Got session ID:', currentSessionId);
 
-    let tabs = await chrome.tabs.query({ url: 'https://perchance.org/fluxgen*' });
-    let tabId: number;
+    // Find the perchance tab
+    const tabs = await chrome.tabs.query({ url: 'https://perchance.org/fluxgen*' });
     if (tabs.length === 0) {
-      console.log('[SBDC Background] No perchance tab, opening new one...');
-      const newTab = await chrome.tabs.create({ url: 'https://perchance.org/fluxgen' });
-      tabId = newTab.id!;
-      await new Promise(r => setTimeout(r, 5000)); // wait for load
-    } else {
-      tabId = tabs[0].id!;
-    }
-
-    const injected = await ensureContentScript(tabId);
-    if (!injected) {
-      console.error('[SBDC Background] Could not inject content script');
+      console.error('[SBDC Background] No perchance.org/fluxgen tab found. Please open it manually.');
       return;
     }
-
+    const tabId = tabs[0].id!;
     console.log(`[SBDC Background] Sending START_POLLING to tab ${tabId}`);
     await chrome.tabs.sendMessage(tabId, { type: 'START_POLLING' });
   } catch (err) {
