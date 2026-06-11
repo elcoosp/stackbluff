@@ -8,60 +8,12 @@ REPO_ROOT="$(git rev-parse --show-toplevel)"
 BASE="$REPO_ROOT/tools/sbdc"
 EXT_DIR="$BASE/sbdc-extension"
 
-echo "=== Diagnosing content script issues ==="
-echo ""
-echo "Problem 1: all_frames: true means the content script runs in EVERY iframe"
-echo "  Iframes don't have the generator UI → stuck waiting forever"
-echo ""
-echo "Problem 2: Content script checks server BEFORE user clicks Start in popup"
-echo "  → sees 0 prompts ready → shows 'No prompts' → never recovers"
-echo ""
-echo "Problem 3: Selectors may not match the current perchance.org DOM"
+echo "=== Fix: TypeScript syntax error in findUI() ==="
+echo "The `as Type |` pattern is invalid TS — it looks like a union type"
+echo "Need to use a helper function with fallback logic instead"
 echo ""
 
-echo "=== Fix 1: manifest.json — remove all_frames ==="
-cat > "$EXT_DIR/manifest.json" << 'MANIFEST_V5_R3kM7'
-{
-  "manifest_version": 3,
-  "name": "SBDC Generator",
-  "version": "1.0",
-  "permissions": [
-    "storage"
-  ],
-  "host_permissions": [
-    "http://localhost:*/*"
-  ],
-  "background": {
-    "service_worker": "src/background.ts",
-    "type": "module"
-  },
-  "content_scripts": [
-    {
-      "matches": [
-        "*://*.perchance.org/*"
-      ],
-      "js": [
-        "src/content.ts"
-      ],
-      "run_at": "document_idle"
-    }
-  ],
-  "action": {
-    "default_popup": "src/popup.html"
-  }
-}
-MANIFEST_V5_R3kM7
-echo "Removed all_frames: true"
-
-echo ""
-echo "=== Fix 2: Rewrite content.ts with proper flow ==="
-echo "  - Add extensive debug logging"
-echo "  - Wait for Start click before checking server"
-echo "  - Listen for storage changes (deckId set by popup)"
-echo "  - Better selector detection with fallbacks"
-echo ""
-
-cat > "$EXT_DIR/src/content.ts" << 'CT_V5_W8nQ2'
+cat > "$EXT_DIR/src/content.ts" << 'CT_V6_F2mK8'
 interface PromptData {
   prompt_id: number;
   target_card: string;
@@ -121,6 +73,14 @@ function setIndicator(color: string, text: string): void {
   }
 }
 
+function querySelector<T extends Element>(selectors: string[]): T | null {
+  for (const sel of selectors) {
+    const el = document.querySelector<T>(sel);
+    if (el) return el;
+  }
+  return null;
+}
+
 async function getServerUrl(): Promise<string> {
   const resp: FetchResponse = await chrome.runtime.sendMessage({ type: "GET_SERVER_URL" });
   const data = resp as { url?: string };
@@ -154,24 +114,33 @@ async function serverFetch(urlPath: string, method?: string, body?: string): Pro
   }
 }
 
-function findUI(): { desc: HTMLTextAreaElement | null; neg: HTMLTextAreaElement | null; genBtn: HTMLElement | null; numSelect: HTMLSelectElement | null } {
-  const desc =
-    document.querySelector('textarea[data-name="description"]') as HTMLTextAreaElement |
-    document.querySelector("textarea.prompt-textarea") as HTMLTextAreaElement |
-    document.querySelector("textarea") as HTMLTextAreaElement;
+function findUI(): {
+  desc: HTMLTextAreaElement | null;
+  neg: HTMLTextAreaElement | null;
+  genBtn: HTMLElement | null;
+  numSelect: HTMLSelectElement | null;
+} {
+  const desc = querySelector<HTMLTextAreaElement>([
+    'textarea[data-name="description"]',
+    "textarea.prompt-textarea",
+    "textarea",
+  ]);
 
-  const neg =
-    document.querySelector('textarea[data-name="negative"]') as HTMLTextAreaElement |
-    document.querySelector('textarea[data-name="negativePrompt"]') as HTMLTextAreaElement;
+  const neg = querySelector<HTMLTextAreaElement>([
+    'textarea[data-name="negative"]',
+    'textarea[data-name="negativePrompt"]',
+  ]);
 
-  const genBtn =
-    document.querySelector("#generateButtonEl") as HTMLElement |
-    document.querySelector('button[data-action="generate"]') as HTMLElement |
-    document.querySelector("button.generate-btn") as HTMLElement;
+  const genBtn = querySelector<HTMLElement>([
+    "#generateButtonEl",
+    'button[data-action="generate"]',
+    "button.generate-btn",
+  ]);
 
-  const numSelect =
-    document.querySelector('select[data-name="numImages"]') as HTMLSelectElement |
-    document.querySelector("select.num-images") as HTMLSelectElement;
+  const numSelect = querySelector<HTMLSelectElement>([
+    'select[data-name="numImages"]',
+    "select.num-images",
+  ]);
 
   return { desc, neg, genBtn, numSelect };
 }
@@ -204,12 +173,12 @@ async function waitForUI(): Promise<boolean> {
       log(`  URL: ${window.location.href}`);
       log(`  all textareas: ${document.querySelectorAll("textarea").length}`);
       log(`  all buttons: ${document.querySelectorAll("button").length}`);
-      const btns = document.querySelectorAll("button");
-      btns.forEach((b, idx) => {
-        if (idx < 10) log(`  button[${idx}]: id="${b.id}" text="${b.textContent?.substring(0, 30)}"`);
+      document.querySelectorAll("button").forEach((b, idx) => {
+        if (idx < 10) {
+          log(`  button[${idx}]: id="${b.id}" text="${b.textContent?.substring(0, 30)}"`);
+        }
       });
-      const tas = document.querySelectorAll("textarea");
-      tas.forEach((t, idx) => {
+      document.querySelectorAll("textarea").forEach((t, idx) => {
         if (idx < 10) {
           const name = t.getAttribute("data-name") || "";
           log(`  textarea[${idx}]: data-name="${name}" id="${t.id}"`);
@@ -255,7 +224,7 @@ async function runGeneration(): Promise<void> {
         setIndicator("green", `[SBDC] ${status.ready_to_generate} prompts! Starting...`);
       } else if (status.status === "generating" && status.generating > 0) {
         ready = true;
-        log(`Generation already in progress, ${status.generating} being processed`);
+        log(`Generation in progress, ${status.generating} being processed`);
         setIndicator("green", "[SBDC] Resuming generation...");
       } else {
         log("No prompts ready. Click 'Start' in the extension popup!");
@@ -288,7 +257,7 @@ async function runGeneration(): Promise<void> {
     }
 
     if (item && item.status === "no_more_prompts") {
-      log("No more prompts ready — all done or waiting for review");
+      log("No more prompts ready");
       setIndicator("blue", "[SBDC] All prompts processed!");
       break;
     }
@@ -375,9 +344,9 @@ async function runGeneration(): Promise<void> {
     try {
       const resultUrl = `/api/decks/${deckId}/prompts/${item.prompt_id}/takes`;
       await serverFetch(resultUrl, "POST", JSON.stringify({ images } as SubmitPayload));
-      log(`✅ Takes submitted for prompt ${item.prompt_id} (${images.length} images)`);
+      log(`Takes submitted for prompt ${item.prompt_id} (${images.length} images)`);
     } catch (e: Error) {
-      log(`❌ Submit failed: ${e.message}`);
+      log(`Submit failed: ${e.message}`);
     }
 
     await new Promise((r) => setTimeout(r, 2000 + Math.random() * 3000));
@@ -421,15 +390,19 @@ main().catch((e: Error) => {
   log(`Fatal: ${e.message}`);
   setIndicator("red", `[SBDC] Error: ${e.message}`);
 });
-CT_V5_W8nQ2
+CT_V6_F2mK8
 
 echo "Rebuilding extension"
 rm -rf "$EXT_DIR/dist"
 (cd "$EXT_DIR" && bash build.sh 2>&1)
 
 echo ""
-echo "Verifying build"
+echo "Verifying build output"
 find "$EXT_DIR/dist" -type f | sort
+
+echo ""
+echo "Verifying manifest paths"
+cat "$EXT_DIR/dist/manifest.json" | python3 -m json.tool 2>/dev/null
 
 echo ""
 echo "Checking Rust"
@@ -437,41 +410,13 @@ cargo clippy --workspace --manifest-path "$BASE/Cargo.toml" -- -D warnings 2>&1 
 
 echo ""
 echo "Running tests"
-cargo test --workspace --manifest-path "$BASE/Cargo.toml" 2>&1 | tail -10
+cargo test --workspace --manifest-path "$BASE/Cargo.toml" 2>&1 | tail -5
 
 echo ""
-echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║              CHROME EXTENSION — RELOAD REQUIRED              ║"
-echo "╠══════════════════════════════════════════════════════════════╣"
-echo "║                                                              ║"
-echo "║  IMPORTANT: You MUST reload the extension after this fix:    ║"
-echo "║                                                              ║"
-echo "║  1. Go to chrome://extensions/                               ║"
-echo "║  2. Find 'SBDC Generator'                                    ║"
-echo "║  3. Click the REFRESH icon (circular arrow)                  ║"
-echo "║  4. Go to perchance.org/fluxgen and REFRESH the page         ║"
-echo "║  5. Open DevTools (F12) → Console tab                        ║"
-echo "║  6. Look for [SBDC] log lines showing what was found         ║"
-echo "║                                                              ║"
-echo "║  The content script now logs:                                ║"
-echo "║    - Whether it's in top frame or iframe                     ║"
-echo "║    - What textareas and buttons exist on the page            ║"
-echo "║    - Their data-name attributes and IDs                      ║"
-echo "║                                                              ║"
-echo "║  If it says 'textarea: not found' or 'generateBtn: not found'║"
-echo "║  then the perchance.org selectors have changed.              ║"
-echo "║  Check the Console log for the actual element names/IDs      ║"
-echo "║  and update findUI() in content.ts accordingly.              ║"
-echo "║                                                              ║"
-echo "╚══════════════════════════════════════════════════════════════╝"
-
+echo "Committing"
 git add -A
-git commit -m "fix(sbdc): fix content script not finding UI on perchance.org
+git commit -m "fix(sbdc): fix TS syntax error in content.ts findUI()
 
-- Remove all_frames: true from manifest (was running in iframes)
-- Skip iframes explicitly (window !== window.top check)
-- Add extensive debug logging on first UI scan
-- Log all textareas and buttons found on the page
-- Add fallback selectors for perchance.org elements
-- Listen for storage changes so popup Start triggers generation
-- Wait for deckId config instead of blocking on server check"
+- Replace invalid 'as Type |' pattern with querySelector helper
+- querySelector<T>(selectors[]) tries each selector in order
+- Build now succeeds, all extension files generated correctly" 2>&1 || echo "Nothing new to commit"

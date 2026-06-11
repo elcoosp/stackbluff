@@ -57,6 +57,14 @@ function setIndicator(color: string, text: string): void {
   }
 }
 
+function querySelector<T extends Element>(selectors: string[]): T | null {
+  for (const sel of selectors) {
+    const el = document.querySelector<T>(sel);
+    if (el) return el;
+  }
+  return null;
+}
+
 async function getServerUrl(): Promise<string> {
   const resp: FetchResponse = await chrome.runtime.sendMessage({ type: "GET_SERVER_URL" });
   const data = resp as { url?: string };
@@ -90,24 +98,33 @@ async function serverFetch(urlPath: string, method?: string, body?: string): Pro
   }
 }
 
-function findUI(): { desc: HTMLTextAreaElement | null; neg: HTMLTextAreaElement | null; genBtn: HTMLElement | null; numSelect: HTMLSelectElement | null } {
-  const desc =
-    document.querySelector('textarea[data-name="description"]') as HTMLTextAreaElement |
-    document.querySelector("textarea.prompt-textarea") as HTMLTextAreaElement |
-    document.querySelector("textarea") as HTMLTextAreaElement;
+function findUI(): {
+  desc: HTMLTextAreaElement | null;
+  neg: HTMLTextAreaElement | null;
+  genBtn: HTMLElement | null;
+  numSelect: HTMLSelectElement | null;
+} {
+  const desc = querySelector<HTMLTextAreaElement>([
+    'textarea[data-name="description"]',
+    "textarea.prompt-textarea",
+    "textarea",
+  ]);
 
-  const neg =
-    document.querySelector('textarea[data-name="negative"]') as HTMLTextAreaElement |
-    document.querySelector('textarea[data-name="negativePrompt"]') as HTMLTextAreaElement;
+  const neg = querySelector<HTMLTextAreaElement>([
+    'textarea[data-name="negative"]',
+    'textarea[data-name="negativePrompt"]',
+  ]);
 
-  const genBtn =
-    document.querySelector("#generateButtonEl") as HTMLElement |
-    document.querySelector('button[data-action="generate"]') as HTMLElement |
-    document.querySelector("button.generate-btn") as HTMLElement;
+  const genBtn = querySelector<HTMLElement>([
+    "#generateButtonEl",
+    'button[data-action="generate"]',
+    "button.generate-btn",
+  ]);
 
-  const numSelect =
-    document.querySelector('select[data-name="numImages"]') as HTMLSelectElement |
-    document.querySelector("select.num-images") as HTMLSelectElement;
+  const numSelect = querySelector<HTMLSelectElement>([
+    'select[data-name="numImages"]',
+    "select.num-images",
+  ]);
 
   return { desc, neg, genBtn, numSelect };
 }
@@ -140,12 +157,12 @@ async function waitForUI(): Promise<boolean> {
       log(`  URL: ${window.location.href}`);
       log(`  all textareas: ${document.querySelectorAll("textarea").length}`);
       log(`  all buttons: ${document.querySelectorAll("button").length}`);
-      const btns = document.querySelectorAll("button");
-      btns.forEach((b, idx) => {
-        if (idx < 10) log(`  button[${idx}]: id="${b.id}" text="${b.textContent?.substring(0, 30)}"`);
+      document.querySelectorAll("button").forEach((b, idx) => {
+        if (idx < 10) {
+          log(`  button[${idx}]: id="${b.id}" text="${b.textContent?.substring(0, 30)}"`);
+        }
       });
-      const tas = document.querySelectorAll("textarea");
-      tas.forEach((t, idx) => {
+      document.querySelectorAll("textarea").forEach((t, idx) => {
         if (idx < 10) {
           const name = t.getAttribute("data-name") || "";
           log(`  textarea[${idx}]: data-name="${name}" id="${t.id}"`);
@@ -191,7 +208,7 @@ async function runGeneration(): Promise<void> {
         setIndicator("green", `[SBDC] ${status.ready_to_generate} prompts! Starting...`);
       } else if (status.status === "generating" && status.generating > 0) {
         ready = true;
-        log(`Generation already in progress, ${status.generating} being processed`);
+        log(`Generation in progress, ${status.generating} being processed`);
         setIndicator("green", "[SBDC] Resuming generation...");
       } else {
         log("No prompts ready. Click 'Start' in the extension popup!");
@@ -224,7 +241,7 @@ async function runGeneration(): Promise<void> {
     }
 
     if (item && item.status === "no_more_prompts") {
-      log("No more prompts ready — all done or waiting for review");
+      log("No more prompts ready");
       setIndicator("blue", "[SBDC] All prompts processed!");
       break;
     }
@@ -311,9 +328,9 @@ async function runGeneration(): Promise<void> {
     try {
       const resultUrl = `/api/decks/${deckId}/prompts/${item.prompt_id}/takes`;
       await serverFetch(resultUrl, "POST", JSON.stringify({ images } as SubmitPayload));
-      log(`✅ Takes submitted for prompt ${item.prompt_id} (${images.length} images)`);
+      log(`Takes submitted for prompt ${item.prompt_id} (${images.length} images)`);
     } catch (e: Error) {
-      log(`❌ Submit failed: ${e.message}`);
+      log(`Submit failed: ${e.message}`);
     }
 
     await new Promise((r) => setTimeout(r, 2000 + Math.random() * 3000));
