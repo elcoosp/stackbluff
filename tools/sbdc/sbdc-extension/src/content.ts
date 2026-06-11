@@ -36,10 +36,6 @@ const FRAME_ID = window.location.hostname.substring(0, 40);
 function log(m: string): void {
   const line = `[SBDC][${FRAME_ID}] ${m}`;
   console.log(`%c${line}`, "color:#0ff;font-weight:bold;font-size:14px;");
-  try {
-    const ind = document.getElementById("sbdc-indicator");
-    if (ind) ind.textContent = line;
-  } catch { /* ignore */ }
 }
 
 function setIndicator(color: string, text: string): void {
@@ -121,26 +117,156 @@ function fillTextarea(selector: string, value: string): boolean {
   return true;
 }
 
-function countOutputIframes(): number {
-  return document.querySelectorAll("iframe.text-to-image-plugin-image-iframe").length;
+// ============================================================
+// MODE 2: Image-generation iframe monitor
+// Our content script runs inside image-generation iframes too
+// (all_frames: true on *.perchance.org). We detect when the
+// image finishes rendering and send the data to the parent.
+// ============================================================
+
+function runIframeMonitor(): void {
+  log("Image iframe detected — monitoring for completion");
+
+  const outputEl = document.getElementById("outputEl");
+  const waitingEl = document.getElementById("waitingEl");
+  if (!outputEl || !waitingEl) {
+    log("Missing #outputEl or #waitingEl — not an image iframe");
+    return;
+  }
+
+  // Check if already loaded
+  if (outputEl.style.display !== "none") {
+    log("Image already loaded in iframe");
+    sendImageData();
+    return;
+  }
+
+  // Watch for display change using MutationObserver
+  const observer = new MutationObserver(() => {
+    if (outputEl.style.display !== "none") {
+      log("outputEl became visible!");
+      observer.disconnect();
+
+      // Small delay to let the image render
+      setTimeout(() => {
+        sendImageData();
+      }, 2000);
+    }
+  });
+
+  observer.observe(outputEl, { attributes: true, attributeFilter: ["style"] });
+
+  // Also observe waitingEl as backup
+  const waitObserver = new MutationObserver(() => {
+    if (waitingEl.style.display === "none") {
+      log("waitingEl became hidden!");
+      waitObserver.disconnect();
+      observer.disconnect();
+
+      setTimeout(() => {
+        sendImageData();
+      }, 2000);
+    }
+  });
+
+  waitObserver.observe(waitingEl, { attributes: true, attributeFilter: ["style"] });
+
+  // Fallback: poll every 5s in case MutationObserver misses something
+  let pollCount = 0;
+  const pollInterval = setInterval(() => {
+    pollCount++;
+    if (outputEl.style.display !== "none" || waitingEl.style.display === "none") {
+      log(`Poll detected image ready after ${pollCount * 5}s`);
+      clearInterval(pollInterval);
+      observer.disconnect();
+      waitObserver.disconnect();
+
+      setTimeout(() => {
+        sendImageData();
+      }, 2000);
+    }
+    if (pollCount > 60) {
+      log("Poll timeout — giving up");
+      clearInterval(pollInterval);
+    }
+  }, 5000);
 }
 
-function iframeHasContent(iframe: HTMLIFrameElement): boolean {
-  try {
-    const doc = iframe.contentDocument;
-    if (!doc) return false;
-    const canvas = doc.querySelector("canvas");
-    if (canvas) {
-      // Check canvas actually has pixels (not just 0x0)
-      if (canvas.width > 0 && canvas.height > 0) return true;
+function sendImageData(): void {
+  const outputEl = document.getElementById("outputEl");
+  if (!outputEl) return;
+
+  // Try canvas first
+  const canvas = outputEl.querySelector("canvas") as HTMLCanvasElement | null;
+  if (canvas && canvas.width > 0 && canvas.height > 0) {
+    log(`Found canvas ${canvas.width}x${canvas.height} — extracting`);
+    try {
+      const dataUrl = canvas.toDataURL("image/png");
+      window.parent.postMessage({
+        type: "sbdc-image-ready",
+        data: dataUrl,
+      }, "*");
+      log("Sent canvas image data to parent");
+      return;
+    } catch (e: Error) {
+      log(`Canvas toDataURL failed: ${e.message}`);
     }
-    const img = doc.querySelector("img");
-    if (img && img.src && img.complete && img.naturalHeight > 0) return true;
-  } catch {
-    // CORS — we can't check, assume not ready
   }
-  return false;
+
+  // Try img element
+  const img = outputEl.querySelector("img") as HTMLImageElement | null;
+  if (img) {
+    log(`Found img element src=${img.src?.substring(0, 80)}...`);
+    if (img.src && img.complete && img.naturalHeight > 0) {
+      if (img.src.startsWith("data:")) {
+        window.parent.postMessage({
+          type: "sbdc-image-ready",
+          data: img.src,
+        }, "*");
+        log("Sent img data URL to parent");
+        return;
+      }
+
+      // Fetch the image and convert to data URL
+      fetch(img.src)
+        .then((resp) => resp.blob())
+        .then((blob) => {
+          return new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+          });
+        })
+        .then((dataUrl) => {
+          window.parent.postMessage({
+            type: "sbdc-image-ready",
+            data: dataUrl,
+          }, "*");
+          log("Sent fetched img data to parent");
+        })
+        .catch((e: Error) => {
+          log(`Failed to fetch img: ${e.message}`);
+        });
+      return;
+    }
+
+    // Image not yet complete — wait for load
+    log("Image not yet loaded, waiting...");
+    img.addEventListener("load", () => {
+      log("Image loaded!");
+      sendImageData();
+    }, { once: true });
+    return;
+  }
+
+  // Nothing found yet — retry after delay
+  log("No canvas or img found in outputEl — retrying in 3s");
+  setTimeout(sendImageData, 3000);
 }
+
+// ============================================================
+// MODE 1: Main frame generation loop
+// ============================================================
 
 async function waitForUI(): Promise<boolean> {
   for (let i = 0; i < 120; i++) {
@@ -161,138 +287,30 @@ async function waitForUI(): Promise<boolean> {
   return false;
 }
 
-async function waitForGenerationComplete(numImages: number): Promise<boolean> {
-  // Phase 1: Wait for iframes to appear
-  log(`Waiting for ${numImages} iframes to appear...`);
-  for (let i = 0; i < 120; i++) {
-    const count = countOutputIframes();
-    if (count >= numImages) {
-      log(`${count} iframes appeared after ${i}s`);
-      break;
-    }
-    if (i % 10 === 0) log(`  iframes: ${count}/${numImages} (${i}s)`);
-    await new Promise((r) => setTimeout(r, 1000));
-  }
+function waitForImagesViaPostMessage(numImages: number): Promise<ImageData[]> {
+  return new Promise((resolve) => {
+    const images: ImageData[] = [];
 
-  // Phase 2: Wait for content inside iframes to render
-  log("Iframes appeared. Waiting for image content to render...");
-  const iframes = document.querySelectorAll("iframe.text-to-image-plugin-image-iframe");
-  const total = Math.min(iframes.length, numImages);
-
-  for (let i = 0; i < 180; i++) {
-    let readyCount = 0;
-    let corsCount = 0;
-
-    for (let j = 0; j < total; j++) {
-      const iframe = iframes[j] as HTMLIFrameElement;
-      try {
-        if (iframeHasContent(iframe)) {
-          readyCount++;
+    function handler(event: MessageEvent) {
+      if (event.data?.type === "sbdc-image-ready" && event.data?.data) {
+        images.push({ index: images.length, data: event.data.data });
+        log(`Received image ${images.length}/${numImages} from iframe`);
+        if (images.length >= numImages) {
+          window.removeEventListener("message", handler);
+          resolve(images);
         }
-      } catch {
-        corsCount++;
       }
     }
 
-    // If we can verify all have content, we're done
-    if (readyCount >= total) {
-      log(`All ${total} iframes have content after ${i}s`);
-      return true;
-    }
+    window.addEventListener("message", handler);
 
-    // If some are CORS-blocked and the rest are ready, wait a bit more then proceed
-    if (corsCount > 0 && readyCount + corsCount >= total && i > 30) {
-      log(`${readyCount} verified + ${corsCount} CORS-blocked. Proceeding after ${i}s`);
-      return true;
-    }
-
-    if (i % 10 === 0) {
-      log(`  Images ready: ${readyCount}/${total} (${i}s)`);
-    }
-    await new Promise((r) => setTimeout(r, 1000));
-  }
-
-  log(`Timeout waiting for image content. Proceeding anyway.`);
-  return true; // Proceed even if not all confirmed — we'll extract what we can
-}
-
-async function extractImageFromIframe(iframe: HTMLIFrameElement): Promise<string | null> {
-  try {
-    const doc = iframe.contentDocument;
-    if (!doc) return null;
-    const canvas = doc.querySelector("canvas");
-    if (canvas && canvas.width > 0 && canvas.height > 0) {
-      log("Extracting from canvas inside iframe");
-      return canvas.toDataURL("image/png");
-    }
-    const img = doc.querySelector("img");
-    if (img && img.src) {
-      if (img.src.startsWith("data:")) return img.src;
-      try {
-        const resp = await fetch(img.src);
-        const blob = await resp.blob();
-        return await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.readAsDataURL(blob);
-        });
-      } catch { /* fall through */ }
-    }
-  } catch { /* CORS */ }
-
-  // Try fetching iframe page directly
-  try {
-    const iframeSrc = iframe.src || iframe.getAttribute("data-src") || "";
-    if (iframeSrc.includes("image-generation.perchance.org")) {
-      const resp = await fetch(iframeSrc);
-      const html = await resp.text();
-      const match = html.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/);
-      if (match) return match[0];
-    }
-  } catch { /* fall through */ }
-
-  return null;
-}
-
-async function extractAllImages(numImages: number): Promise<ImageData[]> {
-  const images: ImageData[] = [];
-
-  // Try iframes
-  const iframes = document.querySelectorAll("iframe.text-to-image-plugin-image-iframe");
-  const count = Math.min(iframes.length, numImages);
-  for (let i = 0; i < count; i++) {
-    const data = await extractImageFromIframe(iframes[i] as HTMLIFrameElement);
-    if (data) {
-      images.push({ index: i, data });
-      log(`Extracted image ${images.length} from iframe[${i}]`);
-    } else {
-      log(`Could not extract from iframe[${i}]`);
-    }
-  }
-
-  // Fallback: img tags
-  if (images.length === 0) {
-    const imgs = document.querySelectorAll("#outputAreaEl img");
-    for (let i = 0; i < imgs.length; i++) {
-      const src = (imgs[i] as HTMLImageElement).src;
-      if (src.startsWith("data:")) {
-        images.push({ index: i, data: src });
-      } else {
-        try {
-          const resp = await fetch(src);
-          const blob = await resp.blob();
-          const data = await new Promise<string>((res) => {
-            const rd = new FileReader();
-            rd.onload = () => res(rd.result as string);
-            rd.readAsDataURL(blob);
-          });
-          images.push({ index: i, data });
-        } catch { /* skip */ }
-      }
-    }
-  }
-
-  return images;
+    // Timeout after 180s
+    setTimeout(() => {
+      window.removeEventListener("message", handler);
+      log(`Image wait timeout — got ${images.length}/${numImages}`);
+      resolve(images);
+    }, 180000);
+  });
 }
 
 async function runGeneration(): Promise<void> {
@@ -375,16 +393,10 @@ async function runGeneration(): Promise<void> {
     setIndicator("darkgreen", `[SBDC] Generating ${item.target_card}...`);
     document.querySelector("#generateButtonEl")!.click();
 
-    // Two-phase wait: 1) iframes appear, 2) content renders inside them
-    const loaded = await waitForGenerationComplete(NUM_IMAGES);
-    if (!loaded) {
-      log("Generation timeout, moving to next prompt");
-      continue;
-    }
-
-    log("Extracting images...");
-    const images = await extractAllImages(NUM_IMAGES);
-    log(`Extracted ${images.length} images`);
+    // Wait for images via postMessage from iframe content scripts
+    log(`Waiting for ${NUM_IMAGES} images from iframes...`);
+    const images = await waitForImagesViaPostMessage(NUM_IMAGES);
+    log(`Got ${images.length} images`);
 
     if (images.length > 0) {
       try {
@@ -398,33 +410,36 @@ async function runGeneration(): Promise<void> {
         log(`Submit failed: ${e.message}`);
       }
     } else {
-      log("No images extracted — retrying extraction in 10s...");
-      await new Promise((r) => setTimeout(r, 10000));
-      const retryImages = await extractAllImages(NUM_IMAGES);
-      log(`Retry extracted ${retryImages.length} images`);
-      if (retryImages.length > 0) {
-        try {
-          await serverFetch(
-            `/api/decks/${deckId}/prompts/${item.prompt_id}/takes`,
-            "POST",
-            JSON.stringify({ images: retryImages }),
-          );
-          log(`Submitted ${retryImages.length} takes after retry`);
-        } catch (e: Error) {
-          log(`Retry submit failed: ${e.message}`);
-        }
-      } else {
-        log("Still no images after retry — skipping prompt");
-      }
+      log("No images received — skipping");
     }
 
     await new Promise((r) => setTimeout(r, 2000 + Math.random() * 3000));
   }
 }
 
+// ============================================================
+// Entry point — detect which mode to run
+// ============================================================
+
 async function main(): Promise<void> {
+  // MODE 2: Check if we're inside an image-generation iframe
+  const waitingEl = document.getElementById("waitingEl");
+  const outputEl = document.getElementById("outputEl");
+
+  if (waitingEl && outputEl && window !== window.top) {
+    // We're inside an image-generation iframe — run monitor
+    runIframeMonitor();
+    return;
+  }
+
+  // MODE 1: Main frame
   setIndicator("red", `[SBDC] Loaded in ${FRAME_ID}`);
   log(`Content script loaded. URL: ${window.location.href}`);
+
+  if (window !== window.top) {
+    // Some other iframe on perchance — skip
+    return;
+  }
 
   if (!(await waitForUI())) return;
 
