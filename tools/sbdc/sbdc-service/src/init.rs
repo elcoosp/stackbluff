@@ -1,22 +1,22 @@
 use crate::error::Result;
 use sbdc_entity::{universe, clan, character, season, junction_type, creative_pattern, framing_instruction, virality_mechanic};
-use sea_orm::{ActiveModelTrait, EntityTrait, Set};
+use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, Set};
 use sbdc_migration::MigratorTrait;
 use std::path::Path;
 use tokio::fs;
 use tracing;
 
-pub async fn run_init(db: &sea_orm::DatabaseConnection, project_dir: &Path) -> Result<()> {
+pub async fn run_init(db: &DatabaseConnection, project_dir: &Path) -> Result<()> {
     let sbdc_dir = project_dir.join(".sbdc");
     if !sbdc_dir.exists() {
         fs::create_dir_all(&sbdc_dir).await?;
     }
 
-    // Run production migrations
+    // Run production migrations (idempotent)
     sbdc_migration::Migrator::up(db, None).await?;
     tracing::info!("database schema migrated");
 
-    // Seed Universe (if not exists)
+    // Seed Universe
     if universe::Entity::find().one(db).await?.is_none() {
         universe::ActiveModel {
             universe_id: Set("default".into()),
@@ -67,7 +67,7 @@ pub async fn run_init(db: &sea_orm::DatabaseConnection, project_dir: &Path) -> R
         clan::Entity::insert_many(models).exec(db).await?;
     }
 
-    // Seed 4 Characters (one per clan)
+    // Seed 4 Characters
     if character::Entity::find().one(db).await?.is_none() {
         let chars = [
             ("char-spade-king", "clan-spades", "Spade King", "stern king with iron crown, sharp jawline, wearing black steel armor"),
@@ -136,15 +136,21 @@ pub async fn run_init(db: &sea_orm::DatabaseConnection, project_dir: &Path) -> R
     Ok(())
 }
 
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sea_orm::Database;
+    use sea_orm::{Database, DatabaseConnection, ConnectionTrait};
+    use sbdc_migration::Migrator;
+    use sbdc_migration::MigratorTrait;
     use tempfile::tempdir;
 
     async fn setup_test_db() -> DatabaseConnection {
         let db = Database::connect("sqlite::memory:").await.unwrap();
-        db.get_schema_registry("sbdc_entity::*").sync(&db).await.unwrap();
+        // Enable foreign keys for SQLite
+        db.execute_unprepared("PRAGMA foreign_keys = ON;").await.unwrap();
+        Migrator::up(&db, None).await.unwrap();
         db
     }
 
