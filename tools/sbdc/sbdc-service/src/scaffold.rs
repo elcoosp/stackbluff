@@ -1,6 +1,6 @@
 use crate::error::{Result, SbdcError};
 use sbdc_entity::{deck, deck_narrative_arc, generated_prompt};
-use sea_orm::{ActiveModelTrait, ConnectionTrait, EntityTrait, QueryFilter, Set, TransactionSession, TransactionTrait};
+use sea_orm::{NotSet, ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter, Set, TransactionSession, TransactionTrait};
 use std::path::Path;
 use tokio::fs;
 use tracing;
@@ -71,7 +71,7 @@ where
             let layer = if is_face { "subject" } else { "env" };
             let variant = if is_face { "full" } else { "background" };
             prompts.push(generated_prompt::ActiveModel {
-                prompt_id: Set(0),
+                prompt_id: NotSet,
                 deck_id: Set(deck_id.to_string()),
                 target_card: Set(target_card.clone()),
                 target_layer: Set(layer.to_string()),

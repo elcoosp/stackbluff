@@ -19,3 +19,5 @@ anyhow = { workspace = true }
 [dev-dependencies]
 sbdc-migration = { path = "../sbdc-migration" }
 tempfile = "3"
+serde_json = { workspace = true }
+sea-orm = { workspace = true }
