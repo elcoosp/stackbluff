@@ -113,11 +113,18 @@ async fn submit_result(
         None => return (StatusCode::NOT_FOUND, "Session not found").into_response(),
     };
 
-    // Retrieve season from deck (simplified: assume default_season for now)
+    // Get the actual season_id for this deck
+    use sbdc_entity::deck;
+    let deck_record = deck::Entity::find()
+        .filter(deck::Column::DeckId.eq(&session.deck_id))
+        .one(&state.db)
+        .await
+        .unwrap_or(None);
+    let season_id = deck_record.map(|d| d.season_id).unwrap_or_else(|| "default_season".to_string());
     let deck_dir = state
         .project_dir
         .join("decks")
-        .join("default_season")
+        .join(season_id)
         .join(&session.deck_id)
         .join("0-takes");
     tokio::fs::create_dir_all(&deck_dir).await.unwrap();
