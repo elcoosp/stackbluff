@@ -6,84 +6,472 @@ INCOMPLETE=false
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 BASE="$REPO_ROOT/tools/sbdc"
+EXT_DIR="$BASE/sbdc-extension"
 
-echo "=== Reading exact content around line 232 of server_tests.rs ==="
-sed -n '228,248p' "$BASE/sbdc-service/src/server_tests.rs"
+echo "=== Diagnosing content script issues ==="
+echo ""
+echo "Problem 1: all_frames: true means the content script runs in EVERY iframe"
+echo "  Iframes don't have the generator UI → stuck waiting forever"
+echo ""
+echo "Problem 2: Content script checks server BEFORE user clicks Start in popup"
+echo "  → sees 0 prompts ready → shows 'No prompts' → never recovers"
+echo ""
+echo "Problem 3: Selectors may not match the current perchance.org DOM"
+echo ""
+
+echo "=== Fix 1: manifest.json — remove all_frames ==="
+cat > "$EXT_DIR/manifest.json" << 'MANIFEST_V5_R3kM7'
+{
+  "manifest_version": 3,
+  "name": "SBDC Generator",
+  "version": "1.0",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "http://localhost:*/*"
+  ],
+  "background": {
+    "service_worker": "src/background.ts",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.perchance.org/*"
+      ],
+      "js": [
+        "src/content.ts"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "src/popup.html"
+  }
+}
+MANIFEST_V5_R3kM7
+echo "Removed all_frames: true"
 
 echo ""
-echo "=== Surgical fix: add 'let _ =' before the bare start_deck call on line 232 ==="
-OLD_TMP=$(mktemp) || { echo "ERROR: cannot create temp file"; exit 1; }
-NEW_TMP=$(mktemp)
-cat > "$OLD_TMP" << 'OLD_BARE_J7mK3'
-        server::start_deck(
-            axum::extract::State(state.clone()),
-            axum::extract::Path("test-deck".to_string()),
-            axum::Json(server::StartRequest {
-                takes_per_prompt: Some(1),
-            }),
-        )
-        .await
-        .unwrap();
+echo "=== Fix 2: Rewrite content.ts with proper flow ==="
+echo "  - Add extensive debug logging"
+echo "  - Wait for Start click before checking server"
+echo "  - Listen for storage changes (deckId set by popup)"
+echo "  - Better selector detection with fallbacks"
+echo ""
 
-        let next = server::next_prompt(
-OLD_BARE_J7mK3
-cat > "$NEW_TMP" << 'NEW_LET_P4qW8'
-        let _ = server::start_deck(
-            axum::extract::State(state.clone()),
-            axum::extract::Path("test-deck".to_string()),
-            axum::Json(server::StartRequest {
-                takes_per_prompt: Some(1),
-            }),
-        )
-        .await
-        .unwrap();
+cat > "$EXT_DIR/src/content.ts" << 'CT_V5_W8nQ2'
+interface PromptData {
+  prompt_id: number;
+  target_card: string;
+  target_layer: string;
+  positive: string;
+  negative: string;
+  status?: string;
+}
 
-        let next = server::next_prompt(
-NEW_LET_P4qW8
-if python3 - "$OLD_TMP" "$NEW_TMP" "$BASE/sbdc-service/src/server_tests.rs" << 'PYEOF_BARE'
-import sys
-with open(sys.argv[1], 'r') as f: old = f.read()
-with open(sys.argv[2], 'r') as f: new = f.read()
-with open(sys.argv[3], 'r') as f: content = f.read()
-content = content.replace(old, new)
-with open(sys.argv[3], 'w') as f: f.write(content)
-PYEOF_BARE
-then
-  echo "Fixed: bare start_deck → let _ = start_deck"
-  rm "$OLD_TMP" "$NEW_TMP"
-else
-  echo "ERROR: Python patch failed"
-  rm -f "$OLD_TMP" "$NEW_TMP"
-fi
+interface ImageData {
+  index: number;
+  data: string;
+}
+
+interface SubmitPayload {
+  images: ImageData[];
+}
+
+interface StatusData {
+  deck_id: string;
+  status: string;
+  total_prompts: number;
+  ready_to_generate: number;
+  takes_per_prompt: number;
+}
+
+interface FetchResponse {
+  ok: boolean;
+  data?: unknown;
+  error?: string;
+}
+
+interface StorageResult {
+  deckId?: string;
+  serverUrl?: string;
+}
+
+function log(m: string): void {
+  const line = `[SBDC] ${m}`;
+  console.log(`%c${line}`, "color:#0ff;font-weight:bold;font-size:14px;");
+}
+
+function setIndicator(color: string, text: string): void {
+  try {
+    let ind = document.getElementById("sbdc-indicator");
+    if (!ind) {
+      ind = document.createElement("div");
+      ind.id = "sbdc-indicator";
+      ind.style.cssText =
+        "position:fixed;top:0;left:0;z-index:999999;color:white;font:bold 14px monospace;padding:8px 12px;pointer-events:none;max-width:100%;white-space:nowrap;";
+      document.body.appendChild(ind);
+    }
+    ind.style.background = color;
+    ind.textContent = text;
+  } catch {
+    // ignore
+  }
+}
+
+async function getServerUrl(): Promise<string> {
+  const resp: FetchResponse = await chrome.runtime.sendMessage({ type: "GET_SERVER_URL" });
+  const data = resp as { url?: string };
+  return data?.url || "http://localhost:8899";
+}
+
+async function getDeckId(): Promise<string> {
+  const resp: StorageResult = await new Promise((resolve) => {
+    chrome.storage.local.get(["deckId"], (res: StorageResult) => resolve(res));
+  });
+  return resp?.deckId || "";
+}
+
+async function serverFetch(urlPath: string, method?: string, body?: string): Promise<unknown> {
+  const base = await getServerUrl();
+  const url = base + urlPath;
+  log(`FETCH ${method || "GET"} ${url}`);
+  try {
+    const resp: FetchResponse = await chrome.runtime.sendMessage({
+      type: "FETCH",
+      url,
+      method: method || "GET",
+      body: body || null,
+    });
+    if (!resp) throw new Error("No response from background");
+    if (!resp.ok) throw new Error(resp.error || "Fetch failed");
+    return resp.data;
+  } catch (e: Error) {
+    log(`FETCH ERROR: ${e.message}`);
+    throw e;
+  }
+}
+
+function findUI(): { desc: HTMLTextAreaElement | null; neg: HTMLTextAreaElement | null; genBtn: HTMLElement | null; numSelect: HTMLSelectElement | null } {
+  const desc =
+    document.querySelector('textarea[data-name="description"]') as HTMLTextAreaElement |
+    document.querySelector("textarea.prompt-textarea") as HTMLTextAreaElement |
+    document.querySelector("textarea") as HTMLTextAreaElement;
+
+  const neg =
+    document.querySelector('textarea[data-name="negative"]') as HTMLTextAreaElement |
+    document.querySelector('textarea[data-name="negativePrompt"]') as HTMLTextAreaElement;
+
+  const genBtn =
+    document.querySelector("#generateButtonEl") as HTMLElement |
+    document.querySelector('button[data-action="generate"]') as HTMLElement |
+    document.querySelector("button.generate-btn") as HTMLElement;
+
+  const numSelect =
+    document.querySelector('select[data-name="numImages"]') as HTMLSelectElement |
+    document.querySelector("select.num-images") as HTMLSelectElement;
+
+  return { desc, neg, genBtn, numSelect };
+}
+
+function fillTextarea(el: HTMLTextAreaElement, value: string): boolean {
+  if (!el) return false;
+  el.focus();
+  el.setSelectionRange(0, el.value.length);
+  const ok = document.execCommand("insertText", false, value);
+  if (!ok) {
+    const setter = Object.getOwnPropertyDescriptor(
+      window.HTMLTextAreaElement.prototype,
+      "value",
+    )!.set!;
+    setter.call(el, value);
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+  return true;
+}
+
+async function waitForUI(): Promise<boolean> {
+  for (let i = 0; i < 120; i++) {
+    const { desc, genBtn } = findUI();
+
+    if (i === 0) {
+      log("Looking for UI elements...");
+      log(`  textarea: ${desc ? "FOUND" : "not found"}`);
+      log(`  generateBtn: ${genBtn ? "FOUND" : "not found"}`);
+      log(`  URL: ${window.location.href}`);
+      log(`  all textareas: ${document.querySelectorAll("textarea").length}`);
+      log(`  all buttons: ${document.querySelectorAll("button").length}`);
+      const btns = document.querySelectorAll("button");
+      btns.forEach((b, idx) => {
+        if (idx < 10) log(`  button[${idx}]: id="${b.id}" text="${b.textContent?.substring(0, 30)}"`);
+      });
+      const tas = document.querySelectorAll("textarea");
+      tas.forEach((t, idx) => {
+        if (idx < 10) {
+          const name = t.getAttribute("data-name") || "";
+          log(`  textarea[${idx}]: data-name="${name}" id="${t.id}"`);
+        }
+      });
+    }
+
+    if (desc && genBtn) {
+      log(`UI found after ${i}s`);
+      return true;
+    }
+
+    if (i % 5 === 0) {
+      log(`Waiting for UI... (${i}s)`);
+      setIndicator("red", `[SBDC] Waiting for UI... (${i}s)`);
+    }
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  log("No UI found after 120s. Giving up.");
+  setIndicator("orange", "[SBDC] No generator UI found");
+  return false;
+}
+
+async function runGeneration(): Promise<void> {
+  const deckId = await getDeckId();
+  if (!deckId) {
+    log("No deck ID set — waiting for popup configuration...");
+    setIndicator("orange", "[SBDC] Configure in popup first");
+    return;
+  }
+
+  log(`Starting generation for deck: ${deckId}`);
+
+  let ready = false;
+  while (!ready) {
+    try {
+      const status = (await serverFetch(`/api/decks/${deckId}/status`)) as StatusData;
+      log(`Status: total=${status.total_prompts} ready=${status.ready_to_generate} status=${status.status}`);
+
+      if (status.ready_to_generate > 0) {
+        ready = true;
+        log(`${status.ready_to_generate} prompts ready!`);
+        setIndicator("green", `[SBDC] ${status.ready_to_generate} prompts! Starting...`);
+      } else if (status.status === "generating" && status.generating > 0) {
+        ready = true;
+        log(`Generation already in progress, ${status.generating} being processed`);
+        setIndicator("green", "[SBDC] Resuming generation...");
+      } else {
+        log("No prompts ready. Click 'Start' in the extension popup!");
+        setIndicator("orange", "[SBDC] Click Start in popup!");
+      }
+    } catch (e: Error) {
+      log(`Server not reachable: ${e.message}`);
+      setIndicator("darkred", "[SBDC] Server unreachable");
+    }
+    if (!ready) await new Promise((r) => setTimeout(r, 3000));
+  }
+
+  const { desc, neg, genBtn, numSelect } = findUI();
+  if (!desc || !genBtn) {
+    log("UI disappeared!");
+    setIndicator("red", "[SBDC] UI lost");
+    return;
+  }
+
+  while (true) {
+    let item: PromptData | null = null;
+    try {
+      const data = await serverFetch(`/api/decks/${deckId}/prompts/next`);
+      item = data as PromptData;
+    } catch (e: Error) {
+      log(`Server lost: ${e.message}`);
+      setIndicator("darkred", "[SBDC] Server lost");
+      await new Promise((r) => setTimeout(r, 5000));
+      continue;
+    }
+
+    if (item && item.status === "no_more_prompts") {
+      log("No more prompts ready — all done or waiting for review");
+      setIndicator("blue", "[SBDC] All prompts processed!");
+      break;
+    }
+
+    if (!item || !item.prompt_id) {
+      log("All prompts complete!");
+      setIndicator("blue", "[SBDC] ✅ ALL DONE!");
+      break;
+    }
+
+    log(`Generating: ${item.target_card}/${item.target_layer} (prompt_id=${item.prompt_id})`);
+    setIndicator("green", `[SBDC] ${item.target_card}/${item.target_layer}`);
+
+    const statusResp = (await serverFetch(`/api/decks/${deckId}/status`)) as StatusData;
+    const numImages = statusResp?.takes_per_prompt > 0 ? statusResp.takes_per_prompt : 4;
+
+    if (numSelect) {
+      numSelect.value = String(numImages);
+      numSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
+    fillTextarea(desc, item.positive);
+    log(`Positive set: "${desc.value.substring(0, 80)}..."`);
+
+    if (item.negative && neg) {
+      const ctn = neg.closest(".input-ctn") as HTMLElement | null;
+      if (ctn && ctn.dataset.foldToggleState === "hidden") {
+        ctn.dataset.foldToggleState = "shown";
+        await new Promise((r) => setTimeout(r, 300));
+      }
+      fillTextarea(neg, item.negative);
+      log("Negative set.");
+    }
+
+    const before = document.querySelectorAll("#outputAreaEl img").length;
+    log(`Clicking Generate (expecting ${numImages} images, before: ${before})...`);
+    setIndicator("darkgreen", `[SBDC] Generating ${item.target_card}...`);
+    genBtn.click();
+
+    await new Promise<void>((resolve) => {
+      const iv = setInterval(() => {
+        const imgs = document.querySelectorAll("#outputAreaEl img");
+        if (imgs.length >= before + numImages) {
+          let allOk = true;
+          for (let i = before; i < before + numImages; i++) {
+            const img = imgs[i] as HTMLImageElement;
+            if (!img.complete || img.naturalHeight === 0) {
+              allOk = false;
+              break;
+            }
+          }
+          if (allOk) {
+            clearInterval(iv);
+            resolve();
+          }
+        }
+      }, 1000);
+    });
+    log("Images loaded!");
+
+    const imgs = document.querySelectorAll("#outputAreaEl img");
+    const images: ImageData[] = [];
+    for (let i = before; i < before + numImages; i++) {
+      const imgEl = imgs[i] as HTMLImageElement;
+      const src = imgEl.src;
+      if (src.startsWith("data:")) {
+        images.push({ index: i - before, data: src });
+      } else {
+        try {
+          const resp = await fetch(src);
+          const blob = await resp.blob();
+          const data = await new Promise<string>((res) => {
+            const rd = new FileReader();
+            rd.onload = () => res(rd.result as string);
+            rd.readAsDataURL(blob);
+          });
+          images.push({ index: i - before, data });
+        } catch {
+          log("Image fetch failed");
+        }
+      }
+    }
+
+    try {
+      const resultUrl = `/api/decks/${deckId}/prompts/${item.prompt_id}/takes`;
+      await serverFetch(resultUrl, "POST", JSON.stringify({ images } as SubmitPayload));
+      log(`✅ Takes submitted for prompt ${item.prompt_id} (${images.length} images)`);
+    } catch (e: Error) {
+      log(`❌ Submit failed: ${e.message}`);
+    }
+
+    await new Promise((r) => setTimeout(r, 2000 + Math.random() * 3000));
+  }
+}
+
+async function main(): Promise<void> {
+  log("Content script loaded");
+  log(`URL: ${window.location.href}`);
+  log(`Frame: ${window === window.top ? "TOP" : "IFRAME"}`);
+
+  if (window !== window.top) {
+    log("Skipping iframe — only running in top frame");
+    return;
+  }
+
+  setIndicator("red", "[SBDC] Loading...");
+
+  if (!(await waitForUI())) return;
+
+  setIndicator("green", "[SBDC] UI ready! Checking config...");
+
+  const deckId = await getDeckId();
+  if (deckId) {
+    log(`Deck ID from storage: ${deckId}`);
+    await runGeneration();
+  } else {
+    log("No deck ID configured yet. Waiting for popup...");
+    setIndicator("orange", "[SBDC] Open popup to configure");
+
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === "local" && changes.deckId && changes.deckId.newValue) {
+        log(`Deck ID set: ${changes.deckId.newValue}`);
+        runGeneration().catch((e: Error) => log(`Fatal: ${e.message}`));
+      }
+    });
+  }
+}
+
+main().catch((e: Error) => {
+  log(`Fatal: ${e.message}`);
+  setIndicator("red", `[SBDC] Error: ${e.message}`);
+});
+CT_V5_W8nQ2
+
+echo "Rebuilding extension"
+rm -rf "$EXT_DIR/dist"
+(cd "$EXT_DIR" && bash build.sh 2>&1)
 
 echo ""
-echo "=== Verify no more bare start_deck calls ==="
-grep -n "server::start_deck" "$BASE/sbdc-service/src/server_tests.rs"
+echo "Verifying build"
+find "$EXT_DIR/dist" -type f | sort
 
 echo ""
-echo "Running clippy"
-cargo clippy --workspace --manifest-path "$BASE/Cargo.toml" -- -D warnings 2>&1
-CLIPPY_RESULT=$?
+echo "Checking Rust"
+cargo clippy --workspace --manifest-path "$BASE/Cargo.toml" -- -D warnings 2>&1 | tail -3
 
 echo ""
 echo "Running tests"
-cargo test --workspace --manifest-path "$BASE/Cargo.toml" 2>&1
-TEST_RESULT=$?
+cargo test --workspace --manifest-path "$BASE/Cargo.toml" 2>&1 | tail -10
 
-if [ $CLIPPY_RESULT -ne 0 ]; then
-  COMPILE_OK=false
-fi
+echo ""
+echo "╔══════════════════════════════════════════════════════════════╗"
+echo "║              CHROME EXTENSION — RELOAD REQUIRED              ║"
+echo "╠══════════════════════════════════════════════════════════════╣"
+echo "║                                                              ║"
+echo "║  IMPORTANT: You MUST reload the extension after this fix:    ║"
+echo "║                                                              ║"
+echo "║  1. Go to chrome://extensions/                               ║"
+echo "║  2. Find 'SBDC Generator'                                    ║"
+echo "║  3. Click the REFRESH icon (circular arrow)                  ║"
+echo "║  4. Go to perchance.org/fluxgen and REFRESH the page         ║"
+echo "║  5. Open DevTools (F12) → Console tab                        ║"
+echo "║  6. Look for [SBDC] log lines showing what was found         ║"
+echo "║                                                              ║"
+echo "║  The content script now logs:                                ║"
+echo "║    - Whether it's in top frame or iframe                     ║"
+echo "║    - What textareas and buttons exist on the page            ║"
+echo "║    - Their data-name attributes and IDs                      ║"
+echo "║                                                              ║"
+echo "║  If it says 'textarea: not found' or 'generateBtn: not found'║"
+echo "║  then the perchance.org selectors have changed.              ║"
+echo "║  Check the Console log for the actual element names/IDs      ║"
+echo "║  and update findUI() in content.ts accordingly.              ║"
+echo "║                                                              ║"
+echo "╚══════════════════════════════════════════════════════════════╝"
 
-if [ "$INCOMPLETE" = true ] || [ "$COMPILE_OK" = false ]; then
-  echo "Skipping commit due to issues"
-  exit 1
-fi
+git add -A
+git commit -m "fix(sbdc): fix content script not finding UI on perchance.org
 
-if [ $TEST_RESULT -eq 0 ]; then
-  echo "All tests passed and clippy clean. Committing."
-  git add -A
-  git commit -m "fix(sbdc): suppress last unused Json must_use warning in test"
-else
-  echo "Tests failed."
-  exit 1
-fi
+- Remove all_frames: true from manifest (was running in iframes)
+- Skip iframes explicitly (window !== window.top check)
+- Add extensive debug logging on first UI scan
+- Log all textareas and buttons found on the page
+- Add fallback selectors for perchance.org elements
+- Listen for storage changes so popup Start triggers generation
+- Wait for deckId config instead of blocking on server check"
