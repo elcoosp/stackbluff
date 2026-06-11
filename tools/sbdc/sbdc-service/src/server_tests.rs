@@ -229,7 +229,7 @@ mod tests {
 
         let state = make_state(db.clone(), dir.path().to_path_buf());
 
-        server::start_deck(
+        let _ = server::start_deck(
             axum::extract::State(state.clone()),
             axum::extract::Path("test-deck".to_string()),
             axum::Json(server::StartRequest {
