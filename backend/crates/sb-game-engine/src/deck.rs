@@ -1,6 +1,6 @@
 //! Standard 52-card deck.
 use rand::Rng;
-use sb_shared_types::{Card, Suit, Rank};
+use sb_shared_types::{Card, Rank, Suit};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Deck {
@@ -116,7 +116,9 @@ mod tests {
     #[test]
     fn test_deal_empty() {
         let mut deck = Deck::new();
-        for _ in 0..52 { deck.deal(); }
+        for _ in 0..52 {
+            deck.deal();
+        }
         assert!(deck.deal().is_none());
     }
 

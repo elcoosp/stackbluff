@@ -1,13 +1,9 @@
 [package]
 name = "sb-contracts"
 version = "0.1.0"
-edition = "2024"
-rust-version = "1.94"
+edition.workspace = true
 
 [dependencies]
-chrono = { workspace = true }
 sb-shared-types = { path = "../sb-shared-types" }
-serde = { workspace = true }
+tokio = { workspace = true, features = ["sync"] }
 thiserror = { workspace = true }
-async-trait = "0.1.89"
-uuid = { workspace = true, features = ["v4", "v7"] }

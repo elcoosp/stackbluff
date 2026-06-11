@@ -1,6 +1,9 @@
-use chrono::{DateTime, Utc};
+//! Contract types for StackBluff
+
 use async_trait::async_trait;
-use sb_shared_types::UserId;
+use chrono::{DateTime, Utc};
+use sb_shared_types::{PlayerId, TableId, UserId};
+use thiserror::Error;
 
 #[derive(Debug, thiserror::Error)]
 pub enum PersistenceError {
@@ -47,7 +50,33 @@ pub trait UserRepository: Send + Sync {
 
 #[async_trait]
 pub trait MissionRepository: Send + Sync {
-    async fn complete_mission(&self, user_id: UserId, mission_type: String) -> PersistenceResult<()>;
+    async fn complete_mission(
+        &self,
+        user_id: UserId,
+        mission_type: String,
+    ) -> PersistenceResult<()>;
 }
-pub mod service_api;
 pub mod repo_api;
+pub mod service_api;
+
+#[derive(Debug, Error)]
+pub enum TableError {
+    #[error("Table {0} not found")]
+    NotFound(TableId),
+    #[error("Table {0} is full")]
+    TableFull(TableId),
+    #[error("Internal actor error: {0}")]
+    ActorError(String),
+}
+
+#[derive(Debug)]
+pub enum TableCommand {
+    Join {
+        player_id: PlayerId,
+        table_id: TableId,
+        response_tx: tokio::sync::oneshot::Sender<Result<(), TableError>>,
+    },
+    Heartbeat {
+        table_id: TableId,
+    },
+}

@@ -11,10 +11,8 @@ pub struct Pot {
 /// Returns a vector of pots from smallest to largest (main pot first).
 pub fn compute_side_pots(players: &[(PlayerId, ChipAmount)]) -> Vec<Pot> {
     // Sort players by total bet ascending
-    let mut sorted: Vec<(PlayerId, i64)> = players
-        .iter()
-        .map(|(p, amt)| (*p, amt.as_i64()))
-        .collect();
+    let mut sorted: Vec<(PlayerId, i64)> =
+        players.iter().map(|(p, amt)| (*p, amt.as_i64())).collect();
     sorted.sort_by_key(|(_, bet)| *bet);
 
     let mut pots = Vec::new();
@@ -29,7 +27,8 @@ pub fn compute_side_pots(players: &[(PlayerId, ChipAmount)]) -> Vec<Pot> {
             min_bet - last_bet
         };
         if contribution > 0 {
-            let pot_amount = ChipAmount::new(contribution * remaining_players.len() as i64).expect("positive");
+            let pot_amount =
+                ChipAmount::new(contribution * remaining_players.len() as i64).expect("positive");
             let eligible = remaining_players.iter().map(|(p, _)| *p).collect();
             pots.push(Pot {
                 amount: pot_amount,

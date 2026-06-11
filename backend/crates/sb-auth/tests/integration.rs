@@ -1,12 +1,12 @@
+use async_trait::async_trait;
 use std::sync::Arc;
 use uuid::Uuid;
-use async_trait::async_trait;
 
-use secrecy::SecretString;
 use sb_contracts::repo_api::{UserInfo, UserRepo};
 use sb_contracts::service_api::AuthService;
 use sb_shared_types::errors::AppError;
 use sb_shared_types::request_context::RequestContext;
+use secrecy::SecretString;
 
 use sb_auth::{AuthConfig, AuthServiceImpl};
 
@@ -15,27 +15,64 @@ struct MockUserRepo {
 }
 
 impl MockUserRepo {
-    fn new() -> Self { Self { users: std::sync::Mutex::new(Vec::new()) } }
+    fn new() -> Self {
+        Self {
+            users: std::sync::Mutex::new(Vec::new()),
+        }
+    }
 }
 
 #[async_trait]
 impl UserRepo for MockUserRepo {
-    async fn find_or_create_by_telegram(&self, _ctx: &RequestContext, tg_id: i64) -> Result<UserInfo, AppError> {
+    async fn find_or_create_by_telegram(
+        &self,
+        _ctx: &RequestContext,
+        tg_id: i64,
+    ) -> Result<UserInfo, AppError> {
         let mut users = self.users.lock().unwrap();
-        if let Some(u) = users.iter().find(|u| u.telegram_id == Some(tg_id)) { return Ok(u.clone()); }
-        let u = UserInfo { id: Uuid::new_v4(), telegram_id: Some(tg_id), email: None, password_hash: String::new() };
+        if let Some(u) = users.iter().find(|u| u.telegram_id == Some(tg_id)) {
+            return Ok(u.clone());
+        }
+        let u = UserInfo {
+            id: Uuid::new_v4(),
+            telegram_id: Some(tg_id),
+            email: None,
+            password_hash: String::new(),
+        };
         users.push(u.clone());
         Ok(u)
     }
-    async fn create_email_user(&self, _ctx: &RequestContext, email: &str, password_hash: &str) -> Result<UserInfo, AppError> {
+    async fn create_email_user(
+        &self,
+        _ctx: &RequestContext,
+        email: &str,
+        password_hash: &str,
+    ) -> Result<UserInfo, AppError> {
         let mut users = self.users.lock().unwrap();
-        if users.iter().any(|u| u.email.as_deref() == Some(email)) { return Err(AppError::Conflict("Email exists".into())); }
-        let u = UserInfo { id: Uuid::new_v4(), telegram_id: None, email: Some(email.into()), password_hash: password_hash.into() };
+        if users.iter().any(|u| u.email.as_deref() == Some(email)) {
+            return Err(AppError::Conflict("Email exists".into()));
+        }
+        let u = UserInfo {
+            id: Uuid::new_v4(),
+            telegram_id: None,
+            email: Some(email.into()),
+            password_hash: password_hash.into(),
+        };
         users.push(u.clone());
         Ok(u)
     }
-    async fn find_by_email(&self, _ctx: &RequestContext, email: &str) -> Result<Option<UserInfo>, AppError> {
-        Ok(self.users.lock().unwrap().iter().find(|u| u.email.as_deref() == Some(email)).cloned())
+    async fn find_by_email(
+        &self,
+        _ctx: &RequestContext,
+        email: &str,
+    ) -> Result<Option<UserInfo>, AppError> {
+        Ok(self
+            .users
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|u| u.email.as_deref() == Some(email))
+            .cloned())
     }
 }
 
@@ -84,10 +121,17 @@ async fn expired_token() {
     use jsonwebtoken::{EncodingKey, Header};
     let (svc, _) = test_service();
     let claims = sb_auth::jwt::Claims {
-        sub: Uuid::new_v4(), platform: "email".into(),
-        exp: (Utc::now() - Duration::days(1)).timestamp() as usize, iat: 0
+        sub: Uuid::new_v4(),
+        platform: "email".into(),
+        exp: (Utc::now() - Duration::days(1)).timestamp() as usize,
+        iat: 0,
     };
-    let token = jsonwebtoken::encode(&Header::default(), &claims, &EncodingKey::from_secret(b"secret")).unwrap();
+    let token = jsonwebtoken::encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(b"secret"),
+    )
+    .unwrap();
     let err = svc.verify_token(&token).await.unwrap_err();
     assert!(matches!(err, AppError::Unauthorized(_)));
 }
@@ -104,7 +148,10 @@ async fn password_validation() {
 async fn email_validation() {
     let (svc, _) = test_service();
     let ctx = RequestContext::new(Uuid::new_v4(), None);
-    let err = svc.register(&ctx, "notanemail", "password123").await.unwrap_err();
+    let err = svc
+        .register(&ctx, "notanemail", "password123")
+        .await
+        .unwrap_err();
     assert!(matches!(err, AppError::InvalidInput(_)));
 }
 
@@ -112,7 +159,10 @@ async fn email_validation() {
 async fn login_nonexistent_email() {
     let (svc, _) = test_service();
     let ctx = RequestContext::new(Uuid::new_v4(), None);
-    let err = svc.login(&ctx, "ghost@example.com", "anything").await.unwrap_err();
+    let err = svc
+        .login(&ctx, "ghost@example.com", "anything")
+        .await
+        .unwrap_err();
     assert!(matches!(err, AppError::Unauthorized(_)));
 }
 
@@ -120,8 +170,13 @@ async fn login_nonexistent_email() {
 async fn register_duplicate_email() {
     let (svc, _) = test_service();
     let ctx = RequestContext::new(Uuid::new_v4(), None);
-    svc.register(&ctx, "dup@test.com", "Password1!").await.unwrap();
-    let err = svc.register(&ctx, "dup@test.com", "Password1!").await.unwrap_err();
+    svc.register(&ctx, "dup@test.com", "Password1!")
+        .await
+        .unwrap();
+    let err = svc
+        .register(&ctx, "dup@test.com", "Password1!")
+        .await
+        .unwrap_err();
     assert!(matches!(err, AppError::Conflict(_)));
 }
 
@@ -162,7 +217,8 @@ async fn verify_token_wrong_secret() {
         &Header::default(),
         &claims,
         &EncodingKey::from_secret(b"wrong-secret"),
-    ).unwrap();
+    )
+    .unwrap();
     let err = svc.verify_token(&token).await.unwrap_err();
     assert!(matches!(err, AppError::Unauthorized(_)));
 }
@@ -172,7 +228,10 @@ async fn authenticate_valid_token() {
     use sb_contracts::service_api::AuthService;
     let (svc, _) = test_service();
     let ctx = RequestContext::new(Uuid::new_v4(), None);
-    let reg = svc.register(&ctx, "auth-test@test.com", "Secret123").await.unwrap();
+    let reg = svc
+        .register(&ctx, "auth-test@test.com", "Secret123")
+        .await
+        .unwrap();
     let user_id = svc.authenticate(&reg.jwt, &ctx).await.unwrap();
     assert_eq!(user_id.0, reg.user_id);
 }
@@ -194,7 +253,8 @@ async fn authenticate_expired_token() {
         &Header::default(),
         &expired_claims,
         &EncodingKey::from_secret(b"secret"),
-    ).unwrap();
+    )
+    .unwrap();
     let err = svc.authenticate(&token, &ctx).await.unwrap_err();
     assert!(matches!(err, AppError::Unauthorized(_)));
 }
