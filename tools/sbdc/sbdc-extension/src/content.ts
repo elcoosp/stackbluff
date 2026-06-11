@@ -121,13 +121,25 @@ function fillTextarea(selector: string, value: string): boolean {
   return true;
 }
 
-function countOutputImages(): number {
-  const iframes = document.querySelectorAll("iframe.text-to-image-plugin-image-iframe");
-  if (iframes.length > 0) return iframes.length;
-  const imgs = document.querySelectorAll("#outputAreaEl img");
-  if (imgs.length > 0) return imgs.length;
-  const containers = document.querySelectorAll(".t2i-image-ctn");
-  return containers.length;
+function countOutputIframes(): number {
+  return document.querySelectorAll("iframe.text-to-image-plugin-image-iframe").length;
+}
+
+function iframeHasContent(iframe: HTMLIFrameElement): boolean {
+  try {
+    const doc = iframe.contentDocument;
+    if (!doc) return false;
+    const canvas = doc.querySelector("canvas");
+    if (canvas) {
+      // Check canvas actually has pixels (not just 0x0)
+      if (canvas.width > 0 && canvas.height > 0) return true;
+    }
+    const img = doc.querySelector("img");
+    if (img && img.src && img.complete && img.naturalHeight > 0) return true;
+  } catch {
+    // CORS — we can't check, assume not ready
+  }
+  return false;
 }
 
 async function waitForUI(): Promise<boolean> {
@@ -149,40 +161,59 @@ async function waitForUI(): Promise<boolean> {
   return false;
 }
 
-async function waitForNewImages(expectedCount: number): Promise<boolean> {
-  // Perchance clears old images when Generate is clicked.
-  // Strategy: wait for output to stabilize at exactly expectedCount images.
-  const timeout = 180;
-  let stableCount = 0;
-  let lastCount = -1;
-
-  for (let i = 0; i < timeout; i++) {
-    const currentCount = countOutputImages();
-
-    if (currentCount === expectedCount) {
-      if (currentCount !== lastCount) {
-        log(`Count reached ${currentCount}, confirming stable...`);
-        lastCount = currentCount;
-      }
-      stableCount++;
-      if (stableCount >= 3) {
-        log(`Confirmed ${expectedCount} images stable after ${i}s`);
-        // Extra wait for images to fully render inside iframes
-        await new Promise((r) => setTimeout(r, 3000));
-        return true;
-      }
-    } else {
-      stableCount = 0;
-      if (i % 10 === 0) {
-        log(`Waiting for images... count=${currentCount} (expect ${expectedCount}) (${i}s)`);
-      }
+async function waitForGenerationComplete(numImages: number): Promise<boolean> {
+  // Phase 1: Wait for iframes to appear
+  log(`Waiting for ${numImages} iframes to appear...`);
+  for (let i = 0; i < 120; i++) {
+    const count = countOutputIframes();
+    if (count >= numImages) {
+      log(`${count} iframes appeared after ${i}s`);
+      break;
     }
-
+    if (i % 10 === 0) log(`  iframes: ${count}/${numImages} (${i}s)`);
     await new Promise((r) => setTimeout(r, 1000));
   }
 
-  log(`Timeout after ${timeout}s. Final count: ${countOutputImages()}`);
-  return false;
+  // Phase 2: Wait for content inside iframes to render
+  log("Iframes appeared. Waiting for image content to render...");
+  const iframes = document.querySelectorAll("iframe.text-to-image-plugin-image-iframe");
+  const total = Math.min(iframes.length, numImages);
+
+  for (let i = 0; i < 180; i++) {
+    let readyCount = 0;
+    let corsCount = 0;
+
+    for (let j = 0; j < total; j++) {
+      const iframe = iframes[j] as HTMLIFrameElement;
+      try {
+        if (iframeHasContent(iframe)) {
+          readyCount++;
+        }
+      } catch {
+        corsCount++;
+      }
+    }
+
+    // If we can verify all have content, we're done
+    if (readyCount >= total) {
+      log(`All ${total} iframes have content after ${i}s`);
+      return true;
+    }
+
+    // If some are CORS-blocked and the rest are ready, wait a bit more then proceed
+    if (corsCount > 0 && readyCount + corsCount >= total && i > 30) {
+      log(`${readyCount} verified + ${corsCount} CORS-blocked. Proceeding after ${i}s`);
+      return true;
+    }
+
+    if (i % 10 === 0) {
+      log(`  Images ready: ${readyCount}/${total} (${i}s)`);
+    }
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+
+  log(`Timeout waiting for image content. Proceeding anyway.`);
+  return true; // Proceed even if not all confirmed — we'll extract what we can
 }
 
 async function extractImageFromIframe(iframe: HTMLIFrameElement): Promise<string | null> {
@@ -190,7 +221,10 @@ async function extractImageFromIframe(iframe: HTMLIFrameElement): Promise<string
     const doc = iframe.contentDocument;
     if (!doc) return null;
     const canvas = doc.querySelector("canvas");
-    if (canvas) return canvas.toDataURL("image/png");
+    if (canvas && canvas.width > 0 && canvas.height > 0) {
+      log("Extracting from canvas inside iframe");
+      return canvas.toDataURL("image/png");
+    }
     const img = doc.querySelector("img");
     if (img && img.src) {
       if (img.src.startsWith("data:")) return img.src;
@@ -204,9 +238,9 @@ async function extractImageFromIframe(iframe: HTMLIFrameElement): Promise<string
         });
       } catch { /* fall through */ }
     }
-  } catch { /* CORS blocked */ }
+  } catch { /* CORS */ }
 
-  // Try fetching the iframe URL directly
+  // Try fetching iframe page directly
   try {
     const iframeSrc = iframe.src || iframe.getAttribute("data-src") || "";
     if (iframeSrc.includes("image-generation.perchance.org")) {
@@ -220,20 +254,19 @@ async function extractImageFromIframe(iframe: HTMLIFrameElement): Promise<string
   return null;
 }
 
-async function extractAllImages(): Promise<ImageData[]> {
+async function extractAllImages(numImages: number): Promise<ImageData[]> {
   const images: ImageData[] = [];
 
-  // Try iframes first
+  // Try iframes
   const iframes = document.querySelectorAll("iframe.text-to-image-plugin-image-iframe");
-  if (iframes.length > 0) {
-    for (let i = 0; i < iframes.length; i++) {
-      const data = await extractImageFromIframe(iframes[i] as HTMLIFrameElement);
-      if (data) {
-        images.push({ index: i, data });
-        log(`Extracted image ${images.length} from iframe[${i}]`);
-      } else {
-        log(`Could not extract from iframe[${i}]`);
-      }
+  const count = Math.min(iframes.length, numImages);
+  for (let i = 0; i < count; i++) {
+    const data = await extractImageFromIframe(iframes[i] as HTMLIFrameElement);
+    if (data) {
+      images.push({ index: i, data });
+      log(`Extracted image ${images.length} from iframe[${i}]`);
+    } else {
+      log(`Could not extract from iframe[${i}]`);
     }
   }
 
@@ -342,26 +375,47 @@ async function runGeneration(): Promise<void> {
     setIndicator("darkgreen", `[SBDC] Generating ${item.target_card}...`);
     document.querySelector("#generateButtonEl")!.click();
 
-    // Wait for exactly NUM_IMAGES new images to appear and stabilize
-    const loaded = await waitForNewImages(NUM_IMAGES);
+    // Two-phase wait: 1) iframes appear, 2) content renders inside them
+    const loaded = await waitForGenerationComplete(NUM_IMAGES);
     if (!loaded) {
-      log("Image load timeout, moving to next prompt");
+      log("Generation timeout, moving to next prompt");
       continue;
     }
 
     log("Extracting images...");
-    const images = await extractAllImages();
+    const images = await extractAllImages(NUM_IMAGES);
     log(`Extracted ${images.length} images`);
 
-    try {
-      await serverFetch(
-        `/api/decks/${deckId}/prompts/${item.prompt_id}/takes`,
-        "POST",
-        JSON.stringify({ images }),
-      );
-      log(`Submitted ${images.length} takes for prompt ${item.prompt_id}`);
-    } catch (e: Error) {
-      log(`Submit failed: ${e.message}`);
+    if (images.length > 0) {
+      try {
+        await serverFetch(
+          `/api/decks/${deckId}/prompts/${item.prompt_id}/takes`,
+          "POST",
+          JSON.stringify({ images }),
+        );
+        log(`Submitted ${images.length} takes for prompt ${item.prompt_id}`);
+      } catch (e: Error) {
+        log(`Submit failed: ${e.message}`);
+      }
+    } else {
+      log("No images extracted — retrying extraction in 10s...");
+      await new Promise((r) => setTimeout(r, 10000));
+      const retryImages = await extractAllImages(NUM_IMAGES);
+      log(`Retry extracted ${retryImages.length} images`);
+      if (retryImages.length > 0) {
+        try {
+          await serverFetch(
+            `/api/decks/${deckId}/prompts/${item.prompt_id}/takes`,
+            "POST",
+            JSON.stringify({ images: retryImages }),
+          );
+          log(`Submitted ${retryImages.length} takes after retry`);
+        } catch (e: Error) {
+          log(`Retry submit failed: ${e.message}`);
+        }
+      } else {
+        log("Still no images after retry — skipping prompt");
+      }
     }
 
     await new Promise((r) => setTimeout(r, 2000 + Math.random() * 3000));
