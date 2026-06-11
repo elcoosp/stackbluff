@@ -1,0 +1,22 @@
+{
+  "name": "stackbluff-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev:pwa": "pnpm --filter @stackbluff/pwa dev",
+    "dev:mini": "pnpm --filter @stackbluff/mini-app dev",
+    "dev": "pnpm run dev:pwa & pnpm run dev:mini",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.15"
+  },
+  "packageManager": "pnpm@10.8.1",
+  "engines": {
+    "node": ">=20"
+  }
+}
