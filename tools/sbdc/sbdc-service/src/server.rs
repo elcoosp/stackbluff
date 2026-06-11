@@ -21,25 +21,25 @@ use sbdc_entity::{deck, generated_prompt, prompt_take};
 use crate::error::{Result as SbdcResult, SbdcError};
 
 #[derive(Deserialize)]
-struct StartRequest {
-    takes_per_prompt: Option<u32>,
+pub struct StartRequest {
+    pub takes_per_prompt: Option<u32>,
 }
 
 #[derive(Deserialize)]
-struct SubmitTakesRequest {
-    images: Vec<ImageData>,
+pub struct SubmitTakesRequest {
+    pub images: Vec<ImageData>,
 }
 
 #[derive(Deserialize)]
-struct ImageData {
-    index: usize,
-    data: String,
+pub struct ImageData {
+    pub index: usize,
+    pub data: String,
 }
 
-struct AppState {
-    db: DatabaseConnection,
-    project_dir: PathBuf,
-    takes_target: Mutex<HashMap<String, u32>>,
+pub struct AppState {
+    pub db: DatabaseConnection,
+    pub project_dir: PathBuf,
+    pub takes_target: Mutex<HashMap<String, u32>>,
 }
 
 async fn count_prompts(
@@ -57,12 +57,12 @@ async fn count_prompts(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
 }
 
-async fn start_deck(
+pub async fn start_deck(
     State(state): State<Arc<AppState>>,
     Path(deck_id): Path<String>,
     Json(payload): Json<StartRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let _deck = deck::Entity::find_by_id(&deck_id)
+    let deck_model = deck::Entity::find_by_id(&deck_id)
         .one(&state.db)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
@@ -76,6 +76,13 @@ async fn start_deck(
         .lock()
         .await
         .insert(deck_id.clone(), takes);
+
+    let mut active: deck::ActiveModel = deck_model.into();
+    active.status = Set("generating".to_string());
+    active
+        .update(&state.db)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     let ready_count = count_prompts(&state.db, &deck_id, Some("ready_to_generate")).await?;
 
@@ -91,7 +98,7 @@ async fn start_deck(
     })))
 }
 
-async fn deck_status(
+pub async fn deck_status(
     State(state): State<Arc<AppState>>,
     Path(deck_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
@@ -108,6 +115,13 @@ async fn deck_status(
     let generating = count_prompts(&state.db, &deck_id, Some("generating")).await?;
     let takes_ready = count_prompts(&state.db, &deck_id, Some("takes_ready")).await?;
     let cleaned = count_prompts(&state.db, &deck_id, Some("cleaned")).await?;
+    let takes_target = state
+        .takes_target
+        .lock()
+        .await
+        .get(&deck_id)
+        .copied()
+        .unwrap_or(0);
 
     Ok(Json(serde_json::json!({
         "deck_id": deck_id,
@@ -117,10 +131,11 @@ async fn deck_status(
         "generating": generating,
         "takes_ready": takes_ready,
         "cleaned": cleaned,
+        "takes_per_prompt": takes_target,
     })))
 }
 
-async fn next_prompt(
+pub async fn next_prompt(
     State(state): State<Arc<AppState>>,
     Path(deck_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
@@ -169,7 +184,7 @@ async fn next_prompt(
     })))
 }
 
-async fn submit_takes(
+pub async fn submit_takes(
     State(state): State<Arc<AppState>>,
     Path((deck_id, prompt_id)): Path<(String, i32)>,
     Json(payload): Json<SubmitTakesRequest>,
@@ -261,7 +276,7 @@ async fn submit_takes(
     })))
 }
 
-async fn list_takes(
+pub async fn list_takes(
     State(state): State<Arc<AppState>>,
     Path(deck_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
@@ -295,7 +310,7 @@ async fn list_takes(
     Ok(Json(serde_json::json!({"takes": result})))
 }
 
-async fn select_take(
+pub async fn select_take(
     State(state): State<Arc<AppState>>,
     Path((deck_id, take_id)): Path<(String, i32)>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {

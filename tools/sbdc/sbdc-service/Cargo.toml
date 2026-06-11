@@ -21,4 +21,6 @@ base64 = "0.22"
 anyhow.workspace = true
 
 [dev-dependencies]
+http-body-util = "0.1"
+sbdc-migration = { path = "../sbdc-migration" }
 tempfile = "3"

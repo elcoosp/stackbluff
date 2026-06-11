@@ -152,7 +152,8 @@
       log('Processing prompt_id=' + item.prompt_id + ' card=' + item.target_card + ' layer=' + item.target_layer);
       setIndicator('green', '[SBDC] Prompt ' + item.target_card + '/' + item.target_layer);
 
-      const numImages = 4;
+      const statusResp = await serverFetch('/api/decks/' + deckId + '/status');
+      const numImages = (statusResp && statusResp.takes_per_prompt > 0) ? statusResp.takes_per_prompt : 4;
       const ns = document.querySelector('select[data-name="numImages"]') as HTMLSelectElement | null;
       if (ns) { ns.value = String(numImages); ns.dispatchEvent(new Event('change', { bubbles: true })); }
 

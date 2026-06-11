@@ -6,28 +6,28 @@ INCOMPLETE=false
 
 BASE="tools/sbdc"
 
-echo "Fixing Serve match arm type mismatch — server already returns SbdcResult<()>"
+echo "Adding missing PaginatorTrait import to server_tests.rs"
 OLD_TMP=$(mktemp) || { echo "ERROR: cannot create temp file"; exit 1; }
 NEW_TMP=$(mktemp)
-cat > "$OLD_TMP" << 'OLD_SERVE_F7xM2'
-        Commands::Serve { port } => sbdc_service::server::run_server(db, cli.project_dir, port).await.map_err(|e| anyhow::anyhow!(e.to_string())),
-OLD_SERVE_F7xM2
-cat > "$NEW_TMP" << 'NEW_SERVE_K9pW5'
-        Commands::Serve { port } => sbdc_service::server::run_server(db, cli.project_dir, port).await,
-NEW_SERVE_K9pW5
-if python3 - "$OLD_TMP" "$NEW_TMP" "$BASE/sbdc-cli/src/main.rs" << 'PYEOF_FIX'
+cat > "$OLD_TMP" << 'OLD_IMPORT_M2vP8'
+    use sea_orm::{ColumnTrait, ConnectionTrait, Database, DatabaseConnection, EntityTrait, QueryFilter};
+OLD_IMPORT_M2vP8
+cat > "$NEW_TMP" << 'NEW_IMPORT_K7nR3'
+    use sea_orm::{ColumnTrait, ConnectionTrait, Database, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter};
+NEW_IMPORT_K7nR3
+if python3 - "$OLD_TMP" "$NEW_TMP" "$BASE/sbdc-service/src/server_tests.rs" << 'PYEOF_IMPORT'
 import sys
 with open(sys.argv[1], 'r') as f: old = f.read()
 with open(sys.argv[2], 'r') as f: new = f.read()
 with open(sys.argv[3], 'r') as f: content = f.read()
 content = content.replace(old, new)
 with open(sys.argv[3], 'w') as f: f.write(content)
-PYEOF_FIX
+PYEOF_IMPORT
 then
-  echo "Fixed Serve arm to return SbdcResult directly"
+  echo "Added PaginatorTrait import"
   rm "$OLD_TMP" "$NEW_TMP"
 else
-  echo "ERROR: Python patch failed for Serve arm fix"
+  echo "ERROR: Python patch failed for PaginatorTrait import"
   rm -f "$OLD_TMP" "$NEW_TMP"
 fi
 
@@ -47,7 +47,7 @@ cargo test --workspace --manifest-path "$BASE/Cargo.toml" 2>&1
 if [ $? -eq 0 ]; then
   echo "All tests passed. Committing."
   git add -A
-  git commit -m "fix(sbdc): serve arm returns SbdcResult directly, no type mismatch"
+  git commit -m "fix(sbdc): add missing PaginatorTrait import to server_tests.rs"
 else
   echo "Tests failed. Fix errors then run the next script."
   exit 1
