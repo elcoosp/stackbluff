@@ -2,6 +2,7 @@ use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use tracing_subscriber::EnvFilter;
 use tokio::fs;
+use sbdc_service::error::SbdcError;
 
 #[derive(Parser)]
 #[command(name = "sbdc", about = "StackBluff Deck Creator", version)]
@@ -71,7 +72,7 @@ async fn main() -> anyhow::Result<()> {
         Commands::IngestJson { deck_id, file } => sbdc_service::ingest::run_ingest_json(&db, &deck_id, &file).await,
         Commands::BuildPrompts { deck_id } => sbdc_service::build_prompts::run_build_prompts(&db, &deck_id).await,
         Commands::Generate { deck_id, takes, delay } => sbdc_service::generate::run_generate(&db, &cli.project_dir, &deck_id, takes, &delay).await,
-        Commands::Serve { deck_id: _, port, takes: _ } => sbdc_service::server::run_server(db, cli.project_dir, port).await,
+        Commands::Serve { deck_id: _, port, takes: _ } => sbdc_service::server::run_server(db, cli.project_dir, port).await.map_err(|e| SbdcError::DbOperation(e.to_string())),
         Commands::Clean { deck_id } => sbdc_service::clean::run_clean(&db, &cli.project_dir, &deck_id).await,
     };
     result?;

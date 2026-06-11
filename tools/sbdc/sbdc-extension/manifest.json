@@ -1,13 +1,28 @@
 {
   "manifest_version": 3,
   "name": "SBDC Generator",
-  "version": "2.0",
-  "permissions": ["storage", "tabs", "scripting", "webNavigation"],
-  "host_permissions": ["http://localhost:*/*", "https://perchance.org/*"],
+  "version": "1.0",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "http://localhost:*/*"
+  ],
   "background": {
-    "service_worker": "src/background.js",
-    "type": "module"
+    "service_worker": "src/background.js"
   },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.perchance.org/*"
+      ],
+      "js": [
+        "src/content.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
   "action": {
     "default_popup": "src/popup.html"
   }
