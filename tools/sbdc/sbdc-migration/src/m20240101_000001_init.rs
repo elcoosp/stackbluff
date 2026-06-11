@@ -1,0 +1,488 @@
+use sea_orm_migration::{prelude::*, schema::*};
+
+#[derive(DeriveMigrationName)]
+pub struct Migration;
+
+#[async_trait::async_trait]
+impl MigrationTrait for Migration {
+    async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        manager
+            .create_table(
+                Table::create()
+                    .table(Universe::Table)
+                    .col(string(Universe::UniverseId).primary_key())
+                    .col(string(Universe::ArtDirection))
+                    .col(string(Universe::BackgroundInvariant))
+                    .col(string(Universe::LightingInvariant))
+                    .col(string(Universe::AnimationPhilosophy))
+                    .col(string(Universe::HiddenGemsRule))
+                    .col(string(Universe::DefaultNegative))
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .create_table(
+                Table::create()
+                    .table(Clans::Table)
+                    .col(string(Clans::ClanId).primary_key())
+                    .col(string(Clans::UniverseId))
+                    .col(string(Clans::Name))
+                    .col(string(Clans::Tagline))
+                    .col(string(Clans::Silhouette))
+                    .col(string(Clans::BorderAccent))
+                    .col(string(Clans::TypographyHint))
+                    .col(string(Clans::PipTexture))
+                    .col(string(Clans::PrimaryDark))
+                    .col(string(Clans::PrimaryAccent))
+                    .col(string(Clans::Secondary))
+                    .col(string(Clans::Sigil))
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(Clans::Table, Clans::UniverseId)
+                            .to(Universe::Table, Universe::UniverseId)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .create_table(
+                Table::create()
+                    .table(Characters::Table)
+                    .col(string(Characters::CharacterId).primary_key())
+                    .col(string(Characters::ClanId))
+                    .col(string(Characters::Name))
+                    .col(string(Characters::Title))
+                    .col(json(Characters::FixedTraits))
+                    .col(json(Characters::VisualDescription))
+                    .col(string(Characters::BustPromptDescription))
+                    .col(string(Characters::ArtifactName))
+                    .col(string(Characters::ArtifactDefaultDesc))
+                    .col(string(Characters::ArtifactVictoryDesc))
+                    .col(string(Characters::ArtifactDefeatDesc))
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(Characters::Table, Characters::ClanId)
+                            .to(Clans::Table, Clans::ClanId)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .create_table(
+                Table::create()
+                    .table(LoreEntries::Table)
+                    .col(string(LoreEntries::LoreId).primary_key())
+                    .col(string(LoreEntries::ParentEntity))
+                    .col(string(LoreEntries::ParentId))
+                    .col(string(LoreEntries::Category))
+                    .col(string(LoreEntries::Title))
+                    .col(string(LoreEntries::Content))
+                    .col(string(LoreEntries::Source))
+                    .col(string(LoreEntries::Status))
+                    .col(boolean(LoreEntries::Injectable))
+                    .col(integer(LoreEntries::InjectionWeight))
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .create_table(
+                Table::create()
+                    .table(CharacterRelationships::Table)
+                    .col(string(CharacterRelationships::RelationshipId).primary_key())
+                    .col(string(CharacterRelationships::CharacterIdA))
+                    .col(string(CharacterRelationships::CharacterIdB))
+                    .col(string(CharacterRelationships::RelationshipType))
+                    .col(string(CharacterRelationships::Description))
+                    .col(string_null(CharacterRelationships::DeckId))
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .create_table(
+                Table::create()
+                    .table(Seasons::Table)
+                    .col(string(Seasons::SeasonId).primary_key())
+                    .col(string(Seasons::UniverseId))
+                    .col(string(Seasons::SeasonName))
+                    .col(string(Seasons::GlobalEvent))
+                    .col(integer(Seasons::SeasonOrder))
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(Seasons::Table, Seasons::UniverseId)
+                            .to(Universe::Table, Universe::UniverseId)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .create_table(
+                Table::create()
+                    .table(JunctionTypes::Table)
+                    .col(string(JunctionTypes::JunctionId).primary_key())
+                    .col(string(JunctionTypes::PromptFragment))
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .create_table(
+                Table::create()
+                    .table(CreativePatterns::Table)
+                    .col(string(CreativePatterns::PatternId).primary_key())
+                    .col(string(CreativePatterns::Description))
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .create_table(
+                Table::create()
+                    .table(FramingInstructions::Table)
+                    .col(string(FramingInstructions::FramingId).primary_key())
+                    .col(string(FramingInstructions::Description))
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .create_table(
+                Table::create()
+                    .table(ViralityMechanics::Table)
+                    .col(string(ViralityMechanics::MechanicId).primary_key())
+                    .col(string(ViralityMechanics::Description))
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .create_table(
+                Table::create()
+                    .table(Decks::Table)
+                    .col(string(Decks::DeckId).primary_key())
+                    .col(string(Decks::SeasonId))
+                    .col(string(Decks::Status))
+                    .col(string(Decks::ArtStyle))
+                    .col(string(Decks::Theme))
+                    .col(string(Decks::JunctionType))
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(Decks::Table, Decks::SeasonId)
+                            .to(Seasons::Table, Seasons::SeasonId)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .create_table(
+                Table::create()
+                    .table(DeckNarrativeArcs::Table)
+                    .col(string(DeckNarrativeArcs::ArcId).primary_key())
+                    .col(string(DeckNarrativeArcs::DeckId))
+                    .col(string(DeckNarrativeArcs::Rank))
+                    .col(string(DeckNarrativeArcs::Suit))
+                    .col(string(DeckNarrativeArcs::Description))
+                    .col(integer(DeckNarrativeArcs::StepOrder))
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(DeckNarrativeArcs::Table, DeckNarrativeArcs::DeckId)
+                            .to(Decks::Table, Decks::DeckId)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .create_table(
+                Table::create()
+                    .table(PromptTemplates::Table)
+                    .col(string(PromptTemplates::TemplateId).primary_key())
+                    .col(string(PromptTemplates::Name))
+                    .col(string(PromptTemplates::TemplateText))
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .create_table(
+                Table::create()
+                    .table(GeneratedPrompts::Table)
+                    .col(integer(GeneratedPrompts::PromptId).auto_increment().primary_key())
+                    .col(string(GeneratedPrompts::DeckId))
+                    .col(string(GeneratedPrompts::TargetCard))
+                    .col(string(GeneratedPrompts::TargetLayer))
+                    .col(string(GeneratedPrompts::TargetVariant))
+                    .col(string(GeneratedPrompts::FinalPositive))
+                    .col(string(GeneratedPrompts::FinalNegative))
+                    .col(string(GeneratedPrompts::Status))
+                    .col(string(GeneratedPrompts::TargetFile))
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(GeneratedPrompts::Table, GeneratedPrompts::DeckId)
+                            .to(Decks::Table, Decks::DeckId)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .create_table(
+                Table::create()
+                    .table(PromptTakes::Table)
+                    .col(integer(PromptTakes::TakeId).auto_increment().primary_key())
+                    .col(integer(PromptTakes::PromptId))
+                    .col(string(PromptTakes::FilePath))
+                    .col(boolean(PromptTakes::IsSelected))
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(PromptTakes::Table, PromptTakes::PromptId)
+                            .to(GeneratedPrompts::Table, GeneratedPrompts::PromptId)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .create_table(
+                Table::create()
+                    .table(PromptComments::Table)
+                    .col(integer(PromptComments::CommentId).auto_increment().primary_key())
+                    .col(integer(PromptComments::PromptId))
+                    .col(string(PromptComments::Comment))
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(PromptComments::Table, PromptComments::PromptId)
+                            .to(GeneratedPrompts::Table, GeneratedPrompts::PromptId)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .create_table(
+                Table::create()
+                    .table(CompositionSchemas::Table)
+                    .col(string(CompositionSchemas::SchemaId).primary_key())
+                    .col(string(CompositionSchemas::Name))
+                    .col(json(CompositionSchemas::LayoutJson))
+                    .to_owned(),
+            )
+            .await?;
+        Ok(())
+    }
+
+    async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        manager
+            .drop_table(Table::drop().table(PromptComments::Table).to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(PromptTakes::Table).to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(GeneratedPrompts::Table).to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(PromptTemplates::Table).to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(DeckNarrativeArcs::Table).to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(Decks::Table).to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(ViralityMechanics::Table).to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(FramingInstructions::Table).to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(CreativePatterns::Table).to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(JunctionTypes::Table).to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(Seasons::Table).to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(CharacterRelationships::Table).to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(LoreEntries::Table).to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(Characters::Table).to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(Clans::Table).to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(Universe::Table).to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(CompositionSchemas::Table).to_owned())
+            .await?;
+        Ok(())
+    }
+}
+
+#[derive(Iden)]
+enum Universe {
+    Table,
+    UniverseId,
+    ArtDirection,
+    BackgroundInvariant,
+    LightingInvariant,
+    AnimationPhilosophy,
+    HiddenGemsRule,
+    DefaultNegative,
+}
+#[derive(Iden)]
+enum Clans {
+    Table,
+    ClanId,
+    UniverseId,
+    Name,
+    Tagline,
+    Silhouette,
+    BorderAccent,
+    TypographyHint,
+    PipTexture,
+    PrimaryDark,
+    PrimaryAccent,
+    Secondary,
+    Sigil,
+}
+#[derive(Iden)]
+enum Characters {
+    Table,
+    CharacterId,
+    ClanId,
+    Name,
+    Title,
+    FixedTraits,
+    VisualDescription,
+    BustPromptDescription,
+    ArtifactName,
+    ArtifactDefaultDesc,
+    ArtifactVictoryDesc,
+    ArtifactDefeatDesc,
+}
+#[derive(Iden)]
+enum LoreEntries {
+    Table,
+    LoreId,
+    ParentEntity,
+    ParentId,
+    Category,
+    Title,
+    Content,
+    Source,
+    Status,
+    Injectable,
+    InjectionWeight,
+}
+#[derive(Iden)]
+enum CharacterRelationships {
+    Table,
+    RelationshipId,
+    CharacterIdA,
+    CharacterIdB,
+    RelationshipType,
+    Description,
+    DeckId,
+}
+#[derive(Iden)]
+enum Seasons {
+    Table,
+    SeasonId,
+    UniverseId,
+    SeasonName,
+    GlobalEvent,
+    SeasonOrder,
+}
+#[derive(Iden)]
+enum JunctionTypes {
+    Table,
+    JunctionId,
+    PromptFragment,
+}
+#[derive(Iden)]
+enum CreativePatterns {
+    Table,
+    PatternId,
+    Description,
+}
+#[derive(Iden)]
+enum FramingInstructions {
+    Table,
+    FramingId,
+    Description,
+}
+#[derive(Iden)]
+enum ViralityMechanics {
+    Table,
+    MechanicId,
+    Description,
+}
+#[derive(Iden)]
+enum Decks {
+    Table,
+    DeckId,
+    SeasonId,
+    Status,
+    ArtStyle,
+    Theme,
+    JunctionType,
+}
+#[derive(Iden)]
+enum DeckNarrativeArcs {
+    Table,
+    ArcId,
+    DeckId,
+    Rank,
+    Suit,
+    Description,
+    StepOrder,
+}
+#[derive(Iden)]
+enum PromptTemplates {
+    Table,
+    TemplateId,
+    Name,
+    TemplateText,
+}
+#[derive(Iden)]
+enum GeneratedPrompts {
+    Table,
+    PromptId,
+    DeckId,
+    TargetCard,
+    TargetLayer,
+    TargetVariant,
+    FinalPositive,
+    FinalNegative,
+    Status,
+    TargetFile,
+}
+#[derive(Iden)]
+enum PromptTakes {
+    Table,
+    TakeId,
+    PromptId,
+    FilePath,
+    IsSelected,
+}
+#[derive(Iden)]
+enum PromptComments {
+    Table,
+    CommentId,
+    PromptId,
+    Comment,
+}
+#[derive(Iden)]
+enum CompositionSchemas {
+    Table,
+    SchemaId,
+    Name,
+    LayoutJson,
+}

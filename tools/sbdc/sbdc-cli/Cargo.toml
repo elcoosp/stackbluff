@@ -1,0 +1,21 @@
+[package]
+name = "sbdc-cli"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "sbdc"
+path = "src/main.rs"
+
+[dependencies]
+sbdc-service = { path = "../sbdc-service" }
+sbdc-entity = { path = "../sbdc-entity" }
+clap = { version = "4", features = ["derive"] }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+
+[dev-dependencies]
+sbdc-migration = { path = "../sbdc-migration" }
+tempfile = "3"
