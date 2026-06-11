@@ -231,7 +231,7 @@ pub async fn submit_takes(
         let file_path = takes_dir.join(&filename);
 
         let b64 = if img.data.contains(',') {
-            img.data.split(',').last().unwrap_or(&img.data)
+            img.data.split(',').next_back().unwrap_or(&img.data)
         } else {
             &img.data
         };
@@ -411,7 +411,7 @@ pub async fn run_server(
     info!("SBDC server listening on port {}", port);
     axum::serve(listener, app)
         .await
-        .map_err(|e| SbdcError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+        .map_err(|e| SbdcError::Io(std::io::Error::other(e)))?;
 
     Ok(())
 }
