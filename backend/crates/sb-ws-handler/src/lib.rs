@@ -58,7 +58,7 @@ async fn ws_handler(
     };
     info!(%user_id, "WebSocket upgrade authenticated");
     // Registry temporarily removed – will be re-added later
-    ws.on_upgrade(move |socket| handle_websocket(socket))
+    ws.on_upgrade(handle_websocket)
 }
 
 async fn handle_websocket(socket: axum::extract::ws::WebSocket) {

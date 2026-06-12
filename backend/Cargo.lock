@@ -3060,9 +3060,10 @@ name = "sb-table-registry"
 version = "0.1.0"
 dependencies = [
  "futures",
- "sb-contracts",
+ "sb-game-engine",
  "sb-shared-types",
- "serde",
+ "sb-ws-handler",
+ "sb-ws-messages",
  "thiserror",
  "tokio",
  "tracing",
@@ -3073,19 +3074,22 @@ dependencies = [
 name = "sb-ws-handler"
 version = "0.1.0"
 dependencies = [
- "anyhow",
- "async-trait",
  "axum",
  "futures",
- "http",
  "sb-auth",
  "sb-shared-types",
- "sb-table-registry",
- "serde",
+ "sb-ws-messages",
  "serde_json",
- "thiserror",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "sb-ws-messages"
+version = "0.1.0"
+dependencies = [
+ "sb-shared-types",
+ "serde",
 ]
 
 [[package]]
