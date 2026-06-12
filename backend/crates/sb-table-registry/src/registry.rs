@@ -1,88 +1,125 @@
-//! Registry stub – satisfies compilation without full contract integration.
-//! The actual actor is fully functional and can be spawned directly.
-
+use crate::actor::{InternalCommand, spawn_table_actor};
 use sb_contracts::{TableCommand, TableError, lobby_api::TableInfo};
 use sb_shared_types::{ChipAmount, PlayerId, TableConfig, TableId, UserId};
+use sb_ws_handler::broadcast_channel;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::RwLock;
+use tokio::sync::{RwLock, mpsc};
 
-/// Registry holds metadata about tables (stub).
+type ActorSender = mpsc::Sender<InternalCommand>;
+
 #[derive(Clone)]
 pub struct Registry {
-    tables: Arc<RwLock<HashMap<TableId, TableConfig>>>,
+    tables: Arc<RwLock<HashMap<TableId, ActorSender>>>,
+    configs: Arc<RwLock<HashMap<TableId, TableConfig>>>,
+    player_to_user: Arc<RwLock<HashMap<PlayerId, UserId>>>,
+    next_seat: Arc<RwLock<HashMap<TableId, u8>>>,
 }
 
 impl Registry {
     pub fn new() -> Self {
         Self {
             tables: Arc::new(RwLock::new(HashMap::new())),
+            configs: Arc::new(RwLock::new(HashMap::new())),
+            player_to_user: Arc::new(RwLock::new(HashMap::new())),
+            next_seat: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
-    /// Creates a new table (stub – does not spawn actor).
     pub async fn create_table(&self, config: TableConfig) -> TableId {
         let table_id = TableId::new();
-        let mut tables = self.tables.write().await;
-        tables.insert(table_id, config);
+        let (broadcast_tx, _) = broadcast_channel(32);
+        let (cmd_tx, _) = spawn_table_actor(table_id, config.clone(), broadcast_tx);
+        self.tables.write().await.insert(table_id, cmd_tx);
+        self.configs.write().await.insert(table_id, config);
         table_id
     }
 
-    /// Sends a command to a table actor (stub – always returns actor error).
+    async fn get_sender(&self, id: TableId) -> Option<ActorSender> {
+        self.tables.read().await.get(&id).cloned()
+    }
+
     pub async fn send_command(
         &self,
-        _table_id: TableId,
-        _cmd: TableCommand,
-    ) -> Result<(), TableError> {
-        Err(TableError::ActorError(
-            "stub registry – use direct actor spawn".into(),
-        ))
-    }
-
-    pub async fn join_table(
-        &self,
         table_id: TableId,
-        _player_id: PlayerId,
-        __user_id: UserId,
-        __stack: ChipAmount,
+        cmd: TableCommand,
     ) -> Result<(), TableError> {
-        let tables = self.tables.read().await;
-        if tables.contains_key(&table_id) {
-            Ok(())
-        } else {
-            Err(TableError::NotFound(table_id))
+        match cmd {
+            TableCommand::Join {
+                player_id,
+                table_id: _,
+                response_tx,
+            } => {
+                let stack = ChipAmount::new(1000).unwrap(); // fallback – contract lacks stack
+                let user_id = UserId(player_id.0);
+                {
+                    let mut map = self.player_to_user.write().await;
+                    map.insert(player_id, user_id);
+                }
+                let seat = {
+                    let mut seats = self.next_seat.write().await;
+                    let s = seats.entry(table_id).or_insert(0);
+                    let val = *s;
+                    *s = (val + 1) % 6;
+                    val
+                };
+                let sender = self
+                    .get_sender(table_id)
+                    .await
+                    .ok_or(TableError::NotFound(table_id))?;
+                let internal = InternalCommand::Join {
+                    user_id,
+                    seat,
+                    stack,
+                };
+                match sender.send(internal).await {
+                    Ok(()) => {
+                        let _ = response_tx.send(Ok(()));
+                        Ok(())
+                    }
+                    Err(e) => {
+                        let msg = format!("send failed: {}", e);
+                        let _ = response_tx.send(Err(TableError::ActorError(msg.clone())));
+                        Err(TableError::ActorError(msg))
+                    }
+                }
+            }
+            TableCommand::Heartbeat { table_id: _ } => Ok(()),
         }
     }
 
-    pub async fn heartbeat(&self, _table_id: TableId) {}
-
-    /// Direct join method for testing (bypasses contract limitations)
-    pub async fn join_table_direct(
+    pub async fn join_table_full(
         &self,
         table_id: TableId,
-        _user_id: UserId,
-        _seat: u8,
-        _stack: ChipAmount,
+        user_id: UserId,
+        seat: u8,
+        stack: ChipAmount,
     ) -> Result<(), TableError> {
-        // Stub: just check table exists
-        let tables = self.tables.read().await;
-        if tables.contains_key(&table_id) {
-            Ok(())
-        } else {
-            Err(TableError::NotFound(table_id))
-        }
+        let sender = self
+            .get_sender(table_id)
+            .await
+            .ok_or(TableError::NotFound(table_id))?;
+        let cmd = InternalCommand::Join {
+            user_id,
+            seat,
+            stack,
+        };
+        sender
+            .send(cmd)
+            .await
+            .map_err(|e| TableError::ActorError(format!("send failed: {}", e)))
     }
 
     pub async fn list_active_tables(&self) -> Vec<TableInfo> {
-        let configs = self.tables.read().await;
+        let configs = self.configs.read().await;
         configs
             .iter()
-            .map(|(id, config)| TableInfo {
+            .map(|(id, cfg)| TableInfo {
                 table_id: *id,
-                stake_level: config.stake_level,
-                max_players: config.max_players as u32,
-                status: "active".to_string(),
+                stake_level: cfg.stake_level,
+                max_players: cfg.max_players as u32,
                 current_players: 0,
+                status: "active".to_string(),
             })
             .collect()
     }
