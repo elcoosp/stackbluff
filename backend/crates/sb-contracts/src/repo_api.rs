@@ -1,34 +1,46 @@
+//! Data access traits (repository layer)
 use async_trait::async_trait;
-use sb_shared_types::errors::AppError;
-use sb_shared_types::request_context::RequestContext;
-use uuid::Uuid;
+use sb_shared_types::{RequestContext, UserId};
+use serde_json;
 
-#[derive(Debug, Clone)]
-pub struct UserInfo {
-    pub id: Uuid,
-    pub telegram_id: Option<i64>,
-    pub email: Option<String>,
-    pub password_hash: String,
+#[derive(Debug, thiserror::Error)]
+pub enum PersistenceError {
+    #[error("Constraint violation: {0}")]
+    ConstraintViolation(String),
+    #[error("Transient database error: {0}")]
+    Transient(String),
+    #[error("Not found")]
+    NotFound,
+}
+
+pub type PersistenceResult<T> = Result<T, PersistenceError>;
+
+pub struct UserCreate {
+    pub name: String,
+    pub initial_chips: i64,
 }
 
 #[async_trait]
-pub trait UserRepo: Send + Sync {
-    async fn find_or_create_by_telegram(
+pub trait UserRepository: Send + Sync {
+    async fn create_user(
         &self,
-        ctx: &RequestContext,
-        tg_id: i64,
-    ) -> Result<UserInfo, AppError>;
+        ctx: RequestContext,
+        create: UserCreate,
+    ) -> PersistenceResult<UserId>;
+    async fn get_user(&self, ctx: RequestContext, id: UserId) -> PersistenceResult<String>;
+    async fn update_chip_balance(
+        &self,
+        ctx: RequestContext,
+        user_id: UserId,
+        delta: i64,
+    ) -> PersistenceResult<()>;
+}
 
-    async fn create_email_user(
+#[async_trait]
+pub trait HandHistoryRepository: Send + Sync {
+    async fn store_hand(
         &self,
-        ctx: &RequestContext,
-        email: &str,
-        password_hash: &str,
-    ) -> Result<UserInfo, AppError>;
-
-    async fn find_by_email(
-        &self,
-        ctx: &RequestContext,
-        email: &str,
-    ) -> Result<Option<UserInfo>, AppError>;
+        ctx: RequestContext,
+        hand_data: serde_json::Value,
+    ) -> PersistenceResult<()>;
 }

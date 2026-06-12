@@ -1,9 +1,18 @@
-pub mod db_writer;
-pub mod leaderboard;
-pub mod mission_repo;
+pub mod commands;
+pub mod hand_history_repo;
 pub mod user_repo;
+pub mod writer_loop;
 
-pub use db_writer::{DbCommand, DbWriter, enable_wal, init_db_writer};
-pub use leaderboard::refresh_leaderboard;
-pub use mission_repo::MissionRepositoryImpl;
-pub use user_repo::UserRepositoryImpl;
+use sea_orm::DatabaseConnection;
+use tokio::sync::mpsc;
+
+pub fn init_writer_loop(
+    db: DatabaseConnection,
+) -> (
+    mpsc::UnboundedSender<commands::DbCommand>,
+    tokio::task::JoinHandle<()>,
+) {
+    let (tx, rx) = mpsc::unbounded_channel();
+    let handle = tokio::spawn(writer_loop::writer_loop(rx, db));
+    (tx, handle)
+}
