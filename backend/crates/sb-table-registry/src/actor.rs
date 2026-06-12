@@ -125,7 +125,6 @@ impl ActiveHand {
 
 #[allow(dead_code)]
 pub struct TableActor {
-    #[allow(dead_code)]
     table_id: TableId,
     config: TableConfig,
     players: HashMap<UserId, Player>,
@@ -221,7 +220,6 @@ impl TableActor {
             player.is_all_in = false;
         }
 
-        // Create PlayerId mapping for each user
         let mut mapping = HashMap::new();
         let players_vec: Vec<(PlayerId, ChipAmount)> = self
             .players
@@ -246,7 +244,6 @@ impl TableActor {
 
         let snapshot = self.players.clone();
         let mut active = ActiveHand::new(state, snapshot, mapping);
-
         if let Some(user_id) = active.current_user_turn() {
             active.schedule_timeout(user_id, self.cmd_tx.clone());
         }
@@ -310,7 +307,6 @@ impl TableActor {
             return;
         }
 
-        // Update player stack and current bet
         if let Some(player) = self.players.get_mut(&user_id) {
             match action_type {
                 ActionType::Call => {
@@ -357,12 +353,10 @@ impl TableActor {
         }
 
         info!("Auto‑fold due to timeout for player {}", user_id);
-
         let player_id = match hand.user_to_player_id.get(&user_id) {
             Some(pid) => *pid,
             None => return,
         };
-
         let _ = hand.state.apply_action(player_id, Action::Fold);
         hand.cancel_timeout();
 
