@@ -130,21 +130,21 @@ impl ActiveHand {
             .and_then(|pid| self.user_by_player_id.get(&pid).cloned())
     }
 
-    fn player_stack(&self, user_id: &UserId) -> Option<ChipAmount> {
+    fn player_stack(&self, user_id: UserId) -> Option<ChipAmount> {
         self.player_by_user_id
-            .get(user_id)
+            .get(&user_id)
             .and_then(|pid| self.state.player_stack(*pid))
     }
 
-    fn player_current_bet(&self, user_id: &UserId) -> Option<ChipAmount> {
+    fn player_current_bet(&self, user_id: UserId) -> Option<ChipAmount> {
         self.player_by_user_id
-            .get(user_id)
+            .get(&user_id)
             .and_then(|pid| self.state.player_current_bet(*pid))
     }
 
-    fn player_is_all_in(&self, user_id: &UserId) -> bool {
+    fn player_is_all_in(&self, user_id: UserId) -> bool {
         self.player_by_user_id
-            .get(user_id)
+            .get(&user_id)
             .map(|pid| self.state.player_is_all_in(*pid))
             .unwrap_or(false)
     }
@@ -225,7 +225,7 @@ impl TableActor {
             warn!(%user_id, stack = ?stack, min = ?self.config.min_buy_in, "Stack below min buy-in");
             return;
         }
-        let player = Player::new(user_id.clone(), seat, stack);
+        let player = Player::new(user_id, seat, stack);
         self.players.insert(user_id, player);
         self.broadcast_table_state().await;
         info!(%user_id, seat, "Player joined");
@@ -233,12 +233,12 @@ impl TableActor {
 
     async fn leave_player(&mut self, user_id: UserId) {
         if let Some(_player) = self.players.remove(&user_id) {
-            if let Some(hand) = &mut self.current_hand {
-                if let Some(pid) = hand.player_by_user_id.get(&user_id) {
-                    let _ = hand.state.apply_action(*pid, Action::Fold);
-                    hand.cancel_timeout();
-                    self.check_hand_completion().await;
-                }
+            if let Some(hand) = &mut self.current_hand
+                && let Some(pid) = hand.player_by_user_id.get(&user_id)
+            {
+                let _ = hand.state.apply_action(*pid, Action::Fold);
+                hand.cancel_timeout();
+                self.check_hand_completion().await;
             }
             self.broadcast_table_state().await;
             info!(%user_id, "Player left");
@@ -412,13 +412,13 @@ impl TableActor {
         for winner in &winners {
             pot = pot.checked_add(winner.amount).unwrap_or(pot);
             // Update actor's stored stack for the winning player
-            if let Some(user_id) = hand.user_by_player_id.get(&winner.player_id) {
-                if let Some(player) = self.players.get_mut(user_id) {
-                    player.stack = player
-                        .stack
-                        .checked_add(winner.amount)
-                        .unwrap_or(player.stack);
-                }
+            if let Some(user_id) = hand.user_by_player_id.get(&winner.player_id)
+                && let Some(player) = self.players.get_mut(user_id)
+            {
+                player.stack = player
+                    .stack
+                    .checked_add(winner.amount)
+                    .unwrap_or(player.stack);
             }
             info!(player_id = ?winner.player_id, amount = ?winner.amount, "Winner");
         }
@@ -433,16 +433,16 @@ impl TableActor {
             self.players
                 .keys()
                 .map(|uid| {
-                    let stack = hand.player_stack(uid).unwrap_or_else(zero);
-                    let current_bet = hand.player_current_bet(uid).unwrap_or_else(zero);
-                    let is_all_in = hand.player_is_all_in(uid);
-                    (uid.clone(), stack, current_bet, is_all_in)
+                    let stack = hand.player_stack(*uid).unwrap_or_else(zero);
+                    let current_bet = hand.player_current_bet(*uid).unwrap_or_else(zero);
+                    let is_all_in = hand.player_is_all_in(*uid);
+                    (*uid, stack, current_bet, is_all_in)
                 })
                 .collect()
         } else {
             self.players
                 .iter()
-                .map(|(uid, p)| (uid.clone(), p.stack, zero(), false))
+                .map(|(uid, p)| (*uid, p.stack, zero(), false))
                 .collect()
         };
         // Convert community cards from sb_shared_types::Card to sb_ws_messages::Card
@@ -461,7 +461,7 @@ impl TableActor {
             })
             .unwrap_or_default();
         let state = TableStateUpdate {
-            table_id: self.table_id.clone(),
+            table_id: self.table_id,
             players: players_state,
             current_hand_in_progress: self.current_hand.is_some(),
             community_cards,
@@ -509,10 +509,10 @@ mod tests {
         let user1 = UserId(Uuid::new_v4());
         let user2 = UserId(Uuid::new_v4());
         actor
-            .join_player(user1.clone(), 0, ChipAmount::new(500).unwrap())
+            .join_player(user1, 0, ChipAmount::new(500).unwrap())
             .await;
         actor
-            .join_player(user2.clone(), 1, ChipAmount::new(500).unwrap())
+            .join_player(user2, 1, ChipAmount::new(500).unwrap())
             .await;
 
         actor.start_new_hand().await;
@@ -520,16 +520,10 @@ mod tests {
 
         // First action: raise
         actor
-            .process_action(
-                user1.clone(),
-                ActionType::Raise,
-                Some(ChipAmount::new(50).unwrap()),
-            )
+            .process_action(user1, ActionType::Raise, Some(ChipAmount::new(50).unwrap()))
             .await;
         // Second: call
-        actor
-            .process_action(user2.clone(), ActionType::Call, None)
-            .await;
+        actor.process_action(user2, ActionType::Call, None).await;
 
         let hand = actor.current_hand.as_ref().unwrap();
         assert!(!hand.state.community_cards().is_empty() || !hand.state.is_hand_complete());
