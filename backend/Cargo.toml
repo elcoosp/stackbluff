@@ -16,6 +16,7 @@ members = [
 ]
 
 [workspace.dependencies]
+sb-game-engine = { path = "crates/sb-game-engine" }
 async-trait = { version = "0.1.89" }
 anyhow = { version = "1.0.102" }
 thiserror = { version = "2.0.18" }
