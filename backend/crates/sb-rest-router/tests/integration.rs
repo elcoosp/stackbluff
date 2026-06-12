@@ -1,9 +1,9 @@
 use axum::http::StatusCode;
 use axum_test::TestServer;
+use sb_contracts::lobby_api::{TableInfo, TableRepo, TableService};
 use sb_rest_router::create_router;
-use sb_contracts::lobby_api::{TableRepo, TableService, TableInfo};
+use sb_shared_types::{StakeLevel, TableId};
 use sb_table_registry::registry::Registry;
-use sb_shared_types::{TableId, StakeLevel};
 use std::sync::Arc;
 
 mockall::mock! {

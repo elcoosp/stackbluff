@@ -31,11 +31,24 @@ pub trait TableService: Send + Sync {
 #[async_trait]
 pub trait AuthService: Send + Sync {
     async fn authenticate(&self, token: &str, ctx: &RequestContext) -> Result<UserId, AppError>;
-    async fn telegram_auth(&self, ctx: &RequestContext, init_data: &str) -> Result<AuthResult, AppError>;
-    async fn register(&self, ctx: &RequestContext, email: &str, password: &str) -> Result<AuthResult, AppError>;
-    async fn login(&self, ctx: &RequestContext, email: &str, password: &str) -> Result<AuthResult, AppError>;
+    async fn telegram_auth(
+        &self,
+        ctx: &RequestContext,
+        init_data: &str,
+    ) -> Result<AuthResult, AppError>;
+    async fn register(
+        &self,
+        ctx: &RequestContext,
+        email: &str,
+        password: &str,
+    ) -> Result<AuthResult, AppError>;
+    async fn login(
+        &self,
+        ctx: &RequestContext,
+        email: &str,
+        password: &str,
+    ) -> Result<AuthResult, AppError>;
     async fn verify_token(&self, token: &str) -> Result<TokenClaims, AppError>;
-
 }
 
 #[async_trait]

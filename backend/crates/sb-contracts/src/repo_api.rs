@@ -1,7 +1,7 @@
 use async_trait::async_trait;
-use uuid::Uuid;
 use sb_shared_types::errors::AppError;
 use sb_shared_types::request_context::RequestContext;
+use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub struct UserInfo {

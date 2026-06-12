@@ -1,34 +1,22 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/sb-auth",
-    "crates/sb-contracts",
-    "crates/sb-db-entities",
-    "crates/sb-db-repos",
-    "crates/sb-game-engine",
     "crates/sb-rest-router",
-    "crates/sb-shared-types",
     "crates/sb-table-registry",
     "crates/sb-ws-handler",
-    "crates/sb-ws-messages",
+    "crates/sb-table-registry",
+    "crates/sb-ws-handler",
+    "crates/sb-game-engine",
+    "crates/sb-db-repos",
+    "crates/sb-db-entities",
+    "crates/sb-shared-types",
+    "crates/sb-contracts",
     "migration",
+    "crates/sb-auth",
 ]
 
-[workspace.package]
-edition = "2024"
-rust-version = "1.94"
-
 [workspace.dependencies]
-tracing-appender = { version = "0.2" }
-
-sb-contracts = { path = "crates/sb-contracts" }
-
-sb-auth = { path = "crates/sb-auth" }
-
-sb-shared-types = { path = "crates/sb-shared-types" }
 sb-game-engine = { path = "crates/sb-game-engine" }
-sb-ws-messages = { path = "crates/sb-ws-messages" }
-sb-ws-handler = { path = "crates/sb-ws-handler" }
 async-trait = { version = "0.1.89" }
 anyhow = { version = "1.0.102" }
 thiserror = { version = "2.0.18" }
@@ -62,3 +50,13 @@ tower = { version = "0.4.13" }
 tower-http = { version = "0.5.2", features = ["auth"] }
 tokio-tungstenite = { version = "0.29.0" }
 http = { version = "1.1.0" }
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.94"
+
+# (Moved from [workspace.package] - fix edition inheritance)
+sb-shared-types = { path = "crates/sb-shared-types" }
+sb-game-engine = { path = "crates/sb-game-engine" }
+sb-ws-messages = { path = "crates/sb-ws-messages" }
+sb-ws-handler = { path = "crates/sb-ws-handler" }

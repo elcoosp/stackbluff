@@ -16,4 +16,4 @@ impl Authenticator for NoopAuthenticator {
     }
 }
 pub mod middleware;
-pub use middleware::{auth_middleware, AuthUser};
+pub use middleware::{AuthUser, auth_middleware};

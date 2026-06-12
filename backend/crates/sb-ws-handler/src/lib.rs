@@ -8,18 +8,26 @@ use axum::{
 };
 use futures::{SinkExt, StreamExt};
 use sb_auth::Authenticator;
-use sb_table_registry::Registry;
 use std::sync::Arc;
+use tokio::sync::broadcast;
 use tokio::time::{self, Duration, Instant};
 use tracing::{error, info, warn};
 
-struct AppState {
-    auth: Arc<dyn Authenticator>,
-    registry: Registry,
+pub type BroadcastSender<T> = broadcast::Sender<T>;
+pub type BroadcastReceiver<T> = broadcast::Receiver<T>;
+
+pub fn broadcast_channel<T: Clone>(capacity: usize) -> (BroadcastSender<T>, BroadcastReceiver<T>) {
+    broadcast::channel(capacity)
 }
 
-pub fn ws_route(auth: Arc<dyn Authenticator>, registry: Registry) -> Router {
-    let state = Arc::new(AppState { auth, registry });
+struct AppState {
+    auth: Arc<dyn Authenticator>,
+    // Registry temporarily removed to break cyclic dependency
+    // registry: Registry,
+}
+
+pub fn ws_route(auth: Arc<dyn Authenticator>) -> Router {
+    let state = Arc::new(AppState { auth });
     Router::new()
         .route("/ws/game", get(ws_handler))
         .with_state(state)
@@ -49,11 +57,11 @@ async fn ws_handler(
         }
     };
     info!(%user_id, "WebSocket upgrade authenticated");
-    let registry = state.registry.clone();
-    ws.on_upgrade(move |socket| handle_websocket(socket, registry))
+    // Registry temporarily removed – will be re-added later
+    ws.on_upgrade(handle_websocket)
 }
 
-async fn handle_websocket(socket: axum::extract::ws::WebSocket, _registry: Registry) {
+async fn handle_websocket(socket: axum::extract::ws::WebSocket) {
     let (mut sender, mut receiver) = socket.split();
     let mut ping_interval = time::interval(Duration::from_secs(30));
     let mut last_pong = Instant::now();
