@@ -9,7 +9,7 @@ use tokio::time::sleep;
 use tracing::{debug, error, info, warn};
 
 use sb_game_engine::game_state::{Action, GameState};
-use sb_shared_types::{Card, ActionType, ChipAmount, PlayerId, TableConfig, TableId, UserId};
+use sb_shared_types::{ActionType, ChipAmount, PlayerId, TableConfig, TableId, UserId};
 use sb_ws_handler::BroadcastSender;
 use sb_ws_messages::{ServerMessage, TableStateUpdate};
 
@@ -123,7 +123,9 @@ impl ActiveHand {
     }
 }
 
+#[allow(dead_code)]
 pub struct TableActor {
+    #[allow(dead_code)]
     table_id: TableId,
     config: TableConfig,
     players: HashMap<UserId, Player>,
@@ -414,5 +416,28 @@ impl TableActor {
             community_cards: vec![],
         };
         let _ = self.broadcast_tx.send(ServerMessage::TableState(state));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::sync::broadcast;
+    use uuid::Uuid;
+
+    #[tokio::test]
+    async fn test_actor_creation() {
+        let table_id = TableId(Uuid::new_v4());
+        let config = TableConfig {
+            stake_level: sb_shared_types::StakeLevel::Low,
+            max_players: 6,
+            variant: sb_shared_types::GameVariant::Holdem,
+            min_buy_in: ChipAmount::new(100).unwrap(),
+            max_buy_in: ChipAmount::new(1000).unwrap(),
+        };
+        let (tx, _) = broadcast::channel(16);
+        let (cmd_tx, _) = mpsc::channel(32);
+        let actor = TableActor::new(table_id, config, tx, cmd_tx);
+        assert_eq!(actor.players.len(), 0);
     }
 }
