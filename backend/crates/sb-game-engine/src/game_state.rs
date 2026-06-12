@@ -810,3 +810,37 @@ mod tests {
         assert!(total_for_c > 0);
     }
 }
+
+impl GameState {
+    /// Returns the PlayerId of the player whose turn it is
+    pub fn current_player_id(&self) -> Option<PlayerId> {
+        if self.hand_complete || self.current_round == BettingRound::Showdown {
+            return None;
+        }
+        self.players.get(self.current_player_index).map(|p| p.player_id)
+    }
+
+    /// Returns the amount needed to call for the current player
+    pub fn current_call_amount(&self) -> ChipAmount {
+        if let Some(player) = self.players.get(self.current_player_index) {
+            let current_bet = self.round_bets[self.current_player_index];
+            if current_bet < self.smallest_bet {
+                self.smallest_bet - current_bet
+            } else {
+                ChipAmount::new(0).unwrap()
+            }
+        } else {
+            ChipAmount::new(0).unwrap()
+        }
+    }
+
+    /// Returns the minimum raise amount
+    pub fn min_raise_amount(&self) -> ChipAmount {
+        self.min_raise
+    }
+
+    /// Returns the current community cards
+    pub fn community_cards(&self) -> &[Card] {
+        &self.community_cards
+    }
+}
