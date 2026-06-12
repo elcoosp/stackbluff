@@ -3,14 +3,19 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
-use tokio::sync::{broadcast, mpsc};
+use tokio::sync::mpsc;
 use tokio::time::sleep;
 use tracing::{debug, error, info, warn};
 
-use sb_game_engine::{ActionType, GameEngine};
-use sb_shared_types::{ChipAmount, StakeLevel, TableConfig, TableId, UserId};
+use sb_game_engine::GameEngine;
+use sb_shared_types::{ActionType, ChipAmount, TableConfig, TableId, UserId};
 use sb_ws_handler::BroadcastSender;
 use sb_ws_messages::{ActionRequired, Card, HandResult, ServerMessage, TableStateUpdate};
+
+// Helper for zero ChipAmount
+fn zero_chips() -> ChipAmount {
+    ChipAmount::new(0).unwrap()
+}
 
 #[derive(Debug, Clone)]
 pub enum TableCommand {
@@ -64,7 +69,7 @@ impl Player {
             user_id,
             seat,
             stack,
-            current_bet: ChipAmount::ZERO,
+            current_bet: zero_chips(),
             is_all_in: false,
         }
     }
@@ -197,7 +202,7 @@ impl TableActor {
         }
 
         for player in self.players.values_mut() {
-            player.current_bet = ChipAmount::ZERO;
+            player.current_bet = zero_chips();
             player.is_all_in = false;
         }
 
@@ -246,9 +251,9 @@ impl TableActor {
             .players
             .get(&user_id)
             .map(|p| p.stack)
-            .unwrap_or(ChipAmount::ZERO);
+            .unwrap_or_else(zero_chips);
         if matches!(action_type, ActionType::Raise) {
-            let bet = amount.unwrap_or(ChipAmount::ZERO);
+            let bet = amount.unwrap_or_else(zero_chips);
             if bet > player_stack {
                 warn!("Insufficient stack for raise");
                 return;
@@ -265,21 +270,29 @@ impl TableActor {
                 ActionType::Call => {
                     let to_call = hand.engine.current_call_amount(&user_id);
                     let call_amount = to_call.min(player.stack);
-                    player.stack = ChipAmount::checked_sub(player.stack, call_amount)
-                        .unwrap_or(ChipAmount::ZERO);
-                    player.current_bet = ChipAmount::checked_add(player.current_bet, call_amount)
-                        .unwrap_or(ChipAmount::ZERO);
+                    player.stack = player
+                        .stack
+                        .checked_sub(call_amount)
+                        .unwrap_or_else(zero_chips);
+                    player.current_bet = player
+                        .current_bet
+                        .checked_add(call_amount)
+                        .unwrap_or_else(zero_chips);
                 }
                 ActionType::Raise => {
-                    let raise_amount = amount.unwrap_or(ChipAmount::ZERO);
-                    player.stack = ChipAmount::checked_sub(player.stack, raise_amount)
-                        .unwrap_or(ChipAmount::ZERO);
-                    player.current_bet = ChipAmount::checked_add(player.current_bet, raise_amount)
-                        .unwrap_or(ChipAmount::ZERO);
+                    let raise_amount = amount.unwrap_or_else(zero_chips);
+                    player.stack = player
+                        .stack
+                        .checked_sub(raise_amount)
+                        .unwrap_or_else(zero_chips);
+                    player.current_bet = player
+                        .current_bet
+                        .checked_add(raise_amount)
+                        .unwrap_or_else(zero_chips);
                 }
                 _ => {}
             }
-            if player.stack == ChipAmount::ZERO {
+            if player.stack == zero_chips() {
                 player.is_all_in = true;
             }
         }
@@ -325,13 +338,15 @@ impl TableActor {
         }
 
         let winners = hand.engine.determine_winners();
-        let mut pot = ChipAmount::ZERO;
+        let mut pot = zero_chips();
         for winner in &winners {
-            pot = ChipAmount::checked_add(pot, winner.amount).unwrap_or(pot);
+            pot = pot.checked_add(winner.amount).unwrap_or(pot);
             if let Some(player) = self.players.get_mut(&winner.user_id) {
-                player.stack =
-                    ChipAmount::checked_add(player.stack, winner.amount).unwrap_or(player.stack);
-                player.current_bet = ChipAmount::ZERO;
+                player.stack = player
+                    .stack
+                    .checked_add(winner.amount)
+                    .unwrap_or(player.stack);
+                player.current_bet = zero_chips();
             }
         }
 
@@ -396,7 +411,7 @@ impl TableActor {
             user_id,
             to_call,
             min_raise,
-            can_check: to_call == ChipAmount::ZERO,
+            can_check: to_call == zero_chips(),
         });
         let _ = self.broadcast_tx.send(msg);
     }
@@ -426,8 +441,9 @@ mod tests {
     #[tokio::test]
     async fn test_raise_and_call() {
         let table_id = TableId("test1".to_string());
+        let stake_level = sb_shared_types::StakeLevel::SmallStakes;
         let config = TableConfig {
-            stake_level: StakeLevel::SmallStakes,
+            stake_level,
             max_players: 6,
             min_buyin: ChipAmount::new(100).unwrap(),
             max_buyin: ChipAmount::new(1000).unwrap(),
