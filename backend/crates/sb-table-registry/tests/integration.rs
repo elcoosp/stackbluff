@@ -1,3 +1,4 @@
+use sb_contracts::TableError;
 use sb_shared_types::{ChipAmount, GameVariant, StakeLevel, TableConfig, TableId, UserId};
 use sb_table_registry::Registry;
 use uuid::Uuid;
@@ -16,7 +17,7 @@ async fn test_registry_creates_table_and_joins_player() {
     assert_ne!(table_id, TableId(Uuid::nil()));
 
     let user_id = UserId(Uuid::new_v4());
-    let result = registry
+    let result: Result<(), TableError> = registry
         .join_table_direct(table_id, user_id, 0, ChipAmount::new(500).unwrap())
         .await;
     assert!(result.is_ok());
