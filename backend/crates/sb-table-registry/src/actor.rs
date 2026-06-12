@@ -291,8 +291,8 @@ impl TableActor {
         let mut user_by_player_id = HashMap::new();
         let mut player_by_user_id = HashMap::new();
         for player in self.players.values() {
-            user_by_player_id.insert(player.player_id, player.user_id.clone());
-            player_by_user_id.insert(player.user_id.clone(), player.player_id);
+            user_by_player_id.insert(player.player_id, player.user_id);
+            player_by_user_id.insert(player.user_id, player.player_id);
         }
 
         let mut active = ActiveHand::new(state, user_by_player_id, player_by_user_id, dealer_index);
@@ -431,8 +431,8 @@ impl TableActor {
     async fn broadcast_table_state(&self) {
         let players_state = if let Some(hand) = &self.current_hand {
             self.players
-                .iter()
-                .map(|(uid, _)| {
+                .keys()
+                .map(|uid| {
                     let stack = hand.player_stack(uid).unwrap_or_else(zero);
                     let current_bet = hand.player_current_bet(uid).unwrap_or_else(zero);
                     let is_all_in = hand.player_is_all_in(uid);
