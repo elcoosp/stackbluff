@@ -4,8 +4,6 @@ members = [
     "crates/sb-rest-router",
     "crates/sb-table-registry",
     "crates/sb-ws-handler",
-    "crates/sb-table-registry",
-    "crates/sb-ws-handler",
     "crates/sb-game-engine",
     "crates/sb-db-repos",
     "crates/sb-db-entities",
@@ -15,8 +13,15 @@ members = [
     "crates/sb-auth",
 ]
 
+[workspace.package]
+edition = "2024"
+rust-version = "1.94"
+
 [workspace.dependencies]
+sb-shared-types = { path = "crates/sb-shared-types" }
 sb-game-engine = { path = "crates/sb-game-engine" }
+sb-ws-messages = { path = "crates/sb-ws-messages" }
+sb-ws-handler = { path = "crates/sb-ws-handler" }
 async-trait = { version = "0.1.89" }
 anyhow = { version = "1.0.102" }
 thiserror = { version = "2.0.18" }
@@ -50,11 +55,3 @@ tower = { version = "0.4.13" }
 tower-http = { version = "0.5.2", features = ["auth"] }
 tokio-tungstenite = { version = "0.29.0" }
 http = { version = "1.1.0" }
-
-[workspace.package]
-edition = "2024"
-rust-version = "1.94"
-sb-shared-types = { path = "crates/sb-shared-types" }
-sb-game-engine = { path = "crates/sb-game-engine" }
-sb-ws-messages = { path = "crates/sb-ws-messages" }
-sb-ws-handler = { path = "crates/sb-ws-handler" }
