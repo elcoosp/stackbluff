@@ -3,22 +3,34 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
-use tokio::sync::{mpsc, broadcast};
+use tokio::sync::{broadcast, mpsc};
 use tokio::time::sleep;
-use tracing::{info, warn, error, debug};
+use tracing::{debug, error, info, warn};
 
-use sb_shared_types::{UserId, ChipAmount, TableId, TableConfig, StakeLevel};
-use sb_game_engine::{GameEngine, ActionType};
-use sb_ws_messages::{ServerMessage, TableStateUpdate, ActionRequired, HandResult, Card};
+use sb_game_engine::{ActionType, GameEngine};
+use sb_shared_types::{ChipAmount, StakeLevel, TableConfig, TableId, UserId};
 use sb_ws_handler::BroadcastSender;
+use sb_ws_messages::{ActionRequired, Card, HandResult, ServerMessage, TableStateUpdate};
 
 #[derive(Debug, Clone)]
 pub enum TableCommand {
-    Join { user_id: UserId, seat: u8, stack: ChipAmount },
-    Leave { user_id: UserId },
-    Action { user_id: UserId, action_type: ActionType, amount: Option<ChipAmount> },
+    Join {
+        user_id: UserId,
+        seat: u8,
+        stack: ChipAmount,
+    },
+    Leave {
+        user_id: UserId,
+    },
+    Action {
+        user_id: UserId,
+        action_type: ActionType,
+        amount: Option<ChipAmount>,
+    },
     StartHand,
-    Timeout { user_id: UserId },
+    Timeout {
+        user_id: UserId,
+    },
 }
 
 pub struct TableHandle {
@@ -26,8 +38,13 @@ pub struct TableHandle {
 }
 
 impl TableHandle {
-    pub fn new(cmd_tx: mpsc::Sender<TableCommand>) -> Self { Self { cmd_tx } }
-    pub async fn send(&self, cmd: TableCommand) -> Result<(), mpsc::error::SendError<TableCommand>> {
+    pub fn new(cmd_tx: mpsc::Sender<TableCommand>) -> Self {
+        Self { cmd_tx }
+    }
+    pub async fn send(
+        &self,
+        cmd: TableCommand,
+    ) -> Result<(), mpsc::error::SendError<TableCommand>> {
         self.cmd_tx.send(cmd).await
     }
 }
@@ -43,7 +60,13 @@ struct Player {
 
 impl Player {
     fn new(user_id: UserId, seat: u8, stack: ChipAmount) -> Self {
-        Self { user_id, seat, stack, current_bet: ChipAmount::ZERO, is_all_in: false }
+        Self {
+            user_id,
+            seat,
+            stack,
+            current_bet: ChipAmount::ZERO,
+            is_all_in: false,
+        }
     }
 }
 
@@ -56,11 +79,18 @@ struct ActiveHand {
 
 impl ActiveHand {
     fn new(engine: GameEngine, players: HashMap<UserId, Player>) -> Self {
-        Self { engine, players, timeout_user_id: None, timeout_handle: None }
+        Self {
+            engine,
+            players,
+            timeout_user_id: None,
+            timeout_handle: None,
+        }
     }
 
     fn cancel_timeout(&mut self) {
-        if let Some(handle) = self.timeout_handle.take() { handle.abort(); }
+        if let Some(handle) = self.timeout_handle.take() {
+            handle.abort();
+        }
         self.timeout_user_id = None;
     }
 
@@ -92,7 +122,14 @@ impl TableActor {
         broadcast_tx: BroadcastSender<ServerMessage>,
         cmd_tx: mpsc::Sender<TableCommand>,
     ) -> Self {
-        Self { table_id, config, players: HashMap::new(), current_hand: None, broadcast_tx, cmd_tx }
+        Self {
+            table_id,
+            config,
+            players: HashMap::new(),
+            current_hand: None,
+            broadcast_tx,
+            cmd_tx,
+        }
     }
 
     pub async fn run(mut self, mut rx: mpsc::Receiver<TableCommand>) {
@@ -106,9 +143,17 @@ impl TableActor {
     async fn handle_command(&mut self, cmd: TableCommand) {
         debug!("Handling command: {:?}", cmd);
         match cmd {
-            TableCommand::Join { user_id, seat, stack } => self.join_player(user_id, seat, stack).await,
+            TableCommand::Join {
+                user_id,
+                seat,
+                stack,
+            } => self.join_player(user_id, seat, stack).await,
             TableCommand::Leave { user_id } => self.leave_player(user_id).await,
-            TableCommand::Action { user_id, action_type, amount } => self.process_action(user_id, action_type, amount).await,
+            TableCommand::Action {
+                user_id,
+                action_type,
+                amount,
+            } => self.process_action(user_id, action_type, amount).await,
             TableCommand::StartHand => self.start_new_hand().await,
             TableCommand::Timeout { user_id } => self.handle_timeout(user_id).await,
         }
@@ -156,7 +201,8 @@ impl TableActor {
             player.is_all_in = false;
         }
 
-        let players_for_engine: HashMap<UserId, ChipAmount> = self.players
+        let players_for_engine: HashMap<UserId, ChipAmount> = self
+            .players
             .iter()
             .map(|(id, p)| (id.clone(), p.stack))
             .collect();
@@ -177,10 +223,18 @@ impl TableActor {
         self.broadcast_table_state().await;
     }
 
-    async fn process_action(&mut self, user_id: UserId, action_type: ActionType, amount: Option<ChipAmount>) {
+    async fn process_action(
+        &mut self,
+        user_id: UserId,
+        action_type: ActionType,
+        amount: Option<ChipAmount>,
+    ) {
         let hand = match &mut self.current_hand {
             Some(h) => h,
-            None => { warn!("No active hand"); return; }
+            None => {
+                warn!("No active hand");
+                return;
+            }
         };
 
         if hand.engine.current_player() != Some(&user_id) {
@@ -188,7 +242,11 @@ impl TableActor {
             return;
         }
 
-        let player_stack = hand.players.get(&user_id).map(|p| p.stack).unwrap_or(ChipAmount::ZERO);
+        let player_stack = hand
+            .players
+            .get(&user_id)
+            .map(|p| p.stack)
+            .unwrap_or(ChipAmount::ZERO);
         if matches!(action_type, ActionType::Raise) {
             let bet = amount.unwrap_or(ChipAmount::ZERO);
             if bet > player_stack {
@@ -207,17 +265,23 @@ impl TableActor {
                 ActionType::Call => {
                     let to_call = hand.engine.current_call_amount(&user_id);
                     let call_amount = to_call.min(player.stack);
-                    player.stack = ChipAmount::checked_sub(player.stack, call_amount).unwrap_or(ChipAmount::ZERO);
-                    player.current_bet = ChipAmount::checked_add(player.current_bet, call_amount).unwrap_or(ChipAmount::ZERO);
+                    player.stack = ChipAmount::checked_sub(player.stack, call_amount)
+                        .unwrap_or(ChipAmount::ZERO);
+                    player.current_bet = ChipAmount::checked_add(player.current_bet, call_amount)
+                        .unwrap_or(ChipAmount::ZERO);
                 }
                 ActionType::Raise => {
                     let raise_amount = amount.unwrap_or(ChipAmount::ZERO);
-                    player.stack = ChipAmount::checked_sub(player.stack, raise_amount).unwrap_or(ChipAmount::ZERO);
-                    player.current_bet = ChipAmount::checked_add(player.current_bet, raise_amount).unwrap_or(ChipAmount::ZERO);
+                    player.stack = ChipAmount::checked_sub(player.stack, raise_amount)
+                        .unwrap_or(ChipAmount::ZERO);
+                    player.current_bet = ChipAmount::checked_add(player.current_bet, raise_amount)
+                        .unwrap_or(ChipAmount::ZERO);
                 }
                 _ => {}
             }
-            if player.stack == ChipAmount::ZERO { player.is_all_in = true; }
+            if player.stack == ChipAmount::ZERO {
+                player.is_all_in = true;
+            }
         }
 
         hand.cancel_timeout();
@@ -235,7 +299,9 @@ impl TableActor {
             Some(h) => h,
             None => return,
         };
-        if Some(&user_id) != hand.timeout_user_id.as_ref() { return; }
+        if Some(&user_id) != hand.timeout_user_id.as_ref() {
+            return;
+        }
         info!("Auto‑fold due to timeout for player {}", user_id);
         let _ = hand.engine.process_action(&user_id, ActionType::Fold, None);
         hand.cancel_timeout();
@@ -263,16 +329,28 @@ impl TableActor {
         for winner in &winners {
             pot = ChipAmount::checked_add(pot, winner.amount).unwrap_or(pot);
             if let Some(player) = self.players.get_mut(&winner.user_id) {
-                player.stack = ChipAmount::checked_add(player.stack, winner.amount).unwrap_or(player.stack);
+                player.stack =
+                    ChipAmount::checked_add(player.stack, winner.amount).unwrap_or(player.stack);
                 player.current_bet = ChipAmount::ZERO;
             }
         }
 
         let hand_result_msg = ServerMessage::HandResult(HandResult {
             table_id: self.table_id.clone(),
-            winners: winners.iter().map(|w| (w.user_id.clone(), w.amount)).collect(),
+            winners: winners
+                .iter()
+                .map(|w| (w.user_id.clone(), w.amount))
+                .collect(),
             pot,
-            community_cards: hand.engine.community_cards().iter().map(|c| Card { suit: c.suit.clone(), rank: c.rank.clone() }).collect(),
+            community_cards: hand
+                .engine
+                .community_cards()
+                .iter()
+                .map(|c| Card {
+                    suit: c.suit.clone(),
+                    rank: c.rank.clone(),
+                })
+                .collect(),
         });
         let _ = self.broadcast_tx.send(hand_result_msg);
 
@@ -283,9 +361,26 @@ impl TableActor {
     async fn broadcast_table_state(&self) {
         let state = TableStateUpdate {
             table_id: self.table_id.clone(),
-            players: self.players.iter().map(|(id, p)| (id.clone(), p.stack, p.current_bet, p.is_all_in)).collect(),
+            players: self
+                .players
+                .iter()
+                .map(|(id, p)| (id.clone(), p.stack, p.current_bet, p.is_all_in))
+                .collect(),
             current_hand_in_progress: self.current_hand.is_some(),
-            community_cards: self.current_hand.as_ref().map(|h| h.engine.community_cards().iter().map(|c| Card { suit: c.suit.clone(), rank: c.rank.clone() }).collect()).unwrap_or_default(),
+            community_cards: self
+                .current_hand
+                .as_ref()
+                .map(|h| {
+                    h.engine
+                        .community_cards()
+                        .iter()
+                        .map(|c| Card {
+                            suit: c.suit.clone(),
+                            rank: c.rank.clone(),
+                        })
+                        .collect()
+                })
+                .unwrap_or_default(),
         };
         let _ = self.broadcast_tx.send(ServerMessage::TableState(state));
     }
@@ -342,12 +437,24 @@ mod tests {
         let mut actor = TableActor::new(table_id, config, broadcast_tx, cmd_tx);
         let (uid1, _) = new_test_player(1, 1, 500);
         let (uid2, _) = new_test_player(2, 2, 500);
-        actor.join_player(uid1.clone(), 1, ChipAmount::new(500).unwrap()).await;
-        actor.join_player(uid2.clone(), 2, ChipAmount::new(500).unwrap()).await;
+        actor
+            .join_player(uid1.clone(), 1, ChipAmount::new(500).unwrap())
+            .await;
+        actor
+            .join_player(uid2.clone(), 2, ChipAmount::new(500).unwrap())
+            .await;
         actor.start_new_hand().await;
         assert!(actor.current_hand.is_some());
-        actor.process_action(uid1.clone(), ActionType::Raise, Some(ChipAmount::new(50).unwrap())).await;
-        actor.process_action(uid2.clone(), ActionType::Call, None).await;
+        actor
+            .process_action(
+                uid1.clone(),
+                ActionType::Raise,
+                Some(ChipAmount::new(50).unwrap()),
+            )
+            .await;
+        actor
+            .process_action(uid2.clone(), ActionType::Call, None)
+            .await;
         let hand = actor.current_hand.as_ref().unwrap();
         assert!(!hand.engine.community_cards().is_empty() || !hand.engine.is_hand_complete());
     }

@@ -1,6 +1,6 @@
 use async_trait::async_trait;
-use sb_shared_types::{TableId, StakeLevel, AppError};
-use serde::{Serialize, Deserialize};
+use sb_shared_types::{AppError, StakeLevel, TableId};
+use serde::{Deserialize, Serialize};
 
 /// Public information about a table, used for lobby listing.
 #[derive(Debug, Clone, Serialize, Deserialize)]

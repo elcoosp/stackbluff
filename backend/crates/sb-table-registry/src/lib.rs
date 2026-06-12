@@ -2,10 +2,10 @@
 
 pub mod actor;
 
-use tokio::sync::mpsc;
+use sb_shared_types::{TableConfig, TableId};
 use sb_ws_handler::BroadcastSender;
 use sb_ws_messages::ServerMessage;
-use sb_shared_types::{TableId, TableConfig};
+use tokio::sync::mpsc;
 
 pub fn spawn_table_actor(
     table_id: TableId,

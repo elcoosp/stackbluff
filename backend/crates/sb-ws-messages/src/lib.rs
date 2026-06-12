@@ -1,7 +1,7 @@
 //! WebSocket message types shared between frontend and backend.
 
-use sb_shared_types::{UserId, ChipAmount, TableId};
-use serde::{Serialize, Deserialize};
+use sb_shared_types::{ChipAmount, TableId, UserId};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
