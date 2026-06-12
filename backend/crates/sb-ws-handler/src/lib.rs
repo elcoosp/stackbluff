@@ -10,8 +10,16 @@ use futures::{SinkExt, StreamExt};
 use sb_auth::Authenticator;
 use sb_table_registry::Registry;
 use std::sync::Arc;
+use tokio::sync::broadcast;
 use tokio::time::{self, Duration, Instant};
 use tracing::{error, info, warn};
+
+pub type BroadcastSender<T> = broadcast::Sender<T>;
+pub type BroadcastReceiver<T> = broadcast::Receiver<T>;
+
+pub fn broadcast_channel<T: Clone>(capacity: usize) -> (BroadcastSender<T>, BroadcastReceiver<T>) {
+    broadcast::channel(capacity)
+}
 
 struct AppState {
     auth: Arc<dyn Authenticator>,

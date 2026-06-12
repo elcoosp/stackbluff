@@ -9,7 +9,7 @@ use tracing::{info, warn, error, debug};
 
 use sb_shared_types::{UserId, ChipAmount, TableId, TableConfig, StakeLevel};
 use sb_game_engine::{GameEngine, ActionType};
-use sb_ws_messages::{ServerMessage, TableStateUpdate, ActionRequired, HandResult};
+use sb_ws_messages::{ServerMessage, TableStateUpdate, ActionRequired, HandResult, Card};
 use sb_ws_handler::BroadcastSender;
 
 #[derive(Debug, Clone)]
@@ -272,7 +272,7 @@ impl TableActor {
             table_id: self.table_id.clone(),
             winners: winners.iter().map(|w| (w.user_id.clone(), w.amount)).collect(),
             pot,
-            community_cards: hand.engine.community_cards().to_vec(),
+            community_cards: hand.engine.community_cards().iter().map(|c| Card { suit: c.suit.clone(), rank: c.rank.clone() }).collect(),
         });
         let _ = self.broadcast_tx.send(hand_result_msg);
 
@@ -285,7 +285,7 @@ impl TableActor {
             table_id: self.table_id.clone(),
             players: self.players.iter().map(|(id, p)| (id.clone(), p.stack, p.current_bet, p.is_all_in)).collect(),
             current_hand_in_progress: self.current_hand.is_some(),
-            community_cards: self.current_hand.as_ref().map(|h| h.engine.community_cards().to_vec()).unwrap_or_default(),
+            community_cards: self.current_hand.as_ref().map(|h| h.engine.community_cards().iter().map(|c| Card { suit: c.suit.clone(), rank: c.rank.clone() }).collect()).unwrap_or_default(),
         };
         let _ = self.broadcast_tx.send(ServerMessage::TableState(state));
     }
