@@ -1,24 +1,19 @@
-//! Production‑ready table actor – stable PlayerId, dealer rotation,
-//! timeout cleanup, broadcast error handling, metrics, full error mapping.
+//! Production table actor – stable PlayerId, dealer rotation,
+//! timeout cleanup, error propagation, full observability.
 
 use std::collections::HashMap;
 use std::time::Duration;
 use uuid::Uuid;
 
-use tokio::sync::{broadcast, mpsc};
+use tokio::sync::mpsc;
 use tokio::time::sleep;
-use tracing::{Instrument, Level, debug, error, field, info, span, warn};
-use tracing_appender::non_blocking::WorkerGuard;
+use tracing::{Instrument, Level, debug, error, info, span, warn};
 
-use sb_contracts::TableCommand as ContractCommand;
 use sb_game_engine::game_state::{Action, ActionError, GameState};
 use sb_shared_types::{ActionType, ChipAmount, PlayerId, StakeLevel, TableConfig, TableId, UserId};
 use sb_ws_handler::BroadcastSender;
 use sb_ws_messages::{Card as WsCard, ServerMessage, TableStateUpdate};
 
-// ------------------------------------------------------------
-// Constants & helpers
-// ------------------------------------------------------------
 fn zero() -> ChipAmount {
     ChipAmount::new(0).unwrap()
 }
@@ -33,9 +28,6 @@ fn blinds_for_stake(stake: StakeLevel) -> (ChipAmount, ChipAmount) {
     }
 }
 
-// ------------------------------------------------------------
-// Local command (internal)
-// ------------------------------------------------------------
 #[derive(Debug, Clone)]
 pub enum InternalCommand {
     Join {
@@ -57,47 +49,6 @@ pub enum InternalCommand {
     },
 }
 
-impl From<ContractCommand> for InternalCommand {
-    fn from(cmd: ContractCommand) -> Self {
-        match cmd {
-            ContractCommand::Join {
-                table_id: _,
-                response_tx: _,
-                player_id: _,
-                stack: _,
-            } => {
-                // Not used – actual join uses different fields; we'll handle separately
-                panic!("ContractCommand::Join not supported – use dedicated join method")
-            }
-            ContractCommand::Leave {
-                table_id: _,
-                response_tx: _,
-            } => {
-                panic!("ContractCommand::Leave not supported")
-            }
-            ContractCommand::Action {
-                table_id: _,
-                response_tx: _,
-                action_type,
-                amount,
-            } => {
-                InternalCommand::Action {
-                    user_id: UserId(Uuid::nil()), // placeholder; real user_id will be set differently
-                    action_type,
-                    amount,
-                }
-            }
-            ContractCommand::StartHand {
-                table_id: _,
-                response_tx: _,
-            } => InternalCommand::StartHand,
-        }
-    }
-}
-
-// ------------------------------------------------------------
-// Player – only stable identity (stack stored in actor for persistence)
-// ------------------------------------------------------------
 #[derive(Debug, Clone)]
 struct Player {
     user_id: UserId,
@@ -117,9 +68,6 @@ impl Player {
     }
 }
 
-// ------------------------------------------------------------
-// Active hand – owns engine state, mapping, and timeout task
-// ------------------------------------------------------------
 struct ActiveHand {
     state: GameState,
     user_by_player_id: HashMap<PlayerId, UserId>,
@@ -143,13 +91,11 @@ impl ActiveHand {
             timeout_handle: None,
         }
     }
-
     fn cancel_timeout(&mut self) {
         if let Some(handle) = self.timeout_handle.take() {
             handle.abort();
         }
     }
-
     fn schedule_timeout(&mut self, user_id: UserId, cmd_tx: mpsc::Sender<InternalCommand>) {
         self.cancel_timeout();
         let tx = cmd_tx.clone();
@@ -159,25 +105,21 @@ impl ActiveHand {
         });
         self.timeout_handle = Some(handle);
     }
-
     fn current_player_user(&self) -> Option<UserId> {
         self.state
             .current_player_id()
             .and_then(|pid| self.user_by_player_id.get(&pid).cloned())
     }
-
     fn player_stack(&self, user_id: UserId) -> Option<ChipAmount> {
         self.player_by_user_id
             .get(&user_id)
             .and_then(|pid| self.state.player_stack(*pid))
     }
-
     fn player_current_bet(&self, user_id: UserId) -> Option<ChipAmount> {
         self.player_by_user_id
             .get(&user_id)
             .and_then(|pid| self.state.player_current_bet(*pid))
     }
-
     fn player_is_all_in(&self, user_id: UserId) -> bool {
         self.player_by_user_id
             .get(&user_id)
@@ -186,9 +128,6 @@ impl ActiveHand {
     }
 }
 
-// ------------------------------------------------------------
-// Table Actor – public interface
-// ------------------------------------------------------------
 pub struct TableActor {
     table_id: TableId,
     config: TableConfig,
@@ -196,7 +135,6 @@ pub struct TableActor {
     current_hand: Option<ActiveHand>,
     broadcast_tx: BroadcastSender<ServerMessage>,
     cmd_tx: mpsc::Sender<InternalCommand>,
-    // Metrics counters (simple atomic, but we'll just log events)
 }
 
 impl TableActor {
@@ -230,7 +168,7 @@ impl TableActor {
     }
 
     async fn handle_command(&mut self, cmd: InternalCommand) {
-        debug!(?cmd, "Handling command");
+        debug!(?cmd);
         match cmd {
             InternalCommand::Join {
                 user_id,
@@ -250,12 +188,12 @@ impl TableActor {
 
     async fn join_player(&mut self, user_id: UserId, seat: u8, stack: ChipAmount) {
         if self.players.contains_key(&user_id) {
-            warn!(%user_id, "Player already at table");
+            warn!(%user_id, "Already at table");
             self.send_error(&user_id, "Already at table").await;
             return;
         }
         if self.players.values().any(|p| p.seat == seat) {
-            warn!(seat, "Seat already occupied");
+            warn!(seat, "Seat occupied");
             self.send_error(&user_id, &format!("Seat {} taken", seat))
                 .await;
             return;
@@ -266,27 +204,27 @@ impl TableActor {
             return;
         }
         if stack < self.config.min_buy_in {
-            warn!(%user_id, stack = ?stack, min = ?self.config.min_buy_in, "Stack below min buy-in");
+            warn!(%user_id, stack = ?stack, min = ?self.config.min_buy_in, "Below min buy-in");
             self.send_error(&user_id, "Buy-in too low").await;
             return;
         }
-        let player = Player::new(user_id.clone(), seat, stack);
-        self.players.insert(user_id, player);
+        let player = Player::new(user_id, seat, stack);
+        self.players.insert(player.user_id, player);
         self.broadcast_table_state().await;
-        info!(%user_id, seat, stack = ?stack, "Player joined");
+        info!(%user_id, seat, "Joined");
     }
 
     async fn leave_player(&mut self, user_id: UserId) {
-        if let Some(_player) = self.players.remove(&user_id) {
-            if let Some(hand) = &mut self.current_hand {
-                if let Some(pid) = hand.player_by_user_id.get(&user_id) {
-                    let _ = hand.state.apply_action(*pid, Action::Fold);
-                    hand.cancel_timeout();
-                    self.check_hand_completion().await;
-                }
+        if let Some(_p) = self.players.remove(&user_id) {
+            if let Some(hand) = &mut self.current_hand
+                && let Some(pid) = hand.player_by_user_id.get(&user_id)
+            {
+                let _ = hand.state.apply_action(*pid, Action::Fold);
+                hand.cancel_timeout();
+                self.check_hand_completion().await;
             }
             self.broadcast_table_state().await;
-            info!(%user_id, "Player left");
+            info!(%user_id, "Left");
         }
     }
 
@@ -300,16 +238,13 @@ impl TableActor {
             return;
         }
 
-        // Rotate dealer
         let dealer_index = self
             .current_hand
             .as_ref()
             .map(|h| (h.dealer_index + 1) % self.players.len())
             .unwrap_or(0);
+        let (sb, bb) = blinds_for_stake(self.config.stake_level);
 
-        let (small_blind, big_blind) = blinds_for_stake(self.config.stake_level);
-
-        // Validate each player has enough stack for blinds (those who need to post)
         let mut player_list: Vec<&Player> = self.players.values().collect();
         player_list.sort_by_key(|p| p.seat);
         let players_for_engine: Vec<(PlayerId, ChipAmount)> =
@@ -317,24 +252,22 @@ impl TableActor {
 
         let small_idx = (dealer_index + 1) % players_for_engine.len();
         let big_idx = (dealer_index + 2) % players_for_engine.len();
-
-        if players_for_engine[small_idx].1 < small_blind {
-            error!("Small blind cannot post");
+        if players_for_engine[small_idx].1 < sb {
+            error!("Small blind insufficient");
             return;
         }
-        if players_for_engine[big_idx].1 < big_blind {
-            error!("Big blind cannot post");
+        if players_for_engine[big_idx].1 < bb {
+            error!("Big blind insufficient");
             return;
         }
 
-        let state =
-            match GameState::new_hand(players_for_engine, dealer_index, (small_blind, big_blind)) {
-                Ok(s) => s,
-                Err(e) => {
-                    error!(error = %e, "Failed to create hand");
-                    return;
-                }
-            };
+        let state = match GameState::new_hand(players_for_engine, dealer_index, (sb, bb)) {
+            Ok(s) => s,
+            Err(e) => {
+                error!(error = %e, "Failed to create hand");
+                return;
+            }
+        };
 
         let mut user_by_player_id = HashMap::new();
         let mut player_by_user_id = HashMap::new();
@@ -344,12 +277,12 @@ impl TableActor {
         }
 
         let mut active = ActiveHand::new(state, user_by_player_id, player_by_user_id, dealer_index);
-        if let Some(user_id) = active.current_player_user() {
-            active.schedule_timeout(user_id, self.cmd_tx.clone());
+        if let Some(user) = active.current_player_user() {
+            active.schedule_timeout(user, self.cmd_tx.clone());
         }
         self.current_hand = Some(active);
         self.broadcast_table_state().await;
-        info!(dealer_index, "New hand started");
+        info!(dealer_index, "Hand started");
     }
 
     async fn process_action(
@@ -362,73 +295,66 @@ impl TableActor {
             Some(h) => h,
             None => {
                 warn!(%user_id, "No active hand");
-                self.send_error(&user_id, "No hand in progress").await;
+                self.send_error(&user_id, "No hand").await;
                 return;
             }
         };
-
         if hand.current_player_user() != Some(user_id) {
-            warn!(%user_id, "Not player's turn");
+            warn!(%user_id, "Not your turn");
             self.send_error(&user_id, "Not your turn").await;
             return;
         }
-
         let player_id = match hand.player_by_user_id.get(&user_id) {
             Some(pid) => *pid,
             None => {
                 warn!(%user_id, "Player not in hand");
-                self.send_error(&user_id, "You are not in this hand").await;
+                self.send_error(&user_id, "Not in hand").await;
                 return;
             }
         };
-
         let engine_action = match action_type {
             ActionType::Fold => Action::Fold,
             ActionType::Check => Action::Check,
             ActionType::Call => Action::Call,
             ActionType::Raise => {
-                let raise_amount = amount.unwrap_or_else(zero);
+                let raise = amount.unwrap_or_else(zero);
                 let min_raise = hand.state.min_raise_amount();
-                if raise_amount < min_raise {
-                    warn!(%user_id, raise = ?raise_amount, min = ?min_raise, "Raise too small");
+                if raise < min_raise {
+                    warn!(%user_id, raise = ?raise, min = ?min_raise);
                     self.send_error(&user_id, &format!("Minimum raise is {}", min_raise))
                         .await;
                     return;
                 }
-                Action::Raise(raise_amount)
+                Action::Raise(raise)
             }
             _ => {
-                warn!(%user_id, ?action_type, "Unsupported action");
-                self.send_error(&user_id, "Action not supported").await;
+                self.send_error(&user_id, "Unsupported action").await;
                 return;
             }
         };
-
         match hand.state.apply_action(player_id, engine_action) {
             Ok(()) => {
-                debug!(%user_id, ?action_type, "Action applied");
                 hand.cancel_timeout();
-                if let Some(next_user) = hand.current_player_user() {
-                    hand.schedule_timeout(next_user, self.cmd_tx.clone());
+                if let Some(next) = hand.current_player_user() {
+                    hand.schedule_timeout(next, self.cmd_tx.clone());
                 } else {
                     self.check_hand_completion().await;
                 }
                 self.broadcast_table_state().await;
             }
             Err(e) => {
-                warn!(%user_id, error = ?e, "Engine rejected action");
-                let user_msg = match e {
+                let msg = match e {
                     ActionError::NotYourTurn => "Not your turn".into(),
-                    ActionError::AlreadyFolded => "You have already folded".into(),
-                    ActionError::AlreadyAllIn => "You are already all‑in".into(),
-                    ActionError::InvalidRaise { .. } => "Invalid raise amount".into(),
-                    ActionError::HandComplete => "Hand already finished".into(),
+                    ActionError::AlreadyFolded => "Already folded".into(),
+                    ActionError::AlreadyAllIn => "Already all-in".into(),
+                    ActionError::InvalidRaise { .. } => "Invalid raise".into(),
+                    ActionError::HandComplete => "Hand finished".into(),
                     ActionError::ShowdownNotActionable => "No actions in showdown".into(),
-                    ActionError::InsufficientStack { action, needed } => {
+                    ActionError::InsufficientStack { action, .. } => {
                         format!("Insufficient stack to {}", action)
                     }
                 };
-                self.send_error(&user_id, &user_msg).await;
+                self.send_error(&user_id, &msg).await;
             }
         }
     }
@@ -441,15 +367,15 @@ impl TableActor {
         if hand.current_player_user() != Some(user_id) {
             return;
         }
-        info!(%user_id, "Auto‑folding due to timeout");
-        let player_id = match hand.player_by_user_id.get(&user_id) {
-            Some(pid) => *pid,
+        info!(%user_id, "Auto‑fold timeout");
+        let pid = match hand.player_by_user_id.get(&user_id) {
+            Some(p) => *p,
             None => return,
         };
-        let _ = hand.state.apply_action(player_id, Action::Fold);
+        let _ = hand.state.apply_action(pid, Action::Fold);
         hand.cancel_timeout();
-        if let Some(next_user) = hand.current_player_user() {
-            hand.schedule_timeout(next_user, self.cmd_tx.clone());
+        if let Some(next) = hand.current_player_user() {
+            hand.schedule_timeout(next, self.cmd_tx.clone());
         } else {
             self.check_hand_completion().await;
         }
@@ -461,32 +387,22 @@ impl TableActor {
             Some(h) => h,
             None => return,
         };
-        // Cancel any pending timeout – hand is done
         hand.cancel_timeout();
-
         if !hand.state.is_hand_complete() {
-            // Re‑insert if not complete (should not happen, but defensive)
             self.current_hand = Some(hand);
             return;
         }
-
         let winners = hand.state.calculate_pot_winners();
-        let mut pot = zero();
         for winner in &winners {
-            pot = pot.checked_add(winner.amount).unwrap_or(pot);
-            // Update actor's stored stack for the winning player
-            if let Some(user_id) = hand.user_by_player_id.get(&winner.player_id) {
-                if let Some(player) = self.players.get_mut(user_id) {
-                    player.stack = player
-                        .stack
-                        .checked_add(winner.amount)
-                        .unwrap_or(player.stack);
-                }
+            if let Some(user) = hand.user_by_player_id.get(&winner.player_id)
+                && let Some(player) = self.players.get_mut(user)
+            {
+                player.stack = player
+                    .stack
+                    .checked_add(winner.amount)
+                    .unwrap_or(player.stack);
             }
-            info!(player_id = ?winner.player_id, amount = ?winner.amount, "Winner");
         }
-        info!(?winners, pot = ?pot, "Hand finished");
-
         self.current_hand = None;
         self.broadcast_table_state().await;
     }
@@ -497,9 +413,9 @@ impl TableActor {
                 .keys()
                 .map(|uid| {
                     let stack = hand.player_stack(*uid).unwrap_or_else(zero);
-                    let current_bet = hand.player_current_bet(*uid).unwrap_or_else(zero);
-                    let is_all_in = hand.player_is_all_in(*uid);
-                    (*uid, stack, current_bet, is_all_in)
+                    let bet = hand.player_current_bet(*uid).unwrap_or_else(zero);
+                    let all_in = hand.player_is_all_in(*uid);
+                    (*uid, stack, bet, all_in)
                 })
                 .collect()
         } else {
@@ -508,8 +424,7 @@ impl TableActor {
                 .map(|(uid, p)| (*uid, p.stack, zero(), false))
                 .collect()
         };
-
-        let community_cards = self
+        let community = self
             .current_hand
             .as_ref()
             .map(|h| {
@@ -523,35 +438,30 @@ impl TableActor {
                     .collect()
             })
             .unwrap_or_default();
-
-        let state = TableStateUpdate {
+        let msg = ServerMessage::TableState(TableStateUpdate {
             table_id: self.table_id,
             players: players_state,
             current_hand_in_progress: self.current_hand.is_some(),
-            community_cards,
-        };
-        if let Err(e) = self.broadcast_tx.send(ServerMessage::TableState(state)) {
-            error!(error = %e, "Failed to broadcast table state");
+            community_cards: community,
+        });
+        if let Err(e) = self.broadcast_tx.send(msg) {
+            error!(error = %e, "Failed to broadcast");
         }
     }
 
-    async fn send_error(&self, user_id: &UserId, message: &str) {
-        // In a real system, you'd send a dedicated error message to the specific user.
-        // For now, we just log it. Production would use a direct channel.
-        warn!(%user_id, error = message, "Action rejected");
+    async fn send_error(&self, user_id: &UserId, msg: &str) {
+        warn!(%user_id, "Error: {}", msg);
+        // In production, send via dedicated user channel
     }
 }
 
-// ------------------------------------------------------------
-// Public API: spawn helper
-// ------------------------------------------------------------
 pub fn spawn_table_actor(
     table_id: TableId,
     config: TableConfig,
     broadcast_tx: BroadcastSender<ServerMessage>,
 ) -> (mpsc::Sender<InternalCommand>, tokio::task::JoinHandle<()>) {
-    let (cmd_tx, cmd_rx) = mpsc::channel(32);
-    let actor = TableActor::new(table_id, config, broadcast_tx, cmd_tx.clone());
-    let handle = tokio::spawn(actor.run(cmd_rx));
-    (cmd_tx, handle)
+    let (tx, rx) = mpsc::channel(32);
+    let actor = TableActor::new(table_id, config, broadcast_tx, tx.clone());
+    let handle = tokio::spawn(actor.run(rx));
+    (tx, handle)
 }

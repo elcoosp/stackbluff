@@ -846,3 +846,28 @@ impl GameState {
         &self.community_cards
     }
 }
+
+impl GameState {
+    /// Returns the current stack of a player (if still in hand).
+    pub fn player_stack(&self, player_id: PlayerId) -> Option<ChipAmount> {
+        self.players
+            .iter()
+            .find(|p| p.player_id == player_id)
+            .map(|p| p.stack)
+    }
+
+    /// Returns the current bet of a player this round.
+    pub fn player_current_bet(&self, player_id: PlayerId) -> Option<ChipAmount> {
+        self.players
+            .iter()
+            .find(|p| p.player_id == player_id)
+            .map(|p| p.bet_this_round)
+    }
+
+    /// Returns whether a player is all-in.
+    pub fn player_is_all_in(&self, player_id: PlayerId) -> bool {
+        self.players
+            .iter()
+            .any(|p| p.player_id == player_id && p.is_all_in)
+    }
+}

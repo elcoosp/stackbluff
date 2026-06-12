@@ -1,5 +1,3 @@
-//! Table registry and actor
-
 pub mod actor;
 pub mod registry;
 
