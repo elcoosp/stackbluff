@@ -19,6 +19,10 @@ edition = "2024"
 rust-version = "1.94"
 
 [workspace.dependencies]
+tracing-appender = { version = "0.2" }
+
+sb-contracts = { path = "crates/sb-contracts" }
+
 sb-auth = { path = "crates/sb-auth" }
 
 sb-shared-types = { path = "crates/sb-shared-types" }
