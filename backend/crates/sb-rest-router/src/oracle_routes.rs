@@ -1,4 +1,4 @@
-//! REST router for StackBluff.
+//! Oracle REST endpoints (separate router to avoid conflicts).
 use axum::{
     extract::State,
     http::StatusCode,
@@ -14,7 +14,7 @@ use uuid::Uuid;
 
 pub type SharedOracleService = Arc<OracleServiceImpl>;
 
-pub fn create_router(oracle: SharedOracleService) -> Router {
+pub fn oracle_router(oracle: SharedOracleService) -> Router {
     Router::new()
         .route("/oracle/analyze", post(analyze_handler))
         .with_state(oracle)
@@ -36,5 +36,3 @@ async fn analyze_handler(
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     }
 }
-mod oracle_routes;
-pub use oracle_routes::oracle_router;
