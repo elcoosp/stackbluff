@@ -3027,6 +3027,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "sb-oracle"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "once_cell",
+ "sb-contracts",
+ "sb-shared-types",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "sb-rest-router"
 version = "0.1.0"
 dependencies = [
@@ -3039,6 +3056,7 @@ dependencies = [
  "mockall",
  "sb-auth",
  "sb-contracts",
+ "sb-oracle",
  "sb-shared-types",
  "sb-table-registry",
  "serde",
