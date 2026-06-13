@@ -9,9 +9,11 @@ use axum::{
 use sb_contracts::service_api::OracleService;
 use sb_oracle::{HandAnalysisParams, OracleError};
 use sb_shared_types::RequestContext;
+use std::sync::Arc;
 use uuid::Uuid;
 
-use super::SharedOracleService;
+// Type alias for the shared oracle service (defined here to avoid circular deps)
+pub type SharedOracleService = Arc<OracleServiceImpl>;
 
 pub fn oracle_router(oracle: SharedOracleService) -> Router {
     Router::new()
