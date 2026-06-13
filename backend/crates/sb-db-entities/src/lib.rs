@@ -47,3 +47,6 @@ pub use subscription_event::{
 };
 pub use table::{ActiveModel as TableActiveModel, Entity as TableEntity, Model as TableModel};
 pub use user::{ActiveModel as UserActiveModel, Entity as UserEntity, Model as UserModel};
+pub mod clubs;
+pub mod club_memberships;
+pub mod club_leaderboard;
