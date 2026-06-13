@@ -20,6 +20,8 @@ edition = "2024"
 rust-version = "1.94"
 
 [workspace.dependencies]
+sb-bot-handler = { path = "crates/sb-bot-handler" }
+teloxide = { version = "0.13.0", features = ["webhooks", "axum"] }
 sb-rest-router = { path = "crates/sb-rest-router" }
 sb-oracle = { path = "crates/sb-oracle" }
 tracing-appender = { version = "0.2" }

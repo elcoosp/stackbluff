@@ -102,3 +102,10 @@ pub trait OracleService {
         params: Self::Params,
     ) -> Result<Self::Output, Self::Error>;
 }
+
+#[async_trait]
+pub trait NotificationService: Send + Sync {
+    async fn send_telegram_message(&self, chat_id: i64, text: String, keyboard: Option<serde_json::Value>) -> Result<(), PersistenceError>;
+    async fn send_telegram_message_to_user(&self, user_id: UserId, text: String, keyboard: Option<serde_json::Value>) -> Result<(), PersistenceError>;
+    async fn answer_callback_query(&self, callback_query_id: String, text: Option<String>) -> Result<(), PersistenceError>;
+}
