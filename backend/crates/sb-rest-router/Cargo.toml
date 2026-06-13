@@ -5,6 +5,7 @@ edition = "2024"
 rust-version = "1.94"
 
 [dependencies]
+sb-oracle = { workspace = true }
 axum = { workspace = true }
 tower = { workspace = true }
 tower-http = { workspace = true }

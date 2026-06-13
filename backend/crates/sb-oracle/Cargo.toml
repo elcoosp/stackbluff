@@ -1,0 +1,21 @@
+[package]
+name = "sb-oracle"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.94"
+
+[dependencies]
+sb-contracts = { workspace = true }
+sb-shared-types = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["time", "sync"] }
+tracing = { workspace = true }
+anyhow = { workspace = true }
+once_cell = { workspace = true }
+async-trait = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }

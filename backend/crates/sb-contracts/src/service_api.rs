@@ -89,3 +89,16 @@ pub trait AntiCheatService: Send + Sync {
         ctx: &RequestContext,
     ) -> Result<(), AppError>;
 }
+
+#[async_trait]
+pub trait OracleService {
+    type Params;
+    type Output;
+    type Error;
+
+    async fn analyze(
+        &self,
+        ctx: &RequestContext,
+        params: Self::Params,
+    ) -> Result<Self::Output, Self::Error>;
+}
