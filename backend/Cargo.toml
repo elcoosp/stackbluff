@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "crates/sb-oracle",
     "crates/sb-auth",
     "crates/sb-contracts",
     "crates/sb-db-entities",
@@ -19,6 +20,8 @@ edition = "2024"
 rust-version = "1.94"
 
 [workspace.dependencies]
+sb-rest-router = { path = "crates/sb-rest-router" }
+sb-oracle = { path = "crates/sb-oracle" }
 tracing-appender = { version = "0.2" }
 
 sb-contracts = { path = "crates/sb-contracts" }
