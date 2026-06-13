@@ -10,7 +10,6 @@ sb-shared-types = { path = "../sb-shared-types" }
 tokio = { workspace = true, features = ["sync"] }
 thiserror = { workspace = true }
 async-trait.workspace = true
-serde.workspace = true
 chrono.workspace = true
 uuid.workspace = true
 
