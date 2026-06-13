@@ -7,13 +7,13 @@ rust-version = { workspace = true }
 [dependencies]
 sb-shared-types = { workspace = true }
 sb-game-engine = { workspace = true }
-sb-ws-messages = { workspace = true }
+sb-ws-messages.workspace = true
 sb-ws-handler = { workspace = true }
 sb-contracts = { workspace = true }
 tokio = { workspace = true }
 futures = { workspace = true }
 thiserror = { workspace = true }
-tracing = { workspace = true }
+tracing.workspace = true
 uuid = { workspace = true }
 
 [dev-dependencies]

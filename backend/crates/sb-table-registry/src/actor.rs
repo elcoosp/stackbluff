@@ -1,18 +1,22 @@
-//! Production table actor – stable PlayerId, dealer rotation,
-//! timeout cleanup, error propagation, full observability.
+#![allow(dead_code)]
+#![allow(unused_imports)]
+const DEFAULT_TIMER_MS: u64 = 30_000;
+// Production table actor – stable PlayerId, dealer rotation,
+// timeout cleanup, error propagation, full observability.
 
 use std::collections::HashMap;
-use std::time::Duration;
 use uuid::Uuid;
 
 use tokio::sync::mpsc;
-use tokio::time::sleep;
-use tracing::{Instrument, Level, debug, error, info, span, warn};
 
 use sb_game_engine::game_state::{Action, ActionError, GameState};
+use sb_shared_types::AppError;
 use sb_shared_types::{ActionType, ChipAmount, PlayerId, StakeLevel, TableConfig, TableId, UserId};
 use sb_ws_handler::BroadcastSender;
 use sb_ws_messages::{Card as WsCard, ServerMessage, TableStateUpdate};
+use std::pin::Pin;
+use tokio::time::{Duration, Sleep, sleep};
+use tracing::{Instrument, Level, debug, error, info, span, warn};
 
 fn zero() -> ChipAmount {
     ChipAmount::new(0).unwrap()
@@ -55,6 +59,7 @@ struct Player {
     seat: u8,
     player_id: PlayerId,
     stack: ChipAmount,
+    pub time_bank_remaining_seconds: u32,
 }
 
 impl Player {
@@ -64,6 +69,7 @@ impl Player {
             seat,
             player_id: PlayerId(Uuid::new_v4()),
             stack,
+            time_bank_remaining_seconds: 0,
         }
     }
 }
@@ -135,6 +141,10 @@ pub struct TableActor {
     current_hand: Option<ActiveHand>,
     broadcast_tx: BroadcastSender<ServerMessage>,
     cmd_tx: mpsc::Sender<InternalCommand>,
+    current_timer: Option<Pin<Box<Sleep>>>,
+    current_timer_player: Option<PlayerId>,
+    current_main_timer_remaining_ms: Option<u64>,
+    player_user_map: HashMap<PlayerId, UserId>,
 }
 
 impl TableActor {
@@ -151,6 +161,11 @@ impl TableActor {
             current_hand: None,
             broadcast_tx,
             cmd_tx,
+
+            current_timer: None,
+            current_timer_player: None,
+            current_main_timer_remaining_ms: None,
+            player_user_map: HashMap::new(),
         }
     }
 
@@ -452,6 +467,70 @@ impl TableActor {
     async fn send_error(&self, user_id: &UserId, msg: &str) {
         warn!(%user_id, "Error: {}", msg);
         // In production, send via dedicated user channel
+    }
+
+    fn start_timer(&mut self, player_id: PlayerId, duration_ms: u64) {
+        let sleep = Box::pin(sleep(Duration::from_millis(duration_ms)));
+        self.current_timer = Some(sleep);
+        self.current_timer_player = Some(player_id);
+        self.current_main_timer_remaining_ms = Some(duration_ms);
+        info!(?player_id, duration_ms, "Timer started");
+    }
+
+    fn cancel_timer(&mut self) {
+        if let Some(player_id) = self.current_timer_player {
+            info!(?player_id, "Timer cancelled");
+        }
+        self.current_timer = None;
+        self.current_timer_player = None;
+        self.current_main_timer_remaining_ms = None;
+    }
+
+    async fn on_timer_expiry(&mut self) -> Result<(), AppError> {
+        let player_id = match self.current_timer_player.take() {
+            Some(pid) => pid,
+            None => return Ok(()),
+        };
+        self.current_timer = None;
+
+        info!(?player_id, "Timer expired for player");
+
+        let user_id = *self
+            .player_user_map
+            .get(&player_id)
+            .ok_or_else(|| AppError::NotFound("player not found".to_string()))?;
+        let player_state = self
+            .players
+            .get_mut(&user_id)
+            .ok_or_else(|| AppError::NotFound("player not found".to_string()))?;
+
+        if player_state.time_bank_remaining_seconds > 0 {
+            player_state.time_bank_remaining_seconds -= 1;
+            info!(
+                ?player_id,
+                bank_remaining = player_state.time_bank_remaining_seconds,
+                "Consumed 1s from bank, resetting timer"
+            );
+            self.start_timer(player_id, DEFAULT_TIMER_MS);
+            // TODO: broadcast ActionRequired with remaining_ms after #001
+        } else {
+            warn!(?player_id, "Time bank exhausted, auto‑folding");
+            self.process_action(user_id, ActionType::Fold, None).await;
+        }
+        Ok(())
+    }
+
+    /// Removes a player from the actor state, cleaning up the player_user_map.
+    pub fn remove_player(&mut self, user_id: &UserId) {
+        if let Some(player_id) = self
+            .player_user_map
+            .iter()
+            .find_map(|(pid, uid)| if uid == user_id { Some(*pid) } else { None })
+        {
+            self.player_user_map.remove(&player_id);
+            self.players.remove(user_id);
+            info!(?player_id, ?user_id, "Player removed from table");
+        }
     }
 }
 

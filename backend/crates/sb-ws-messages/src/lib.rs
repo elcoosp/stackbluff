@@ -25,6 +25,7 @@ pub struct ActionRequired {
     pub to_call: ChipAmount,
     pub min_raise: ChipAmount,
     pub can_check: bool,
+    pub remaining_ms: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
