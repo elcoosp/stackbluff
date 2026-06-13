@@ -1,19 +1,28 @@
 [package]
 name = "sb-db-repos"
 version = "0.1.0"
-edition.workspace = true
+edition = "2024"
 
 [dependencies]
-sea-orm = { workspace = true }
-sqlx = { workspace = true }
-tokio = { workspace = true, features = ["rt", "macros", "sync"] }
-tracing = { workspace = true }
+sb-shared-types = { workspace = true }
+sb-contracts = { workspace = true }
+sb-db-entities = { workspace = true }
+
+tokio = { workspace = true }
+futures = { workspace = true }
 thiserror = { workspace = true }
-anyhow = { workspace = true }
-moka = { workspace = true }
+tracing = { workspace = true }
+sqlx = { workspace = true }
+sea-orm = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+once_cell = { workspace = true }
+derive_more = { workspace = true }
+uuid = { workspace = true }
 async-trait = { workspace = true }
 chrono = { workspace = true }
-uuid = { workspace = true }
-sb-shared-types = { path = "../sb-shared-types" }
-sb-contracts = { path = "../sb-contracts" }
-sb-db-entities = { path = "../sb-db-entities" }
+
+[dev-dependencies]
+tempfile = "3.14"
+tokio = { workspace = true, features = ["rt", "macros", "test-util"] }
+sqlx = { workspace = true, features = ["sqlite", "runtime-tokio"] }
