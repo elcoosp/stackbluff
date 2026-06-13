@@ -5,6 +5,7 @@ edition = "2024"
 rust-version = "1.94"
 
 [dependencies]
+sb-bot-handler = { workspace = true }
 sb-rest-router = { workspace = true }
 sb-oracle = { workspace = true }
 axum = { workspace = true }
