@@ -19,3 +19,6 @@ uuid = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true }
+sb-db-repos = { path = "../sb-db-repos" }
+sea-orm = { workspace = true }
+migration = { path = "../../migration" }
