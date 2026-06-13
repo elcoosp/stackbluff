@@ -97,19 +97,23 @@ async fn process_batch(batch: &mut Vec<DbCommand>, db: &DatabaseConnection) {
     } else {
         for (cmd, result) in batch.drain(..).zip(savepoint_results) {
             match result {
-                Ok(()) => respond_ok(cmd, ()),
+                Ok(res) => respond_ok(cmd, res),
                 Err(err) => respond_err(cmd, err),
             }
         }
     }
 }
 
-async fn run_command_in_savepoint(
+async fn run_command_in_savepoint<C: ConnectionTrait>(
     cmd: &mut DbCommand,
-    conn: &impl ConnectionTrait,
+    conn: &C,
     sp_name: &str,
-) -> Result<(), PersistenceError> {
+) -> Result<Option<String>, PersistenceError> {
     let ctx = match cmd {
+        DbCommand::CreateUser { ctx, .. } => ctx,
+        DbCommand::GetUser { ctx, .. } => ctx,
+        DbCommand::UpdateChipBalance { ctx, .. } => ctx,
+        DbCommand::StoreHandHistory { ctx, .. } => ctx,
         DbCommand::ExecuteRaw { ctx, .. } => ctx,
     };
     let request_id = ctx.request_id;
@@ -121,9 +125,97 @@ async fn run_command_in_savepoint(
         }
 
         let result = match cmd {
+            DbCommand::CreateUser {
+                telegram_id,
+                email,
+                display_name,
+                ..
+            } => {
+                use sb_db_entities::user::ActiveModel;
+                use sea_orm::{ActiveModelTrait, Set};
+                let new_user = ActiveModel {
+                    id: Set(uuid::Uuid::new_v4()),
+                    telegram_id: Set(Some(*telegram_id)),
+                    email: Set(Some(email.clone())),
+                    display_name: Set(display_name.clone()),
+                    streak_count: Set(0),
+                    created_at: Set(chrono::Utc::now()),
+                    ..Default::default()
+                };
+                let model = new_user.insert(conn).await.map_err(map_db_error)?;
+                Ok(Some(model.id.to_string()))
+            }
+            DbCommand::GetUser { id, .. } => {
+                use sb_db_entities::user::Entity;
+                use sea_orm::EntityTrait;
+                let user_id: uuid::Uuid = (*id).into();
+                let model = Entity::find_by_id(user_id)
+                    .one(conn)
+                    .await
+                    .map_err(map_db_error)?
+                    .ok_or(PersistenceError::NotFound)?;
+                Ok(Some(model.display_name))
+            }
+            DbCommand::UpdateChipBalance { user_id, delta, .. } => {
+                use sb_db_entities::user::{ActiveModel, Entity};
+                use sea_orm::{ActiveModelTrait, EntityTrait, Set};
+                let uid: uuid::Uuid = (*user_id).into();
+                let model = Entity::find_by_id(uid)
+                    .one(conn)
+                    .await
+                    .map_err(map_db_error)?
+                    .ok_or(PersistenceError::NotFound)?;
+                let mut active: ActiveModel = model.into();
+                let current = active.chip_balance.take().unwrap_or(0);
+                let new_balance = current + *delta;
+                active.chip_balance = Set(new_balance);
+                active.update(conn).await.map_err(map_db_error)?;
+                Ok(None)
+            }
+            DbCommand::StoreHandHistory {
+                table_id,
+                played_at,
+                players_json,
+                actions_json,
+                result_json,
+                ..
+            } => {
+                use sb_db_entities::hand_history::ActiveModel;
+                use sb_db_entities::hand_history_json::{HandActions, HandPlayers, HandResult};
+                use sea_orm::{ActiveModelTrait, Set};
+                let players: HandPlayers =
+                    serde_json::from_value(players_json.clone()).map_err(|e| {
+                        PersistenceError::ConstraintViolation(format!(
+                            "Invalid players_json: {}",
+                            e
+                        ))
+                    })?;
+                let actions: HandActions =
+                    serde_json::from_value(actions_json.clone()).map_err(|e| {
+                        PersistenceError::ConstraintViolation(format!(
+                            "Invalid actions_json: {}",
+                            e
+                        ))
+                    })?;
+                let result: HandResult =
+                    serde_json::from_value(result_json.clone()).map_err(|e| {
+                        PersistenceError::ConstraintViolation(format!("Invalid result_json: {}", e))
+                    })?;
+                let new_history = ActiveModel {
+                    id: Set(uuid::Uuid::new_v4()),
+                    table_id: Set(*table_id),
+                    played_at: Set(*played_at),
+                    players_json: Set(players),
+                    actions_json: Set(actions),
+                    result_json: Set(result),
+                    is_archived: Set(false),
+                };
+                new_history.insert(conn).await.map_err(map_db_error)?;
+                Ok(None)
+            }
             DbCommand::ExecuteRaw { sql, .. } => {
                 conn.execute_unprepared(sql).await.map_err(map_db_error)?;
-                Ok(())
+                Ok(None)
             }
         };
 
@@ -157,8 +249,25 @@ fn map_db_error(e: sea_orm::DbErr) -> PersistenceError {
     }
 }
 
-fn respond_ok(cmd: DbCommand, _value: ()) {
+fn respond_ok(cmd: DbCommand, value: Option<String>) {
     match cmd {
+        DbCommand::CreateUser { respond, .. } => {
+            let id = value
+                .and_then(|s| s.parse().ok())
+                .unwrap_or_else(uuid::Uuid::new_v4)
+                .into();
+            let _ = respond.send(Ok(id));
+        }
+        DbCommand::GetUser { respond, .. } => {
+            let name = value.unwrap_or_default();
+            let _ = respond.send(Ok(name));
+        }
+        DbCommand::UpdateChipBalance { respond, .. } => {
+            let _ = respond.send(Ok(()));
+        }
+        DbCommand::StoreHandHistory { respond, .. } => {
+            let _ = respond.send(Ok(()));
+        }
         DbCommand::ExecuteRaw { respond, .. } => {
             let _ = respond.send(Ok(()));
         }
@@ -167,6 +276,18 @@ fn respond_ok(cmd: DbCommand, _value: ()) {
 
 fn respond_err(cmd: DbCommand, err: PersistenceError) {
     match cmd {
+        DbCommand::CreateUser { respond, .. } => {
+            let _ = respond.send(Err(err));
+        }
+        DbCommand::GetUser { respond, .. } => {
+            let _ = respond.send(Err(err));
+        }
+        DbCommand::UpdateChipBalance { respond, .. } => {
+            let _ = respond.send(Err(err));
+        }
+        DbCommand::StoreHandHistory { respond, .. } => {
+            let _ = respond.send(Err(err));
+        }
         DbCommand::ExecuteRaw { respond, .. } => {
             let _ = respond.send(Err(err));
         }

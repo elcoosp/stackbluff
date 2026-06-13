@@ -2,6 +2,7 @@ use crate::commands::DbCommand;
 use sb_contracts::repo_api::{HandHistoryRepository, PersistenceError, PersistenceResult};
 use sb_shared_types::RequestContext;
 use tokio::sync::{mpsc, oneshot};
+use uuid::Uuid;
 
 pub struct HandHistoryRepoImpl {
     sender: mpsc::UnboundedSender<DbCommand>,
@@ -20,19 +21,35 @@ impl HandHistoryRepository for HandHistoryRepoImpl {
         ctx: RequestContext,
         hand_data: serde_json::Value,
     ) -> PersistenceResult<()> {
-        // Fixed: use {} directly, .to_string() is redundant and causes clippy warning
-        let sql = format!("INSERT INTO hand_history (data) VALUES ('{}')", hand_data);
+        let table_id_str = hand_data["table_id"]
+            .as_str()
+            .ok_or_else(|| PersistenceError::ConstraintViolation("missing table_id".into()))?;
+        let table_id = Uuid::parse_str(table_id_str)
+            .map_err(|e| PersistenceError::ConstraintViolation(e.to_string()))?;
+        let played_at_str = hand_data["played_at"]
+            .as_str()
+            .ok_or_else(|| PersistenceError::ConstraintViolation("missing played_at".into()))?;
+        let played_at = chrono::DateTime::parse_from_rfc3339(played_at_str)
+            .map_err(|e| PersistenceError::ConstraintViolation(e.to_string()))?
+            .with_timezone(&chrono::Utc);
+        let players_json = hand_data["players"].clone();
+        let actions_json = hand_data["actions"].clone();
+        let result_json = hand_data["result"].clone();
+
         let (tx, rx) = oneshot::channel();
-        let cmd = DbCommand::ExecuteRaw {
+        let cmd = DbCommand::StoreHandHistory {
             ctx,
-            sql,
+            table_id,
+            played_at,
+            players_json,
+            actions_json,
+            result_json,
             respond: tx,
         };
         self.sender
             .send(cmd)
             .map_err(|e| PersistenceError::Transient(e.to_string()))?;
         rx.await
-            .map_err(|e| PersistenceError::Transient(e.to_string()))??;
-        Ok(())
+            .map_err(|e| PersistenceError::Transient(e.to_string()))?
     }
 }

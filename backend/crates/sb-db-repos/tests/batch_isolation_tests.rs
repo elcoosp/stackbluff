@@ -14,7 +14,7 @@ async fn batch_isolation_violation_rollback_only_bad_command() {
 
     let handle = init_writer_loop(db.clone(), Some(50));
 
-    let (tx_ok, rx_ok) = oneshot::channel();
+    let (tx_ok, rx_ok): (oneshot::Sender<Result<(), _>>, _) = oneshot::channel();
     let (tx_bad, rx_bad) = oneshot::channel();
 
     let sql_ok = "INSERT INTO test (value) VALUES ('foo')".to_string();
@@ -32,7 +32,6 @@ async fn batch_isolation_violation_rollback_only_bad_command() {
 
     handle.sender.send(cmd_ok).unwrap();
     handle.sender.send(cmd_bad).unwrap();
-
     drop(handle.sender);
     handle.task.await.unwrap();
 
