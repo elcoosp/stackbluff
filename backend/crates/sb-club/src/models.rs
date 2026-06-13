@@ -2,15 +2,11 @@ use sb_contracts::LeaderboardPage;
 use sb_shared_types::ClubId;
 use serde::{Deserialize, Serialize};
 
-// ── Request types ────────────────────────────────────────────
-
 #[derive(Debug, Clone, Deserialize)]
 pub struct CreateClubRequest {
     pub name: String,
     pub logo_url: Option<String>,
 }
-
-// ── Response types ───────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize)]
 pub struct CreateClubResponse {

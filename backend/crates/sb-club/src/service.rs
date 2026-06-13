@@ -1,10 +1,7 @@
-use sb_contracts::{
-    ClubRepo, ClubService, LeaderboardPage, PersistenceError,
-};
+use sb_contracts::{ClubRepo, ClubService, LeaderboardPage, PersistenceError};
 use sb_shared_types::{ClubId, UserId};
 use std::sync::Arc;
 
-/// Concrete club service backed by any ClubRepo implementation.
 pub struct ClubServiceImpl {
     repo: Arc<dyn ClubRepo>,
 }
@@ -23,7 +20,6 @@ impl ClubService for ClubServiceImpl {
         logo_url: Option<&str>,
         created_by: UserId,
     ) -> Result<ClubId, PersistenceError> {
-        // Validate name is non-empty
         if name.trim().is_empty() {
             return Err(PersistenceError::ValidationError(
                 "club name must not be empty".into(),
@@ -37,12 +33,10 @@ impl ClubService for ClubServiceImpl {
         club_id: ClubId,
         user_id: UserId,
     ) -> Result<(), PersistenceError> {
-        // Verify club exists
         let club = self.repo.find_club_by_id(club_id).await?;
         if club.is_none() {
             return Err(PersistenceError::ClubNotFound);
         }
-        // Check not already a member
         if self.repo.is_member(club_id, user_id).await? {
             return Err(PersistenceError::AlreadyMember);
         }
@@ -54,7 +48,6 @@ impl ClubService for ClubServiceImpl {
         club_id: ClubId,
         division: u32,
     ) -> Result<LeaderboardPage, PersistenceError> {
-        // Verify club exists
         let club = self.repo.find_club_by_id(club_id).await?;
         if club.is_none() {
             return Err(PersistenceError::ClubNotFound);
@@ -68,7 +61,6 @@ impl ClubService for ClubServiceImpl {
         user_id: UserId,
         xp: i64,
     ) -> Result<(), PersistenceError> {
-        // Verify membership before awarding XP
         if !self.repo.is_member(club_id, user_id).await? {
             return Err(PersistenceError::NotAMember);
         }

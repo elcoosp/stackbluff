@@ -1,4 +1,3 @@
-use crate::PersistenceError;
 use async_trait::async_trait;
 use sb_shared_types::{AppError, RequestContext, TableId, UserId};
 
@@ -111,6 +110,7 @@ pub trait NotificationService: Send + Sync {
     async fn answer_callback_query(&self, callback_query_id: String, text: Option<String>) -> Result<(), PersistenceError>;
 }
 
+
 /// Service interface for club operations.
 #[async_trait::async_trait]
 pub trait ClubService: Send + Sync {
@@ -133,7 +133,6 @@ pub trait ClubService: Send + Sync {
         division: u32,
     ) -> Result<crate::repo_api::LeaderboardPage, crate::PersistenceError>;
 
-    /// Called when a club member earns XP (e.g. plays a hand at a club table).
     async fn add_xp(
         &self,
         club_id: sb_shared_types::ClubId,

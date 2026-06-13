@@ -1,2 +1,11 @@
-//! Re-export of PersistenceError and PersistenceResult from crate root.
-pub use crate::{PersistenceError, PersistenceResult};
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+pub enum PersistenceError {
+    #[error("Transient error: {0}")]
+    Transient(String),
+    #[error("Constraint violation: {0}")]
+    ConstraintViolation(String),
+    #[error("Fatal error: {0}")]
+    Fatal(String),
+}
