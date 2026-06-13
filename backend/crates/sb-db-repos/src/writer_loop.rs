@@ -4,7 +4,7 @@ use tokio::sync::watch;
 use tracing::{Instrument, error, info, info_span};
 
 use crate::commands::DbCommand;
-use sb_contracts::repo_api::PersistenceError;
+use sb_contracts::PersistenceError;
 
 const DEFAULT_BATCH_SIZE: usize = 50;
 

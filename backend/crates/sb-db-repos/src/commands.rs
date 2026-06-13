@@ -1,4 +1,4 @@
-use sb_contracts::repo_api::PersistenceResult;
+use sb_contracts::PersistenceResult;
 use sb_shared_types::{RequestContext, UserId};
 use tokio::sync::oneshot;
 use uuid::Uuid;

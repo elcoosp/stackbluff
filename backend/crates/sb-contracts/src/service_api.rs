@@ -119,19 +119,19 @@ pub trait ClubService: Send + Sync {
         name: &str,
         logo_url: Option<&str>,
         created_by: sb_shared_types::UserId,
-    ) -> Result<sb_shared_types::ClubId, crate::persistence_error::PersistenceError>;
+    ) -> Result<sb_shared_types::ClubId, crate::PersistenceError>;
 
     async fn join_club(
         &self,
         club_id: sb_shared_types::ClubId,
         user_id: sb_shared_types::UserId,
-    ) -> Result<(), crate::persistence_error::PersistenceError>;
+    ) -> Result<(), crate::PersistenceError>;
 
     async fn get_leaderboard(
         &self,
         club_id: sb_shared_types::ClubId,
         division: u32,
-    ) -> Result<crate::repo_api::LeaderboardPage, crate::persistence_error::PersistenceError>;
+    ) -> Result<crate::repo_api::LeaderboardPage, crate::PersistenceError>;
 
     /// Called when a club member earns XP (e.g. plays a hand at a club table).
     async fn add_xp(
@@ -139,5 +139,5 @@ pub trait ClubService: Send + Sync {
         club_id: sb_shared_types::ClubId,
         user_id: sb_shared_types::UserId,
         xp: i64,
-    ) -> Result<(), crate::persistence_error::PersistenceError>;
+    ) -> Result<(), crate::PersistenceError>;
 }

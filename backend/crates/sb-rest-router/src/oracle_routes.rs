@@ -7,7 +7,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 // Type alias for the shared oracle service (defined here to avoid circular deps)
-pub type SharedOracleService = Arc<OracleServiceImpl>;
+pub type SharedOracleService = Arc<dyn sb_contracts::OracleService>;
 
 pub fn oracle_router(oracle: SharedOracleService) -> Router {
     Router::new()

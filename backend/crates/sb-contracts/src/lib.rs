@@ -15,6 +15,38 @@ pub enum PersistenceError {
     InvalidState,
     #[error("Write conflict")]
     WriteConflict,
+    #[error("Constraint violation: {0}")]
+    ConstraintViolation(String),
+    #[error("Data integrity error: {0}")]
+    DataIntegrity(String),
+    #[error("Transient database error: {0}")]
+    Transient(String),
+    // Club errors
+    #[error("Club not found")]
+    ClubNotFound,
+    #[error("Already a member of this club")]
+    AlreadyMember,
+    #[error("Not a member of this club")]
+    NotAMember,
+    #[error("Validation error: {0}")]
+    ValidationError(String),
+}")]
+    Database(String),
+    #[error("Not found")]
+    NotFound,
+    #[error("Invalid state transition")]
+    InvalidState,
+    #[error("Write conflict")]
+    WriteConflict,
+    // Club errors
+    #[error("Club not found")]
+    ClubNotFound,
+    #[error("Already a member of this club")]
+    AlreadyMember,
+    #[error("Not a member of this club")]
+    NotAMember,
+    #[error("Validation error: {0}")]
+    ValidationError(String),
 }
 
 pub type PersistenceResult<T> = Result<T, PersistenceError>;
@@ -56,6 +88,7 @@ pub trait MissionRepository: Send + Sync {
         mission_type: String,
     ) -> PersistenceResult<()>;
 }
+
 pub mod repo_api;
 pub mod service_api;
 
@@ -85,3 +118,7 @@ pub mod lobby_api;
 pub use lobby_api::{TableInfo, TableRepo, TableService};
 pub mod persistence_error;
 pub mod async_hooks;
+
+// Club re-exports
+pub use repo_api::{Club, ClubMembership, ClubRepo, DIVISION_SIZE, LeaderboardEntry, LeaderboardPage};
+pub use service_api::ClubService;

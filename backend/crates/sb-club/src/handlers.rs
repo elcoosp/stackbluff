@@ -23,14 +23,14 @@ pub async fn create_club(
     Json(req): Json<CreateClubRequest>,
 ) -> Result<(StatusCode, Json<CreateClubResponse>), (StatusCode, String)> {
     // TODO: extract user_id from auth middleware / request context
-    let user_id = sb_shared_types::UserId::parse_str("00000000-0000-0000-0000-000000000001")
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    // TODO: extract user_id from auth middleware / request context
+    let user_id = sb_shared_types::UserId(uuid::Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap());
 
     let club_id = state
         .service
         .create_club(&req.name, req.logo_url.as_deref(), user_id)
         .await
-        .map_err(|e| match e {
+        .map_err(|e: sb_contracts::PersistenceError| match e {
             sb_contracts::PersistenceError::ValidationError(msg) => {
                 (StatusCode::BAD_REQUEST, msg)
             }
@@ -46,14 +46,14 @@ pub async fn join_club(
     Path(club_id): Path<ClubId>,
 ) -> Result<Json<JoinClubResponse>, (StatusCode, String)> {
     // TODO: extract user_id from auth middleware / request context
-    let user_id = sb_shared_types::UserId::parse_str("00000000-0000-0000-0000-000000000001")
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    // TODO: extract user_id from auth middleware / request context
+    let user_id = sb_shared_types::UserId(uuid::Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap());
 
     state
         .service
         .join_club(club_id, user_id)
         .await
-        .map_err(|e| match e {
+        .map_err(|e: sb_contracts::PersistenceError| match e {
             sb_contracts::PersistenceError::ClubNotFound => {
                 (StatusCode::NOT_FOUND, "club not found".into())
             }
@@ -75,7 +75,7 @@ pub async fn get_leaderboard(
         .service
         .get_leaderboard(club_id, 1)
         .await
-        .map_err(|e| match e {
+        .map_err(|e: sb_contracts::PersistenceError| match e {
             sb_contracts::PersistenceError::ClubNotFound => {
                 (StatusCode::NOT_FOUND, "club not found".into())
             }
