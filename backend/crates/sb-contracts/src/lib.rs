@@ -83,3 +83,5 @@ pub enum TableCommand {
 
 pub mod lobby_api;
 pub use lobby_api::{TableInfo, TableRepo, TableService};
+pub mod persistence_error;
+pub mod async_hooks;

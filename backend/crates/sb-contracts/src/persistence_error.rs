@@ -8,4 +8,8 @@ pub enum PersistenceError {
     ConstraintViolation(String),
     #[error("Fatal error: {0}")]
     Fatal(String),
+    // Club errors
+    ClubNotFound,
+    AlreadyMember,
+    NotAMember,
 }
