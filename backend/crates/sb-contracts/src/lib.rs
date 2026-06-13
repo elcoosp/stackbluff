@@ -2,7 +2,7 @@
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use sb_shared_types::{ClubId, PlayerId, TableId, UserId};
+use sb_shared_types::{PlayerId, TableId, UserId};
 use thiserror::Error;
 
 /// Unified persistence error type.
@@ -110,3 +110,5 @@ pub enum TableCommand {
         table_id: TableId,
     },
 }
+pub mod user_resolution;
+pub use sb_shared_types::ClubId;

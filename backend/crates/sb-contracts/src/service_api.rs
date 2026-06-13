@@ -1,3 +1,4 @@
+use crate::PersistenceError;
 use async_trait::async_trait;
 use sb_shared_types::{AppError, RequestContext, TableId, UserId};
 
@@ -138,4 +139,11 @@ pub trait ClubService: Send + Sync {
         user_id: sb_shared_types::UserId,
         xp: i64,
     ) -> Result<(), crate::PersistenceError>;
+}
+
+/// Input for creating a table (stub — will be replaced by #007).
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct CreateTableInput {
+    pub name: String,
+    pub club_id: Option<sb_shared_types::ClubId>,
 }

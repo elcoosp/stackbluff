@@ -1,14 +1,11 @@
 use async_trait::async_trait;
 use chrono::Utc;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseBackend,
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, ConnectionTrait,
     DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
-    Set, Statement,
 };
-use sb_contracts::{
-    Club, ClubId, ClubRepo, LeaderboardEntry, LeaderboardPage, PersistenceError,
-    UserId, DIVISION_SIZE,
-};
+use sb_contracts::{Club, ClubRepo, LeaderboardEntry, LeaderboardPage, PersistenceError, DIVISION_SIZE};
+use sb_shared_types::{ClubId, UserId};
 use sb_db_entities::{club_leaderboard, club_memberships, clubs};
 use uuid::Uuid;
 
@@ -163,39 +160,27 @@ impl ClubRepo for ClubRepoImpl {
         user_id: UserId,
         xp: i64,
     ) -> Result<(), PersistenceError> {
-        let sql = match self.db.get_database_backend() {
-            DatabaseBackend::Sqlite => {
-                "UPDATE club_memberships SET weekly_xp = weekly_xp + ?, updated_at = ? WHERE club_id = ? AND user_id = ?"
-            }
-            DatabaseBackend::Postgres => {
-                "UPDATE club_memberships SET weekly_xp = weekly_xp + $1, updated_at = $2 WHERE club_id = $3 AND user_id = $4"
-            }
-            _ => {
-                "UPDATE club_memberships SET weekly_xp = weekly_xp + ?, updated_at = ? WHERE club_id = ? AND user_id = ?"
-            }
-        };
-
-        let now = Utc::now();
-        let result: sea_orm::ExecResult = self
-            .db
-            .execute(Statement::from_sql_and_values(
-                self.db.get_database_backend(),
-                sql,
-                [
-                    xp.into(),
-                    now.into(),
-                    Uuid::from(club_id).into(),
-                    Uuid::from(user_id).into(),
-                ],
-            ))
+        // Find the membership, then update it (read-modify-write via SeaORM)
+        let model = club_memberships::Entity::find()
+            .filter(club_memberships::Column::ClubId.eq(Uuid::from(club_id)))
+            .filter(club_memberships::Column::UserId.eq(Uuid::from(user_id)))
+            .one(&self.db)
             .await
             .map_err(|e: sea_orm::DbErr| PersistenceError::Database(e.to_string()))?;
 
-        if result.rows_affected() == 0 {
-            return Err(PersistenceError::NotAMember);
+        match model {
+            Some(m) => {
+                let mut active: club_memberships::ActiveModel = m.into();
+                let current_xp: i64 = active.weekly_xp.unwrap();
+                active.weekly_xp = Set(current_xp + xp);
+                active.updated_at = Set(Utc::now());
+                ActiveModelTrait::update(active, &self.db)
+                    .await
+                    .map_err(|e: sea_orm::DbErr| PersistenceError::Database(e.to_string()))?;
+                Ok(())
+            }
+            None => Err(PersistenceError::NotAMember),
         }
-
-        Ok(())
     }
 
     async fn refresh_leaderboard(
