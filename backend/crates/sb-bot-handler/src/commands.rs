@@ -54,7 +54,7 @@ pub async fn handle_poker_command(
         }
     };
 
-    // Create a new context that includes the user_id for all subsequent logging
+    // Context that includes user_id for logging
     let ctx_with_user = RequestContext::new(ctx.request_id, Some(user_id));
 
     let input = CreateTableInput {
