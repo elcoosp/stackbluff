@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
-const MAIN_TIMER_DURATION_MS: u64 = 30_000;
+const DEFAULT_TIMER_MS: u64 = 30_000;
 // Production table actor – stable PlayerId, dealer rotation,
 // timeout cleanup, error propagation, full observability.
 
@@ -511,7 +511,7 @@ impl TableActor {
                 bank_remaining = player_state.time_bank_remaining_seconds,
                 "Consumed 1s from bank, resetting timer"
             );
-            self.start_timer(player_id, MAIN_TIMER_DURATION_MS);
+            self.start_timer(player_id, DEFAULT_TIMER_MS);
             // TODO: broadcast ActionRequired with remaining_ms after #001
         } else {
             warn!(?player_id, "Time bank exhausted, auto‑folding");
