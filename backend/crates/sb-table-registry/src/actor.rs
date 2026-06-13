@@ -10,13 +10,13 @@ use uuid::Uuid;
 use tokio::sync::mpsc;
 
 use sb_game_engine::game_state::{Action, ActionError, GameState};
+use sb_shared_types::AppError;
 use sb_shared_types::{ActionType, ChipAmount, PlayerId, StakeLevel, TableConfig, TableId, UserId};
 use sb_ws_handler::BroadcastSender;
 use sb_ws_messages::{Card as WsCard, ServerMessage, TableStateUpdate};
 use std::pin::Pin;
-use tokio::time::{sleep, Duration, Sleep};
-use tracing::{info, warn, error, span, debug, Instrument, Level};
-use sb_shared_types::AppError;
+use tokio::time::{Duration, Sleep, sleep};
+use tracing::{Instrument, Level, debug, error, info, span, warn};
 
 fn zero() -> ChipAmount {
     ChipAmount::new(0).unwrap()
@@ -59,7 +59,8 @@ struct Player {
     seat: u8,
     player_id: PlayerId,
     stack: ChipAmount,
-    pub time_bank_remaining_seconds: u32,}
+    pub time_bank_remaining_seconds: u32,
+}
 
 impl Player {
     fn new(user_id: UserId, seat: u8, stack: ChipAmount) -> Self {
@@ -68,7 +69,8 @@ impl Player {
             seat,
             player_id: PlayerId(Uuid::new_v4()),
             stack,
-            time_bank_remaining_seconds: 0}
+            time_bank_remaining_seconds: 0,
+        }
     }
 }
 
@@ -159,7 +161,7 @@ impl TableActor {
             current_hand: None,
             broadcast_tx,
             cmd_tx,
-        
+
             current_timer: None,
             current_timer_player: None,
             current_main_timer_remaining_ms: None,
@@ -493,14 +495,22 @@ impl TableActor {
 
         info!(?player_id, "Timer expired for player");
 
-        let user_id = *self.player_user_map.get(&player_id)
+        let user_id = *self
+            .player_user_map
+            .get(&player_id)
             .ok_or_else(|| AppError::NotFound("player not found".to_string()))?;
-        let player_state = self.players.get_mut(&user_id)
+        let player_state = self
+            .players
+            .get_mut(&user_id)
             .ok_or_else(|| AppError::NotFound("player not found".to_string()))?;
 
         if player_state.time_bank_remaining_seconds > 0 {
             player_state.time_bank_remaining_seconds -= 1;
-            info!(?player_id, bank_remaining = player_state.time_bank_remaining_seconds, "Consumed 1s from bank, resetting timer");
+            info!(
+                ?player_id,
+                bank_remaining = player_state.time_bank_remaining_seconds,
+                "Consumed 1s from bank, resetting timer"
+            );
             self.start_timer(player_id, MAIN_TIMER_DURATION_MS);
             // TODO: broadcast ActionRequired with remaining_ms after #001
         } else {
@@ -510,10 +520,13 @@ impl TableActor {
         Ok(())
     }
 
-
     /// Removes a player from the actor state, cleaning up the player_user_map.
     pub fn remove_player(&mut self, user_id: &UserId) {
-        if let Some(player_id) = self.player_user_map.iter().find_map(|(pid, uid)| if uid == user_id { Some(*pid) } else { None }) {
+        if let Some(player_id) = self
+            .player_user_map
+            .iter()
+            .find_map(|(pid, uid)| if uid == user_id { Some(*pid) } else { None })
+        {
             self.player_user_map.remove(&player_id);
             self.players.remove(user_id);
             info!(?player_id, ?user_id, "Player removed from table");
