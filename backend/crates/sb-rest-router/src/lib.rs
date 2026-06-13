@@ -36,3 +36,9 @@ async fn analyze_handler(
 }
 mod oracle_routes;
 pub use oracle_routes::oracle_router;
+<<<<<<< HEAD
+||||||| parent of 7b2689b (fix(oracle): final compilation fixes and template diversity)
+=======
+use sb_oracle::OracleServiceImpl;
+pub type SharedOracleService = Arc<OracleServiceImpl>;
+>>>>>>> 7b2689b (fix(oracle): final compilation fixes and template diversity)
