@@ -13,6 +13,8 @@ members = [
     "crates/sb-ws-handler",
     "crates/sb-ws-messages",
     "migration",
+    "crates/sb-club",
+    "crates/sb-server",
 ]
 
 [workspace.package]
@@ -20,6 +22,9 @@ edition = "2024"
 rust-version = "1.94"
 
 [workspace.dependencies]
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+sb-server = { path = "crates/sb-server" }
+sb-club = { path = "crates/sb-club" }
 futures = { version = "0.3.32", default-features = false, features = ["std", "async-await"] }
 moka = { version = "0.12.5", features = ["sync"] }
 parking_lot = "0.12.3"
