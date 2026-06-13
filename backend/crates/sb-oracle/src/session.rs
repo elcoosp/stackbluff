@@ -7,17 +7,6 @@ use tokio::time::{Duration, Instant};
 const MAX_ANALYSES: u32 = 3;
 const INACTIVITY_RESET: Duration = Duration::from_secs(8 * 3600);
 
-<<<<<<< HEAD
-#[derive(Debug, Clone)]
-struct UserSession {
-    count: u32,
-    last_active: Instant,
-}
-
-pub struct SessionManager {
-    inner: Arc<Mutex<HashMap<UserId, UserSession>>>,
-||||||| parent of 7b2689b (fix(oracle): final compilation fixes and template diversity)
-=======
 /// In-memory session manager. Sessions are lost if the server restarts.
 /// This is intentional per the specification (counted in memory, keyed by user_id).
 /// For persistence across restarts, a database-backed store would be required.
@@ -37,7 +26,6 @@ impl Default for SessionManager {
     fn default() -> Self {
         Self::new()
     }
->>>>>>> 7b2689b (fix(oracle): final compilation fixes and template diversity)
 }
 
 impl SessionManager {
