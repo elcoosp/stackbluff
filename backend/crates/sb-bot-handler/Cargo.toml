@@ -5,9 +5,10 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+tokio = { workspace = true, features = ["time"] }
+parking_lot = { workspace = true }
 sb-contracts = { workspace = true }
 sb-shared-types = { workspace = true }
-sb-auth = { workspace = true }
 
 axum = { workspace = true }
 teloxide = { workspace = true }
