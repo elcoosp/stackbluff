@@ -110,7 +110,6 @@ pub trait NotificationService: Send + Sync {
     async fn answer_callback_query(&self, callback_query_id: String, text: Option<String>) -> Result<(), PersistenceError>;
 }
 
-
 /// Service interface for club operations.
 #[async_trait::async_trait]
 pub trait ClubService: Send + Sync {

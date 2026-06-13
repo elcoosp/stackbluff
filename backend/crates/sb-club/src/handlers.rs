@@ -4,8 +4,9 @@ use axum::{
     Json,
 };
 use sb_contracts::ClubService;
-use sb_shared_types::ClubId;
+use sb_shared_types::{ClubId, UserId};
 use std::sync::Arc;
+use uuid::Uuid;
 
 use crate::models::{
     CreateClubRequest, CreateClubResponse, GetLeaderboardResponse, JoinClubResponse,
@@ -23,8 +24,7 @@ pub async fn create_club(
     Json(req): Json<CreateClubRequest>,
 ) -> Result<(StatusCode, Json<CreateClubResponse>), (StatusCode, String)> {
     // TODO: extract user_id from auth middleware / request context
-    // TODO: extract user_id from auth middleware / request context
-    let user_id = sb_shared_types::UserId(uuid::Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap());
+    let user_id = UserId::from(Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap());
 
     let club_id = state
         .service
@@ -46,8 +46,7 @@ pub async fn join_club(
     Path(club_id): Path<ClubId>,
 ) -> Result<Json<JoinClubResponse>, (StatusCode, String)> {
     // TODO: extract user_id from auth middleware / request context
-    // TODO: extract user_id from auth middleware / request context
-    let user_id = sb_shared_types::UserId(uuid::Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap());
+    let user_id = UserId::from(Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap());
 
     state
         .service

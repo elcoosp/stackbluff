@@ -1,12 +1,13 @@
 use async_trait::async_trait;
 use chrono::Utc;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DatabaseBackend, DatabaseConnection, EntityTrait,
-    QueryFilter, QueryOrder, Set, Statement,
+    ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseBackend,
+    DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
+    Set, Statement,
 };
 use sb_contracts::{
-    Club, ClubId, ClubRepo, LeaderboardEntry, LeaderboardPage, PersistenceError, UserId,
-    DIVISION_SIZE,
+    Club, ClubId, ClubRepo, LeaderboardEntry, LeaderboardPage, PersistenceError,
+    UserId, DIVISION_SIZE,
 };
 use sb_db_entities::{club_leaderboard, club_memberships, clubs};
 use uuid::Uuid;
@@ -35,7 +36,7 @@ impl ClubRepo for ClubRepoImpl {
             id: Set(id),
             name: Set(name.to_string()),
             logo_url: Set(logo_url.map(|s| s.to_string())),
-            created_by: Set(created_by.0),
+            created_by: Set(created_by.into()),
             created_at: Set(now),
             updated_at: Set(now),
         };
@@ -45,23 +46,24 @@ impl ClubRepo for ClubRepoImpl {
             .await
             .map_err(|e| PersistenceError::Database(e.to_string()))?;
 
-        Ok(ClubId(id))
+        Ok(ClubId::from(id))
     }
 
     async fn find_club_by_id(
         &self,
         club_id: ClubId,
     ) -> Result<Option<Club>, PersistenceError> {
-        let model = clubs::Entity::find_by_id(club_id.0)
+        let uuid: Uuid = club_id.into();
+        let model = clubs::Entity::find_by_id(uuid)
             .one(&self.db)
             .await
             .map_err(|e| PersistenceError::Database(e.to_string()))?;
 
         Ok(model.map(|m| Club {
-            id: ClubId(m.id),
+            id: ClubId::from(m.id),
             name: m.name,
             logo_url: m.logo_url,
-            created_by: UserId(m.created_by),
+            created_by: UserId::from(m.created_by),
         }))
     }
 
@@ -74,8 +76,8 @@ impl ClubRepo for ClubRepoImpl {
         let now = Utc::now();
         let active = club_memberships::ActiveModel {
             id: Set(id),
-            club_id: Set(club_id.0),
-            user_id: Set(user_id.0),
+            club_id: Set(club_id.into()),
+            user_id: Set(user_id.into()),
             weekly_xp: Set(0),
             joined_at: Set(now),
             updated_at: Set(now),
@@ -95,11 +97,11 @@ impl ClubRepo for ClubRepoImpl {
         user_id: UserId,
     ) -> Result<bool, PersistenceError> {
         let count = club_memberships::Entity::find()
-            .filter(club_memberships::Column::ClubId.eq(club_id.0))
-            .filter(club_memberships::Column::UserId.eq(user_id.0))
+            .filter(club_memberships::Column::ClubId.eq(Uuid::from(club_id)))
+            .filter(club_memberships::Column::UserId.eq(Uuid::from(user_id)))
             .count(&self.db)
             .await
-            .map_err(|e| PersistenceError::Database(e.to_string()))?;
+            .map_err(|e: sea_orm::DbErr| PersistenceError::Database(e.to_string()))?;
 
         Ok(count > 0)
     }
@@ -109,10 +111,10 @@ impl ClubRepo for ClubRepoImpl {
         club_id: ClubId,
     ) -> Result<u64, PersistenceError> {
         let count = club_memberships::Entity::find()
-            .filter(club_memberships::Column::ClubId.eq(club_id.0))
+            .filter(club_memberships::Column::ClubId.eq(Uuid::from(club_id)))
             .count(&self.db)
             .await
-            .map_err(|e| PersistenceError::Database(e.to_string()))?;
+            .map_err(|e: sea_orm::DbErr| PersistenceError::Database(e.to_string()))?;
 
         Ok(count)
     }
@@ -130,18 +132,18 @@ impl ClubRepo for ClubRepoImpl {
         };
 
         let entries = club_leaderboard::Entity::find()
-            .filter(club_leaderboard::Column::ClubId.eq(club_id.0))
+            .filter(club_leaderboard::Column::ClubId.eq(Uuid::from(club_id)))
             .filter(club_leaderboard::Column::Division.eq(division as i32))
             .order_by_asc(club_leaderboard::Column::Rank)
             .all(&self.db)
             .await
-            .map_err(|e| PersistenceError::Database(e.to_string()))?;
+            .map_err(|e: sea_orm::DbErr| PersistenceError::Database(e.to_string()))?;
 
         let leaderboard_entries: Vec<LeaderboardEntry> = entries
             .into_iter()
             .map(|e| LeaderboardEntry {
                 rank: e.rank as u32,
-                user_id: UserId(e.user_id),
+                user_id: UserId::from(e.user_id),
                 weekly_xp: e.weekly_xp,
             })
             .collect();
@@ -174,15 +176,20 @@ impl ClubRepo for ClubRepoImpl {
         };
 
         let now = Utc::now();
-        let result = self
+        let result: sea_orm::ExecResult = self
             .db
             .execute(Statement::from_sql_and_values(
                 self.db.get_database_backend(),
                 sql,
-                [xp.into(), now.into(), club_id.0.into(), user_id.0.into()],
+                [
+                    xp.into(),
+                    now.into(),
+                    Uuid::from(club_id).into(),
+                    Uuid::from(user_id).into(),
+                ],
             ))
             .await
-            .map_err(|e| PersistenceError::Database(e.to_string()))?;
+            .map_err(|e: sea_orm::DbErr| PersistenceError::Database(e.to_string()))?;
 
         if result.rows_affected() == 0 {
             return Err(PersistenceError::NotAMember);
@@ -199,18 +206,18 @@ impl ClubRepo for ClubRepoImpl {
 
         // 1. Delete existing leaderboard entries for this club
         club_leaderboard::Entity::delete_many()
-            .filter(club_leaderboard::Column::ClubId.eq(club_id.0))
+            .filter(club_leaderboard::Column::ClubId.eq(Uuid::from(club_id)))
             .exec(&self.db)
             .await
-            .map_err(|e| PersistenceError::Database(e.to_string()))?;
+            .map_err(|e: sea_orm::DbErr| PersistenceError::Database(e.to_string()))?;
 
         // 2. Read all members sorted by weekly_xp descending
         let members = club_memberships::Entity::find()
-            .filter(club_memberships::Column::ClubId.eq(club_id.0))
+            .filter(club_memberships::Column::ClubId.eq(Uuid::from(club_id)))
             .order_by_desc(club_memberships::Column::WeeklyXp)
             .all(&self.db)
             .await
-            .map_err(|e| PersistenceError::Database(e.to_string()))?;
+            .map_err(|e: sea_orm::DbErr| PersistenceError::Database(e.to_string()))?;
 
         // 3. Insert new leaderboard rows with rank and division
         for (idx, member) in members.iter().enumerate() {
@@ -218,7 +225,7 @@ impl ClubRepo for ClubRepoImpl {
             let division = ((idx as u32) / DIVISION_SIZE) + 1;
 
             let active = club_leaderboard::ActiveModel {
-                club_id: Set(club_id.0),
+                club_id: Set(Uuid::from(club_id)),
                 user_id: Set(member.user_id),
                 rank: Set(rank),
                 weekly_xp: Set(member.weekly_xp),
@@ -229,7 +236,7 @@ impl ClubRepo for ClubRepoImpl {
             active
                 .insert(&self.db)
                 .await
-                .map_err(|e| PersistenceError::Database(e.to_string()))?;
+                .map_err(|e: sea_orm::DbErr| PersistenceError::Database(e.to_string()))?;
         }
 
         Ok(())
@@ -239,8 +246,8 @@ impl ClubRepo for ClubRepoImpl {
         let all_clubs = clubs::Entity::find()
             .all(&self.db)
             .await
-            .map_err(|e| PersistenceError::Database(e.to_string()))?;
+            .map_err(|e: sea_orm::DbErr| PersistenceError::Database(e.to_string()))?;
 
-        Ok(all_clubs.into_iter().map(|c| ClubId(c.id)).collect())
+        Ok(all_clubs.into_iter().map(|c| ClubId::from(c.id)).collect())
     }
 }

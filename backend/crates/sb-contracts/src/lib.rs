@@ -2,13 +2,33 @@
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use sb_shared_types::{PlayerId, TableId, UserId};
+use sb_shared_types::{ClubId, PlayerId, TableId, UserId};
 use thiserror::Error;
 
-#[derive(Debug, thiserror::Error)]
+/// Unified persistence error type.
+/// Merges root, repo_api, and persistence_error variants into one enum.
+#[derive(Debug, Error)]
 pub enum PersistenceError {
-    #[error("Database error: {0,
-    // Club errors
+    // Root variants
+    #[error("Database error: {0}")]
+    Database(String),
+    #[error("Not found")]
+    NotFound,
+    #[error("Invalid state transition")]
+    InvalidState,
+    #[error("Write conflict")]
+    WriteConflict,
+    // repo_api variants
+    #[error("Constraint violation (UNIQUE/CHECK): {0}")]
+    ConstraintViolation(String),
+    #[error("Data integrity error: {0}")]
+    DataIntegrity(String),
+    #[error("Transient database error (retryable): {0}")]
+    Transient(String),
+    // persistence_error variants
+    #[error("Fatal error: {0}")]
+    Fatal(String),
+    // Club variants
     #[error("Club not found")]
     ClubNotFound,
     #[error("Already a member of this club")]
@@ -17,14 +37,6 @@ pub enum PersistenceError {
     NotAMember,
     #[error("Validation error: {0}")]
     ValidationError(String),
-}")]
-    Database(String),
-    #[error("Not found")]
-    NotFound,
-    #[error("Invalid state transition")]
-    InvalidState,
-    #[error("Write conflict")]
-    WriteConflict,
 }
 
 pub type PersistenceResult<T> = Result<T, PersistenceError>;
@@ -66,8 +78,16 @@ pub trait MissionRepository: Send + Sync {
         mission_type: String,
     ) -> PersistenceResult<()>;
 }
+
 pub mod repo_api;
 pub mod service_api;
+pub mod lobby_api;
+pub mod persistence_error;
+pub mod async_hooks;
+
+pub use lobby_api::{TableInfo, TableRepo, TableService};
+pub use repo_api::{Club, ClubMembership, ClubRepo, DIVISION_SIZE, LeaderboardEntry, LeaderboardPage};
+pub use service_api::ClubService;
 
 #[derive(Debug, Error)]
 pub enum TableError {
@@ -90,10 +110,3 @@ pub enum TableCommand {
         table_id: TableId,
     },
 }
-
-pub mod lobby_api;
-pub use lobby_api::{TableInfo, TableRepo, TableService};
-
-// Club re-exports
-pub use repo_api::{Club, ClubMembership, ClubRepo, DIVISION_SIZE, LeaderboardEntry, LeaderboardPage};
-pub use service_api::ClubService;
