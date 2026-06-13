@@ -4,3 +4,4 @@ pub mod user_repo;
 pub mod writer_loop;
 
 pub use writer_loop::{WriterLoopHandle, init_writer_loop};
+pub mod club_repo;
