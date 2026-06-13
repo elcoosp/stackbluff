@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use chrono::Utc;
 use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, ConnectionTrait,
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait,
     DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
 };
 use sb_contracts::{Club, ClubRepo, LeaderboardEntry, LeaderboardPage, PersistenceError, DIVISION_SIZE};
