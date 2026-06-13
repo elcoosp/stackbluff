@@ -55,7 +55,6 @@ hmac = "0.12"
 jsonwebtoken = { version = "=10.3.0", features = ["rust_crypto"] }
 argon2 = "0.6.0-rc.8"
 sqlx = { version = "0.9.0", features = ["sqlite", "runtime-tokio", "tls-rustls"] }
-moka = { version = "0.12", features = ["sync"] }
 sea-orm = { version = "2.0.0-rc.38", features = ["sqlx-sqlite", "runtime-tokio-rustls", "macros"] }
 sea-orm-migration = { version = "2.0.0-rc.38" }
 serde = { version = "1.0.228", features = ["derive"] }

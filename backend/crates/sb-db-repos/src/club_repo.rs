@@ -212,6 +212,13 @@ impl ClubRepo for ClubRepoImpl {
                .await
                .map_err(|e| PersistenceError::DatabaseError(e.to_string()))?;
 
+        // 1. Delete existing leaderboard entries for this club
+        club_leaderboard::Entity::delete_many()
+            .filter(club_leaderboard::Column::ClubId.eq(club_id))
+            .exec(&self.db)
+            .await
+            .map_err(|e| PersistenceError::DatabaseError(e.to_string()))?;
+
         // 2. Read all members sorted by weekly_xp descending
         let members = club_memberships::Entity::find()
             .filter(club_memberships::Column::ClubId.eq(club_id))

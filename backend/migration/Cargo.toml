@@ -8,3 +8,4 @@ rust-version = "1.94"
 sea-orm-migration = { workspace = true }
 sb-db-entities = { path = "../crates/sb-db-entities" }
 tokio = { workspace = true }
+async-trait = { workspace = true }
