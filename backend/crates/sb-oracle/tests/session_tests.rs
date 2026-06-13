@@ -2,7 +2,7 @@ use sb_oracle::{OracleServiceImpl, HandAnalysisParams};
 use sb_shared_types::{RequestContext, UserId};
 use tokio::time::{pause, advance, Duration as TokioDuration};
 use uuid::Uuid;
-use sb_contracts::service_api::OracleService;   // <-- import trait
+use sb_contracts::service_api::OracleService;
 
 #[tokio::test]
 async fn session_resets_after_8_hours() {
