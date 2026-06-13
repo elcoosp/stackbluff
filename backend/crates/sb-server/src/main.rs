@@ -1,26 +1,47 @@
-//! StackBluff server entry point.
-use sb_rest_router::{oracle_router, SharedOracleService};
-use sb_oracle::OracleServiceImpl;
+mod leaderboard_refresh;
+
+use axum::Router;
+use sb_club::{club_router, ClubServiceImpl};
+use sb_contracts::ClubRepo;
+use sb_db_repos::ClubRepoImpl;
+use sea_orm::Database;
 use std::sync::Arc;
-use axum::Server;
-use std::net::SocketAddr;
 
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
 
-    let oracle_svc = Arc::new(OracleServiceImpl::new());
-    // For now, serve only oracle endpoints. The existing lobby router can be merged later.
-    // FIXME: The original lobby router (from sb-rest-router::create_router) is not mounted here.
-    // It requires table_service, table_repo, and registry dependencies that are not yet provided.
-    // For a complete server, merge both routers: Router::new().merge(lobby_router).merge(oracle_router).
-    let app = oracle_router(oracle_svc);
+    let db_url = std::env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "sqlite://stackbluff.db?mode=rwc".to_string());
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
-    tracing::info!("listening on {}", addr);
-    Server::bind(&addr)
-        .serve(app.into_make_service())
+    let db = Database::connect(&db_url)
         .await
-        .unwrap();
-}
+        .expect("failed to connect to database");
 
+    // Run migrations
+    migration::Migrator::up(&db, None)
+        .await
+        .expect("failed to run migrations");
+
+    // ── Club wiring ────────────────────────────────────────
+    let club_repo: Arc<dyn ClubRepo> = Arc::new(ClubRepoImpl::new(db.clone()));
+    let club_service = Arc::new(ClubServiceImpl::new(club_repo.clone()));
+
+    // Spawn the 5-minute leaderboard refresh job
+    leaderboard_refresh::spawn_leaderboard_refresh_job(club_repo);
+
+    let club_state = sb_club::handlers::ClubState {
+        service: club_service,
+    };
+
+    let app = Router::new().merge(club_router(club_state));
+
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
+        .await
+        .expect("failed to bind port 3000");
+
+    tracing::info!("server listening on {}", listener.local_addr().unwrap());
+    axum::serve(listener, app)
+        .await
+        .expect("server error");
+}

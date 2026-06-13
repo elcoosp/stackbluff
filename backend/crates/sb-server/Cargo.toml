@@ -12,3 +12,9 @@ axum = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+sb-club = { path = "../sb-club" }
+sb-db-repos = { path = "../sb-db-repos" }
+sb-contracts = { path = "../sb-contracts" }
+sb-shared-types = { path = "../sb-shared-types" }
+sea-orm = { workspace = true }
+migration = { path = "../../migration" }
