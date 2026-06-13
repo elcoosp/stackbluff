@@ -32,7 +32,15 @@ impl HandAnalysisParams {
         is_cbet_situation: bool,
         is_all_in: bool,
     ) -> Self {
-        Self { position, pot_odds_ratio, stack_bb, hand_strength, is_bluff_catching, is_cbet_situation, is_all_in }
+        Self {
+            position,
+            pot_odds_ratio,
+            stack_bb,
+            hand_strength,
+            is_bluff_catching,
+            is_cbet_situation,
+            is_all_in,
+        }
     }
 }
 
@@ -72,13 +80,25 @@ impl OracleService for OracleServiceImpl {
     type Output = AnalysisOutput;
     type Error = OracleError;
 
-    async fn analyze(&self, ctx: &RequestContext, params: Self::Params) -> Result<Self::Output, Self::Error> {
-        let user_id = ctx.user_id.ok_or_else(|| OracleError::Internal("missing user_id".into()))?;
+    async fn analyze(
+        &self,
+        ctx: &RequestContext,
+        params: Self::Params,
+    ) -> Result<Self::Output, Self::Error> {
+        let user_id = ctx
+            .user_id
+            .ok_or_else(|| OracleError::Internal("missing user_id".into()))?;
         if !self.sessions.try_consume(user_id).await {
             return Err(OracleError::LimitReached);
         }
-        let template = self.templates.select(&params).ok_or(OracleError::NoMatchingTemplate)?;
+        let template = self
+            .templates
+            .select(&params)
+            .ok_or(OracleError::NoMatchingTemplate)?;
         let text = template.render(&params);
-        Ok(AnalysisOutput { text, template_id: template.id.clone() })
+        Ok(AnalysisOutput {
+            text,
+            template_id: template.id.clone(),
+        })
     }
 }

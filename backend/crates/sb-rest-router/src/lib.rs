@@ -1,13 +1,7 @@
 //! REST router for StackBluff.
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::IntoResponse,
-    routing::post,
-    Json, Router,
-};
+use axum::{Json, Router, extract::State, http::StatusCode, response::IntoResponse, routing::post};
 use sb_contracts::service_api::OracleService;
-use sb_oracle::{HandAnalysisParams, OracleServiceImpl, OracleError};
+use sb_oracle::{HandAnalysisParams, OracleError, OracleServiceImpl};
 use sb_shared_types::RequestContext;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -31,8 +25,12 @@ async fn analyze_handler(
     };
     match oracle.analyze(&ctx, params).await {
         Ok(output) => (StatusCode::OK, Json(output)).into_response(),
-        Err(OracleError::LimitReached) => (StatusCode::TOO_MANY_REQUESTS, "Free tier limit reached").into_response(),
-        Err(OracleError::NoMatchingTemplate) => (StatusCode::NOT_FOUND, "No analysis template matched").into_response(),
+        Err(OracleError::LimitReached) => {
+            (StatusCode::TOO_MANY_REQUESTS, "Free tier limit reached").into_response()
+        }
+        Err(OracleError::NoMatchingTemplate) => {
+            (StatusCode::NOT_FOUND, "No analysis template matched").into_response()
+        }
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     }
 }

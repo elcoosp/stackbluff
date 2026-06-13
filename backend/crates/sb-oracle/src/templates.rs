@@ -24,11 +24,14 @@ pub struct TemplateRules {
     pub max_stack_bb: Option<f64>,
 }
 
-pub struct TemplateLibrary { templates: Vec<Template> }
+pub struct TemplateLibrary {
+    templates: Vec<Template>,
+}
 
 impl TemplateLibrary {
     pub fn load() -> Self {
-        let templates: Vec<Template> = serde_json::from_str(TEMPLATES_JSON).expect("invalid templates.json");
+        let templates: Vec<Template> =
+            serde_json::from_str(TEMPLATES_JSON).expect("invalid templates.json");
         Self { templates }
     }
     pub fn select(&self, params: &HandAnalysisParams) -> Option<&Template> {
@@ -48,15 +51,51 @@ impl Template {
 
 impl TemplateRules {
     fn matches(&self, params: &HandAnalysisParams) -> bool {
-        if let Some(ref positions) = self.positions { if !positions.contains(&params.position) { return false; } }
-        if let Some(min) = self.min_pot_odds_ratio { if params.pot_odds_ratio < min { return false; } }
-        if let Some(max) = self.max_pot_odds_ratio { if params.pot_odds_ratio > max { return false; } }
-        if let Some(min) = self.min_hand_strength { if params.hand_strength < min { return false; } }
-        if let Some(max) = self.max_hand_strength { if params.hand_strength > max { return false; } }
-        if let Some(expect) = self.is_bluff_catching { if params.is_bluff_catching != expect { return false; } }
-        if let Some(expect) = self.is_cbet_situation { if params.is_cbet_situation != expect { return false; } }
-        if let Some(min) = self.min_stack_bb { if params.stack_bb < min { return false; } }
-        if let Some(max) = self.max_stack_bb { if params.stack_bb > max { return false; } }
+        if let Some(ref positions) = self.positions {
+            if !positions.contains(&params.position) {
+                return false;
+            }
+        }
+        if let Some(min) = self.min_pot_odds_ratio {
+            if params.pot_odds_ratio < min {
+                return false;
+            }
+        }
+        if let Some(max) = self.max_pot_odds_ratio {
+            if params.pot_odds_ratio > max {
+                return false;
+            }
+        }
+        if let Some(min) = self.min_hand_strength {
+            if params.hand_strength < min {
+                return false;
+            }
+        }
+        if let Some(max) = self.max_hand_strength {
+            if params.hand_strength > max {
+                return false;
+            }
+        }
+        if let Some(expect) = self.is_bluff_catching {
+            if params.is_bluff_catching != expect {
+                return false;
+            }
+        }
+        if let Some(expect) = self.is_cbet_situation {
+            if params.is_cbet_situation != expect {
+                return false;
+            }
+        }
+        if let Some(min) = self.min_stack_bb {
+            if params.stack_bb < min {
+                return false;
+            }
+        }
+        if let Some(max) = self.max_stack_bb {
+            if params.stack_bb > max {
+                return false;
+            }
+        }
         true
     }
 }
