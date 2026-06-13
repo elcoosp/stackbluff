@@ -51,53 +51,6 @@ impl Template {
 
 impl TemplateRules {
     fn matches(&self, params: &HandAnalysisParams) -> bool {
-<<<<<<< HEAD
-        if let Some(ref positions) = self.positions {
-            if !positions.contains(&params.position) {
-                return false;
-            }
-        }
-        if let Some(min) = self.min_pot_odds_ratio {
-            if params.pot_odds_ratio < min {
-                return false;
-            }
-        }
-        if let Some(max) = self.max_pot_odds_ratio {
-            if params.pot_odds_ratio > max {
-                return false;
-            }
-        }
-        if let Some(min) = self.min_hand_strength {
-            if params.hand_strength < min {
-                return false;
-            }
-        }
-        if let Some(max) = self.max_hand_strength {
-            if params.hand_strength > max {
-                return false;
-            }
-        }
-        if let Some(expect) = self.is_bluff_catching {
-            if params.is_bluff_catching != expect {
-                return false;
-            }
-        }
-        if let Some(expect) = self.is_cbet_situation {
-            if params.is_cbet_situation != expect {
-                return false;
-            }
-        }
-        if let Some(min) = self.min_stack_bb {
-            if params.stack_bb < min {
-                return false;
-            }
-        }
-        if let Some(max) = self.max_stack_bb {
-            if params.stack_bb > max {
-                return false;
-            }
-||||||| parent of 7b2689b (fix(oracle): final compilation fixes and template diversity)
-=======
         if let Some(ref positions) = self.positions
             && !positions.contains(&params.position)
         {
@@ -142,7 +95,6 @@ impl TemplateRules {
             && params.stack_bb > max
         {
             return false;
->>>>>>> 7b2689b (fix(oracle): final compilation fixes and template diversity)
         }
         true
     }
