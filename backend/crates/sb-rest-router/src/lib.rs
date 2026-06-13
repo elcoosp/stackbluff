@@ -1,146 +1,38 @@
+//! REST router for StackBluff.
 use axum::{
-    Router,
-    extract::{Extension, State},
+    extract::State,
     http::StatusCode,
-    response::Json,
-    routing::{get, post},
+    response::IntoResponse,
+    routing::post,
+    Json, Router,
 };
-use sb_auth::AuthUser;
-use sb_contracts::lobby_api::{TableInfo, TableRepo, TableService};
-use sb_shared_types::{StakeLevel, TableId};
-use sb_table_registry::registry::Registry;
-use serde::{Deserialize, Serialize};
+use sb_contracts::service_api::OracleService;
+use sb_oracle::{HandAnalysisParams, OracleServiceImpl, OracleError};
+use sb_shared_types::RequestContext;
 use std::sync::Arc;
-use tracing::error;
+use uuid::Uuid;
 
-#[derive(Debug, Serialize)]
-pub struct LobbyTableInfo {
-    pub table_id: TableId,
-    pub stake_level: StakeLevel,
-    pub current_players: u32,
-    pub max_players: u32,
-    pub status: String,
-}
+pub type SharedOracleService = Arc<OracleServiceImpl>;
 
-impl From<TableInfo> for LobbyTableInfo {
-    fn from(t: TableInfo) -> Self {
-        LobbyTableInfo {
-            table_id: t.table_id,
-            stake_level: t.stake_level,
-            current_players: t.current_players,
-            max_players: t.max_players,
-            status: t.status,
-        }
-    }
-}
-
-#[derive(Debug, Deserialize)]
-pub struct CreateTableRequest {
-    pub stake_level: StakeLevel,
-    pub max_players: u32,
-}
-
-#[derive(Debug, Serialize)]
-pub struct CreateTableResponse {
-    pub table_id: TableId,
-}
-
-#[derive(Debug, Serialize)]
-pub struct ErrorResponse {
-    pub error: ErrorDetail,
-}
-
-#[derive(Debug, Serialize)]
-pub struct ErrorDetail {
-    pub code: String,
-    pub message: String,
-}
-
-pub struct AppState {
-    table_service: Arc<dyn TableService + Send + Sync>,
-    table_repo: Arc<dyn TableRepo + Send + Sync>,
-    registry: Arc<Registry>,
-}
-
-pub fn create_router(
-    table_service: Arc<dyn TableService + Send + Sync>,
-    table_repo: Arc<dyn TableRepo + Send + Sync>,
-    registry: Arc<Registry>,
-) -> Router {
-    let state = Arc::new(AppState {
-        table_service,
-        table_repo,
-        registry,
-    });
+pub fn create_router(oracle: SharedOracleService) -> Router {
     Router::new()
-        .route("/lobby", get(lobby_handler))
-        .route("/tables", post(create_table_handler))
-        .layer(axum::middleware::from_fn(sb_auth::auth_middleware))
-        .with_state(state)
+        .route("/oracle/analyze", post(analyze_handler))
+        .with_state(oracle)
 }
 
-#[axum::debug_handler]
-async fn lobby_handler(
-    Extension(_auth_user): Extension<AuthUser>,
-    State(state): State<Arc<AppState>>,
-) -> Result<Json<Vec<LobbyTableInfo>>, (StatusCode, Json<ErrorResponse>)> {
-    let persistent = state
-        .table_repo
-        .list_tables()
-        .await
-        .map_err(internal_error)?;
-    let active = state.registry.list_active_tables().await;
-
-    let mut merged: Vec<LobbyTableInfo> = persistent.into_iter().map(Into::into).collect();
-    for a in active {
-        if !merged.iter().any(|m| m.table_id == a.table_id) {
-            merged.push(a.into());
-        }
+async fn analyze_handler(
+    State(oracle): State<SharedOracleService>,
+    Json(params): Json<HandAnalysisParams>,
+) -> impl IntoResponse {
+    let user_id = sb_shared_types::UserId::from(Uuid::new_v4());
+    let ctx = RequestContext {
+        request_id: Uuid::new_v4(),
+        user_id: Some(user_id),
+    };
+    match oracle.analyze(&ctx, params).await {
+        Ok(output) => (StatusCode::OK, Json(output)).into_response(),
+        Err(OracleError::LimitReached) => (StatusCode::TOO_MANY_REQUESTS, "Free tier limit reached").into_response(),
+        Err(OracleError::NoMatchingTemplate) => (StatusCode::NOT_FOUND, "No analysis template matched").into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     }
-    Ok(Json(merged))
-}
-
-#[axum::debug_handler]
-async fn create_table_handler(
-    Extension(_auth_user): Extension<AuthUser>,
-    State(state): State<Arc<AppState>>,
-    Json(req): Json<CreateTableRequest>,
-) -> Result<Json<CreateTableResponse>, (StatusCode, Json<ErrorResponse>)> {
-    if req.max_players < 2 || req.max_players > 9 {
-        return Err(bad_request(
-            "INVALID_MAX_PLAYERS",
-            "max_players must be between 2 and 9",
-        ));
-    }
-    let table_id = state
-        .table_service
-        .create_cash_table(req.stake_level, req.max_players)
-        .await
-        .map_err(internal_error)?;
-    Ok(Json(CreateTableResponse { table_id }))
-}
-
-fn internal_error<E: std::fmt::Display>(err: E) -> (StatusCode, Json<ErrorResponse>) {
-    error!("Internal error: {}", err);
-    (
-        StatusCode::INTERNAL_SERVER_ERROR,
-        Json(ErrorResponse {
-            error: ErrorDetail {
-                code: "INTERNAL_ERROR".to_string(),
-                message: "Something went wrong".to_string(),
-            },
-        }),
-    )
-}
-
-fn bad_request(code: &str, msg: &str) -> (StatusCode, Json<ErrorResponse>) {
-    (
-        StatusCode::BAD_REQUEST,
-        Json(ErrorResponse {
-            error: ErrorDetail {
-                code: code.to_string(),
-                message: msg.to_string(),
-            },
-        }),
-    )
 }
