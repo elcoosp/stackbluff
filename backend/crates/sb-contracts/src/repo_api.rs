@@ -1,23 +1,25 @@
-//! Data access traits (repository layer)
 use async_trait::async_trait;
 use sb_shared_types::{RequestContext, UserId};
-use serde_json;
 
 #[derive(Debug, thiserror::Error)]
 pub enum PersistenceError {
-    #[error("Constraint violation: {0}")]
+    #[error("Constraint violation (UNIQUE/CHECK): {0}")]
     ConstraintViolation(String),
-    #[error("Transient database error: {0}")]
+    #[error("Data integrity error: {0}")]
+    DataIntegrity(String),
+    #[error("Transient database error (retryable): {0}")]
     Transient(String),
-    #[error("Not found")]
+    #[error("Record not found")]
     NotFound,
 }
 
 pub type PersistenceResult<T> = Result<T, PersistenceError>;
 
 pub struct UserCreate {
-    pub name: String,
-    pub initial_chips: i64,
+    pub telegram_id: i64,
+    pub email: String,
+    pub display_name: String,
+    pub platform: String,
 }
 
 #[async_trait]

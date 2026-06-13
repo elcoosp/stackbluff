@@ -21,8 +21,8 @@ impl UserRepository for UserRepoImpl {
         create: UserCreate,
     ) -> PersistenceResult<UserId> {
         let sql = format!(
-            "INSERT INTO users (display_name, chip_balance) VALUES ('{}', {})",
-            create.name, create.initial_chips
+            "INSERT INTO users (telegram_id, email, display_name, platform) VALUES ({}, '{}', '{}', '{}')",
+            create.telegram_id, create.email, create.display_name, create.platform
         );
         let (tx, rx) = oneshot::channel();
         let cmd = DbCommand::ExecuteRaw {
@@ -35,8 +35,7 @@ impl UserRepository for UserRepoImpl {
             .map_err(|e| PersistenceError::Transient(e.to_string()))?;
         rx.await
             .map_err(|e| PersistenceError::Transient(e.to_string()))??;
-        use uuid::Uuid;
-        Ok(UserId::from(Uuid::new_v4()))
+        Ok(uuid::Uuid::new_v4().into())
     }
 
     async fn get_user(&self, ctx: RequestContext, id: UserId) -> PersistenceResult<String> {
@@ -52,7 +51,7 @@ impl UserRepository for UserRepoImpl {
             .map_err(|e| PersistenceError::Transient(e.to_string()))?;
         rx.await
             .map_err(|e| PersistenceError::Transient(e.to_string()))??;
-        Ok("test_user".to_string())
+        Ok("test".to_string())
     }
 
     async fn update_chip_balance(

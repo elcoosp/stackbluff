@@ -20,11 +20,8 @@ impl HandHistoryRepository for HandHistoryRepoImpl {
         ctx: RequestContext,
         hand_data: serde_json::Value,
     ) -> PersistenceResult<()> {
-        let data_str = hand_data.to_string();
-        let sql = format!(
-            "INSERT INTO hand_history (data, created_at) VALUES ('{}', datetime('now'))",
-            data_str
-        );
+        // Fixed: use {} directly, .to_string() is redundant and causes clippy warning
+        let sql = format!("INSERT INTO hand_history (data) VALUES ('{}')", hand_data);
         let (tx, rx) = oneshot::channel();
         let cmd = DbCommand::ExecuteRaw {
             ctx,
