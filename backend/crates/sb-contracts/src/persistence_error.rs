@@ -9,7 +9,10 @@ pub enum PersistenceError {
     #[error("Fatal error: {0}")]
     Fatal(String),
     // Club errors
+    #[error("club not found")]
     ClubNotFound,
+    #[error("already member")]
     AlreadyMember,
+    #[error("not a member")]
     NotAMember,
 }

@@ -1,3 +1,4 @@
+use crate::PersistenceError;
 use async_trait::async_trait;
 use sb_shared_types::{AppError, RequestContext, TableId, UserId};
 
