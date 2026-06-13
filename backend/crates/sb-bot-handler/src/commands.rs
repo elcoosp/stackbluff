@@ -54,6 +54,7 @@ pub async fn handle_poker_command(
         }
     };
 
+    // Create a new context that includes the user_id for all subsequent logging
     let ctx_with_user = RequestContext::new(ctx.request_id, Some(user_id));
 
     let input = CreateTableInput {
@@ -68,12 +69,12 @@ pub async fn handle_poker_command(
     let table_id = match timeout(SERVICE_TIMEOUT, state.table_service.create_table(&ctx_with_user, input)).await {
         Ok(Ok(id)) => id,
         Ok(Err(e)) => {
-            error!(request_id = %ctx.request_id, error = %e, "Table creation failed");
+            error!(request_id = %ctx_with_user.request_id, user_id = %user_id, error = %e, "Table creation failed");
             let _ = send_telegram_message_with_timeout(state, chat_id.0, "❌ Failed to create table. Try again later.".to_string(), None).await;
             return;
         }
         Err(_) => {
-            error!(request_id = %ctx.request_id, "Table creation timeout");
+            error!(request_id = %ctx_with_user.request_id, user_id = %user_id, "Table creation timeout");
             let _ = send_telegram_message_with_timeout(state, chat_id.0, "❌ Service timeout. Please try again.".to_string(), None).await;
             return;
         }
@@ -84,16 +85,16 @@ pub async fn handle_poker_command(
     let keyboard_value = match serde_json::to_value(keyboard) {
         Ok(v) => Some(v),
         Err(e) => {
-            error!(request_id = %ctx.request_id, error = %e, "Keyboard serialization failed");
+            error!(request_id = %ctx_with_user.request_id, user_id = %user_id, error = %e, "Keyboard serialization failed");
             None
         }
     };
     let text = format!("🎰 New poker table created!\nTable ID: `{}`\nClick below to join:", table_id.as_uuid());
 
     if let Err(e) = send_telegram_message_with_timeout(state, chat_id.0, text, keyboard_value).await {
-        error!(request_id = %ctx.request_id, error = %e, "Failed to send message");
+        error!(request_id = %ctx_with_user.request_id, user_id = %user_id, error = %e, "Failed to send message");
     } else {
-        info!(request_id = %ctx.request_id, table_id = %table_id, "Table created and notification sent");
+        info!(request_id = %ctx_with_user.request_id, user_id = %user_id, table_id = %table_id, "Table created and notification sent");
     }
 }
 
@@ -146,12 +147,12 @@ pub async fn handle_challenge_command(
     let table_id = match timeout(SERVICE_TIMEOUT, state.table_service.create_table(&ctx_with_user, input)).await {
         Ok(Ok(id)) => id,
         Ok(Err(e)) => {
-            error!(request_id = %ctx.request_id, error = %e, "Challenge table creation failed");
+            error!(request_id = %ctx_with_user.request_id, user_id = %challenger_id, error = %e, "Challenge table creation failed");
             let _ = send_telegram_message_with_timeout(state, chat_id.0, "❌ Failed to create heads-up table.".to_string(), None).await;
             return;
         }
         Err(_) => {
-            error!(request_id = %ctx.request_id, "Challenge table creation timeout");
+            error!(request_id = %ctx_with_user.request_id, user_id = %challenger_id, "Challenge table creation timeout");
             let _ = send_telegram_message_with_timeout(state, chat_id.0, "❌ Service timeout. Try again.".to_string(), None).await;
             return;
         }
@@ -163,7 +164,7 @@ pub async fn handle_challenge_command(
     let f2 = state.notification_service.send_telegram_message_to_user(challenged_id, message_text.clone(), None);
     let f3 = state.notification_service.send_telegram_message_to_user(challenger_id, message_text, None);
     futures::join!(f1, f2, f3);
-    info!(request_id = %ctx.request_id, table_id = %table_id, challenger = %challenger_id, challenged = %challenged_id, "Challenge table created");
+    info!(request_id = %ctx_with_user.request_id, user_id = %challenger_id, table_id = %table_id, challenged = %challenged_id, "Challenge table created");
 }
 
 pub async fn handle_callback_query(
@@ -199,6 +200,7 @@ pub async fn handle_callback_query(
         }
     };
 
+    let ctx_with_user = RequestContext::new(ctx.request_id, Some(user_id));
     let deep_link = format!("{}{}", state.mini_app_url, table_id.as_uuid());
     let reply_text = format!("🎮 Click to join the table: [Open Mini App]({})", deep_link);
 
@@ -206,5 +208,5 @@ pub async fn handle_callback_query(
         let _ = send_telegram_message_with_timeout(state, msg.chat.id.0, reply_text, None).await;
     }
     let _ = state.notification_service.answer_callback_query(callback.id, None).await;
-    info!(request_id = %ctx.request_id, user_id = %user_id, table_id = %table_id, "Callback handled");
+    info!(request_id = %ctx_with_user.request_id, user_id = %user_id, table_id = %table_id, "Callback handled");
 }
