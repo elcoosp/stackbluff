@@ -1,7 +1,6 @@
 use sb_db_repos::{commands::DbCommand, init_writer_loop};
 use sb_shared_types::RequestContext;
 use sea_orm::{ConnectionTrait, Database};
-use sqlx::Row;
 use tokio::sync::oneshot;
 use uuid::Uuid;
 
