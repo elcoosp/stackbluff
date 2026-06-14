@@ -35,11 +35,13 @@ impl ClubRepo for ClubRepoImpl {
         let now = Utc::now();
         let active = clubs::ActiveModel {
             id: Set(id),
+            owner_id: Set(created_by.as_uuid()),
             name: Set(name.to_string()),
             logo_url: Set(logo_url.map(|s| s.to_string())),
             created_by: Set(created_by.as_uuid()),
             created_at: Set(now),
             updated_at: Set(now),
+            ..Default::default()
         };
 
         active

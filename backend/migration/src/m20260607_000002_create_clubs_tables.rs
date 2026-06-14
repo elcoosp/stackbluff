@@ -7,30 +7,32 @@ pub struct Migration;
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         // ── clubs ─────────────────────────────────────────────
+        // Migration 1 already created the `clubs` table (via club::Entity)
+        // but without logo_url, created_by, and updated_at columns.
+        // SQLite only allows one ADD COLUMN per ALTER TABLE, so issue three.
         manager
-            .create_table(
-                Table::create()
+            .alter_table(
+                Table::alter()
                     .table(Alias::new("clubs"))
-                    .if_not_exists()
-                    .col(
-                        ColumnDef::new(Alias::new("id"))
-                            .uuid()
-                            .not_null()
-                            .primary_key(),
-                    )
-                    .col(ColumnDef::new(Alias::new("name")).text().not_null())
-                    .col(ColumnDef::new(Alias::new("logo_url")).text())
-                    .col(ColumnDef::new(Alias::new("created_by")).uuid().not_null())
-                    .col(
-                        ColumnDef::new(Alias::new("created_at"))
-                            .timestamp_with_time_zone()
-                            .not_null(),
-                    )
-                    .col(
-                        ColumnDef::new(Alias::new("updated_at"))
-                            .timestamp_with_time_zone()
-                            .not_null(),
-                    )
+                    .add_column(ColumnDef::new(Alias::new("logo_url")).text())
+                    .to_owned(),
+            )
+            .await?;
+
+        manager
+            .alter_table(
+                Table::alter()
+                    .table(Alias::new("clubs"))
+                    .add_column(ColumnDef::new(Alias::new("created_by")).uuid())
+                    .to_owned(),
+            )
+            .await?;
+
+        manager
+            .alter_table(
+                Table::alter()
+                    .table(Alias::new("clubs"))
+                    .add_column(ColumnDef::new(Alias::new("updated_at")).timestamp_with_time_zone())
                     .to_owned(),
             )
             .await?;
@@ -131,14 +133,22 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .drop_table(Table::drop().table(Alias::new("club_leaderboard")).to_owned())
+            .drop_table(
+                Table::drop()
+                    .table(Alias::new("club_leaderboard"))
+                    .to_owned(),
+            )
             .await?;
         manager
-            .drop_table(Table::drop().table(Alias::new("club_memberships")).to_owned())
+            .drop_table(
+                Table::drop()
+                    .table(Alias::new("club_memberships"))
+                    .to_owned(),
+            )
             .await?;
-        manager
-            .drop_table(Table::drop().table(Alias::new("clubs")).to_owned())
-            .await?;
+        // Note: added columns on `clubs` are not dropped here because
+        // SQLite lacks ALTER TABLE DROP COLUMN support. The table is
+        // owned by migration 1; a full rollback requires dropping it.
         Ok(())
     }
 }

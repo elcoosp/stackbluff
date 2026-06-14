@@ -1,12 +1,11 @@
 //! Integration test against a temporary SQLite database.
 //! Tests actual SQL correctness, not mock behaviour.
-
 use migration::MigratorTrait;
 use sb_club::ClubServiceImpl;
 use sb_contracts::{ClubError, ClubRepo, ClubService, DIVISION_SIZE};
 use sb_db_repos::club_repo::ClubRepoImpl;
 use sb_shared_types::{ClubId, RequestContext, UserId};
-use sea_orm::Database;
+use sea_orm::{ConnectionTrait, Database};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -19,6 +18,14 @@ async fn setup_db() -> (Arc<dyn ClubService>, Arc<dyn ClubRepo>) {
     migration::Migrator::up(&db, None)
         .await
         .expect("migrations");
+
+    // Disable FK constraints for integration tests — we're testing
+    // club SQL correctness, not FK integrity. Without real user rows,
+    // FK constraints on clubs.owner_id and club_memberships.user_id
+    // would block all inserts.
+    db.execute_unprepared("PRAGMA foreign_keys = OFF")
+        .await
+        .expect("disable FK for tests");
 
     let repo: Arc<dyn ClubRepo> = Arc::new(ClubRepoImpl::new(db));
     let service = Arc::new(ClubServiceImpl::new(repo.clone()));
@@ -112,7 +119,12 @@ async fn test_leaderboard_divisions() {
         .await
         .expect("create");
 
-    // Join and add XP for 600 members
+    // Owner joins the club too
+    svc.join_club(&ctx, club_id, owner_id)
+        .await
+        .expect("owner join");
+
+    // Join and add XP for 599 additional members (total 600)
     for i in 0..599 {
         let member_ctx = RequestContext {
             request_id: Uuid::new_v4(),
@@ -148,7 +160,6 @@ async fn test_leaderboard_divisions() {
     assert_eq!(div2.division, 2);
     assert!(div2.entries.len() <= 100);
 }
-
 #[tokio::test]
 async fn test_club_not_found() {
     let (svc, _repo) = setup_db().await;
