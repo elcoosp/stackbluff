@@ -1,16 +1,65 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { GlassHub } from '../components/game';
 
-const tables = [
-  { id: '1', name: 'Vegas Vault', stakes: '200/400', players: 6, maxPlayers: 9 },
-  { id: '2', name: 'Obsidian Room', stakes: '500/1000', players: 4, maxPlayers: 6 },
-  { id: '3', name: 'Emerald Lounge', stakes: '100/200', players: 8, maxPlayers: 9 },
-];
+interface Table {
+  id: string;
+  name: string;
+  stakes: string;
+  players: number;
+  maxPlayers: number;
+}
+
+// Fetch function defined once outside component – stable reference
+const fetchTables = async (): Promise<Table[]> => {
+  // TODO: Replace with actual backend endpoint when available
+  // For now, simulate API call with a delay to show loading state
+  // Remove the setTimeout and use real fetch when backend is ready
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve([
+        { id: '1', name: 'Vegas Vault', stakes: '200/400', players: 6, maxPlayers: 9 },
+        { id: '2', name: 'Obsidian Room', stakes: '500/1000', players: 4, maxPlayers: 6 },
+        { id: '3', name: 'Emerald Lounge', stakes: '100/200', players: 8, maxPlayers: 9 },
+      ]);
+    }, 300);
+  });
+};
 
 export const Route = createFileRoute('/')({
-  component: function Lobby() {
+  component: function LobbyPage() {
+    // Proper useQuery config – no infinite loops
+    const { data: tables, isLoading, error } = useQuery({
+      queryKey: ['tables'],
+      queryFn: fetchTables,
+      staleTime: 30 * 1000,        // data considered fresh for 30 seconds
+      refetchOnWindowFocus: false, // prevent refetch when tab gains focus
+      refetchOnReconnect: false,   // prevent refetch on network reconnect
+      refetchInterval: false,      // no polling
+      retry: 1,
+    });
+
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center h-screen text-on-surface">
+          Loading tables...
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="flex flex-col items-center justify-center h-screen text-error">
+          <p>Failed to load tables. Please try again later.</p>
+          <Button onClick={() => window.location.reload()} variant="outline" className="mt-4">
+            Retry
+          </Button>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-background p-8" style={{ background: 'radial-gradient(circle at center, #1a1c1b 0%, #131313 100%)' }}>
         <div className="max-w-7xl mx-auto">
@@ -19,7 +68,7 @@ export const Route = createFileRoute('/')({
             <p className="text-on-surface-variant">Select a table to join the game</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {tables.map((table) => (
+            {tables?.map((table) => (
               <GlassHub key={table.id} active={false}>
                 <Card className="bg-transparent border-0 shadow-none">
                   <CardHeader>
@@ -32,7 +81,9 @@ export const Route = createFileRoute('/')({
                       <span>Status: {table.players === table.maxPlayers ? 'Full' : 'Open'}</span>
                     </div>
                     <Link to="/table/$tableId" params={{ tableId: table.id }}>
-                      <Button className="w-full bg-tertiary text-on-tertiary hover:bg-tertiary/80">Join Table</Button>
+                      <Button className="w-full bg-tertiary text-on-tertiary hover:bg-tertiary/80">
+                        Join Table
+                      </Button>
                     </Link>
                   </CardContent>
                 </Card>
