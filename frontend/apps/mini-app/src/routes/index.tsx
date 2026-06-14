@@ -5,39 +5,48 @@ import { Button } from '@/components/ui/button';
 import { GlassHub } from '../components/game';
 
 interface Table {
-  id: string;
-  name: string;
-  stakes: string;
-  players: number;
-  maxPlayers: number;
+  table_id: string;
+  stake_level: string;
+  current_players: number;
+  max_players: number;
+  status: string;
 }
 
+// Function to get auth token (adjust based on your auth implementation)
+const getToken = () => localStorage.getItem('auth_token') || 'demo-token';
+
 const fetchTables = async (): Promise<Table[]> => {
-  return [
-    { id: '1', name: 'Vegas Vault', stakes: '200/400', players: 6, maxPlayers: 9 },
-    { id: '2', name: 'Obsidian Room', stakes: '500/1000', players: 4, maxPlayers: 6 },
-    { id: '3', name: 'Emerald Lounge', stakes: '100/200', players: 8, maxPlayers: 9 },
-  ];
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+  const response = await fetch(`${baseUrl}/lobby`, {
+    headers: { 'Authorization': `Bearer ${getToken()}` }
+  });
+  if (!response.ok) throw new Error('Failed to fetch tables');
+  return response.json();
 };
 
 export const Route = createFileRoute('/')({
   component: function LobbyPage() {
-    const { data: tables, isLoading, error } = useQuery({
+    const { data: tables, isLoading, error, refetch } = useQuery({
       queryKey: ['tables'],
       queryFn: fetchTables,
-      staleTime: 30 * 1000,
+      staleTime: 30_000,
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       retry: 1,
     });
 
-    if (isLoading) return <div className="flex items-center justify-center h-screen text-white">Loading tables...</div>;
-    if (error) return (
-      <div className="flex flex-col items-center justify-center h-screen text-red-500">
-        <p>Failed to load tables.</p>
-        <Button onClick={() => window.location.reload()} variant="outline" className="mt-4">Retry</Button>
-      </div>
-    );
+    if (isLoading) {
+      return <div className="flex items-center justify-center h-screen text-white">Loading tables...</div>;
+    }
+
+    if (error) {
+      return (
+        <div className="flex flex-col items-center justify-center h-screen text-red-500">
+          <p>Failed to load tables. {error.message}</p>
+          <Button onClick={() => refetch()} variant="outline" className="mt-4">Retry</Button>
+        </div>
+      );
+    }
 
     return (
       <div className="min-h-screen bg-[#131313] p-8">
@@ -48,18 +57,18 @@ export const Route = createFileRoute('/')({
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {tables?.map((table) => (
-              <GlassHub key={table.id} active={false}>
+              <GlassHub key={table.table_id} active={false}>
                 <Card className="bg-black/40 border-white/10 shadow-none">
                   <CardHeader>
-                    <CardTitle className="text-white">{table.name}</CardTitle>
-                    <div className="text-emerald-400 text-sm font-mono">{table.stakes}</div>
+                    <CardTitle className="text-white">Table {table.table_id}</CardTitle>
+                    <div className="text-emerald-400 text-sm font-mono">{table.stake_level}</div>
                   </CardHeader>
                   <CardContent>
                     <div className="flex justify-between text-gray-400 text-sm mb-4">
-                      <span>Players: {table.players}/{table.maxPlayers}</span>
-                      <span>Status: {table.players === table.maxPlayers ? 'Full' : 'Open'}</span>
+                      <span>Players: {table.current_players}/{table.max_players}</span>
+                      <span>Status: {table.status}</span>
                     </div>
-                    <Link to="/table/$tableId" params={{ tableId: table.id }}>
+                    <Link to="/table/$tableId" params={{ tableId: table.table_id }}>
                       <Button className="w-full bg-emerald-600 text-white hover:bg-emerald-700">
                         Join Table
                       </Button>
