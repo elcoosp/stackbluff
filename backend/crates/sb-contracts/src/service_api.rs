@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sb_shared_types::{AppError, ChipAmount, HandRank, TableId, UserId};
 use serde::{Deserialize, Serialize};
+use sb_shared_types::RequestContext;
 
 #[derive(Debug, Clone)]
 pub struct HandResult {
@@ -59,4 +60,12 @@ pub trait UserService: Send + Sync {
     async fn award_chips(&self, user_id: UserId, amount: ChipAmount) -> Result<(), AppError>;
     async fn get_user_name(&self, user_id: UserId) -> Result<String, AppError>;
     async fn get_registration_order(&self, user_id: UserId) -> Result<Option<u64>, AppError>;
+}
+
+#[async_trait]
+pub trait AntiCheatService: Send + Sync {
+    async fn check_transfer(&self, from: UserId, to: UserId, amount: ChipAmount) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    fn check_game_action_rate(&self, user_id: UserId) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    fn check_auth_rate(&self, ip: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    async fn record_heads_up(&self, ip: &str, user1: UserId, user2: UserId, ctx: &RequestContext) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
 }

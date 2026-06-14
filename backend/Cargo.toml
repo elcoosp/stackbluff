@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "crates/sb-anti-cheat",
     "crates/sb-viral",
     "crates/sb-oracle",
     "crates/sb-auth",
