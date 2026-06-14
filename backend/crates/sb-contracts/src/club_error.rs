@@ -59,9 +59,3 @@ impl ClubError {
     }
 }
 
-/// Helper: detect UNIQUE constraint violation from sea_orm::DbErr.
-/// Returns true if the error is a unique constraint violation.
-pub fn is_unique_violation(db_err: &sea_orm::DbErr) -> bool {
-    let msg = db_err.to_string().to_lowercase();
-    msg.contains("unique") || msg.contains("constraint") || msg.contains("duplicate")
-}

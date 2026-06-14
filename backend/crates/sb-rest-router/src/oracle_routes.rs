@@ -19,7 +19,7 @@ async fn analyze_handler(
     State(oracle): State<SharedOracleService>,
     Json(params): Json<HandAnalysisParams>,
 ) -> impl IntoResponse {
-    let user_id = sb_shared_types::UserId::from(Uuid::new_v4());
+    let user_id = sb_shared_types::UserId(Uuid::new_v4());
     let ctx = RequestContext {
         request_id: Uuid::new_v4(),
         user_id: Some(user_id),
@@ -29,8 +29,12 @@ async fn analyze_handler(
     }
     match oracle.analyze(&ctx, params).await {
         Ok(output) => (StatusCode::OK, Json(output)).into_response(),
-        Err(OracleError::LimitReached) => (StatusCode::TOO_MANY_REQUESTS, "Free tier limit reached").into_response(),
-        Err(OracleError::NoMatchingTemplate) => (StatusCode::NOT_FOUND, "No analysis template matched").into_response(),
+        Err(OracleError::LimitReached) => {
+            (StatusCode::TOO_MANY_REQUESTS, "Free tier limit reached").into_response()
+        }
+        Err(OracleError::NoMatchingTemplate) => {
+            (StatusCode::NOT_FOUND, "No analysis template matched").into_response()
+        }
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     }
 }

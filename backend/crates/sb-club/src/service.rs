@@ -39,8 +39,6 @@ impl ClubService for ClubServiceImpl {
         club_id: ClubId,
         user_id: UserId,
     ) -> Result<(), ClubError> {
-        // FIX 15: We no longer check is_member first — the repo's
-        // join_club handles UNIQUE constraint atomically.
         tracing::debug!(
             request_id = %ctx.request_id,
             club_id = %club_id,
@@ -77,8 +75,6 @@ impl ClubService for ClubServiceImpl {
             xp = xp,
             "add_xp"
         );
-        // FIX 1: increment_weekly_xp is now atomic; no is_member check needed.
-        // The repo returns NotAMember if no row was updated.
         self.repo.increment_weekly_xp(club_id, user_id, xp).await
     }
 }

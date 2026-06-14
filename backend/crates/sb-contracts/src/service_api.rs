@@ -1,5 +1,4 @@
-use crate::club_error::ClubError;
-use crate::repo_api::{ClubResult, CreateTableInput};
+use crate::repo_api::ClubResult;
 use sb_shared_types::{AppError, RequestContext, TableId, UserId};
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]

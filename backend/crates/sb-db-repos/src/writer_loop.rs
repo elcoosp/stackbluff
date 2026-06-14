@@ -1,10 +1,11 @@
+use sb_contracts::PersistenceError;
+use sb_shared_types::UserId;
 use sea_orm::{ConnectionTrait, DatabaseConnection, TransactionTrait};
 use tokio::sync::mpsc;
 use tokio::sync::watch;
 use tracing::{Instrument, error, info, info_span};
 
 use crate::commands::DbCommand;
-use sb_contracts::PersistenceError;
 
 const DEFAULT_BATCH_SIZE: usize = 50;
 
@@ -76,7 +77,7 @@ async fn process_batch(batch: &mut Vec<DbCommand>, db: &DatabaseConnection) {
         Err(e) => {
             error!("Failed to begin transaction: {}", e);
             for cmd in batch.drain(..) {
-                respond_err(cmd, PersistenceError::Transient(e.to_string()));
+                respond_err(cmd, PersistenceError::database(e.to_string()));
             }
             return;
         }
@@ -92,7 +93,7 @@ async fn process_batch(batch: &mut Vec<DbCommand>, db: &DatabaseConnection) {
     if let Err(e) = txn.commit().await {
         error!("Transaction commit failed: {}", e);
         for (cmd, _) in batch.drain(..).zip(savepoint_results) {
-            respond_err(cmd, PersistenceError::Transient(e.to_string()));
+            respond_err(cmd, PersistenceError::database(e.to_string()));
         }
     } else {
         for (cmd, result) in batch.drain(..).zip(savepoint_results) {
@@ -121,7 +122,7 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
     async {
         let create_sql = format!("SAVEPOINT {}", sp_name);
         if let Err(e) = conn.execute_unprepared(&create_sql).await {
-            return Err(PersistenceError::Transient(e.to_string()));
+            return Err(PersistenceError::database(e.to_string()));
         }
 
         let result = match cmd {
@@ -148,7 +149,7 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
             DbCommand::GetUser { id, .. } => {
                 use sb_db_entities::user::Entity;
                 use sea_orm::EntityTrait;
-                let user_id: uuid::Uuid = (*id).into();
+                let user_id = id.as_uuid();
                 let model = Entity::find_by_id(user_id)
                     .one(conn)
                     .await
@@ -159,7 +160,7 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
             DbCommand::UpdateChipBalance { user_id, delta, .. } => {
                 use sb_db_entities::user::{ActiveModel, Entity};
                 use sea_orm::{ActiveModelTrait, EntityTrait, Set};
-                let uid: uuid::Uuid = (*user_id).into();
+                let uid = user_id.as_uuid();
                 let model = Entity::find_by_id(uid)
                     .one(conn)
                     .await
@@ -185,21 +186,15 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                 use sea_orm::{ActiveModelTrait, Set};
                 let players: HandPlayers =
                     serde_json::from_value(players_json.clone()).map_err(|e| {
-                        PersistenceError::ConstraintViolation(format!(
-                            "Invalid players_json: {}",
-                            e
-                        ))
+                        PersistenceError::database(format!("Invalid players_json: {}", e))
                     })?;
                 let actions: HandActions =
                     serde_json::from_value(actions_json.clone()).map_err(|e| {
-                        PersistenceError::ConstraintViolation(format!(
-                            "Invalid actions_json: {}",
-                            e
-                        ))
+                        PersistenceError::database(format!("Invalid actions_json: {}", e))
                     })?;
                 let result: HandResult =
                     serde_json::from_value(result_json.clone()).map_err(|e| {
-                        PersistenceError::ConstraintViolation(format!("Invalid result_json: {}", e))
+                        PersistenceError::database(format!("Invalid result_json: {}", e))
                     })?;
                 let new_history = ActiveModel {
                     id: Set(uuid::Uuid::new_v4()),
@@ -238,24 +233,25 @@ fn map_db_error(e: sea_orm::DbErr) -> PersistenceError {
         sea_orm::DbErr::Query(qe) => {
             let msg = qe.to_string();
             if msg.contains("UNIQUE constraint") || msg.contains("CHECK constraint") {
-                PersistenceError::ConstraintViolation(msg)
+                PersistenceError::database(msg)
             } else if msg.contains("NOT NULL") || msg.contains("FOREIGN KEY") {
-                PersistenceError::DataIntegrity(msg)
+                PersistenceError::database(msg)
             } else {
-                PersistenceError::Transient(msg)
+                PersistenceError::database(msg)
             }
         }
-        _ => PersistenceError::Transient(e.to_string()),
+        _ => PersistenceError::database(e.to_string()),
     }
 }
 
 fn respond_ok(cmd: DbCommand, value: Option<String>) {
     match cmd {
         DbCommand::CreateUser { respond, .. } => {
-            let id = value
-                .and_then(|s| s.parse().ok())
-                .unwrap_or_else(uuid::Uuid::new_v4)
-                .into();
+            let id = UserId::new(
+                value
+                    .and_then(|s| s.parse().ok())
+                    .unwrap_or_else(uuid::Uuid::new_v4),
+            );
             let _ = respond.send(Ok(id));
         }
         DbCommand::GetUser { respond, .. } => {

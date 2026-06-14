@@ -2,7 +2,7 @@
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use sb_shared_types::{ClubId, PlayerId, TableId, UserId};
+use sb_shared_types::{PlayerId, TableId, UserId};
 
 // ── Base infrastructure error ──────────────────────────────────
 
@@ -92,7 +92,8 @@ pub mod user_resolution;
 
 pub use lobby_api::{TableInfo, TableRepo, TableService};
 pub use club_error::ClubError;
-pub use repo_api::ClubRepo;
+pub use repo_api::{ClubRepo, LeaderboardPage, LeaderboardEntry, Club, ClubMembership, DIVISION_SIZE};
+pub use service_api::ClubService;
 
 #[derive(Debug, thiserror::Error)]
 pub enum TableError {
