@@ -1,9 +1,9 @@
 pub mod referral;
 pub mod replay;
 
-use sb_contracts::service_api::{HandResult, ReplayCard, ReferralStats, ViralService, UserService};
-use sb_shared_types::{AppError, UserId, TableId, ChipAmount};
 use async_trait::async_trait;
+use sb_contracts::service_api::{HandResult, ReferralStats, ReplayCard, UserService, ViralService};
+use sb_shared_types::{AppError, ChipAmount, TableId, UserId};
 use sea_orm::DatabaseConnection;
 use std::sync::Arc;
 use tracing::info;
@@ -25,7 +25,7 @@ impl ViralServiceImpl {
 
     pub async fn init_counter(&self) -> Result<(), AppError> {
         use sb_db_entities::prelude::SystemCounter;
-        use sea_orm::{EntityTrait, ColumnTrait, QueryFilter};
+        use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
         let counter = SystemCounter::find()
             .filter(sb_db_entities::system_counter::Column::Name.eq("global_user_count"))
             .one(self.db.as_ref())
@@ -38,16 +38,30 @@ impl ViralServiceImpl {
 
     async fn award_bonus(&self, user_id: UserId, is_triple: bool) -> Result<(), AppError> {
         let base_amount: i64 = 100;
-        let amount = if is_triple { base_amount * 3 } else { base_amount };
-        self.user_service.award_chips(user_id, ChipAmount::new(amount).unwrap()).await?;
-        info!("Awarded {} chips to user {:?} (triple={})", amount, user_id, is_triple);
+        let amount = if is_triple {
+            base_amount * 3
+        } else {
+            base_amount
+        };
+        self.user_service
+            .award_chips(user_id, ChipAmount::new(amount).unwrap())
+            .await?;
+        info!(
+            "Awarded {} chips to user {:?} (triple={})",
+            amount, user_id, is_triple
+        );
         Ok(())
     }
 }
 
 #[async_trait]
 impl ViralService for ViralServiceImpl {
-    async fn generate_replay_card(&self, hand_result: &HandResult, winner_id: UserId, table_id: TableId) -> Result<ReplayCard, AppError> {
+    async fn generate_replay_card(
+        &self,
+        hand_result: &HandResult,
+        winner_id: UserId,
+        table_id: TableId,
+    ) -> Result<ReplayCard, AppError> {
         if !hand_result.is_significant() {
             return Err(AppError::InvalidInput("hand not significant".into()));
         }
@@ -64,7 +78,11 @@ impl ViralService for ViralServiceImpl {
         })
     }
 
-    async fn record_referral(&self, referrer_id: UserId, referred_id: UserId) -> Result<(), AppError> {
+    async fn record_referral(
+        &self,
+        referrer_id: UserId,
+        referred_id: UserId,
+    ) -> Result<(), AppError> {
         referral::record_referral(self.db.as_ref(), referrer_id, referred_id).await
     }
 

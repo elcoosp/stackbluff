@@ -18,8 +18,8 @@ impl Authenticator for NoopAuthenticator {
 pub mod middleware;
 pub use middleware::{AuthUser, auth_middleware};
 
-use sea_orm::{EntityTrait, ActiveModelTrait, Set, QueryFilter, ColumnTrait};
 use sb_db_entities::system_counter;
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
 
 pub async fn increment_global_user_counter(db: &DatabaseConnection) -> Result<u64, DbErr> {
     let counter = system_counter::Entity::find()
@@ -32,5 +32,7 @@ pub async fn increment_global_user_counter(db: &DatabaseConnection) -> Result<u6
         active.value = Set(new_val);
         active.update(db).await?;
         Ok(new_val as u64)
-    } else { Ok(0) }
+    } else {
+        Ok(0)
+    }
 }
