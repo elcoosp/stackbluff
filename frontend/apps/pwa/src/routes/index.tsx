@@ -31,36 +31,38 @@ export const Route = createFileRoute('/')({
       retry: 1,
     });
 
-    if (isLoading) return <div className="flex items-center justify-center h-screen text-on-surface">Loading tables...</div>;
+    if (isLoading) return <div className="flex items-center justify-center h-screen text-white">Loading tables...</div>;
     if (error) return (
-      <div className="flex flex-col items-center justify-center h-screen text-error">
+      <div className="flex flex-col items-center justify-center h-screen text-red-500">
         <p>Failed to load tables.</p>
         <Button onClick={() => window.location.reload()} variant="outline" className="mt-4">Retry</Button>
       </div>
     );
 
     return (
-      <div className="min-h-screen bg-background p-8" style={{ background: 'radial-gradient(circle at center, #1a1c1b 0%, #131313 100%)' }}>
+      <div className="min-h-screen bg-[#131313] p-8">
         <div className="max-w-7xl mx-auto">
           <div className="mb-8">
-            <h1 className="font-display-lg text-4xl text-on-surface mb-2">STACKBLUFF</h1>
-            <p className="text-on-surface-variant">Select a table to join the game</p>
+            <h1 className="text-4xl font-bold text-white mb-2">STACKBLUFF</h1>
+            <p className="text-gray-400">Select a table to join the game</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {tables?.map((table) => (
               <GlassHub key={table.id} active={false}>
-                <Card className="bg-transparent border-0 shadow-none">
+                <Card className="bg-black/40 border-white/10 shadow-none">
                   <CardHeader>
-                    <CardTitle className="text-on-surface">{table.name}</CardTitle>
-                    <div className="text-tertiary text-sm font-mono">{table.stakes}</div>
+                    <CardTitle className="text-white">{table.name}</CardTitle>
+                    <div className="text-emerald-400 text-sm font-mono">{table.stakes}</div>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex justify-between text-on-surface-variant text-sm mb-4">
+                    <div className="flex justify-between text-gray-400 text-sm mb-4">
                       <span>Players: {table.players}/{table.maxPlayers}</span>
                       <span>Status: {table.players === table.maxPlayers ? 'Full' : 'Open'}</span>
                     </div>
                     <Link to="/table/$tableId" params={{ tableId: table.id }}>
-                      <Button className="w-full bg-tertiary text-on-tertiary hover:bg-tertiary/80">Join Table</Button>
+                      <Button className="w-full bg-emerald-600 text-white hover:bg-emerald-700">
+                        Join Table
+                      </Button>
                     </Link>
                   </CardContent>
                 </Card>
