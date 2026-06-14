@@ -1,1 +1,1 @@
-// Additional replay card generation logic can be expanded here.
+// Additional replay card rendering logic can be placed here.
