@@ -1,21 +1,12 @@
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::IntoResponse,
-    routing::post,
-    Json, Router,
-};
+use axum::{Json, Router, extract::State, http::StatusCode, response::IntoResponse, routing::post};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::SharedAuthService;
 use sb_shared_types::errors::AppError;
 use sb_shared_types::request_context::RequestContext;
-use crate::SharedAuthService;
 
-/// Temporary helper to build a RequestContext.
-/// TODO: replace with a middleware that extracts request_id and optional user_id from headers.
 fn dummy_ctx() -> RequestContext {
-    // In production, request_id and user_id should come from request extensions/headers.
     RequestContext::new(Uuid::new_v4(), None)
 }
 
@@ -26,18 +17,28 @@ fn app_error_to_status(e: &AppError) -> StatusCode {
         AppError::Unauthorized(_) => StatusCode::UNAUTHORIZED,
         AppError::Conflict(_) => StatusCode::CONFLICT,
         AppError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
-        // Exhaustive – no need for catch‑all
+        AppError::Configuration(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        AppError::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        AppError::External(_) => StatusCode::BAD_GATEWAY,
     }
 }
 
 #[derive(Deserialize)]
-struct TelegramAuthRequest { init_data: String }
+struct TelegramAuthRequest {
+    init_data: String,
+}
 
 #[derive(Deserialize)]
-struct EmailPasswordRequest { email: String, password: String }
+struct EmailPasswordRequest {
+    email: String,
+    password: String,
+}
 
 #[derive(Serialize)]
-struct AuthResponse { jwt: String, user_id: String }
+struct AuthResponse {
+    jwt: String,
+    user_id: String,
+}
 
 async fn telegram_auth(
     State(svc): State<SharedAuthService>,
@@ -45,8 +46,19 @@ async fn telegram_auth(
 ) -> impl IntoResponse {
     let ctx = dummy_ctx();
     match svc.telegram_auth(&ctx, &req.init_data).await {
-        Ok(r) => (StatusCode::OK, Json(AuthResponse { jwt: r.jwt, user_id: r.user_id.to_string() })).into_response(),
-        Err(e) => (app_error_to_status(&e), Json(serde_json::json!({"error": e.to_string()}))).into_response(),
+        Ok(r) => (
+            StatusCode::OK,
+            Json(AuthResponse {
+                jwt: r.jwt,
+                user_id: r.user_id.to_string(),
+            }),
+        )
+            .into_response(),
+        Err(e) => (
+            app_error_to_status(&e),
+            Json(serde_json::json!({"error": e.to_string()})),
+        )
+            .into_response(),
     }
 }
 
@@ -56,8 +68,19 @@ async fn register(
 ) -> impl IntoResponse {
     let ctx = dummy_ctx();
     match svc.register(&ctx, &req.email, &req.password).await {
-        Ok(r) => (StatusCode::OK, Json(AuthResponse { jwt: r.jwt, user_id: r.user_id.to_string() })).into_response(),
-        Err(e) => (app_error_to_status(&e), Json(serde_json::json!({"error": e.to_string()}))).into_response(),
+        Ok(r) => (
+            StatusCode::OK,
+            Json(AuthResponse {
+                jwt: r.jwt,
+                user_id: r.user_id.to_string(),
+            }),
+        )
+            .into_response(),
+        Err(e) => (
+            app_error_to_status(&e),
+            Json(serde_json::json!({"error": e.to_string()})),
+        )
+            .into_response(),
     }
 }
 
@@ -67,8 +90,19 @@ async fn login(
 ) -> impl IntoResponse {
     let ctx = dummy_ctx();
     match svc.login(&ctx, &req.email, &req.password).await {
-        Ok(r) => (StatusCode::OK, Json(AuthResponse { jwt: r.jwt, user_id: r.user_id.to_string() })).into_response(),
-        Err(e) => (app_error_to_status(&e), Json(serde_json::json!({"error": e.to_string()}))).into_response(),
+        Ok(r) => (
+            StatusCode::OK,
+            Json(AuthResponse {
+                jwt: r.jwt,
+                user_id: r.user_id.to_string(),
+            }),
+        )
+            .into_response(),
+        Err(e) => (
+            app_error_to_status(&e),
+            Json(serde_json::json!({"error": e.to_string()})),
+        )
+            .into_response(),
     }
 }
 

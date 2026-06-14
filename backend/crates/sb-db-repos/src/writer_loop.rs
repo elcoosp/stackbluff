@@ -42,6 +42,66 @@ async fn writer_loop(
                         batch.push(cmd);
                         if batch.len() >= batch_size {
                             process_batch(&mut batch, &db).await;
+        DbCommand::FindOrCreateByTelegram { ctx, tg_id, respond } => {
+            use sb_db_entities::user::ActiveModel;
+            use sea_orm::{ActiveModelTrait, Set};
+            // Try to find existing user by telegram_id
+            let user = sb_db_entities::user::Entity::find()
+                .filter(sb_db_entities::user::Column::TelegramId.eq(Some(*tg_id)))
+                .one(conn)
+                .await
+                .map_err(map_db_error)?;
+            let user_id = if let Some(u) = user {
+                UserId::new(u.id)
+            } else {
+                let new_user = ActiveModel {
+                    id: Set(uuid::Uuid::new_v4()),
+                    telegram_id: Set(Some(*tg_id)),
+                    email: Set(Some(format!("telegram_{}@temp.local", tg_id))),
+                    display_name: Set(format!("tg_user_{}", tg_id)),
+                    chip_balance: Set(0),
+                    streak_count: Set(0),
+                    created_at: Set(chrono::Utc::now()),
+                    updated_at: Set(chrono::Utc::now()),
+                };
+                let model = new_user.insert(conn).await.map_err(map_db_error)?;
+                UserId::new(model.id)
+            };
+            let _ = respond.send(Ok(user_id));
+            Ok(Some(user_id.to_string()))
+        }
+        DbCommand::CreateEmailUser { ctx, email, password_hash, respond } => {
+            use sb_db_entities::user::ActiveModel;
+            use sea_orm::{ActiveModelTrait, Set};
+            let new_user = ActiveModel {
+                id: Set(uuid::Uuid::new_v4()),
+                email: Set(Some(email.clone())),
+                display_name: Set(email.split('@').next().unwrap_or("user").to_string()),
+                chip_balance: Set(0),
+                streak_count: Set(0),
+                created_at: Set(chrono::Utc::now()),
+                updated_at: Set(chrono::Utc::now()),
+                // password_hash would need a column; for now we ignore. We'll store in a separate table later.
+                ..Default::default()
+            };
+            let model = new_user.insert(conn).await.map_err(map_db_error)?;
+            let user_id = UserId::new(model.id);
+            // TODO: store password_hash in a separate email_auth table.
+            let _ = respond.send(Ok(user_id));
+            Ok(Some(user_id.to_string()))
+        }
+        DbCommand::FindByEmail { ctx, email, respond } => {
+            use sb_db_entities::user::Entity;
+            let user = Entity::find()
+                .filter(sb_db_entities::user::Column::Email.eq(Some(email.clone())))
+                .one(conn)
+                .await
+                .map_err(map_db_error)?;
+            let user_id = user.map(|u| UserId::new(u.id));
+            let _ = respond.send(Ok(user_id));
+            Ok(user_id.map(|id| id.to_string()))
+        }
+
                         }
                     }
                     None => {
@@ -116,6 +176,66 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
         DbCommand::UpdateChipBalance { ctx, .. } => ctx,
         DbCommand::StoreHandHistory { ctx, .. } => ctx,
         DbCommand::ExecuteRaw { ctx, .. } => ctx,
+        DbCommand::FindOrCreateByTelegram { ctx, tg_id, respond } => {
+            use sb_db_entities::user::ActiveModel;
+            use sea_orm::{ActiveModelTrait, Set};
+            // Try to find existing user by telegram_id
+            let user = sb_db_entities::user::Entity::find()
+                .filter(sb_db_entities::user::Column::TelegramId.eq(Some(*tg_id)))
+                .one(conn)
+                .await
+                .map_err(map_db_error)?;
+            let user_id = if let Some(u) = user {
+                UserId::new(u.id)
+            } else {
+                let new_user = ActiveModel {
+                    id: Set(uuid::Uuid::new_v4()),
+                    telegram_id: Set(Some(*tg_id)),
+                    email: Set(Some(format!("telegram_{}@temp.local", tg_id))),
+                    display_name: Set(format!("tg_user_{}", tg_id)),
+                    chip_balance: Set(0),
+                    streak_count: Set(0),
+                    created_at: Set(chrono::Utc::now()),
+                    updated_at: Set(chrono::Utc::now()),
+                };
+                let model = new_user.insert(conn).await.map_err(map_db_error)?;
+                UserId::new(model.id)
+            };
+            let _ = respond.send(Ok(user_id));
+            Ok(Some(user_id.to_string()))
+        }
+        DbCommand::CreateEmailUser { ctx, email, password_hash, respond } => {
+            use sb_db_entities::user::ActiveModel;
+            use sea_orm::{ActiveModelTrait, Set};
+            let new_user = ActiveModel {
+                id: Set(uuid::Uuid::new_v4()),
+                email: Set(Some(email.clone())),
+                display_name: Set(email.split('@').next().unwrap_or("user").to_string()),
+                chip_balance: Set(0),
+                streak_count: Set(0),
+                created_at: Set(chrono::Utc::now()),
+                updated_at: Set(chrono::Utc::now()),
+                // password_hash would need a column; for now we ignore. We'll store in a separate table later.
+                ..Default::default()
+            };
+            let model = new_user.insert(conn).await.map_err(map_db_error)?;
+            let user_id = UserId::new(model.id);
+            // TODO: store password_hash in a separate email_auth table.
+            let _ = respond.send(Ok(user_id));
+            Ok(Some(user_id.to_string()))
+        }
+        DbCommand::FindByEmail { ctx, email, respond } => {
+            use sb_db_entities::user::Entity;
+            let user = Entity::find()
+                .filter(sb_db_entities::user::Column::Email.eq(Some(email.clone())))
+                .one(conn)
+                .await
+                .map_err(map_db_error)?;
+            let user_id = user.map(|u| UserId::new(u.id));
+            let _ = respond.send(Ok(user_id));
+            Ok(user_id.map(|id| id.to_string()))
+        }
+
     };
     let request_id = ctx.request_id;
     let span = info_span!("db_command", savepoint = sp_name, request_id = %request_id);
@@ -131,6 +251,66 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                 email,
                 display_name,
                 ..
+        DbCommand::FindOrCreateByTelegram { ctx, tg_id, respond } => {
+            use sb_db_entities::user::ActiveModel;
+            use sea_orm::{ActiveModelTrait, Set};
+            // Try to find existing user by telegram_id
+            let user = sb_db_entities::user::Entity::find()
+                .filter(sb_db_entities::user::Column::TelegramId.eq(Some(*tg_id)))
+                .one(conn)
+                .await
+                .map_err(map_db_error)?;
+            let user_id = if let Some(u) = user {
+                UserId::new(u.id)
+            } else {
+                let new_user = ActiveModel {
+                    id: Set(uuid::Uuid::new_v4()),
+                    telegram_id: Set(Some(*tg_id)),
+                    email: Set(Some(format!("telegram_{}@temp.local", tg_id))),
+                    display_name: Set(format!("tg_user_{}", tg_id)),
+                    chip_balance: Set(0),
+                    streak_count: Set(0),
+                    created_at: Set(chrono::Utc::now()),
+                    updated_at: Set(chrono::Utc::now()),
+                };
+                let model = new_user.insert(conn).await.map_err(map_db_error)?;
+                UserId::new(model.id)
+            };
+            let _ = respond.send(Ok(user_id));
+            Ok(Some(user_id.to_string()))
+        }
+        DbCommand::CreateEmailUser { ctx, email, password_hash, respond } => {
+            use sb_db_entities::user::ActiveModel;
+            use sea_orm::{ActiveModelTrait, Set};
+            let new_user = ActiveModel {
+                id: Set(uuid::Uuid::new_v4()),
+                email: Set(Some(email.clone())),
+                display_name: Set(email.split('@').next().unwrap_or("user").to_string()),
+                chip_balance: Set(0),
+                streak_count: Set(0),
+                created_at: Set(chrono::Utc::now()),
+                updated_at: Set(chrono::Utc::now()),
+                // password_hash would need a column; for now we ignore. We'll store in a separate table later.
+                ..Default::default()
+            };
+            let model = new_user.insert(conn).await.map_err(map_db_error)?;
+            let user_id = UserId::new(model.id);
+            // TODO: store password_hash in a separate email_auth table.
+            let _ = respond.send(Ok(user_id));
+            Ok(Some(user_id.to_string()))
+        }
+        DbCommand::FindByEmail { ctx, email, respond } => {
+            use sb_db_entities::user::Entity;
+            let user = Entity::find()
+                .filter(sb_db_entities::user::Column::Email.eq(Some(email.clone())))
+                .one(conn)
+                .await
+                .map_err(map_db_error)?;
+            let user_id = user.map(|u| UserId::new(u.id));
+            let _ = respond.send(Ok(user_id));
+            Ok(user_id.map(|id| id.to_string()))
+        }
+
             } => {
                 use sb_db_entities::user::ActiveModel;
                 use sea_orm::{ActiveModelTrait, Set};
@@ -269,6 +449,66 @@ fn respond_ok(cmd: DbCommand, value: Option<String>) {
                             "insert returned invalid UUID".to_string(),
                         )));
                         return;
+        DbCommand::FindOrCreateByTelegram { ctx, tg_id, respond } => {
+            use sb_db_entities::user::ActiveModel;
+            use sea_orm::{ActiveModelTrait, Set};
+            // Try to find existing user by telegram_id
+            let user = sb_db_entities::user::Entity::find()
+                .filter(sb_db_entities::user::Column::TelegramId.eq(Some(*tg_id)))
+                .one(conn)
+                .await
+                .map_err(map_db_error)?;
+            let user_id = if let Some(u) = user {
+                UserId::new(u.id)
+            } else {
+                let new_user = ActiveModel {
+                    id: Set(uuid::Uuid::new_v4()),
+                    telegram_id: Set(Some(*tg_id)),
+                    email: Set(Some(format!("telegram_{}@temp.local", tg_id))),
+                    display_name: Set(format!("tg_user_{}", tg_id)),
+                    chip_balance: Set(0),
+                    streak_count: Set(0),
+                    created_at: Set(chrono::Utc::now()),
+                    updated_at: Set(chrono::Utc::now()),
+                };
+                let model = new_user.insert(conn).await.map_err(map_db_error)?;
+                UserId::new(model.id)
+            };
+            let _ = respond.send(Ok(user_id));
+            Ok(Some(user_id.to_string()))
+        }
+        DbCommand::CreateEmailUser { ctx, email, password_hash, respond } => {
+            use sb_db_entities::user::ActiveModel;
+            use sea_orm::{ActiveModelTrait, Set};
+            let new_user = ActiveModel {
+                id: Set(uuid::Uuid::new_v4()),
+                email: Set(Some(email.clone())),
+                display_name: Set(email.split('@').next().unwrap_or("user").to_string()),
+                chip_balance: Set(0),
+                streak_count: Set(0),
+                created_at: Set(chrono::Utc::now()),
+                updated_at: Set(chrono::Utc::now()),
+                // password_hash would need a column; for now we ignore. We'll store in a separate table later.
+                ..Default::default()
+            };
+            let model = new_user.insert(conn).await.map_err(map_db_error)?;
+            let user_id = UserId::new(model.id);
+            // TODO: store password_hash in a separate email_auth table.
+            let _ = respond.send(Ok(user_id));
+            Ok(Some(user_id.to_string()))
+        }
+        DbCommand::FindByEmail { ctx, email, respond } => {
+            use sb_db_entities::user::Entity;
+            let user = Entity::find()
+                .filter(sb_db_entities::user::Column::Email.eq(Some(email.clone())))
+                .one(conn)
+                .await
+                .map_err(map_db_error)?;
+            let user_id = user.map(|u| UserId::new(u.id));
+            let _ = respond.send(Ok(user_id));
+            Ok(user_id.map(|id| id.to_string()))
+        }
+
                     }
                 },
                 None => {
@@ -301,6 +541,66 @@ fn respond_err(cmd: DbCommand, err: PersistenceError) {
     match cmd {
         DbCommand::CreateUser { respond, .. } => {
             let _ = respond.send(Err(err));
+        DbCommand::FindOrCreateByTelegram { ctx, tg_id, respond } => {
+            use sb_db_entities::user::ActiveModel;
+            use sea_orm::{ActiveModelTrait, Set};
+            // Try to find existing user by telegram_id
+            let user = sb_db_entities::user::Entity::find()
+                .filter(sb_db_entities::user::Column::TelegramId.eq(Some(*tg_id)))
+                .one(conn)
+                .await
+                .map_err(map_db_error)?;
+            let user_id = if let Some(u) = user {
+                UserId::new(u.id)
+            } else {
+                let new_user = ActiveModel {
+                    id: Set(uuid::Uuid::new_v4()),
+                    telegram_id: Set(Some(*tg_id)),
+                    email: Set(Some(format!("telegram_{}@temp.local", tg_id))),
+                    display_name: Set(format!("tg_user_{}", tg_id)),
+                    chip_balance: Set(0),
+                    streak_count: Set(0),
+                    created_at: Set(chrono::Utc::now()),
+                    updated_at: Set(chrono::Utc::now()),
+                };
+                let model = new_user.insert(conn).await.map_err(map_db_error)?;
+                UserId::new(model.id)
+            };
+            let _ = respond.send(Ok(user_id));
+            Ok(Some(user_id.to_string()))
+        }
+        DbCommand::CreateEmailUser { ctx, email, password_hash, respond } => {
+            use sb_db_entities::user::ActiveModel;
+            use sea_orm::{ActiveModelTrait, Set};
+            let new_user = ActiveModel {
+                id: Set(uuid::Uuid::new_v4()),
+                email: Set(Some(email.clone())),
+                display_name: Set(email.split('@').next().unwrap_or("user").to_string()),
+                chip_balance: Set(0),
+                streak_count: Set(0),
+                created_at: Set(chrono::Utc::now()),
+                updated_at: Set(chrono::Utc::now()),
+                // password_hash would need a column; for now we ignore. We'll store in a separate table later.
+                ..Default::default()
+            };
+            let model = new_user.insert(conn).await.map_err(map_db_error)?;
+            let user_id = UserId::new(model.id);
+            // TODO: store password_hash in a separate email_auth table.
+            let _ = respond.send(Ok(user_id));
+            Ok(Some(user_id.to_string()))
+        }
+        DbCommand::FindByEmail { ctx, email, respond } => {
+            use sb_db_entities::user::Entity;
+            let user = Entity::find()
+                .filter(sb_db_entities::user::Column::Email.eq(Some(email.clone())))
+                .one(conn)
+                .await
+                .map_err(map_db_error)?;
+            let user_id = user.map(|u| UserId::new(u.id));
+            let _ = respond.send(Ok(user_id));
+            Ok(user_id.map(|id| id.to_string()))
+        }
+
         }
         DbCommand::GetUser { respond, .. } => {
             let _ = respond.send(Err(err));

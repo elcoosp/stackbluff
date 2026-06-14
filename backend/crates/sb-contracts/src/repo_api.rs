@@ -30,6 +30,25 @@ pub trait UserRepository: Send + Sync {
         user_id: UserId,
         delta: i64,
     ) -> PersistenceResult<()>;
+
+    async fn find_or_create_by_telegram(
+        &self,
+        ctx: RequestContext,
+        tg_id: i64,
+    ) -> PersistenceResult<UserId>;
+
+    async fn create_email_user(
+        &self,
+        ctx: RequestContext,
+        email: &str,
+        password_hash: &str,
+    ) -> PersistenceResult<UserId>;
+
+    async fn find_by_email(
+        &self,
+        ctx: RequestContext,
+        email: &str,
+    ) -> PersistenceResult<Option<UserId>>;
 }
 
 #[async_trait]
@@ -147,3 +166,5 @@ pub trait ReferralRepository: Send + Sync {
     async fn get_referrer_id(&self, referred_id: UserId) -> Result<Option<UserId>, AppError>;
     async fn get_referral_stats(&self, referrer_id: UserId) -> Result<ReferralStats, AppError>;
 }
+
+pub use UserRepository as UserRepo;

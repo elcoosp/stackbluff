@@ -70,15 +70,16 @@ pub async fn get_leaderboard(
 
     Ok(Json(GetLeaderboardResponse::from(page)))
 }
-
 fn map_club_error(e: ClubError) -> (StatusCode, String) {
     match e {
-        ClubError::NotFound { .. } => (StatusCode::NOT_FOUND, e.to_string()),
-        ClubError::AlreadyMember { .. } => (StatusCode::CONFLICT, e.to_string()),
-        ClubError::NotAMember { .. } => (StatusCode::FORBIDDEN, e.to_string()),
+        ClubError::NotFound => (StatusCode::NOT_FOUND, e.to_string()),
+        ClubError::AlreadyMember => (StatusCode::CONFLICT, e.to_string()),
+        ClubError::NotAMember => (StatusCode::FORBIDDEN, e.to_string()),
         ClubError::Validation { .. } => (StatusCode::BAD_REQUEST, e.to_string()),
-        ClubError::Database { .. } => {
-            tracing::error!(error = %e, "club database error");
+        ClubError::PermissionDenied => (StatusCode::FORBIDDEN, e.to_string()),
+        ClubError::InvalidOperation => (StatusCode::BAD_REQUEST, e.to_string()),
+        ClubError::Database { .. } | ClubError::Internal { .. } => {
+            tracing::error!(error = %e, "club database/internal error");
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "internal error".to_string(),

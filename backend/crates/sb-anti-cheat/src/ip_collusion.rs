@@ -1,6 +1,6 @@
-use metrics;
+use chrono::{DateTime, Duration, Utc};
 use dashmap::DashMap;
-use chrono::{DateTime, Utc, Duration};
+use metrics;
 use sb_shared_types::UserId;
 use std::env;
 
@@ -26,7 +26,11 @@ impl IpCollusionTracker {
     pub fn record_heads_up(&self, ip: &str, user1: UserId, user2: UserId) -> bool {
         let now = Utc::now();
         let cutoff = now - Duration::hours(24);
-        let (a, b) = if user1 < user2 { (user1, user2) } else { (user2, user1) };
+        let (a, b) = if user1 < user2 {
+            (user1, user2)
+        } else {
+            (user2, user1)
+        };
         let key = (ip.to_string(), a, b);
 
         let mut timestamps = self.sessions.entry(key).or_default();

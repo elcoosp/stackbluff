@@ -1,14 +1,14 @@
-use sb_contracts::service_api::{AntiCheatService, AntiCheatError};
-use sb_shared_types::{UserId, ChipAmount, RequestContext};
-use crate::transfer_tracker::TransferTracker;
-use crate::rate_limiter::RateLimiter;
 use crate::ip_collusion::IpCollusionTracker;
+use crate::rate_limiter::RateLimiter;
+use crate::transfer_tracker::TransferTracker;
+use sb_contracts::service_api::{AntiCheatError, AntiCheatService};
 use sb_db_entities::entities::anti_cheat_events::ActiveModel;
+use sb_shared_types::{ChipAmount, RequestContext, UserId};
 use sea_orm::{ActiveModelTrait, DatabaseConnection, Set};
-use tracing::error;
 use std::sync::Arc;
-use tokio::task;
 use std::time::Duration as StdDuration;
+use tokio::task;
+use tracing::error;
 
 pub struct AntiCheatServiceImpl {
     transfer_tracker: TransferTracker,
@@ -43,7 +43,13 @@ impl AntiCheatServiceImpl {
 
 #[async_trait::async_trait]
 impl AntiCheatService for AntiCheatServiceImpl {
-    async fn check_transfer(&self, from: UserId, to: UserId, amount: ChipAmount, ctx: &RequestContext) -> Result<(), AntiCheatError> {
+    async fn check_transfer(
+        &self,
+        from: UserId,
+        to: UserId,
+        amount: ChipAmount,
+        ctx: &RequestContext,
+    ) -> Result<(), AntiCheatError> {
         match self.transfer_tracker.check_and_record(from, to, amount) {
             Ok(true) => Ok(()),
             Ok(false) => {
@@ -81,7 +87,13 @@ impl AntiCheatService for AntiCheatServiceImpl {
         }
     }
 
-    async fn record_heads_up(&self, ip: &str, user1: UserId, user2: UserId, _ctx: &RequestContext) -> Result<(), AntiCheatError> {
+    async fn record_heads_up(
+        &self,
+        ip: &str,
+        user1: UserId,
+        user2: UserId,
+        _ctx: &RequestContext,
+    ) -> Result<(), AntiCheatError> {
         let flagged = self.ip_collusion.record_heads_up(ip, user1, user2);
         if flagged {
             let event = ActiveModel {
@@ -101,24 +113,18 @@ impl AntiCheatService for AntiCheatServiceImpl {
     }
 }
 
-
-
-
-
-
 #[cfg(test)]
 mod tests_service {
     use super::*;
     use sb_shared_types::UserId;
-    use sea_orm::{MockDatabase, DbBackend};
+    use sea_orm::{DbBackend, MockDatabase};
     use std::sync::Arc;
     use uuid::Uuid;
 
     fn dummy_db() -> DatabaseConnection {
         // Create a mock database that never actually executes queries,
         // but satisfies the type requirement.
-        MockDatabase::new(DbBackend::Sqlite)
-            .into_connection()
+        MockDatabase::new(DbBackend::Sqlite).into_connection()
     }
 
     #[tokio::test]

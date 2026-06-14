@@ -1,6 +1,6 @@
-use metrics;
+use chrono::{DateTime, Duration, Utc};
 use dashmap::DashMap;
-use chrono::{DateTime, Utc, Duration};
+use metrics;
 use std::env;
 
 #[derive(Default)]

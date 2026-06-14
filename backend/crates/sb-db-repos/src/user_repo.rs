@@ -69,4 +69,62 @@ impl UserRepository for UserRepoImpl {
         rx.await
             .map_err(|e| PersistenceError::transient(e.to_string()))?
     }
+
+
+    async fn find_or_create_by_telegram(
+        &self,
+        ctx: RequestContext,
+        tg_id: i64,
+    ) -> PersistenceResult<UserId> {
+        let (tx, rx) = oneshot::channel();
+        let cmd = DbCommand::FindOrCreateByTelegram {
+            ctx,
+            tg_id,
+            respond: tx,
+        };
+        self.sender
+            .send(cmd)
+            .map_err(|e| PersistenceError::transient(e.to_string()))?;
+        rx.await
+            .map_err(|e| PersistenceError::transient(e.to_string()))?
+    }
+
+    async fn create_email_user(
+        &self,
+        ctx: RequestContext,
+        email: &str,
+        password_hash: &str,
+    ) -> PersistenceResult<UserId> {
+        let (tx, rx) = oneshot::channel();
+        let cmd = DbCommand::CreateEmailUser {
+            ctx,
+            email: email.to_string(),
+            password_hash: password_hash.to_string(),
+            respond: tx,
+        };
+        self.sender
+            .send(cmd)
+            .map_err(|e| PersistenceError::transient(e.to_string()))?;
+        rx.await
+            .map_err(|e| PersistenceError::transient(e.to_string()))?
+    }
+
+    async fn find_by_email(
+        &self,
+        ctx: RequestContext,
+        email: &str,
+    ) -> PersistenceResult<Option<UserId>> {
+        let (tx, rx) = oneshot::channel();
+        let cmd = DbCommand::FindByEmail {
+            ctx,
+            email: email.to_string(),
+            respond: tx,
+        };
+        self.sender
+            .send(cmd)
+            .map_err(|e| PersistenceError::transient(e.to_string()))?;
+        rx.await
+            .map_err(|e| PersistenceError::transient(e.to_string()))?
+    }
+
 }

@@ -51,7 +51,7 @@ impl TableService for InMemoryTableService {
         _ctx: &RequestContext,
         input: CreateTableInput,
     ) -> Result<TableId, AppError> {
-        let id = TableId::generate();
+        let id = TableId::new(uuid::Uuid::new_v4());
         let table = Table {
             id,
             name: input.name,
@@ -64,23 +64,5 @@ impl TableService for InMemoryTableService {
         };
         self.tables.write().insert(id, table);
         Ok(id)
-    }
-
-    async fn join_table(
-        &self,
-        _user_id: UserId,
-        _table_id: TableId,
-        _ctx: &RequestContext,
-    ) -> Result<(), AppError> {
-        Ok(())
-    }
-
-    async fn leave_table(
-        &self,
-        _user_id: UserId,
-        _table_id: TableId,
-        _ctx: &RequestContext,
-    ) -> Result<(), AppError> {
-        Ok(())
     }
 }

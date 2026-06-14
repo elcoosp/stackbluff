@@ -5,13 +5,19 @@ use axum::{
     response::Json,
     routing::{get, post},
 };
-use sb_auth::AuthUser;
+use sb_auth::middleware::{AuthUser, auth_middleware};
 use sb_contracts::lobby_api::{TableInfo, TableRepo, TableService};
 use sb_shared_types::{StakeLevel, TableId};
 use sb_table_registry::registry::Registry;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::error;
+
+pub mod oracle_routes;
+pub mod rate_limit;
+
+pub use oracle_routes::oracle_router;
+pub use rate_limit::rate_limit_middleware;
 
 #[derive(Debug, Serialize)]
 pub struct LobbyTableInfo {
@@ -75,7 +81,7 @@ pub fn create_router(
     Router::new()
         .route("/lobby", get(lobby_handler))
         .route("/tables", post(create_table_handler))
-        .layer(axum::middleware::from_fn(sb_auth::auth_middleware))
+        .layer(axum::middleware::from_fn(auth_middleware))
         .with_state(state)
 }
 
@@ -144,36 +150,3 @@ fn bad_request(code: &str, msg: &str) -> (StatusCode, Json<ErrorResponse>) {
         }),
     )
 }
-pub mod oracle_routes;
-pub use oracle_routes::oracle_router;
-
-// Add .route("/referrals/stats", get(referral_stats_handler)) to your router.
-
-async fn referral_stats_handler(
-    State(viral): State<Arc<dyn ViralService>>,
-    user: UserId,
-    req: Request<Body>,
-) -> impl IntoResponse {
-    // Extract request_id from headers or generate one
-    let request_id = req
-        .headers()
-        .get("x-request-id")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or_else(|| "unknown");
-    let span = tracing::info_span!("referral_stats", request_id = %request_id);
-    let _enter = span.enter();
-
-    match viral.get_referral_stats(user).await {
-        Ok(stats) => (StatusCode::OK, Json(stats)).into_response(),
-        Err(e) => {
-            tracing::error!(error = %e, "Failed to retrieve referral stats");
-            let error_body = serde_json::json!({
-                "error": format!("{:?}", e),
-                "message": "Failed to retrieve referral stats"
-            });
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(error_body)).into_response()
-        }
-    }
-}
-pub mod rate_limit;
-pub use rate_limit::rate_limit_middleware;

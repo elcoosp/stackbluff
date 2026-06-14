@@ -23,6 +23,7 @@ async fn analyze_handler(
     let ctx = RequestContext {
         request_id: Uuid::new_v4(),
         user_id: Some(user_id),
+        ip: "unknown".to_string(),
     };
     if let Err(e) = params.validate() {
         return (StatusCode::BAD_REQUEST, e.to_string()).into_response();

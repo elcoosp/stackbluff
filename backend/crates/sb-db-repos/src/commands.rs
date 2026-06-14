@@ -39,4 +39,21 @@ pub enum DbCommand {
         sql: String,
         respond: ResponseSender<()>,
     },
+
+    FindOrCreateByTelegram {
+        ctx: RequestContext,
+        tg_id: i64,
+        respond: ResponseSender<UserId>,
+    },
+    CreateEmailUser {
+        ctx: RequestContext,
+        email: String,
+        password_hash: String,
+        respond: ResponseSender<UserId>,
+    },
+    FindByEmail {
+        ctx: RequestContext,
+        email: String,
+        respond: ResponseSender<Option<UserId>>,
+    },
 }

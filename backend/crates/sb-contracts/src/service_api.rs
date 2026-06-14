@@ -1,9 +1,34 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use sb_shared_types::RequestContext;
 use sb_shared_types::{AppError, ChipAmount, HandRank, TableId, UserId};
 use serde::{Deserialize, Serialize};
-use sb_shared_types::RequestContext;
 
+use crate::{ClubError, LeaderboardPage};
+use sb_shared_types::game_types::GameVariant;
+use sb_shared_types::{ClubId, StakeLevel};
+
+/// Input for creating a new poker table.
+#[derive(Debug, Clone)]
+pub struct CreateTableInput {
+    pub name: String,
+    pub club_id: Option<ClubId>,
+    pub stake_level: StakeLevel,
+    pub variant: GameVariant,
+    pub created_by: UserId,
+    pub is_private: bool,
+    pub invited_users: Vec<UserId>,
+}
+
+/// Service for managing poker tables.
+#[async_trait::async_trait]
+pub trait TableService: Send + Sync {
+    async fn create_table(
+        &self,
+        ctx: &RequestContext,
+        input: CreateTableInput,
+    ) -> Result<TableId, AppError>;
+}
 #[derive(Debug, Clone)]
 pub struct HandResult {
     pub hand_rank: HandRank,
@@ -64,10 +89,22 @@ pub trait UserService: Send + Sync {
 
 #[async_trait]
 pub trait AntiCheatService: Send + Sync {
-    async fn check_transfer(&self, from: UserId, to: UserId, amount: ChipAmount, ctx: &RequestContext) -> Result<(), AntiCheatError>;
+    async fn check_transfer(
+        &self,
+        from: UserId,
+        to: UserId,
+        amount: ChipAmount,
+        ctx: &RequestContext,
+    ) -> Result<(), AntiCheatError>;
     fn check_game_action_rate(&self, user_id: UserId) -> Result<(), AntiCheatError>;
     fn check_auth_rate(&self, ip: &str) -> Result<(), AntiCheatError>;
-    async fn record_heads_up(&self, ip: &str, user1: UserId, user2: UserId, ctx: &RequestContext) -> Result<(), AntiCheatError>;
+    async fn record_heads_up(
+        &self,
+        ip: &str,
+        user1: UserId,
+        user2: UserId,
+        ctx: &RequestContext,
+    ) -> Result<(), AntiCheatError>;
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -108,4 +145,97 @@ pub trait PaymentService: Send + Sync {
         user_id: sb_shared_types::UserId,
         amount: sb_shared_types::ChipAmount,
     ) -> Result<(), sb_shared_types::AppError>;
+}
+#[async_trait]
+pub trait OracleService: Send + Sync {
+    type Params: Send + Sync;
+    type Output: Send + Sync;
+    type Error: std::error::Error + Send + Sync;
+
+    /// Analyze a hand using the oracle heuristic engine.
+    async fn analyze(
+        &self,
+        ctx: &RequestContext,
+        params: Self::Params,
+    ) -> Result<Self::Output, Self::Error>;
+
+    /// Handle a callback query (no-op for oracle service, but required by the trait).
+    async fn answer_callback_query(
+        &self,
+        callback_id: String,
+        text: Option<String>,
+    ) -> Result<(), Self::Error>;
+}
+#[async_trait::async_trait]
+pub trait ClubService: Send + Sync {
+    async fn create_club(
+        &self,
+        ctx: &sb_shared_types::RequestContext,
+        name: &str,
+        logo_url: Option<&str>,
+        created_by: sb_shared_types::UserId,
+    ) -> Result<sb_shared_types::ClubId, ClubError>;
+
+    async fn join_club(
+        &self,
+        ctx: &sb_shared_types::RequestContext,
+        club_id: sb_shared_types::ClubId,
+        user_id: sb_shared_types::UserId,
+    ) -> Result<(), ClubError>;
+
+    async fn get_leaderboard(
+        &self,
+        ctx: &sb_shared_types::RequestContext,
+        club_id: sb_shared_types::ClubId,
+        division: u32,
+    ) -> Result<LeaderboardPage, ClubError>;
+
+    async fn add_xp(
+        &self,
+        ctx: &sb_shared_types::RequestContext,
+        club_id: sb_shared_types::ClubId,
+        user_id: sb_shared_types::UserId,
+        xp: i64,
+    ) -> Result<(), ClubError>;
+}
+
+// ========== Authentication contracts ==========
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuthResult {
+    pub jwt: String,
+    pub user_id: sb_shared_types::UserId,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TokenClaims {
+    pub user_id: sb_shared_types::UserId,
+    pub platform: String,
+}
+
+#[async_trait::async_trait]
+pub trait AuthService: Send + Sync {
+    async fn authenticate(
+        &self,
+        token: &str,
+        ctx: &sb_shared_types::RequestContext,
+    ) -> Result<sb_shared_types::UserId, sb_shared_types::AppError>;
+    async fn telegram_auth(
+        &self,
+        ctx: &sb_shared_types::RequestContext,
+        init_data: &str,
+    ) -> Result<AuthResult, sb_shared_types::AppError>;
+    async fn register(
+        &self,
+        ctx: &sb_shared_types::RequestContext,
+        email: &str,
+        password: &str,
+    ) -> Result<AuthResult, sb_shared_types::AppError>;
+    async fn login(
+        &self,
+        ctx: &sb_shared_types::RequestContext,
+        email: &str,
+        password: &str,
+    ) -> Result<AuthResult, sb_shared_types::AppError>;
+    async fn verify_token(&self, token: &str) -> Result<TokenClaims, sb_shared_types::AppError>;
 }

@@ -3,12 +3,14 @@ mod leaderboard_refresh;
 mod test_utils;
 
 use axum::Router;
-use sb_club::{ClubServiceImpl, club_router};
-use sb_contracts::ClubRepo;
-use sb_db_repos::club_repo::ClubRepoImpl;
 use sea_orm::Database;
 use sea_orm_migration::MigratorTrait;
 use std::sync::Arc;
+
+// TODO: Wire up ClubRepoImpl once sb_db_repos exports it
+// use sb_club::{ClubServiceImpl, club_router};
+// use sb_contracts::ClubRepo;
+// use sb_db_repos::club_repo::ClubRepoImpl;
 
 #[cfg(feature = "test-stubs")]
 use test_utils::notification_service::InMemoryNotificationService;
@@ -34,23 +36,23 @@ async fn main() {
         .expect("failed to run migrations");
 
     // ── Service wiring ─────────────────────────────────────
-    let club_repo: Arc<dyn ClubRepo> = Arc::new(ClubRepoImpl::new(db.clone()));
-    let club_service = Arc::new(ClubServiceImpl::new(club_repo.clone()));
+    // let club_repo: Arc<dyn ClubRepo> = Arc::new(ClubRepoImpl::new(db.clone()));
+    // let club_service = Arc::new(ClubServiceImpl::new(club_repo.clone()));
 
     // Spawn the 5-minute leaderboard refresh job
-    leaderboard_refresh::spawn_leaderboard_refresh_job(club_repo);
+    // leaderboard_refresh::spawn_leaderboard_refresh_job(club_repo);
 
-    let club_state = sb_club::handlers::ClubState {
-        service: club_service,
-    };
+    // let club_state = sb_club::handlers::ClubState {
+    //     service: club_service,
+    // };
 
     // Wire up bot handler services
     let bot_state = build_bot_state();
 
     let oracle_service = Arc::new(sb_oracle::OracleServiceImpl::new());
 
-    let app = Router::new().layer(axum::middleware::from_fn(move |req, next| { let limiter = rate_limiter.clone(); async move { req.extensions_mut().insert(limiter); next.run(req).await } }))
-        .merge(club_router(club_state))
+    let app = Router::new()
+        // .merge(club_router(club_state))
         .merge(sb_bot_handler::attach(bot_state))
         .merge(sb_rest_router::oracle_routes::oracle_router(oracle_service));
 

@@ -1,8 +1,8 @@
-use std::collections::VecDeque;
+use chrono::{DateTime, Duration, Utc};
 use dashmap::DashMap;
-use chrono::{DateTime, Utc, Duration};
 use metrics;
-use sb_shared_types::{UserId, ChipAmount};
+use sb_shared_types::{ChipAmount, UserId};
+use std::collections::VecDeque;
 
 type Pair = (UserId, UserId);
 
@@ -14,10 +14,19 @@ struct TransferWindow {
 
 impl TransferWindow {
     fn new() -> Self {
-        Self { deque: VecDeque::new(), net: 0 }
+        Self {
+            deque: VecDeque::new(),
+            net: 0,
+        }
     }
 
-    fn add(&mut self, timestamp: DateTime<Utc>, amount: i64, cutoff: DateTime<Utc>, limit: i64) -> Result<bool, &'static str> {
+    fn add(
+        &mut self,
+        timestamp: DateTime<Utc>,
+        amount: i64,
+        cutoff: DateTime<Utc>,
+        limit: i64,
+    ) -> Result<bool, &'static str> {
         // Clean expired
         while let Some(&(ts, amt)) = self.deque.front() {
             if ts < cutoff {
@@ -54,7 +63,12 @@ impl TransferTracker {
         }
     }
 
-    pub fn check_and_record(&self, from: UserId, to: UserId, amount: ChipAmount) -> Result<bool, &'static str> {
+    pub fn check_and_record(
+        &self,
+        from: UserId,
+        to: UserId,
+        amount: ChipAmount,
+    ) -> Result<bool, &'static str> {
         if from == to {
             return Err("self-transfer");
         }
@@ -62,7 +76,10 @@ impl TransferTracker {
         let cutoff = now - Duration::hours(24);
         let amount_i64: i64 = amount.into();
 
-        let mut entry = self.transfers.entry((from, to)).or_insert_with(TransferWindow::new);
+        let mut entry = self
+            .transfers
+            .entry((from, to))
+            .or_insert_with(TransferWindow::new);
         match entry.add(now, amount_i64, cutoff, self.limit) {
             Ok(allowed) => {
                 if !allowed {
@@ -80,7 +97,12 @@ impl TransferTracker {
         self.transfers
             .get(&(from, to))
             .map(|entry| {
-                entry.deque.iter().filter(|(ts,_)| *ts >= cutoff).map(|(_,amt)| amt).sum()
+                entry
+                    .deque
+                    .iter()
+                    .filter(|(ts, _)| *ts >= cutoff)
+                    .map(|(_, amt)| amt)
+                    .sum()
             })
             .unwrap_or(0)
     }

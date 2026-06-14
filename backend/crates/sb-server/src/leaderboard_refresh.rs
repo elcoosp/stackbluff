@@ -4,6 +4,7 @@ use std::time::Duration;
 use tokio::time::interval;
 
 /// Spawns a background task that refreshes all club leaderboards every 5 minutes.
+#[allow(dead_code)]
 pub fn spawn_leaderboard_refresh_job(repo: Arc<dyn ClubRepo>) {
     tokio::spawn(async move {
         let mut ticker = interval(Duration::from_secs(300));

@@ -1,5 +1,5 @@
 use chrono::{Duration, Utc};
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -11,7 +11,12 @@ pub struct Claims {
     pub iat: usize,
 }
 
-pub fn create_jwt(user_id: Uuid, platform: &str, secret: &str, expiry_days: i64) -> Result<String, jsonwebtoken::errors::Error> {
+pub fn create_jwt(
+    user_id: Uuid,
+    platform: &str,
+    secret: &str,
+    expiry_days: i64,
+) -> Result<String, jsonwebtoken::errors::Error> {
     let now = Utc::now();
     let exp = now + Duration::days(expiry_days);
     let claims = Claims {
@@ -20,7 +25,11 @@ pub fn create_jwt(user_id: Uuid, platform: &str, secret: &str, expiry_days: i64)
         exp: exp.timestamp() as usize,
         iat: now.timestamp() as usize,
     };
-    encode(&Header::default(), &claims, &EncodingKey::from_secret(secret.as_bytes()))
+    encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(secret.as_bytes()),
+    )
 }
 
 pub fn verify_jwt(token: &str, secret: &str) -> Result<Claims, jsonwebtoken::errors::Error> {

@@ -1,6 +1,6 @@
 use crate::actor::{InternalCommand, spawn_table_actor};
 use sb_contracts::{TableCommand, TableError, lobby_api::TableInfo};
-use sb_shared_types::{ChipAmount, PlayerId, TableConfig, TableId, UserId};
+use sb_shared_types::{ChipAmount, TableConfig, TableId, UserId};
 use sb_ws_handler::broadcast_channel;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -13,7 +13,6 @@ type ActorSender = mpsc::Sender<InternalCommand>;
 pub struct Registry {
     tables: Arc<RwLock<HashMap<TableId, ActorSender>>>,
     configs: Arc<RwLock<HashMap<TableId, TableConfig>>>,
-    player_to_user: Arc<RwLock<HashMap<PlayerId, UserId>>>,
     next_seat: Arc<RwLock<HashMap<TableId, u8>>>,
 }
 
@@ -22,7 +21,6 @@ impl Registry {
         Self {
             tables: Arc::new(RwLock::new(HashMap::new())),
             configs: Arc::new(RwLock::new(HashMap::new())),
-            player_to_user: Arc::new(RwLock::new(HashMap::new())),
             next_seat: Arc::new(RwLock::new(HashMap::new())),
         }
     }
@@ -47,16 +45,11 @@ impl Registry {
     ) -> Result<(), TableError> {
         match cmd {
             TableCommand::Join {
-                player_id,
                 table_id: _,
-                response_tx,
+                user_id,
+                reply_to,
             } => {
                 let stack = ChipAmount::new(1000).unwrap(); // fallback – contract lacks stack
-                let user_id = UserId(player_id.0);
-                {
-                    let mut map = self.player_to_user.write().await;
-                    map.insert(player_id, user_id);
-                }
                 let seat = {
                     let mut seats = self.next_seat.write().await;
                     let s = seats.entry(table_id).or_insert(0);
@@ -75,17 +68,18 @@ impl Registry {
                 };
                 match sender.send(internal).await {
                     Ok(()) => {
-                        let _ = response_tx.send(Ok(()));
+                        let _ = reply_to.send(Ok(()));
                         Ok(())
                     }
                     Err(e) => {
                         let msg = format!("send failed: {}", e);
-                        let _ = response_tx.send(Err(TableError::ActorError(msg.clone())));
+                        let _ = reply_to.send(Err(TableError::ActorError(msg.clone())));
                         Err(TableError::ActorError(msg))
                     }
                 }
             }
             TableCommand::Heartbeat { table_id: _ } => Ok(()),
+            _ => Err(TableError::Internal("Unsupported command".into())),
         }
     }
 

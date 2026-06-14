@@ -4,10 +4,7 @@ version = "0.1.0"
 edition.workspace = true
 
 [dependencies]
-
 argon2 = { workspace = true }
-
-
 hmac = { workspace = true }
 sha2 = { workspace = true }
 once_cell = { workspace = true }
@@ -33,5 +30,8 @@ tokio = { workspace = true }
 [dev-dependencies]
 chrono.workspace = true
 secrecy.workspace = true
+rand = { workspace = true }
 
 # Add missing dependencies
+argon2 = { workspace = true }
+rand = { workspace = true }

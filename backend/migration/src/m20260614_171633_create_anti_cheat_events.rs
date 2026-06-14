@@ -11,12 +11,26 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(AntiCheatEvents::Table)
                     .if_not_exists()
-                    .col(ColumnDef::new(AntiCheatEvents::Id).big_integer().not_null().auto_increment().primary_key())
+                    .col(
+                        ColumnDef::new(AntiCheatEvents::Id)
+                            .big_integer()
+                            .not_null()
+                            .auto_increment()
+                            .primary_key(),
+                    )
                     .col(ColumnDef::new(AntiCheatEvents::UserIds).string().not_null())
                     .col(ColumnDef::new(AntiCheatEvents::Ip).string())
-                    .col(ColumnDef::new(AntiCheatEvents::EventType).string().not_null())
+                    .col(
+                        ColumnDef::new(AntiCheatEvents::EventType)
+                            .string()
+                            .not_null(),
+                    )
                     .col(ColumnDef::new(AntiCheatEvents::Details).string())
-                    .col(ColumnDef::new(AntiCheatEvents::CreatedAt).timestamp().not_null())
+                    .col(
+                        ColumnDef::new(AntiCheatEvents::CreatedAt)
+                            .timestamp()
+                            .not_null(),
+                    )
                     .to_owned(),
             )
             .await

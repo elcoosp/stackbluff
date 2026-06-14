@@ -14,7 +14,7 @@ impl RequestContext {
         Self {
             request_id,
             user_id,
-                ip: String::new(),
+            ip: String::new(),
         }
     }
 }
