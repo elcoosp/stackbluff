@@ -2,10 +2,22 @@
 
 use sb_contracts::{ClubRepo, ClubService, LeaderboardPage, PersistenceError, DIVISION_SIZE};
 use sb_shared_types::{ClubId, UserId};
+use std::collections::HashSet;
 use std::sync::Arc;
+use parking_lot::RwLock;
 use uuid::Uuid;
 
-struct MockClubRepo;
+struct MockClubRepo {
+    members: Arc<RwLock<HashSet<(ClubId, UserId)>>>,
+}
+
+impl MockClubRepo {
+    fn new() -> Self {
+        Self {
+            members: Arc::new(RwLock::new(HashSet::new())),
+        }
+    }
+}
 
 #[async_trait::async_trait]
 impl ClubRepo for MockClubRepo {
@@ -32,18 +44,19 @@ impl ClubRepo for MockClubRepo {
 
     async fn join_club(
         &self,
-        _club_id: ClubId,
-        _user_id: UserId,
+        club_id: ClubId,
+        user_id: UserId,
     ) -> Result<(), PersistenceError> {
+        self.members.write().insert((club_id, user_id));
         Ok(())
     }
 
     async fn is_member(
         &self,
-        _club_id: ClubId,
-        _user_id: UserId,
+        club_id: ClubId,
+        user_id: UserId,
     ) -> Result<bool, PersistenceError> {
-        Ok(true)
+        Ok(self.members.read().contains(&(club_id, user_id)))
     }
 
     async fn get_member_count(
@@ -102,7 +115,7 @@ impl ClubRepo for MockClubRepo {
 }
 
 fn make_service() -> Arc<dyn ClubService> {
-    let repo: Arc<dyn ClubRepo> = Arc::new(MockClubRepo);
+    let repo: Arc<dyn ClubRepo> = Arc::new(MockClubRepo::new());
     Arc::new(sb_club::ClubServiceImpl::new(repo))
 }
 
@@ -125,17 +138,8 @@ async fn test_join_club() {
 
     let member_id = UserId::from(Uuid::new_v4());
     svc.join_club(club_id, member_id).await.expect("join club");
-}
 
-#[tokio::test]
-async fn test_join_club_already_member() {
-    let svc = make_service();
-    let owner_id = UserId::from(Uuid::new_v4());
-    let club_id = svc.create_club("Dup Club", None, owner_id).await.expect("create");
-
-    let member_id = UserId::from(Uuid::new_v4());
-    svc.join_club(club_id, member_id).await.expect("join");
-    // Mock always returns is_member=true, so this should fail
+    // Second join should fail
     let result = svc.join_club(club_id, member_id).await;
     assert!(matches!(result, Err(PersistenceError::AlreadyMember)));
 }
@@ -147,6 +151,16 @@ async fn test_add_xp() {
     let club_id = svc.create_club("XP Club", None, owner_id).await.expect("create");
     svc.join_club(club_id, owner_id).await.expect("join");
     svc.add_xp(club_id, owner_id, 100).await.expect("add xp");
+}
+
+#[tokio::test]
+async fn test_add_xp_not_member() {
+    let svc = make_service();
+    let owner_id = UserId::from(Uuid::new_v4());
+    let club_id = svc.create_club("NoXP Club", None, owner_id).await.expect("create");
+    // Don't join — add_xp should fail
+    let result = svc.add_xp(club_id, owner_id, 100).await;
+    assert!(matches!(result, Err(PersistenceError::NotAMember)));
 }
 
 #[tokio::test]

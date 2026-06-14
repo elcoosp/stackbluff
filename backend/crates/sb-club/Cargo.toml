@@ -18,6 +18,7 @@ chrono = { workspace = true }
 uuid = { workspace = true }
 
 [dev-dependencies]
+parking_lot = { workspace = true }
 tokio = { workspace = true }
 sb-db-repos = { path = "../sb-db-repos" }
 sea-orm = { workspace = true }

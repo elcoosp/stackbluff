@@ -3496,6 +3496,7 @@ dependencies = [
  "axum 0.8.9",
  "chrono",
  "migration",
+ "parking_lot",
  "sb-contracts",
  "sb-db-repos",
  "sb-shared-types",
