@@ -146,3 +146,14 @@ fn bad_request(code: &str, msg: &str) -> (StatusCode, Json<ErrorResponse>) {
 }
 pub mod oracle_routes;
 pub use oracle_routes::oracle_router;
+
+async fn referral_stats_handler(
+    State(viral): State<Arc<dyn ViralService>>,
+    user: UserId,
+) -> impl IntoResponse {
+    match viral.get_referral_stats(user).await {
+        Ok(stats) => (StatusCode::OK, Json(stats)).into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("{:?}", e)).into_response(),
+    }
+}
+// Add .route("/referrals/stats", get(referral_stats_handler)) to your router.
