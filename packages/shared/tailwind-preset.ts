@@ -23,33 +23,11 @@ export default {
         input: '#353535',
         ring: '#4edea3',
       },
-      borderRadius: {
-        lg: '0.5rem',
-        md: '0.25rem',
-        sm: '0.125rem',
-      },
-      fontFamily: {
-        display: ['Playfair Display', 'serif'],
-        mono: ['JetBrains Mono', 'monospace'],
-        sans: ['Inter', 'sans-serif'],
-      },
-      keyframes: {
-        float: {
-          '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-4px)' },
-        },
-        sweep: {
-          '0%': { transform: 'translateX(-100%)' },
-          '100%': { transform: 'translateX(200%)' },
-        },
-      },
-      animation: {
-        float: 'float 4s infinite ease-in-out',
-        sweep: 'sweep 3s infinite linear',
-      },
-      aspectRatio: {
-        'table-desktop': '16 / 9',
-      },
+      borderRadius: { lg: '0.5rem', md: '0.25rem', sm: '0.125rem' },
+      fontFamily: { display: ['Playfair Display', 'serif'], mono: ['JetBrains Mono', 'monospace'], sans: ['Inter', 'sans-serif'] },
+      keyframes: { float: { '0%,100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-4px)' } }, sweep: { '0%': { transform: 'translateX(-100%)' }, '100%': { transform: 'translateX(200%)' } } },
+      animation: { float: 'float 4s infinite ease-in-out', sweep: 'sweep 3s infinite linear' },
+      aspectRatio: { 'table-desktop': '16 / 9' },
     },
   },
   plugins: [],
