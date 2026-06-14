@@ -16,11 +16,8 @@ const loginSchema = z.object({
 });
 
 export const Route = createFileRoute('/login')({
-  beforeLoad: ({ context }) => {
-    // If already authenticated, redirect to lobby
-    if (useAuthStore.getState().user) {
-      throw redirect({ to: '/' });
-    }
+  beforeLoad: () => {
+    if (useAuthStore.getState().user) throw redirect({ to: '/' });
   },
   component: LoginPage,
 });
@@ -28,7 +25,7 @@ export const Route = createFileRoute('/login')({
 function LoginPage() {
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);
-  const loginMutation = useMutation({
+  const mutation = useMutation({
     mutationFn: authApi.login,
     onSuccess: (data) => {
       setToken(data.token);
@@ -36,47 +33,36 @@ function LoginPage() {
       navigate({ to: '/' });
     },
   });
-
   const form = useForm({
     defaultValues: { username: '', password: '' },
     validatorAdapter: zodValidator(),
     validators: { onChange: loginSchema },
-    onSubmit: ({ value }) => loginMutation.mutate(value),
+    onSubmit: ({ value }) => mutation.mutate(value),
   });
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#1a1b1e_0%,_#0a0a0a_100%)]" />
-      <div className="absolute inset-0 carbon-texture opacity-5 pointer-events-none" />
       <div className="relative z-10 w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter">STACKBLUFF</h1>
+          <h1 className="font-display-lg text-4xl text-white uppercase tracking-tighter">STACKBLUFF</h1>
           <p className="font-data-mono text-xs text-tertiary mt-2 tracking-widest">SECURE LOGIN</p>
         </div>
         <GlassPanel>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              form.handleSubmit();
-            }}
-            className="space-y-6"
-          >
+          <form onSubmit={(e) => { e.preventDefault(); form.handleSubmit(); }} className="space-y-6">
             <form.Field name="username">
               {(field) => (
                 <div className="space-y-2">
-                  <label className="block font-label-caps text-[10px] text-outline tracking-wider uppercase">
-                    Username or Email
-                  </label>
-                  <div className="relative border border-outline-variant/50 rounded-lg bg-black/40">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-outline-variant">
+                  <label className="block font-label-caps text-[10px] text-gray-400 tracking-wider uppercase">Username or Email</label>
+                  <div className="relative border border-white/20 rounded-lg bg-black/40">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
                       <span className="material-symbols-outlined text-base">person</span>
                     </span>
                     <input
                       type="text"
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
-                      className="w-full bg-transparent py-3 pl-10 pr-4 text-on-surface font-data-mono text-sm focus:outline-none focus:ring-1 focus:ring-tertiary rounded-lg"
+                      className="w-full bg-transparent py-3 pl-10 pr-4 text-white font-data-mono text-sm focus:outline-none focus:ring-1 focus:ring-tertiary rounded-lg placeholder:text-gray-600"
                       placeholder="ID / EMAIL"
                     />
                   </div>
@@ -89,18 +75,16 @@ function LoginPage() {
             <form.Field name="password">
               {(field) => (
                 <div className="space-y-2">
-                  <label className="block font-label-caps text-[10px] text-outline tracking-wider uppercase">
-                    Password
-                  </label>
-                  <div className="relative border border-outline-variant/50 rounded-lg bg-black/40">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-outline-variant">
+                  <label className="block font-label-caps text-[10px] text-gray-400 tracking-wider uppercase">Password</label>
+                  <div className="relative border border-white/20 rounded-lg bg-black/40">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
                       <span className="material-symbols-outlined text-base">lock</span>
                     </span>
                     <input
                       type="password"
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
-                      className="w-full bg-transparent py-3 pl-10 pr-4 text-on-surface font-data-mono text-sm focus:outline-none focus:ring-1 focus:ring-tertiary rounded-lg"
+                      className="w-full bg-transparent py-3 pl-10 pr-4 text-white font-data-mono text-sm focus:outline-none focus:ring-1 focus:ring-tertiary rounded-lg placeholder:text-gray-600"
                       placeholder="••••••••"
                     />
                   </div>
@@ -110,22 +94,14 @@ function LoginPage() {
                 </div>
               )}
             </form.Field>
-            <LiquidMetalButton
-              type="submit"
-              disabled={loginMutation.isPending}
-              className="w-full"
-            >
-              {loginMutation.isPending ? 'AUTHENTICATING...' : 'SIGN IN'}
+            <LiquidMetalButton type="submit" disabled={mutation.isPending} className="w-full">
+              {mutation.isPending ? 'AUTHENTICATING...' : 'SIGN IN'}
             </LiquidMetalButton>
-            {loginMutation.error && (
-              <p className="text-error text-xs font-mono text-center">
-                {loginMutation.error.message}
-              </p>
-            )}
+            {mutation.error && <p className="text-error text-xs font-mono text-center">{mutation.error.message}</p>}
             <div className="text-center pt-4">
               <Link
                 to="/register"
-                className="font-label-caps text-[10px] text-outline hover:text-tertiary transition-all tracking-widest uppercase"
+                className="font-label-caps text-[10px] text-gray-400 hover:text-tertiary transition-all tracking-widest uppercase"
               >
                 NEW TO STACKBLUFF? <span className="text-tertiary">CREATE ACCOUNT</span>
               </Link>
