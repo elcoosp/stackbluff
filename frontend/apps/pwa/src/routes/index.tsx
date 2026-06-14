@@ -12,13 +12,19 @@ interface Table {
   status: string;
 }
 
-// Function to get auth token (adjust based on your auth implementation)
-const getToken = () => localStorage.getItem('auth_token') || 'demo-token';
+// Ensure we have a dummy auth token (for development)
+const ensureToken = () => {
+  if (!localStorage.getItem('auth_token')) {
+    // Generate a fake user ID (you can change this later)
+    localStorage.setItem('auth_token', 'dev-token-12345');
+  }
+  return localStorage.getItem('auth_token')!;
+};
 
 const fetchTables = async (): Promise<Table[]> => {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
-  const response = await fetch(`/api/lobby`, {
-    headers: { 'Authorization': `Bearer ${getToken()}` }
+  const token = ensureToken();
+  const response = await fetch('/api/lobby', {
+    headers: { 'Authorization': `Bearer ${token}` }
   });
   if (!response.ok) throw new Error('Failed to fetch tables');
   return response.json();
@@ -26,6 +32,9 @@ const fetchTables = async (): Promise<Table[]> => {
 
 export const Route = createFileRoute('/')({
   component: function LobbyPage() {
+    // Ensure token exists on component mount
+    ensureToken();
+
     const { data: tables, isLoading, error, refetch } = useQuery({
       queryKey: ['tables'],
       queryFn: fetchTables,

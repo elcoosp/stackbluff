@@ -2,14 +2,16 @@ import { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '@stackbluff/shared/stores/gameStore';
 import { useToast } from '@/components/ui/use-toast';
 
-// Helper to get auth token
-const getToken = () => localStorage.getItem('auth_token') || 'demo-token';
+const getToken = () => {
+  if (!localStorage.getItem('auth_token')) {
+    localStorage.setItem('auth_token', 'dev-token-12345');
+  }
+  return localStorage.getItem('auth_token')!;
+};
 
-// Helper to parse incoming WebSocket messages based on backend enum type
 const parseMessage = (data: any) => {
   switch (data.type) {
     case 'TableState':
-      // Transform backend TableStateUpdate to frontend TableState format
       return {
         type: 'TableState',
         seats: data.players.map((player: any, idx: number) => ({
@@ -23,10 +25,10 @@ const parseMessage = (data: any) => {
           avatar_url: undefined,
         })),
         community_cards: data.community_cards || [],
-        pot: 0, // not provided by backend, compute from players? For now set to 0
+        pot: 0,
         side_pots: [],
         round: data.current_hand_in_progress ? 'preflop' : 'showdown',
-        hero_seat: 0, // will be overridden when user joins
+        hero_seat: 0,
         hero_hole_cards: null,
       };
     case 'ActionRequired':
@@ -34,7 +36,7 @@ const parseMessage = (data: any) => {
         type: 'ActionRequired',
         to_call: data.to_call,
         min_raise: data.min_raise,
-        max_raise: data.max_raise, // backend doesn't send max_raise, we'll set to stack or pot
+        max_raise: data.min_raise * 2, // placeholder
         remaining_ms: data.remaining_ms,
       };
     case 'HandResult':
@@ -74,25 +76,10 @@ export function useGameWebSocket(tableId: string) {
       const data = JSON.parse(event.data);
       const message = parseMessage(data);
       if (!message) return;
-
-      switch (message.type) {
-        case 'TableState':
-          setSnapshot(message);
-          break;
-        case 'ActionRequired':
-          setActionRequired(message);
-          break;
-        case 'HandDealt':
-          // Backend currently doesn't send HandDealt; we will infer from TableState hero_hole_cards later
-          if (message.cards) setHeroHoleCards(message.cards);
-          break;
-        case 'ActionBroadcast':
-          applyActionBroadcast(message);
-          break;
-        case 'HandResult':
-          setHandResult(message);
-          break;
-      }
+      if (message.type === 'TableState') setSnapshot(message);
+      else if (message.type === 'ActionRequired') setActionRequired(message);
+      else if (message.type === 'ActionBroadcast') applyActionBroadcast(message);
+      else if (message.type === 'HandResult') setHandResult(message);
     };
 
     ws.onclose = () => {
