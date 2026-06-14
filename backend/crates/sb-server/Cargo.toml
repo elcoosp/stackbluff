@@ -9,6 +9,7 @@ default = ["test-stubs"]
 test-stubs = []
 
 [dependencies]
+sb-anti-cheat = { path = "../sb-anti-cheat" }
 sb-bot-handler = { workspace = true }
 sb-rest-router = { workspace = true }
 sb-oracle = { workspace = true }

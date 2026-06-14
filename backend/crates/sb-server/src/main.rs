@@ -49,7 +49,7 @@ async fn main() {
 
     let oracle_service = Arc::new(sb_oracle::OracleServiceImpl::new());
 
-    let app = Router::new()
+    let app = Router::new().layer(axum::middleware::from_fn(move |req, next| { let limiter = rate_limiter.clone(); async move { req.extensions_mut().insert(limiter); next.run(req).await } }))
         .merge(club_router(club_state))
         .merge(sb_bot_handler::attach(bot_state))
         .merge(sb_rest_router::oracle_routes::oracle_router(oracle_service));

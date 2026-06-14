@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// Unique identifier for a user. Use `UserId::new(uuid)` to construct, `.as_uuid()` to extract.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, PartialOrd)]
 pub struct UserId(pub Uuid);
 
 impl UserId {
@@ -22,7 +22,7 @@ impl std::fmt::Display for UserId {
 }
 
 /// Unique identifier for a table. Use `TableId::new(uuid)` to construct, `.as_uuid()` to extract.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, PartialOrd)]
 pub struct TableId(pub Uuid);
 
 impl TableId {
@@ -54,7 +54,7 @@ impl std::str::FromStr for TableId {
 }
 
 /// Unique identifier for a club. Use `ClubId::new(uuid)` to construct, `.as_uuid()` to extract.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, PartialOrd)]
 pub struct ClubId(pub Uuid);
 
 impl ClubId {
@@ -86,7 +86,7 @@ impl std::str::FromStr for ClubId {
 }
 
 /// Unique identifier for a player at a table.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, PartialOrd)]
 pub struct PlayerId(pub Uuid);
 
 impl PlayerId {

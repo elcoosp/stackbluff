@@ -1,0 +1,23 @@
+[package]
+name = "sb-anti-cheat"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+metrics = { workspace = true }
+sb-contracts = { path = "../sb-contracts" }
+sb-shared-types = { path = "../sb-shared-types" }
+sb-db-entities = { path = "../sb-db-entities" }
+tokio = { workspace = true }
+tracing = { workspace = true }
+dashmap = "6.1.0"
+chrono = { workspace = true }
+thiserror = { workspace = true }
+sea-orm = { workspace = true }
+serde = { workspace = true }
+once_cell = { workspace = true }
+async-trait = { workspace = true }
+
+[dev-dependencies]
+mockall = { workspace = true }

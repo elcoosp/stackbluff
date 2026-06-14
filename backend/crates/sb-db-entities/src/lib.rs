@@ -4,3 +4,4 @@ pub mod system_counter;
 
 pub use referral::Entity as Referral;
 pub use system_counter::Entity as SystemCounter;
+pub mod entities;
