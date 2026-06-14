@@ -1,8 +1,9 @@
 //! Integration test against a temporary SQLite database.
 //! Tests actual SQL correctness, not mock behaviour.
 
+use migration::MigratorTrait;
 use sb_club::ClubServiceImpl;
-use sb_contracts::{ClubError, ClubRepo, ClubService, DIVISION_SIZE, LeaderboardPage};
+use sb_contracts::{ClubError, ClubRepo, ClubService, DIVISION_SIZE};
 use sb_db_repos::club_repo::ClubRepoImpl;
 use sb_shared_types::{ClubId, RequestContext, UserId};
 use sea_orm::Database;
@@ -27,7 +28,7 @@ async fn setup_db() -> (Arc<dyn ClubService>, Arc<dyn ClubRepo>) {
 fn test_ctx() -> RequestContext {
     RequestContext {
         request_id: Uuid::new_v4(),
-        user_id: Some(UserId::new(Uuid::new_v4())),
+        user_id: Some(UserId(Uuid::new_v4())),
     }
 }
 
@@ -60,7 +61,7 @@ async fn test_join_club_and_duplicate() {
 
     let member_ctx = RequestContext {
         request_id: Uuid::new_v4(),
-        user_id: Some(UserId::new(Uuid::new_v4())),
+        user_id: Some(UserId(Uuid::new_v4())),
     };
     let member_id = member_ctx.user_id.unwrap();
     svc.join_club(&member_ctx, club_id, member_id)
@@ -115,7 +116,7 @@ async fn test_leaderboard_divisions() {
     for i in 0..599 {
         let member_ctx = RequestContext {
             request_id: Uuid::new_v4(),
-            user_id: Some(UserId::new(Uuid::new_v4())),
+            user_id: Some(UserId(Uuid::new_v4())),
         };
         let member_id = member_ctx.user_id.unwrap();
         svc.join_club(&member_ctx, club_id, member_id)

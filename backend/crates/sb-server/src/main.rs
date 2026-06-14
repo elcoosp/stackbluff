@@ -45,33 +45,7 @@ async fn main() {
     };
 
     // Wire up bot handler services
-    // In production, replace with real implementations; test-stubs are for development only.
-    #[cfg(feature = "test-stubs")]
-    let (table_service, notification_service, user_resolution) = {
-        let table_service: Arc<dyn sb_contracts::service_api::TableService> =
-            Arc::new(InMemoryTableService::new());
-        let notification_service: Arc<dyn sb_contracts::notification_api::NotificationService> =
-            Arc::new(InMemoryNotificationService::new());
-        let user_resolution: Arc<dyn sb_contracts::user_resolution::UserResolutionService> =
-            Arc::new(InMemoryUserResolutionService::new());
-        (table_service, notification_service, user_resolution)
-    };
-
-    #[cfg(not(feature = "test-stubs"))]
-    let (table_service, notification_service, user_resolution) = {
-        // Production wiring — TODO: replace with real service implementations
-        unimplemented!(
-            "Production service wiring not yet configured. Build with --features test-stubs for development."
-        )
-    };
-
-    let bot_state: Arc<sb_bot_handler::BotState> = Arc::new(sb_bot_handler::BotState::new(
-        table_service,
-        notification_service,
-        user_resolution,
-        std::env::var("TELEGRAM_BOT_TOKEN").unwrap_or_default(),
-        std::env::var("MINI_APP_URL").unwrap_or_else(|_| "http://localhost:5173/".to_string()),
-    ));
+    let bot_state = build_bot_state();
 
     let oracle_service = Arc::new(sb_oracle::OracleServiceImpl::new());
 
@@ -86,4 +60,32 @@ async fn main() {
 
     tracing::info!("server listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.expect("server error");
+}
+
+#[cfg(feature = "test-stubs")]
+fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
+    let table_service: Arc<dyn sb_contracts::service_api::TableService> =
+        Arc::new(InMemoryTableService::new());
+    let notification_service: Arc<dyn sb_contracts::notification_api::NotificationService> =
+        Arc::new(InMemoryNotificationService::new());
+    let user_resolution: Arc<dyn sb_contracts::user_resolution::UserResolutionService> =
+        Arc::new(InMemoryUserResolutionService::new());
+
+    Arc::new(sb_bot_handler::BotState::new(
+        table_service,
+        notification_service,
+        user_resolution,
+        std::env::var("TELEGRAM_BOT_TOKEN").unwrap_or_default(),
+        std::env::var("MINI_APP_URL").unwrap_or_else(|_| "http://localhost:5173/".to_string()),
+    ))
+}
+
+#[cfg(not(feature = "test-stubs"))]
+fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
+    // Production wiring — replace with real service implementations.
+    // Build with `--features test-stubs` for local development.
+    compile_error!(
+        "Production service wiring not yet configured. \
+         Build with --features test-stubs for development."
+    );
 }

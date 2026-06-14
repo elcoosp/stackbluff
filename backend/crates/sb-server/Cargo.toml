@@ -5,7 +5,7 @@ edition = "2024"
 rust-version = "1.94"
 
 [features]
-default = []
+default = ["test-stubs"]
 test-stubs = []
 
 [dependencies]
