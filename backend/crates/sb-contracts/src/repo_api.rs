@@ -131,8 +131,15 @@ pub trait ClubRepo: Send + Sync {
 
 #[async_trait::async_trait]
 pub trait ReferralRepository: Send + Sync {
-    async fn record_referral(&self, referrer_id: UserId, referred_id: UserId) -> Result<(), AppError>;
-    async fn increment_hand_count_and_check_bonus(&self, referred_id: UserId) -> Result<bool, AppError>;
+    async fn record_referral(
+        &self,
+        referrer_id: UserId,
+        referred_id: UserId,
+    ) -> Result<(), AppError>;
+    async fn increment_hand_count_and_check_bonus(
+        &self,
+        referred_id: UserId,
+    ) -> Result<bool, AppError>;
     async fn mark_bonus_awarded(&self, referred_id: UserId) -> Result<(), AppError>;
     async fn get_referrer_id(&self, referred_id: UserId) -> Result<Option<UserId>, AppError>;
     async fn get_referral_stats(&self, referrer_id: UserId) -> Result<ReferralStats, AppError>;

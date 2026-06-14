@@ -4,8 +4,8 @@ use sb_contracts::service_api::ReferralStats;
 use sb_db_entities::{prelude::*, referral, user};
 use sb_shared_types::{AppError, UserId};
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, IntoActiveModel,
-    QueryFilter, Set, TransactionTrait, UpdateMany, Expr, Condition,
+    ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, Expr,
+    IntoActiveModel, QueryFilter, Set, TransactionTrait, UpdateMany,
 };
 use tracing::info;
 
@@ -21,7 +21,11 @@ impl ReferralRepositoryImpl {
 
 #[async_trait]
 impl ReferralRepository for ReferralRepositoryImpl {
-    async fn record_referral(&self, referrer_id: UserId, referred_id: UserId) -> Result<(), AppError> {
+    async fn record_referral(
+        &self,
+        referrer_id: UserId,
+        referred_id: UserId,
+    ) -> Result<(), AppError> {
         let new_ref = referral::ActiveModel::builder()
             .set_referrer_id(referrer_id.to_string())
             .set_referred_id(referred_id.to_string())
@@ -35,7 +39,10 @@ impl ReferralRepository for ReferralRepositoryImpl {
         Ok(())
     }
 
-    async fn increment_hand_count_and_check_bonus(&self, referred_id: UserId) -> Result<bool, AppError> {
+    async fn increment_hand_count_and_check_bonus(
+        &self,
+        referred_id: UserId,
+    ) -> Result<bool, AppError> {
         use referral::COLUMN;
         // Atomic increment: UPDATE referral SET hand_count = hand_count + 1 WHERE referred_id = ? AND hand_count < 5
         let update_result = Referral::update_many()
@@ -43,7 +50,7 @@ impl ReferralRepository for ReferralRepositoryImpl {
             .filter(
                 Condition::all()
                     .add(COLUMN.referred_id.eq(referred_id.to_string()))
-                    .add(COLUMN.hand_count.lt(5))
+                    .add(COLUMN.hand_count.lt(5)),
             )
             .exec(&self.db)
             .await
@@ -71,7 +78,10 @@ impl ReferralRepository for ReferralRepositoryImpl {
         if let Some(mut ref_model) = referral {
             let mut active: referral::ActiveModel = ref_model.into();
             active.bonus_awarded = Set(true);
-            active.update(&self.db).await.map_err(|e| AppError::Database(e.to_string()))?;
+            active
+                .update(&self.db)
+                .await
+                .map_err(|e| AppError::Database(e.to_string()))?;
         }
         Ok(())
     }
@@ -95,7 +105,14 @@ impl ReferralRepository for ReferralRepositoryImpl {
             .map_err(|e| AppError::Database(e.to_string()))?;
         let total_referred = referrals.len() as i64;
         let bonus_earned = referrals.iter().filter(|r| r.bonus_awarded).count() as i64;
-        let pending_bonus = referrals.iter().filter(|r| r.hand_count >= 5 && !r.bonus_awarded).count() as i64;
-        Ok(ReferralStats { total_referred, bonus_earned, pending_bonus })
+        let pending_bonus = referrals
+            .iter()
+            .filter(|r| r.hand_count >= 5 && !r.bonus_awarded)
+            .count() as i64;
+        Ok(ReferralStats {
+            total_referred,
+            bonus_earned,
+            pending_bonus,
+        })
     }
 }

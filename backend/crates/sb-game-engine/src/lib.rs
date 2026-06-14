@@ -27,7 +27,12 @@ pub async fn on_hand_complete(
 /// Observer trait for hand completion events
 #[async_trait]
 pub trait HandObserver: Send + Sync {
-    async fn on_hand_completed(&self, hand_result: &HandResult, winner_id: UserId, table_id: TableId);
+    async fn on_hand_completed(
+        &self,
+        hand_result: &HandResult,
+        winner_id: UserId,
+        table_id: TableId,
+    );
 }
 
 /// Engine configuration with observers
@@ -44,9 +49,16 @@ impl GameEngine {
         self.observers.push(observer);
     }
 
-    async fn notify_observers(&self, hand_result: &HandResult, winner_id: UserId, table_id: TableId) {
+    async fn notify_observers(
+        &self,
+        hand_result: &HandResult,
+        winner_id: UserId,
+        table_id: TableId,
+    ) {
         for observer in &self.observers {
-            observer.on_hand_completed(hand_result, winner_id, table_id).await;
+            observer
+                .on_hand_completed(hand_result, winner_id, table_id)
+                .await;
         }
     }
 }

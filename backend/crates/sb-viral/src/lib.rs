@@ -1,18 +1,18 @@
 use sb_contracts::HandObserver;
 
-pub mod referral;
 pub mod metrics;
+pub mod referral;
 
+use async_trait::async_trait;
+use chrono::Utc;
 use sb_contracts::{
     repo_api::ReferralRepository,
-    service_api::{HandResult, ReplayCard, ReferralStats, ViralService, UserService},
+    service_api::{HandResult, ReferralStats, ReplayCard, UserService, ViralService},
 };
-use sb_shared_types::{AppError, UserId, TableId, ChipAmount};
-use async_trait::async_trait;
+use sb_shared_types::{AppError, ChipAmount, TableId, UserId};
 use std::sync::Arc;
-use tracing::{info, error};
+use tracing::{error, info};
 use uuid::Uuid;
-use chrono::Utc;
 
 pub struct ViralServiceImpl<R: ReferralRepository, U: UserService> {
     repo: Arc<R>,
@@ -31,8 +31,13 @@ impl<R: ReferralRepository, U: UserService> ViralServiceImpl<R, U> {
 
     async fn award_bonus(&self, user_id: UserId, is_triple: bool) -> Result<(), AppError> {
         let base_amount: i64 = 100;
-        let amount = if is_triple { base_amount * 3 } else { base_amount };
-        let chip_amount = ChipAmount::new(amount).map_err(|_| AppError::InvalidInput("Invalid chip amount".into()))?;
+        let amount = if is_triple {
+            base_amount * 3
+        } else {
+            base_amount
+        };
+        let chip_amount = ChipAmount::new(amount)
+            .map_err(|_| AppError::InvalidInput("Invalid chip amount".into()))?;
         self.user_service.award_chips(user_id, chip_amount).await?;
         info!(user_id = %user_id, triple = is_triple, "Awarded {} chips", amount);
         metrics::counter!("bonus_awarded", 1);
@@ -42,7 +47,12 @@ impl<R: ReferralRepository, U: UserService> ViralServiceImpl<R, U> {
 
 #[async_trait]
 impl<R: ReferralRepository, U: UserService> ViralService for ViralServiceImpl<R, U> {
-    async fn generate_replay_card(&self, hand_result: &HandResult, winner_id: UserId, table_id: TableId) -> Result<ReplayCard, AppError> {
+    async fn generate_replay_card(
+        &self,
+        hand_result: &HandResult,
+        winner_id: UserId,
+        table_id: TableId,
+    ) -> Result<ReplayCard, AppError> {
         if !hand_result.is_significant() {
             return Err(AppError::InvalidInput("hand not significant".into()));
         }
@@ -58,12 +68,19 @@ impl<R: ReferralRepository, U: UserService> ViralService for ViralServiceImpl<R,
         })
     }
 
-    async fn record_referral(&self, referrer_id: UserId, referred_id: UserId) -> Result<(), AppError> {
+    async fn record_referral(
+        &self,
+        referrer_id: UserId,
+        referred_id: UserId,
+    ) -> Result<(), AppError> {
         self.repo.record_referral(referrer_id, referred_id).await
     }
 
     async fn on_hand_completed(&self, user_id: UserId) -> Result<(), AppError> {
-        let should_award = self.repo.increment_hand_count_and_check_bonus(user_id).await?;
+        let should_award = self
+            .repo
+            .increment_hand_count_and_check_bonus(user_id)
+            .await?;
         if !should_award {
             return Ok(());
         }
@@ -86,10 +103,20 @@ impl<R: ReferralRepository, U: UserService> ViralService for ViralServiceImpl<R,
 }
 
 #[async_trait]
-impl<R: ReferralRepository + Send + Sync, U: UserService + Send + Sync> sb_contracts::HandObserver for ViralServiceImpl<R, U> {
-    async fn on_hand_completed(&self, hand_result: &HandResult, winner_id: UserId, table_id: TableId) {
+impl<R: ReferralRepository + Send + Sync, U: UserService + Send + Sync> sb_contracts::HandObserver
+    for ViralServiceImpl<R, U>
+{
+    async fn on_hand_completed(
+        &self,
+        hand_result: &HandResult,
+        winner_id: UserId,
+        table_id: TableId,
+    ) {
         if hand_result.is_significant() {
-            if let Err(e) = self.generate_replay_card(hand_result, winner_id, table_id).await {
+            if let Err(e) = self
+                .generate_replay_card(hand_result, winner_id, table_id)
+                .await
+            {
                 error!(error = %e, "Failed to generate replay card");
             }
         }
