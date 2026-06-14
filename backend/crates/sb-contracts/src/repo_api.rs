@@ -1,8 +1,11 @@
+use crate::service_api::ReferralStats;
+use sb_shared_types::{AppError, UserId};
+
 use async_trait::async_trait;
-use sb_shared_types::{ClubId, RequestContext, UserId};
+use sb_shared_types::{ClubId, RequestContext};
 
 pub use crate::club_error::ClubError;
-pub use crate::{PersistenceError, PersistenceResult};
+pub use crate::persistence_error::{PersistenceError, PersistenceResult};
 
 // ── Existing repository types ──────────────────────────────────
 
@@ -127,4 +130,20 @@ pub trait ClubRepo: Send + Sync {
 
     /// Return all club ids for the scheduled refresh job.
     async fn get_all_club_ids(&self) -> ClubResult<Vec<ClubId>>;
+}
+
+#[async_trait::async_trait]
+pub trait ReferralRepository: Send + Sync {
+    async fn record_referral(
+        &self,
+        referrer_id: UserId,
+        referred_id: UserId,
+    ) -> Result<(), AppError>;
+    async fn increment_hand_count_and_check_bonus(
+        &self,
+        referred_id: UserId,
+    ) -> Result<bool, AppError>;
+    async fn mark_bonus_awarded(&self, referred_id: UserId) -> Result<(), AppError>;
+    async fn get_referrer_id(&self, referred_id: UserId) -> Result<Option<UserId>, AppError>;
+    async fn get_referral_stats(&self, referrer_id: UserId) -> Result<ReferralStats, AppError>;
 }

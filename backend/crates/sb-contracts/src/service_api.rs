@@ -1,157 +1,62 @@
-use crate::repo_api::ClubResult;
-use sb_shared_types::{AppError, RequestContext, TableId, UserId};
+use async_trait::async_trait;
+use chrono::{DateTime, Utc};
+use sb_shared_types::{AppError, ChipAmount, HandRank, TableId, UserId};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub struct AuthResult {
-    pub jwt: String,
-    pub user_id: uuid::Uuid,
+#[derive(Debug, Clone)]
+pub struct HandResult {
+    pub hand_rank: HandRank,
+    pub pot_size: ChipAmount,
+    pub is_all_in: bool,
+    pub is_tournament_ko: bool,
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub struct TokenClaims {
-    pub user_id: uuid::Uuid,
-    pub platform: String,
+impl HandResult {
+    pub fn is_significant(&self) -> bool {
+        matches!(
+            self.hand_rank,
+            HandRank::StraightFlush | HandRank::FourOfAKind | HandRank::FullHouse
+        ) || self.is_all_in
+            || self.is_tournament_ko
+    }
 }
 
-#[async_trait::async_trait]
-pub trait TableService: Send + Sync {
-    async fn create_table(
-        &self,
-        ctx: &RequestContext,
-        input: CreateTableInput,
-    ) -> Result<TableId, AppError>;
-
-    async fn join_table(
-        &self,
-        user_id: UserId,
-        table_id: TableId,
-        ctx: &RequestContext,
-    ) -> Result<(), AppError>;
-
-    async fn leave_table(
-        &self,
-        user_id: UserId,
-        table_id: TableId,
-        ctx: &RequestContext,
-    ) -> Result<(), AppError>;
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReplayCard {
+    pub card_id: String,
+    pub hand_description: String,
+    pub winner_name: String,
+    pub invite_link: String,
+    pub timestamp: DateTime<Utc>,
 }
 
-#[async_trait::async_trait]
-pub trait AuthService: Send + Sync {
-    async fn authenticate(&self, token: &str, ctx: &RequestContext) -> Result<UserId, AppError>;
-    async fn telegram_auth(
-        &self,
-        ctx: &RequestContext,
-        init_data: &str,
-    ) -> Result<AuthResult, AppError>;
-    async fn register(
-        &self,
-        ctx: &RequestContext,
-        email: &str,
-        password: &str,
-    ) -> Result<AuthResult, AppError>;
-    async fn login(
-        &self,
-        ctx: &RequestContext,
-        email: &str,
-        password: &str,
-    ) -> Result<AuthResult, AppError>;
-    async fn verify_token(&self, token: &str) -> Result<TokenClaims, AppError>;
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReferralStats {
+    pub total_referred: i64,
+    pub bonus_earned: i64,
+    pub pending_bonus: i64,
 }
 
-#[async_trait::async_trait]
-pub trait PaymentService: Send + Sync {
-    async fn deposit(
-        &self,
-        user_id: UserId,
-        amount: u64,
-        ctx: &RequestContext,
-    ) -> Result<(), AppError>;
-}
-
-#[async_trait::async_trait]
+#[async_trait]
 pub trait ViralService: Send + Sync {
-    async fn share_referral(
+    async fn generate_replay_card(
         &self,
-        user_id: UserId,
-        code: &str,
-        ctx: &RequestContext,
+        hand_result: &HandResult,
+        winner_id: UserId,
+        table_id: TableId,
+    ) -> Result<ReplayCard, AppError>;
+    async fn record_referral(
+        &self,
+        referrer_id: UserId,
+        referred_id: UserId,
     ) -> Result<(), AppError>;
+    async fn on_hand_completed(&self, user_id: UserId) -> Result<(), AppError>;
+    async fn get_referral_stats(&self, user_id: UserId) -> Result<ReferralStats, AppError>;
 }
 
-#[async_trait::async_trait]
-pub trait MissionService: Send + Sync {
-    async fn check_missions(
-        &self,
-        user_id: UserId,
-        ctx: &RequestContext,
-    ) -> Result<Vec<String>, AppError>;
-}
-
-#[async_trait::async_trait]
-pub trait OracleService: Send + Sync {
-    type Params: Send;
-    type Output: Send;
-    type Error: std::error::Error + Send;
-
-    async fn analyze(
-        &self,
-        ctx: &RequestContext,
-        params: Self::Params,
-    ) -> Result<Self::Output, Self::Error>;
-
-    async fn answer_callback_query(
-        &self,
-        callback_query_id: String,
-        text: Option<String>,
-    ) -> Result<(), Self::Error>;
-}
-
-/// Input for creating a table.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct CreateTableInput {
-    pub name: String,
-    pub club_id: Option<sb_shared_types::ClubId>,
-    pub stake_level: sb_shared_types::game_types::StakeLevel,
-    pub variant: sb_shared_types::game_types::GameVariant,
-    pub created_by: UserId,
-    pub is_private: bool,
-    pub invited_users: Vec<UserId>,
-}
-
-/// Service interface for club operations.
-///
-/// All methods accept `RequestContext` for request tracing.
-#[async_trait::async_trait]
-pub trait ClubService: Send + Sync {
-    async fn create_club(
-        &self,
-        ctx: &RequestContext,
-        name: &str,
-        logo_url: Option<&str>,
-        created_by: UserId,
-    ) -> ClubResult<sb_shared_types::ClubId>;
-
-    async fn join_club(
-        &self,
-        ctx: &RequestContext,
-        club_id: sb_shared_types::ClubId,
-        user_id: UserId,
-    ) -> ClubResult<()>;
-
-    async fn get_leaderboard(
-        &self,
-        ctx: &RequestContext,
-        club_id: sb_shared_types::ClubId,
-        division: u32,
-    ) -> ClubResult<crate::repo_api::LeaderboardPage>;
-
-    /// Called when a club member earns XP (e.g. plays a hand at a club table).
-    async fn add_xp(
-        &self,
-        ctx: &RequestContext,
-        club_id: sb_shared_types::ClubId,
-        user_id: UserId,
-        xp: i64,
-    ) -> ClubResult<()>;
+#[async_trait]
+pub trait UserService: Send + Sync {
+    async fn award_chips(&self, user_id: UserId, amount: ChipAmount) -> Result<(), AppError>;
+    async fn get_user_name(&self, user_id: UserId) -> Result<String, AppError>;
+    async fn get_registration_order(&self, user_id: UserId) -> Result<Option<u64>, AppError>;
 }
