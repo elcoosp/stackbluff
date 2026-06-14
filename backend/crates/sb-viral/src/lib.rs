@@ -1,3 +1,5 @@
+use sb_contracts::HandObserver;
+
 pub mod referral;
 pub mod metrics;
 
@@ -80,5 +82,19 @@ impl<R: ReferralRepository, U: UserService> ViralService for ViralServiceImpl<R,
 
     async fn get_referral_stats(&self, user_id: UserId) -> Result<ReferralStats, AppError> {
         self.repo.get_referral_stats(user_id).await
+    }
+}
+
+#[async_trait]
+impl<R: ReferralRepository + Send + Sync, U: UserService + Send + Sync> sb_contracts::HandObserver for ViralServiceImpl<R, U> {
+    async fn on_hand_completed(&self, hand_result: &HandResult, winner_id: UserId, table_id: TableId) {
+        if hand_result.is_significant() {
+            if let Err(e) = self.generate_replay_card(hand_result, winner_id, table_id).await {
+                error!(error = %e, "Failed to generate replay card");
+            }
+        }
+        if let Err(e) = ViralService::on_hand_completed(self, winner_id).await {
+            error!(error = %e, "Failed to process hand completion for referrals");
+        }
     }
 }
