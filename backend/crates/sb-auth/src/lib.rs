@@ -24,6 +24,9 @@ use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
 use sea_orm::{EntityTrait, QueryFilter, ColumnTrait, ActiveValue, IntoSimpleExpr, Expr};
 use sb_db_entities::system_counter;
 
+use sea_orm::{EntityTrait, QueryFilter, ColumnTrait, ActiveValue, IntoSimpleExpr, Expr};
+use sb_db_entities::system_counter;
+
 pub async fn increment_global_user_counter(db: &DatabaseConnection) -> Result<u64, DbErr> {
     use system_counter::COLUMN;
     // Atomic increment using SQL update
