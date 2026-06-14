@@ -1,17 +1,16 @@
 use sea_orm::entity::prelude::*;
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 #[sea_orm::model]
-#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
-#[sea_orm(table_name = "referrals")]
+#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
+#[sea_orm(table_name = "referral")]
 pub struct Model {
     #[sea_orm(primary_key)]
-    pub referrer_id: Uuid,
-    #[sea_orm(primary_key)]
-    pub referred_id: Uuid,
-    pub completed_at: Option<DateTimeUtc>,
-    pub bonus_credited: bool,
+    pub id: i32,
+    pub referrer_id: String,
+    pub referred_id: String,
+    pub hand_count: i32,
+    pub bonus_awarded: bool,
+    pub created_at: DateTime,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

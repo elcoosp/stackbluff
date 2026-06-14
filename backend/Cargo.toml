@@ -23,6 +23,8 @@ edition = "2024"
 rust-version = "1.94"
 
 [workspace.dependencies]
+dashmap = { version = "6", features = ["serde"] }
+
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 sb-server = { path = "crates/sb-server" }
 sb-club = { path = "crates/sb-club" }

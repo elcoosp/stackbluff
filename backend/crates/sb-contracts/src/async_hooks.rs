@@ -1,32 +1,18 @@
+use crate::service_api::HandResult;
 use async_trait::async_trait;
-use sb_shared_types::{RequestContext, UserId};
+use sb_shared_types::{TableId, UserId};
 
 #[async_trait]
-pub trait NotificationHook: Send + Sync {
-    async fn notify_user(
+pub trait ReplayCardObserver: Send + Sync {
+    async fn on_significant_hand(
         &self,
-        user_id: UserId,
-        message: &str,
-        ctx: &RequestContext,
-    ) -> Result<(), String>;
+        hand_result: &HandResult,
+        winner_id: UserId,
+        table_id: TableId,
+    );
 }
 
 #[async_trait]
-pub trait ViralHook: Send + Sync {
-    async fn on_referral_used(
-        &self,
-        referrer: UserId,
-        new_user: UserId,
-        ctx: &RequestContext,
-    ) -> Result<(), String>;
-}
-
-#[async_trait]
-pub trait AuditHook: Send + Sync {
-    async fn log_action(
-        &self,
-        user_id: UserId,
-        action: &str,
-        ctx: &RequestContext,
-    ) -> Result<(), String>;
+pub trait HandCountObserver: Send + Sync {
+    async fn on_hand_completed(&self, user_id: UserId);
 }

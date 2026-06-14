@@ -1,8 +1,11 @@
+use crate::service_api::ReferralStats;
+use sb_shared_types::{AppError, UserId};
+
 use async_trait::async_trait;
-use sb_shared_types::{ClubId, RequestContext, UserId};
+use sb_shared_types::{ClubId, RequestContext};
 
 pub use crate::club_error::ClubError;
-pub use crate::{PersistenceError, PersistenceResult};
+pub use crate::persistence_error::{PersistenceError, PersistenceResult};
 
 // ── Existing repository types ──────────────────────────────────
 

@@ -149,14 +149,14 @@ pub use oracle_routes::oracle_router;
 
 // Add .route("/referrals/stats", get(referral_stats_handler)) to your router.
 
-
 async fn referral_stats_handler(
     State(viral): State<Arc<dyn ViralService>>,
     user: UserId,
     req: Request<Body>,
 ) -> impl IntoResponse {
     // Extract request_id from headers or generate one
-    let request_id = req.headers()
+    let request_id = req
+        .headers()
         .get("x-request-id")
         .and_then(|v| v.to_str().ok())
         .unwrap_or_else(|| "unknown");
@@ -175,4 +175,3 @@ async fn referral_stats_handler(
         }
     }
 }
-

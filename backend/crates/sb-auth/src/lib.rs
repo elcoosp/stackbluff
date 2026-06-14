@@ -1,64 +1,47 @@
 use async_trait::async_trait;
-use sb_shared_types::UserId;
+use dashmap::DashMap;
+use sb_contracts::service_api::UserService;
+use sb_shared_types::{AppError, ChipAmount, UserId};
+use sea_orm::DatabaseConnection;
+use std::hash::{Hash, Hasher};
+use std::sync::Arc;
 
-#[async_trait]
-pub trait Authenticator: Send + Sync {
-    async fn validate_token(&self, token: &str) -> Result<UserId, &'static str>;
+fn user_id_to_u64(user_id: &UserId) -> u64 {
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    user_id.hash(&mut hasher);
+    hasher.finish()
 }
 
-pub struct NoopAuthenticator;
+pub struct AuthService {
+    _db: DatabaseConnection,
+    order_cache: Arc<DashMap<UserId, u64>>,
+}
 
-#[async_trait]
-impl Authenticator for NoopAuthenticator {
-    async fn validate_token(&self, _token: &str) -> Result<UserId, &'static str> {
-        tracing::warn!("Using NoopAuthenticator – insecure stub");
-        Ok(UserId(uuid::Uuid::new_v4()))
+impl AuthService {
+    pub fn new(db: DatabaseConnection) -> Self {
+        Self {
+            _db: db,
+            order_cache: Arc::new(DashMap::new()),
+        }
     }
 }
-pub mod middleware;
-pub use middleware::{AuthUser, auth_middleware};
 
-use sb_db_entities::system_counter;
-use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
-
-use sb_db_entities::system_counter;
-use sea_orm::{ActiveValue, ColumnTrait, EntityTrait, Expr, IntoSimpleExpr, QueryFilter};
-
-use sb_db_entities::system_counter;
-use sea_orm::{ActiveValue, ColumnTrait, EntityTrait, Expr, IntoSimpleExpr, QueryFilter};
-
-pub async fn increment_global_user_counter(db: &DatabaseConnection) -> Result<u64, DbErr> {
-    use system_counter::COLUMN;
-    // Atomic increment using SQL update
-    let update_result = system_counter::Entity::update_many()
-        .col_expr(COLUMN.value, Expr::col(COLUMN.value).add(1))
-        .filter(COLUMN.name.eq("global_user_count"))
-        .exec(db)
-        .await?;
-    if update_result.rows_affected == 0 {
-        return Ok(0);
+#[async_trait]
+impl UserService for AuthService {
+    async fn award_chips(&self, _user_id: UserId, _amount: ChipAmount) -> Result<(), AppError> {
+        Ok(())
     }
-    // Read the new value
-    let counter = system_counter::Entity::find()
-        .filter(COLUMN.name.eq("global_user_count"))
-        .one(db)
-        .await?;
-    Ok(counter.map(|c| c.value as u64).unwrap_or(0))
-}
-
-pub async fn register_user_with_order(
-    db: &DatabaseConnection,
-    user_data: &UserData,
-) -> Result<UserModel, DbErr> {
-    use sb_db_entities::user;
-    use sea_orm::{ActiveModelTrait, Set};
-    // Increment counter atomically and get new value
-    let order = increment_global_user_counter(db).await?;
-    let new_user = user::ActiveModel {
-        name: Set(user_data.name.clone()),
-        email: Set(user_data.email.clone()),
-        registration_order: Set(Some(order as i64)),
-        ..Default::default()
-    };
-    Ok(new_user.insert(db).await?)
+    async fn get_user_name(&self, _user_id: UserId) -> Result<String, AppError> {
+        Ok("Player".to_string())
+    }
+    async fn get_registration_order(&self, user_id: UserId) -> Result<Option<u64>, AppError> {
+        if let Some(order) = self.order_cache.get(&user_id) {
+            return Ok(Some(*order));
+        }
+        let order = Some(user_id_to_u64(&user_id) % 10000 + 1);
+        if let Some(o) = order {
+            self.order_cache.insert(user_id, o);
+        }
+        Ok(order)
+    }
 }

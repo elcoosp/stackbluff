@@ -1,4 +1,3 @@
-//! Pure poker game engine – deterministic, stateless, production-ready.
 pub mod deck;
 pub mod evaluate;
 pub mod game_state;
@@ -10,24 +9,13 @@ pub use evaluate::compare_hands;
 pub use game_state::{ActionError, GameState, HandId, Winner};
 pub use hand_rank::HandRank;
 
-// Viral hook: call this after hand resolution
-pub async fn on_hand_complete(
-    viral_service: &(dyn ViralService + Send + Sync),
-    hand_result: &HandResult,
-    winner_id: UserId,
-    table_id: TableId,
-) {
-    if hand_result.is_significant() {
-        let _ = viral_service
-            .generate_replay_card(hand_result, winner_id, table_id)
-            .await;
-    }
-}
+use async_trait::async_trait;
+use sb_contracts::service_api::HandResult;
+use sb_shared_types::{TableId, UserId};
 
-/// Observer trait for hand completion events
 #[async_trait]
-pub trait HandObserver: Send + Sync {
-    async fn on_hand_completed(
+pub trait ReplayCardObserver: Send + Sync {
+    async fn on_significant_hand(
         &self,
         hand_result: &HandResult,
         winner_id: UserId,
@@ -35,30 +23,52 @@ pub trait HandObserver: Send + Sync {
     );
 }
 
-/// Engine configuration with observers
+#[async_trait]
+pub trait HandCountObserver: Send + Sync {
+    async fn on_hand_completed(&self, user_id: UserId);
+}
+
 pub struct GameEngine {
-    observers: Vec<Arc<dyn HandObserver>>,
+    replay_observers: Vec<std::sync::Arc<dyn ReplayCardObserver>>,
+    hand_count_observers: Vec<std::sync::Arc<dyn HandCountObserver>>,
 }
 
 impl GameEngine {
     pub fn new() -> Self {
-        Self { observers: vec![] }
+        Self {
+            replay_observers: vec![],
+            hand_count_observers: vec![],
+        }
     }
-
-    pub fn add_observer(&mut self, observer: Arc<dyn HandObserver>) {
-        self.observers.push(observer);
+    pub fn add_replay_observer(&mut self, observer: std::sync::Arc<dyn ReplayCardObserver>) {
+        self.replay_observers.push(observer);
     }
-
-    async fn notify_observers(
+    pub fn add_hand_count_observer(&mut self, observer: std::sync::Arc<dyn HandCountObserver>) {
+        self.hand_count_observers.push(observer);
+    }
+    pub async fn notify_replay_observers(
         &self,
         hand_result: &HandResult,
         winner_id: UserId,
         table_id: TableId,
     ) {
-        for observer in &self.observers {
-            observer
-                .on_hand_completed(hand_result, winner_id, table_id)
-                .await;
+        for observer in &self.replay_observers {
+            if hand_result.is_significant() {
+                observer
+                    .on_significant_hand(hand_result, winner_id, table_id)
+                    .await;
+            }
         }
+    }
+    pub async fn notify_hand_count_observers(&self, user_id: UserId) {
+        for observer in &self.hand_count_observers {
+            observer.on_hand_completed(user_id).await;
+        }
+    }
+}
+
+impl Default for GameEngine {
+    fn default() -> Self {
+        Self::new()
     }
 }
