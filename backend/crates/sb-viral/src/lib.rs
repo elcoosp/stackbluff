@@ -76,7 +76,7 @@ impl<R: ReferralRepository, U: UserService> ViralService for ViralServiceImpl<R,
         self.repo.record_referral(referrer_id, referred_id).await
     }
 
-    async fn on_hand_completed(&self, user_id: UserId)
+    async fn on_hand_completed(&self, user_id: UserId) {
         let span = tracing::info_span!("on_hand_completed", user_id = %user_id);
         let _enter = span.enter(); -> Result<(), AppError> {
         let should_award = self
