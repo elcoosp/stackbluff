@@ -36,7 +36,7 @@ pub async fn create_club(
         .service
         .create_club(&ctx, &req.name, req.logo_url.as_deref(), user_id)
         .await
-        .map_err(|e| map_club_error(e))?;
+        .map_err(map_club_error)?;
 
     Ok((StatusCode::CREATED, Json(CreateClubResponse { club_id })))
 }
@@ -52,7 +52,7 @@ pub async fn join_club(
         .service
         .join_club(&ctx, club_id, user_id)
         .await
-        .map_err(|e| map_club_error(e))?;
+        .map_err(map_club_error)?;
 
     Ok(Json(JoinClubResponse { success: true }))
 }
@@ -66,7 +66,7 @@ pub async fn get_leaderboard(
         .service
         .get_leaderboard(&ctx, club_id, 1)
         .await
-        .map_err(|e| map_club_error(e))?;
+        .map_err(map_club_error)?;
 
     Ok(Json(GetLeaderboardResponse::from(page)))
 }
