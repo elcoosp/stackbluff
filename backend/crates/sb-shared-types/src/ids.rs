@@ -25,3 +25,17 @@ impl Default for TableId {
         Self::new()
     }
 }
+
+impl std::str::FromStr for TableId {
+    type Err = uuid::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(TableId(uuid::Uuid::parse_str(s)?))
+    }
+}
+
+impl TableId {
+    pub fn as_uuid(&self) -> uuid::Uuid {
+        self.0
+    }
+}

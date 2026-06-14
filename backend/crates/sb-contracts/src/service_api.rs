@@ -21,6 +21,12 @@ pub trait TableService: Send + Sync {
         table_id: TableId,
         ctx: &RequestContext,
     ) -> Result<(), AppError>;
+    async fn create_table(
+        &self,
+        ctx: &sb_shared_types::RequestContext,
+        input: CreateTableInput,
+    ) -> Result<sb_shared_types::TableId, AppError>;
+
     async fn leave_table(
         &self,
         user_id: UserId,
@@ -111,6 +117,18 @@ pub trait NotificationService: Send + Sync {
     async fn answer_callback_query(&self, callback_query_id: String, text: Option<String>) -> Result<(), PersistenceError>;
 }
 
+/// Input for creating a table.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct CreateTableInput {
+    pub name: String,
+    pub club_id: Option<sb_shared_types::ClubId>,
+    pub stake_level: sb_shared_types::game_types::StakeLevel,
+    pub variant: sb_shared_types::game_types::GameVariant,
+    pub created_by: sb_shared_types::UserId,
+    pub is_private: bool,
+    pub invited_users: Vec<sb_shared_types::UserId>,
+}
+
 /// Service interface for club operations.
 #[async_trait::async_trait]
 pub trait ClubService: Send + Sync {
@@ -141,9 +159,3 @@ pub trait ClubService: Send + Sync {
     ) -> Result<(), crate::PersistenceError>;
 }
 
-/// Input for creating a table (stub — will be replaced by #007).
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct CreateTableInput {
-    pub name: String,
-    pub club_id: Option<sb_shared_types::ClubId>,
-}

@@ -30,18 +30,32 @@ pub async fn telegram_webhook(
 
     info!(request_id = %request_id, "Received telegram update");
 
-    if let Some(message) = update.message() {
-        if let Some(text) = message.text() {
-            if text.starts_with("/poker") {
-                tokio::spawn(handle_poker_command(&ctx, &state, message).instrument(span.clone()));
-            } else if text.starts_with("/challenge") || text.contains("challenge @") {
-                tokio::spawn(handle_challenge_command(&ctx, &state, message).instrument(span.clone()));
+    match update.kind {
+        teloxide::types::UpdateKind::Message(message) => {
+            if let Some(text) = message.text().map(|t| t.to_string()) {
+                if text.starts_with("/poker") {
+                    let ctx = ctx.clone();
+                    let state = state.clone();
+                    tokio::spawn(async move {
+                        handle_poker_command(&ctx, &state, &message).await;
+                    }.instrument(span.clone()));
+                } else if text.starts_with("/challenge") || text.contains("challenge @") {
+                    let ctx = ctx.clone();
+                    let state = state.clone();
+                    tokio::spawn(async move {
+                        handle_challenge_command(&ctx, &state, &message).await;
+                    }.instrument(span.clone()));
+                }
             }
         }
-    }
-
-    if let Some(callback) = update.callback_query() {
-        tokio::spawn(handle_callback_query(&ctx, &state, callback).instrument(span.clone()));
+        teloxide::types::UpdateKind::CallbackQuery(callback) => {
+            let ctx = ctx.clone();
+            let state = state.clone();
+            tokio::spawn(async move {
+                handle_callback_query(&ctx, &state, &callback).await;
+            }.instrument(span.clone()));
+        }
+        _ => {}
     }
 
     axum::http::StatusCode::OK.into_response()

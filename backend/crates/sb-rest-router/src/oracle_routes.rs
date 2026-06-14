@@ -1,12 +1,12 @@
 //! Oracle REST endpoints – completely separate from lobby router.
 use axum::{Json, Router, extract::State, http::StatusCode, response::IntoResponse, routing::post};
 use sb_contracts::service_api::OracleService;
-use sb_oracle::{HandAnalysisParams, OracleError};
+use sb_oracle::{HandAnalysisParams, OracleError, OracleServiceImpl};
 use sb_shared_types::RequestContext;
 use std::sync::Arc;
 use uuid::Uuid;
 
-// Type alias for the shared oracle service (defined here to avoid circular deps)
+// Type alias for the shared oracle service
 pub type SharedOracleService = Arc<OracleServiceImpl>;
 
 pub fn oracle_router(oracle: SharedOracleService) -> Router {
@@ -19,13 +19,11 @@ async fn analyze_handler(
     State(oracle): State<SharedOracleService>,
     Json(params): Json<HandAnalysisParams>,
 ) -> impl IntoResponse {
-    // TODO: Replace this mock user ID with real authentication extraction.
     let user_id = sb_shared_types::UserId::from(Uuid::new_v4());
     let ctx = RequestContext {
         request_id: Uuid::new_v4(),
         user_id: Some(user_id),
     };
-    // Validate parameters
     if let Err(e) = params.validate() {
         return (StatusCode::BAD_REQUEST, e.to_string()).into_response();
     }
