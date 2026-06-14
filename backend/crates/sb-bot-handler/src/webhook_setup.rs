@@ -1,5 +1,5 @@
-use teloxide::prelude::*;
 use std::env;
+use teloxide::prelude::*;
 use url::Url;
 
 pub async fn setup_webhook() -> Result<(), Box<dyn std::error::Error>> {

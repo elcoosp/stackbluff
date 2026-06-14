@@ -1,4 +1,4 @@
-use axum::{routing::get, routing::post, Router};
+use axum::{Router, routing::get, routing::post};
 
 use crate::handlers::{ClubState, create_club, get_leaderboard, join_club};
 

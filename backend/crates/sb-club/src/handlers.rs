@@ -1,9 +1,9 @@
 use axum::{
+    Extension, Json,
     extract::{Path, State},
     http::StatusCode,
-    Extension, Json,
 };
-use sb_contracts::{ClubService, ClubError};
+use sb_contracts::{ClubError, ClubService};
 use sb_shared_types::{ClubId, RequestContext, UserId};
 use std::sync::Arc;
 
@@ -18,7 +18,10 @@ pub struct ClubState {
 
 fn extract_user_id(ctx: &RequestContext) -> Result<UserId, (StatusCode, String)> {
     ctx.user_id.ok_or_else(|| {
-        (StatusCode::UNAUTHORIZED, "authentication required".to_string())
+        (
+            StatusCode::UNAUTHORIZED,
+            "authentication required".to_string(),
+        )
     })
 }
 
@@ -76,7 +79,10 @@ fn map_club_error(e: ClubError) -> (StatusCode, String) {
         ClubError::Validation { .. } => (StatusCode::BAD_REQUEST, e.to_string()),
         ClubError::Database { .. } => {
             tracing::error!(error = %e, "club database error");
-            (StatusCode::INTERNAL_SERVER_ERROR, "internal error".to_string())
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal error".to_string(),
+            )
         }
     }
 }

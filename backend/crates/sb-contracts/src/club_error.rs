@@ -41,11 +41,16 @@ impl ClubError {
     }
 
     pub fn validation(msg: impl Into<String>) -> Self {
-        Self::Validation { message: msg.into() }
+        Self::Validation {
+            message: msg.into(),
+        }
     }
 
     pub fn database(msg: impl Into<String>) -> Self {
-        Self::Database { message: msg.into(), source: None }
+        Self::Database {
+            message: msg.into(),
+            source: None,
+        }
     }
 
     pub fn database_with_source(
@@ -58,4 +63,3 @@ impl ClubError {
         }
     }
 }
-

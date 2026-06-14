@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use sb_shared_types::{ClubId, RequestContext, UserId};
 
-pub use crate::{PersistenceError, PersistenceResult};
 pub use crate::club_error::ClubError;
+pub use crate::{PersistenceError, PersistenceResult};
 
 // ── Existing repository types ──────────────────────────────────
 
@@ -97,30 +97,16 @@ pub trait ClubRepo: Send + Sync {
         created_by: UserId,
     ) -> ClubResult<ClubId>;
 
-    async fn find_club_by_id(
-        &self,
-        club_id: ClubId,
-    ) -> ClubResult<Option<Club>>;
+    async fn find_club_by_id(&self, club_id: ClubId) -> ClubResult<Option<Club>>;
 
     /// Join a club. Returns `ClubError::AlreadyMember` on duplicate.
     /// Does NOT require a prior `is_member` check — the UNIQUE constraint
     /// is the authoritative guard.
-    async fn join_club(
-        &self,
-        club_id: ClubId,
-        user_id: UserId,
-    ) -> ClubResult<()>;
+    async fn join_club(&self, club_id: ClubId, user_id: UserId) -> ClubResult<()>;
 
-    async fn is_member(
-        &self,
-        club_id: ClubId,
-        user_id: UserId,
-    ) -> ClubResult<bool>;
+    async fn is_member(&self, club_id: ClubId, user_id: UserId) -> ClubResult<bool>;
 
-    async fn get_member_count(
-        &self,
-        club_id: ClubId,
-    ) -> ClubResult<u64>;
+    async fn get_member_count(&self, club_id: ClubId) -> ClubResult<u64>;
 
     async fn get_leaderboard_page(
         &self,
@@ -137,10 +123,7 @@ pub trait ClubRepo: Send + Sync {
     ) -> ClubResult<()>;
 
     /// Materialise the leaderboard snapshot. Must run in a transaction.
-    async fn refresh_leaderboard(
-        &self,
-        club_id: ClubId,
-    ) -> ClubResult<()>;
+    async fn refresh_leaderboard(&self, club_id: ClubId) -> ClubResult<()>;
 
     /// Return all club ids for the scheduled refresh job.
     async fn get_all_club_ids(&self) -> ClubResult<Vec<ClubId>>;

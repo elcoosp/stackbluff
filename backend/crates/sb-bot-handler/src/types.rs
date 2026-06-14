@@ -1,5 +1,5 @@
-use sb_contracts::service_api::TableService;
 use sb_contracts::notification_api::NotificationService;
+use sb_contracts::service_api::TableService;
 use sb_contracts::user_resolution::UserResolutionService;
 use std::sync::Arc;
 

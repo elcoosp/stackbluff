@@ -14,5 +14,6 @@ pub enum UserResolutionError {
 
 #[async_trait]
 pub trait UserResolutionService: Send + Sync {
-    async fn resolve_telegram_user(&self, telegram_id: &str) -> Result<UserId, UserResolutionError>;
+    async fn resolve_telegram_user(&self, telegram_id: &str)
+    -> Result<UserId, UserResolutionError>;
 }

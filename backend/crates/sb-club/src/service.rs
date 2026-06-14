@@ -1,4 +1,4 @@
-use sb_contracts::{ClubRepo, ClubService, ClubError, LeaderboardPage};
+use sb_contracts::{ClubError, ClubRepo, ClubService, LeaderboardPage};
 use sb_shared_types::{ClubId, RequestContext, UserId};
 use std::sync::Arc;
 

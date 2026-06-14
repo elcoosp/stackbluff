@@ -1,15 +1,11 @@
-use crate::commands::{handle_poker_command, handle_challenge_command, handle_callback_query};
+use crate::commands::{handle_callback_query, handle_challenge_command, handle_poker_command};
 use crate::types::BotState;
-use axum::{
-    extract::State,
-    response::IntoResponse,
-    Json,
-};
+use axum::{Json, extract::State, response::IntoResponse};
+use sb_shared_types::request_context::RequestContext;
 use serde_json::Value;
 use std::sync::Arc;
-use tracing::{info, error, Instrument, Span};
 use teloxide::types::Update;
-use sb_shared_types::request_context::RequestContext;
+use tracing::{Instrument, Span, error, info};
 use uuid::Uuid;
 
 pub async fn telegram_webhook(
@@ -36,24 +32,33 @@ pub async fn telegram_webhook(
                 if text.starts_with("/poker") {
                     let ctx = ctx.clone();
                     let state = state.clone();
-                    tokio::spawn(async move {
-                        handle_poker_command(&ctx, &state, &message).await;
-                    }.instrument(span.clone()));
+                    tokio::spawn(
+                        async move {
+                            handle_poker_command(&ctx, &state, &message).await;
+                        }
+                        .instrument(span.clone()),
+                    );
                 } else if text.starts_with("/challenge") || text.contains("challenge @") {
                     let ctx = ctx.clone();
                     let state = state.clone();
-                    tokio::spawn(async move {
-                        handle_challenge_command(&ctx, &state, &message).await;
-                    }.instrument(span.clone()));
+                    tokio::spawn(
+                        async move {
+                            handle_challenge_command(&ctx, &state, &message).await;
+                        }
+                        .instrument(span.clone()),
+                    );
                 }
             }
         }
         teloxide::types::UpdateKind::CallbackQuery(callback) => {
             let ctx = ctx.clone();
             let state = state.clone();
-            tokio::spawn(async move {
-                handle_callback_query(&ctx, &state, &callback).await;
-            }.instrument(span.clone()));
+            tokio::spawn(
+                async move {
+                    handle_callback_query(&ctx, &state, &callback).await;
+                }
+                .instrument(span.clone()),
+            );
         }
         _ => {}
     }
