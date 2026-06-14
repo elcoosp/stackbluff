@@ -42,3 +42,17 @@ pub async fn increment_global_user_counter(db: &DatabaseConnection) -> Result<u6
         .await?;
     Ok(counter.map(|c| c.value as u64).unwrap_or(0))
 }
+
+pub async fn register_user_with_order(db: &DatabaseConnection, user_data: &UserData) -> Result<UserModel, DbErr> {
+    use sb_db_entities::user;
+    use sea_orm::{ActiveModelTrait, Set};
+    // Increment counter atomically and get new value
+    let order = increment_global_user_counter(db).await?;
+    let new_user = user::ActiveModel {
+        name: Set(user_data.name.clone()),
+        email: Set(user_data.email.clone()),
+        registration_order: Set(Some(order as i64)),
+        ..Default::default()
+    };
+    Ok(new_user.insert(db).await?)
+}
