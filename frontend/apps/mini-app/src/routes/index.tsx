@@ -17,7 +17,7 @@ const getToken = () => localStorage.getItem('auth_token') || 'demo-token';
 
 const fetchTables = async (): Promise<Table[]> => {
   const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
-  const response = await fetch(`${baseUrl}/lobby`, {
+  const response = await fetch(`/api/lobby`, {
     headers: { 'Authorization': `Bearer ${getToken()}` }
   });
   if (!response.ok) throw new Error('Failed to fetch tables');
