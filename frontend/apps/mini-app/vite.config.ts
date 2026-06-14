@@ -1,15 +1,14 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import path from 'path'
 
-export default defineConfig(({ mode }) => {
-  const isTelegram = mode === 'telegram';
-  return {
-    plugins: [react()],
-    define: {
-      'import.meta.env.VITE_TELEGRAM': JSON.stringify(isTelegram),
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+      '@stackbluff/shared': path.resolve(__dirname, '../../packages/shared'),
     },
-    server: {
-      port: 5174,
-    },
-  };
-});
+  },
+  server: { port: 5173 },
+})

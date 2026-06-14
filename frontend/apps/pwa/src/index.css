@@ -1,5 +1,70 @@
-body {
-  margin: 0;
-  background: #0a0a1a;
-  color: #e0e0e0;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 7%;
+    --foreground: 0 0% 89%;
+    --card: 0 0% 9%;
+    --card-foreground: 0 0% 89%;
+    --popover: 0 0% 9%;
+    --popover-foreground: 0 0% 89%;
+    --primary: 240 5% 79%;
+    --primary-foreground: 240 8% 20%;
+    --secondary: 240 3% 53%;
+    --secondary-foreground: 0 0% 19%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 70%;
+    --accent: 158 70% 51%;
+    --accent-foreground: 156 100% 11%;
+    --destructive: 0 100% 67%;
+    --destructive-foreground: 0 100% 20%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 158 70% 51%;
+    --radius: 0.5rem;
+  }
+  .dark {
+    --background: 0 0% 7%;
+    --foreground: 0 0% 89%;
+    --card: 0 0% 9%;
+    --card-foreground: 0 0% 89%;
+    --popover: 0 0% 9%;
+    --popover-foreground: 0 0% 89%;
+    --primary: 240 5% 79%;
+    --primary-foreground: 240 8% 20%;
+    --secondary: 240 3% 53%;
+    --secondary-foreground: 0 0% 19%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 70%;
+    --accent: 158 70% 51%;
+    --accent-foreground: 156 100% 11%;
+    --destructive: 0 100% 67%;
+    --destructive-foreground: 0 100% 20%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 158 70% 51%;
+  }
+}
+
+@layer components {
+  .glass-hub {
+    backdrop-filter: blur(16px);
+    background: rgba(10, 10, 10, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+  }
+  .card-back {
+    background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    position: relative;
+    overflow: hidden;
+  }
+  .card-back::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(78, 222, 163, 0.05) 2px, rgba(78, 222, 163, 0.05) 4px);
+  }
 }
