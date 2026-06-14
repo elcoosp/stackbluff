@@ -149,13 +149,24 @@ pub use oracle_routes::oracle_router;
 
 // Add .route("/referrals/stats", get(referral_stats_handler)) to your router.
 
+
 async fn referral_stats_handler(
     State(viral): State<Arc<dyn ViralService>>,
     user: UserId,
+    req: Request<Body>,
 ) -> impl IntoResponse {
+    // Extract request_id from headers or generate one
+    let request_id = req.headers()
+        .get("x-request-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or_else(|| "unknown");
+    let span = tracing::info_span!("referral_stats", request_id = %request_id);
+    let _enter = span.enter();
+
     match viral.get_referral_stats(user).await {
         Ok(stats) => (StatusCode::OK, Json(stats)).into_response(),
         Err(e) => {
+            tracing::error!(error = %e, "Failed to retrieve referral stats");
             let error_body = serde_json::json!({
                 "error": format!("{:?}", e),
                 "message": "Failed to retrieve referral stats"
@@ -164,3 +175,4 @@ async fn referral_stats_handler(
         }
     }
 }
+
