@@ -100,3 +100,52 @@ impl AntiCheatService for AntiCheatServiceImpl {
         Ok(())
     }
 }
+
+
+
+
+
+
+#[cfg(test)]
+mod tests_service {
+    use super::*;
+    use sb_shared_types::UserId;
+    use sea_orm::{MockDatabase, DbBackend};
+    use std::sync::Arc;
+    use uuid::Uuid;
+
+    fn dummy_db() -> DatabaseConnection {
+        // Create a mock database that never actually executes queries,
+        // but satisfies the type requirement.
+        MockDatabase::new(DbBackend::Sqlite)
+            .into_connection()
+    }
+
+    #[tokio::test]
+    async fn test_game_action_rate() {
+        let db = dummy_db();
+        let limiter = Arc::new(RateLimiter::new());
+        let service = AntiCheatServiceImpl::new(db, limiter);
+        let user = UserId(Uuid::new_v4());
+        for _ in 0..10 {
+            assert!(service.check_game_action_rate(user).is_ok());
+        }
+        assert!(service.check_game_action_rate(user).is_err());
+    }
+
+    #[tokio::test]
+    async fn test_auth_rate() {
+        let db = dummy_db();
+        let limiter = Arc::new(RateLimiter::new());
+        let service = AntiCheatServiceImpl::new(db, limiter);
+        let ip = "192.168.1.1";
+        for _ in 0..100 {
+            assert!(service.check_auth_rate(ip).is_ok());
+        }
+        assert!(service.check_auth_rate(ip).is_err());
+    }
+
+    // Note: Tests that would insert into the database are omitted because they
+    // require a real database or more complex mocking. They are covered by
+    // integration tests instead.
+}
