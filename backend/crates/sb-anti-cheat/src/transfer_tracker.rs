@@ -47,4 +47,19 @@ impl TransferTracker {
             .map(|entry| entry.iter().filter(|(ts,_)| *ts >= cutoff).map(|(_,amt)| amt).sum())
             .unwrap_or(0)
     }
+
+    pub fn cleanup_expired(&self) {
+        let now = Utc::now();
+        let cutoff = now - Duration::hours(24);
+        self.transfers.retain(|_, deque| {
+            while let Some(&(ts, _)) = deque.front() {
+                if ts < cutoff {
+                    deque.pop_front();
+                } else {
+                    break;
+                }
+            }
+            !deque.is_empty()
+        });
+    }
 }
