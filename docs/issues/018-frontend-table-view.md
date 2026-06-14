@@ -16,7 +16,7 @@ Agent 2 implements the table view for both PWA and Mini App:
   - `action.required` – enables action buttons, shows timer.
   - `action.broadcast` – opponent actions.
   - `hand.result` – showdown, winners.
-- Renders poker table UI using shadcn/ui and custom CSS (cards, chips, pot).
+- Renders poker table UI using shadcn/ui and tailwind custom CSS (cards, chips, pot).
 - Action buttons: fold, check/call, raise slider (with min/max limits from server).
 - Timer bar counts down based on `remaining_ms`.
 
