@@ -21,18 +21,24 @@ pub use middleware::{AuthUser, auth_middleware};
 use sb_db_entities::system_counter;
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
 
+use sea_orm::{EntityTrait, QueryFilter, ColumnTrait, ActiveValue, IntoSimpleExpr, Expr};
+use sb_db_entities::system_counter;
+
 pub async fn increment_global_user_counter(db: &DatabaseConnection) -> Result<u64, DbErr> {
+    use system_counter::COLUMN;
+    // Atomic increment using SQL update
+    let update_result = system_counter::Entity::update_many()
+        .col_expr(COLUMN.value, Expr::col(COLUMN.value).add(1))
+        .filter(COLUMN.name.eq("global_user_count"))
+        .exec(db)
+        .await?;
+    if update_result.rows_affected == 0 {
+        return Ok(0);
+    }
+    // Read the new value
     let counter = system_counter::Entity::find()
-        .filter(system_counter::Column::Name.eq("global_user_count"))
+        .filter(COLUMN.name.eq("global_user_count"))
         .one(db)
         .await?;
-    if let Some(c) = counter {
-        let mut active: system_counter::ActiveModel = c.into();
-        let new_val = active.value.as_ref() + 1;
-        active.value = Set(new_val);
-        active.update(db).await?;
-        Ok(new_val as u64)
-    } else {
-        Ok(0)
-    }
+    Ok(counter.map(|c| c.value as u64).unwrap_or(0))
 }
