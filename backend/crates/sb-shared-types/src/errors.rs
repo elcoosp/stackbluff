@@ -2,6 +2,8 @@ use thiserror::Error;
 
 #[derive(Debug, Clone, Error)]
 pub enum AppError {
+    #[error("Configuration error: {0}")]
+    Configuration(String),
     #[error("Invalid input: {0}")]
     InvalidInput(String),
 

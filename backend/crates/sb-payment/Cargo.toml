@@ -1,0 +1,37 @@
+[package]
+name = "sb-payment"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.94"
+
+[dependencies]
+async-stripe = { workspace = true }
+async-stripe-checkout = { workspace = true }
+async-stripe-webhook = { workspace = true }
+async-stripe-types = { workspace = true }
+reqwest = { workspace = true }
+hmac = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+
+sb-shared-types = { path = "../sb-shared-types" }
+sb-contracts = { path = "../sb-contracts" }
+
+sea-orm = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true, features = ["v4"] }
+axum = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+async-trait = { workspace = true }
+dotenvy = { workspace = true }
+once_cell = { workspace = true }
+prometheus = { workspace = true }
+lazy_static = { workspace = true }
+
+[dev-dependencies]
+mockall = { workspace = true }
