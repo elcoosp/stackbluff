@@ -93,7 +93,7 @@ impl ReferralRepository for ReferralRepositoryImpl {
             .one(&self.db)
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;
-        Ok(referral.map(|r| UserId::try_from(r.referrer_id).unwrap()))
+        Ok(referral.map(|r| UserId::try_from(r.referrer_id).map_err(|_| AppError::InvalidInput("invalid referrer id".into()))?).transpose()?)
     }
 
     async fn get_referral_stats(&self, referrer_id: UserId) -> Result<ReferralStats, AppError> {
