@@ -134,4 +134,13 @@ impl OracleService for OracleServiceImpl {
             template_id: template.id.clone(),
         })
     }
+
+    async fn answer_callback_query(
+        &self,
+        _callback_id: String,
+        _text: Option<String>,
+    ) -> Result<(), Self::Error> {
+        // Oracle service does not handle callback queries; no-op
+        Ok(())
+    }
 }

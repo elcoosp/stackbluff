@@ -1,5 +1,5 @@
 use sb_db_entities::{
-    Platform, RankTier, SubscriptionEventType, TableStatus, club, club_membership, hand_history,
+    Platform, RankTier, SubscriptionEventType, TableStatus, club_memberships, clubs, hand_history,
     leaderboard_global_mv, mission_completion, player_rank, referral, season, session,
     subscription_event, table, user,
 };
@@ -194,31 +194,31 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(club::Entity)
+                    .table(clubs::Entity)
                     .if_not_exists()
                     .col(
-                        ColumnDef::new(club::Column::Id)
+                        ColumnDef::new(clubs::Column::Id)
                             .uuid()
                             .not_null()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(club::Column::OwnerId).uuid().not_null())
-                    .col(ColumnDef::new(club::Column::Name).string().not_null())
+                    .col(ColumnDef::new(clubs::Column::OwnerId).uuid().not_null())
+                    .col(ColumnDef::new(clubs::Column::Name).string().not_null())
                     .col(
-                        ColumnDef::new(club::Column::CreatedAt)
+                        ColumnDef::new(clubs::Column::CreatedAt)
                             .date_time()
                             .not_null(),
                     )
                     .col(
-                        ColumnDef::new(club::Column::IsFounderClub)
+                        ColumnDef::new(clubs::Column::IsFounderClub)
                             .boolean()
                             .not_null()
                             .default(false),
                     )
-                    .col(ColumnDef::new(club::Column::ProSettingsJson).json())
+                    .col(ColumnDef::new(clubs::Column::ProSettingsJson).json())
                     .foreign_key(
                         ForeignKey::create()
-                            .from(club::Entity, club::Column::OwnerId)
+                            .from(clubs::Entity, clubs::Column::OwnerId)
                             .to(user::Entity, user::Column::Id)
                             .on_delete(ForeignKeyAction::Cascade),
                     )
@@ -230,44 +230,50 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(club_membership::Entity)
+                    .table(club_memberships::Entity)
                     .if_not_exists()
                     .col(
-                        ColumnDef::new(club_membership::Column::UserId)
+                        ColumnDef::new(club_memberships::Column::Id)
+                            .uuid()
+                            .not_null()
+                            .primary_key(),
+                    )
+                    .col(
+                        ColumnDef::new(club_memberships::Column::ClubId)
                             .uuid()
                             .not_null(),
                     )
                     .col(
-                        ColumnDef::new(club_membership::Column::ClubId)
+                        ColumnDef::new(club_memberships::Column::UserId)
                             .uuid()
                             .not_null(),
                     )
                     .col(
-                        ColumnDef::new(club_membership::Column::JoinedAt)
+                        ColumnDef::new(club_memberships::Column::WeeklyXp)
+                            .big_integer()
+                            .not_null()
+                            .default(0),
+                    )
+                    .col(
+                        ColumnDef::new(club_memberships::Column::JoinedAt)
                             .date_time()
                             .not_null(),
                     )
                     .col(
-                        ColumnDef::new(club_membership::Column::WeeklyXp)
-                            .integer()
-                            .not_null()
-                            .default(0),
-                    )
-                    .primary_key(
-                        Index::create()
-                            .col(club_membership::Column::UserId)
-                            .col(club_membership::Column::ClubId),
+                        ColumnDef::new(club_memberships::Column::UpdatedAt)
+                            .date_time()
+                            .not_null(),
                     )
                     .foreign_key(
                         ForeignKey::create()
-                            .from(club_membership::Entity, club_membership::Column::UserId)
+                            .from(club_memberships::Entity, club_memberships::Column::UserId)
                             .to(user::Entity, user::Column::Id)
                             .on_delete(ForeignKeyAction::Cascade),
                     )
                     .foreign_key(
                         ForeignKey::create()
-                            .from(club_membership::Entity, club_membership::Column::ClubId)
-                            .to(club::Entity, club::Column::Id)
+                            .from(club_memberships::Entity, club_memberships::Column::ClubId)
+                            .to(clubs::Entity, clubs::Column::Id)
                             .on_delete(ForeignKeyAction::Cascade),
                     )
                     .to_owned(),
@@ -312,7 +318,7 @@ impl MigrationTrait for Migration {
                     .foreign_key(
                         ForeignKey::create()
                             .from(table::Entity, table::Column::ClubId)
-                            .to(club::Entity, club::Column::Id)
+                            .to(clubs::Entity, clubs::Column::Id)
                             .on_delete(ForeignKeyAction::SetNull),
                     )
                     .to_owned(),
@@ -593,8 +599,8 @@ impl MigrationTrait for Migration {
             .create_index(
                 Index::create()
                     .name("idx_club_memberships_user_id")
-                    .table(club_membership::Entity)
-                    .col(club_membership::Column::UserId)
+                    .table(club_memberships::Entity)
+                    .col(club_memberships::Column::UserId)
                     .to_owned(),
             )
             .await?;
@@ -602,8 +608,8 @@ impl MigrationTrait for Migration {
             .create_index(
                 Index::create()
                     .name("idx_club_memberships_club_id")
-                    .table(club_membership::Entity)
-                    .col(club_membership::Column::ClubId)
+                    .table(club_memberships::Entity)
+                    .col(club_memberships::Column::ClubId)
                     .to_owned(),
             )
             .await?;
@@ -653,10 +659,10 @@ impl MigrationTrait for Migration {
             .drop_table(Table::drop().table(table::Entity).to_owned())
             .await?;
         manager
-            .drop_table(Table::drop().table(club_membership::Entity).to_owned())
+            .drop_table(Table::drop().table(club_memberships::Entity).to_owned())
             .await?;
         manager
-            .drop_table(Table::drop().table(club::Entity).to_owned())
+            .drop_table(Table::drop().table(clubs::Entity).to_owned())
             .await?;
         manager
             .drop_table(Table::drop().table(player_rank::Entity).to_owned())

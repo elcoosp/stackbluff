@@ -5,6 +5,7 @@ use sb_ws_handler::broadcast_channel;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{RwLock, mpsc};
+use uuid::Uuid;
 
 type ActorSender = mpsc::Sender<InternalCommand>;
 
@@ -27,7 +28,7 @@ impl Registry {
     }
 
     pub async fn create_table(&self, config: TableConfig) -> TableId {
-        let table_id = TableId::new();
+        let table_id = TableId::new(Uuid::new_v4());
         let (broadcast_tx, _) = broadcast_channel(32);
         let (cmd_tx, _) = spawn_table_actor(table_id, config.clone(), broadcast_tx);
         self.tables.write().await.insert(table_id, cmd_tx);

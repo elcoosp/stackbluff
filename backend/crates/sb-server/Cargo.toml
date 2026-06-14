@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.94"
 
+[features]
+default = ["test-stubs"]
+test-stubs = []
+
 [dependencies]
 sb-bot-handler = { workspace = true }
 sb-rest-router = { workspace = true }
@@ -12,3 +16,15 @@ axum = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+sb-club = { path = "../sb-club" }
+sb-db-repos = { path = "../sb-db-repos" }
+sb-contracts = { path = "../sb-contracts" }
+sb-shared-types = { path = "../sb-shared-types" }
+sea-orm = { workspace = true }
+migration = { path = "../../migration" }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+parking_lot = { workspace = true }
+uuid = { workspace = true }
+moka = { workspace = true }
+sea-orm-migration = { workspace = true }

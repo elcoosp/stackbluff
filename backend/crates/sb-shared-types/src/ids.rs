@@ -1,27 +1,106 @@
-use derive_more::{Display, From, Into};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, From, Into)]
+/// Unique identifier for a user. Use `UserId::new(uuid)` to construct, `.as_uuid()` to extract.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct UserId(pub Uuid);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, From, Into)]
+impl UserId {
+    pub fn new(uuid: Uuid) -> Self {
+        Self(uuid)
+    }
+
+    pub fn as_uuid(&self) -> Uuid {
+        self.0
+    }
+}
+
+impl std::fmt::Display for UserId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+/// Unique identifier for a table. Use `TableId::new(uuid)` to construct, `.as_uuid()` to extract.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct TableId(pub Uuid);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, From, Into)]
+impl TableId {
+    pub fn new(uuid: Uuid) -> Self {
+        Self(uuid)
+    }
+
+    pub fn as_uuid(&self) -> Uuid {
+        self.0
+    }
+
+    pub fn generate() -> Self {
+        Self(Uuid::new_v4())
+    }
+}
+
+impl std::fmt::Display for TableId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl std::str::FromStr for TableId {
+    type Err = uuid::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(TableId(Uuid::parse_str(s)?))
+    }
+}
+
+/// Unique identifier for a club. Use `ClubId::new(uuid)` to construct, `.as_uuid()` to extract.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ClubId(pub Uuid);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, From, Into)]
+impl ClubId {
+    pub fn new(uuid: Uuid) -> Self {
+        Self(uuid)
+    }
+
+    pub fn as_uuid(&self) -> Uuid {
+        self.0
+    }
+
+    pub fn generate() -> Self {
+        Self(Uuid::new_v4())
+    }
+}
+
+impl std::fmt::Display for ClubId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl std::str::FromStr for ClubId {
+    type Err = uuid::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(ClubId(Uuid::parse_str(s)?))
+    }
+}
+
+/// Unique identifier for a player at a table.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct PlayerId(pub Uuid);
 
-impl TableId {
-    pub fn new() -> Self {
-        Self(uuid::Uuid::new_v4())
+impl PlayerId {
+    pub fn new(uuid: Uuid) -> Self {
+        Self(uuid)
+    }
+
+    pub fn as_uuid(&self) -> Uuid {
+        self.0
     }
 }
 
 impl Default for TableId {
     fn default() -> Self {
-        Self::new()
+        Self::generate()
     }
 }

@@ -1,5 +1,7 @@
-pub mod club;
-pub mod club_membership;
+pub mod club_leaderboard;
+pub mod club_memberships;
+pub mod clubs;
+
 pub mod enums;
 pub mod hand_history;
 pub mod hand_history_json;
@@ -13,11 +15,11 @@ pub mod subscription_event;
 pub mod table;
 pub mod user;
 
-pub use club::{ActiveModel as ClubActiveModel, Entity as ClubEntity, Model as ClubModel};
-pub use club_membership::{
+pub use club_memberships::{
     ActiveModel as ClubMembershipActiveModel, Entity as ClubMembershipEntity,
     Model as ClubMembershipModel,
 };
+pub use clubs::{ActiveModel as ClubActiveModel, Entity as ClubEntity, Model as ClubModel};
 pub use enums::*;
 pub use hand_history::{
     ActiveModel as HandHistoryActiveModel, Entity as HandHistoryEntity, Model as HandHistoryModel,

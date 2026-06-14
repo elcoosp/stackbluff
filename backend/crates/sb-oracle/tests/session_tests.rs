@@ -8,7 +8,7 @@ use uuid::Uuid;
 async fn session_resets_after_8_hours() {
     pause();
     let oracle = OracleServiceImpl::new();
-    let user_id = UserId::from(Uuid::new_v4());
+    let user_id = UserId(Uuid::new_v4());
     let ctx = RequestContext {
         request_id: Uuid::new_v4(),
         user_id: Some(user_id),

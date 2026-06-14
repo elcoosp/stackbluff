@@ -36,7 +36,7 @@ pub async fn handle_poker_command(
     message: &Message,
 ) {
     let chat_id = message.chat.id;
-    let telegram_user_id = match message.from().map(|u| u.id.0.to_string()) {
+    let telegram_user_id = match message.from.as_ref().map(|u| u.id.0.to_string()) {
         Some(id) => id,
         None => {
             error!(request_id = %ctx.request_id, "Message has no sender");
@@ -54,13 +54,13 @@ pub async fn handle_poker_command(
         }
     };
 
-    // Context that includes user_id for logging
     let ctx_with_user = RequestContext::new(ctx.request_id, Some(user_id));
 
     let input = CreateTableInput {
         name: format!("Poker table from group {}", chat_id.0),
+        club_id: None,
         stake_level: sb_shared_types::game_types::StakeLevel::Micro,
-        variant: sb_shared_types::game_types::GameVariant::TexasHoldem,
+        variant: sb_shared_types::game_types::GameVariant::Holdem,
         created_by: user_id,
         is_private: false,
         invited_users: vec![],
@@ -94,7 +94,7 @@ pub async fn handle_poker_command(
     if let Err(e) = send_telegram_message_with_timeout(state, chat_id.0, text, keyboard_value).await {
         error!(request_id = %ctx_with_user.request_id, user_id = %user_id, error = %e, "Failed to send message");
     } else {
-        info!(request_id = %ctx_with_user.request_id, user_id = %user_id, table_id = %table_id, "Table created and notification sent");
+    info!(request_id = %ctx_with_user.request_id, user_id = %user_id, table_id = %table_id, "Table created and notification sent");
     }
 }
 
@@ -108,7 +108,7 @@ pub async fn handle_challenge_command(
     let parts: Vec<&str> = text.split_whitespace().collect();
     let challenged_username = parts.iter().find(|p| p.starts_with('@')).map(|p| &p[1..]);
 
-    let challenger_telegram = message.from().and_then(|u| u.username.clone());
+    let challenger_telegram = message.from.as_ref().and_then(|u| u.username.clone());
     let challenged_telegram = challenged_username.map(|s| s.to_string());
 
     if challenged_telegram.is_none() {
@@ -124,7 +124,7 @@ pub async fn handle_challenge_command(
             return;
         }
     };
-    let challenged_id = match resolve_user_with_timeout(state, &challenged_telegram.as_ref().unwrap()).await {
+    let challenged_id = match resolve_user_with_timeout(state, challenged_telegram.as_ref().unwrap()).await {
         Ok(uid) => uid,
         Err(e) => {
             error!(request_id = %ctx.request_id, error = %e, "Challenged resolve failed");
@@ -137,8 +137,9 @@ pub async fn handle_challenge_command(
 
     let input = CreateTableInput {
         name: format!("Heads-up: {} vs {}", challenger_id, challenged_id),
+        club_id: None,
         stake_level: sb_shared_types::game_types::StakeLevel::Micro,
-        variant: sb_shared_types::game_types::GameVariant::TexasHoldem,
+        variant: sb_shared_types::game_types::GameVariant::Holdem,
         created_by: challenger_id,
         is_private: true,
         invited_users: vec![challenger_id, challenged_id],
@@ -163,17 +164,17 @@ pub async fn handle_challenge_command(
     let f1 = send_telegram_message_with_timeout(state, chat_id.0, message_text.clone(), None);
     let f2 = state.notification_service.send_telegram_message_to_user(challenged_id, message_text.clone(), None);
     let f3 = state.notification_service.send_telegram_message_to_user(challenger_id, message_text, None);
-    futures::join!(f1, f2, f3);
+    let _ = futures::join!(f1, f2, f3);
     info!(request_id = %ctx_with_user.request_id, user_id = %challenger_id, table_id = %table_id, challenged = %challenged_id, "Challenge table created");
 }
 
 pub async fn handle_callback_query(
     ctx: &RequestContext,
     state: &Arc<BotState>,
-    callback: CallbackQuery,
+    callback: &CallbackQuery,
 ) {
-    let data = match callback.data {
-        Some(d) => d,
+    let data = match &callback.data {
+        Some(d) => d.clone(),
         None => return,
     };
     if !data.starts_with("join_") {
@@ -193,8 +194,9 @@ pub async fn handle_callback_query(
         Ok(uid) => uid,
         Err(e) => {
             error!(request_id = %ctx.request_id, error = %e, "Callback user resolve failed");
-            if let Some(msg) = callback.message {
-                let _ = send_telegram_message_with_timeout(state, msg.chat.id.0, "❌ Please start the bot in private first.".to_string(), None).await;
+            if let Some(msg) = &callback.message {
+                let chat_id = msg.chat().id;
+                let _ = send_telegram_message_with_timeout(state, chat_id.0, "❌ Please start the bot in private first.".to_string(), None).await;
             }
             return;
         }
@@ -204,9 +206,10 @@ pub async fn handle_callback_query(
     let deep_link = format!("{}{}", state.mini_app_url, table_id.as_uuid());
     let reply_text = format!("🎮 Click to join the table: [Open Mini App]({})", deep_link);
 
-    if let Some(msg) = callback.message {
-        let _ = send_telegram_message_with_timeout(state, msg.chat.id.0, reply_text, None).await;
+    if let Some(msg) = &callback.message {
+        let chat_id = msg.chat().id;
+        let _ = send_telegram_message_with_timeout(state, chat_id.0, reply_text, None).await;
     }
-    let _ = state.notification_service.answer_callback_query(callback.id, None).await;
+    let _ = state.notification_service.answer_callback_query(callback.id.clone(), None).await;
     info!(request_id = %ctx_with_user.request_id, user_id = %user_id, table_id = %table_id, "Callback handled");
 }

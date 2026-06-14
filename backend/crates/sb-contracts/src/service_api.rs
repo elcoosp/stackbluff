@@ -1,4 +1,4 @@
-use async_trait::async_trait;
+use crate::repo_api::ClubResult;
 use sb_shared_types::{AppError, RequestContext, TableId, UserId};
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -12,14 +12,22 @@ pub struct TokenClaims {
     pub user_id: uuid::Uuid,
     pub platform: String,
 }
-#[async_trait]
+
+#[async_trait::async_trait]
 pub trait TableService: Send + Sync {
+    async fn create_table(
+        &self,
+        ctx: &RequestContext,
+        input: CreateTableInput,
+    ) -> Result<TableId, AppError>;
+
     async fn join_table(
         &self,
         user_id: UserId,
         table_id: TableId,
         ctx: &RequestContext,
     ) -> Result<(), AppError>;
+
     async fn leave_table(
         &self,
         user_id: UserId,
@@ -28,7 +36,7 @@ pub trait TableService: Send + Sync {
     ) -> Result<(), AppError>;
 }
 
-#[async_trait]
+#[async_trait::async_trait]
 pub trait AuthService: Send + Sync {
     async fn authenticate(&self, token: &str, ctx: &RequestContext) -> Result<UserId, AppError>;
     async fn telegram_auth(
@@ -51,7 +59,7 @@ pub trait AuthService: Send + Sync {
     async fn verify_token(&self, token: &str) -> Result<TokenClaims, AppError>;
 }
 
-#[async_trait]
+#[async_trait::async_trait]
 pub trait PaymentService: Send + Sync {
     async fn deposit(
         &self,
@@ -61,7 +69,7 @@ pub trait PaymentService: Send + Sync {
     ) -> Result<(), AppError>;
 }
 
-#[async_trait]
+#[async_trait::async_trait]
 pub trait ViralService: Send + Sync {
     async fn share_referral(
         &self,
@@ -71,7 +79,7 @@ pub trait ViralService: Send + Sync {
     ) -> Result<(), AppError>;
 }
 
-#[async_trait]
+#[async_trait::async_trait]
 pub trait MissionService: Send + Sync {
     async fn check_missions(
         &self,
@@ -80,32 +88,70 @@ pub trait MissionService: Send + Sync {
     ) -> Result<Vec<String>, AppError>;
 }
 
-#[async_trait]
-pub trait AntiCheatService: Send + Sync {
-    async fn report_anomaly(
-        &self,
-        user_id: UserId,
-        details: &str,
-        ctx: &RequestContext,
-    ) -> Result<(), AppError>;
-}
-
-#[async_trait]
-pub trait OracleService {
-    type Params;
-    type Output;
-    type Error;
+#[async_trait::async_trait]
+pub trait OracleService: Send + Sync {
+    type Params: Send;
+    type Output: Send;
+    type Error: std::error::Error + Send;
 
     async fn analyze(
         &self,
         ctx: &RequestContext,
         params: Self::Params,
     ) -> Result<Self::Output, Self::Error>;
+
+    async fn answer_callback_query(
+        &self,
+        callback_query_id: String,
+        text: Option<String>,
+    ) -> Result<(), Self::Error>;
 }
 
-#[async_trait]
-pub trait NotificationService: Send + Sync {
-    async fn send_telegram_message(&self, chat_id: i64, text: String, keyboard: Option<serde_json::Value>) -> Result<(), PersistenceError>;
-    async fn send_telegram_message_to_user(&self, user_id: UserId, text: String, keyboard: Option<serde_json::Value>) -> Result<(), PersistenceError>;
-    async fn answer_callback_query(&self, callback_query_id: String, text: Option<String>) -> Result<(), PersistenceError>;
+/// Input for creating a table.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct CreateTableInput {
+    pub name: String,
+    pub club_id: Option<sb_shared_types::ClubId>,
+    pub stake_level: sb_shared_types::game_types::StakeLevel,
+    pub variant: sb_shared_types::game_types::GameVariant,
+    pub created_by: UserId,
+    pub is_private: bool,
+    pub invited_users: Vec<UserId>,
+}
+
+/// Service interface for club operations.
+///
+/// All methods accept `RequestContext` for request tracing.
+#[async_trait::async_trait]
+pub trait ClubService: Send + Sync {
+    async fn create_club(
+        &self,
+        ctx: &RequestContext,
+        name: &str,
+        logo_url: Option<&str>,
+        created_by: UserId,
+    ) -> ClubResult<sb_shared_types::ClubId>;
+
+    async fn join_club(
+        &self,
+        ctx: &RequestContext,
+        club_id: sb_shared_types::ClubId,
+        user_id: UserId,
+    ) -> ClubResult<()>;
+
+    async fn get_leaderboard(
+        &self,
+        ctx: &RequestContext,
+        club_id: sb_shared_types::ClubId,
+        division: u32,
+    ) -> ClubResult<crate::repo_api::LeaderboardPage>;
+
+    /// Called when a club member earns XP (e.g. plays a hand at a club table).
+    async fn add_xp(
+        &self,
+        ctx: &RequestContext,
+        club_id: sb_shared_types::ClubId,
+        user_id: UserId,
+        xp: i64,
+    ) -> ClubResult<()>;
 }
