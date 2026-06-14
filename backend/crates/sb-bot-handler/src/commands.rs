@@ -94,7 +94,7 @@ pub async fn handle_poker_command(
     if let Err(e) = send_telegram_message_with_timeout(state, chat_id.0, text, keyboard_value).await {
         error!(request_id = %ctx_with_user.request_id, user_id = %user_id, error = %e, "Failed to send message");
     } else {
-        info!(request_id = %ctx_with_user.request_id, user_id = %user_id, table_id = %table_id, "Table created and notification sent");
+    info!(request_id = %ctx_with_user.request_id, user_id = %user_id, table_id = %table_id, "Table created and notification sent");
     }
 }
 

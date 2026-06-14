@@ -9,6 +9,7 @@ use parking_lot::RwLock;
 /// Simple in-memory table representation.
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
+#[allow(dead_code)]
 pub struct Table {
     pub id: TableId,
     pub name: String,
