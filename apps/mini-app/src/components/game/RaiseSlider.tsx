@@ -5,7 +5,7 @@ export const RaiseSlider = ({ min, max, step, pot, onConfirm }: { min: number; m
   const form = useForm({ defaultValues: { amount: min }, onSubmit: ({ value }) => onConfirm(value.amount) });
   return (
     <form.Field name="amount" validators={{ onChange: ({ value }) => value >= min && value <= max }} children={(field) => (
-      <div className="space-y-4">
+      <div className="space-y-4 p-4 bg-surface-container rounded-xl border border-outline-variant/20">
         <MotionSlider value={[field.state.value]} min={min} max={max} step={step} onValueChange={(v) => field.handleChange(v[0])} />
         <div className="flex gap-2">
           <Button onClick={() => field.handleChange(Math.floor(pot * 0.5))}>½ POT</Button>
@@ -13,7 +13,7 @@ export const RaiseSlider = ({ min, max, step, pot, onConfirm }: { min: number; m
           <Button onClick={() => field.handleChange(pot)}>POT</Button>
           <Button onClick={() => field.handleChange(max)}>MAX</Button>
         </div>
-        <Button onClick={() => form.handleSubmit()}>Confirm Raise</Button>
+        <Button className="w-full bg-tertiary text-on-tertiary" onClick={() => form.handleSubmit()}>Confirm Raise</Button>
       </div>
     )} />
   );

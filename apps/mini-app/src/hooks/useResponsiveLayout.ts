@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-
 export function useResponsiveLayout() {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
   useEffect(() => {

@@ -11,8 +11,8 @@ export function TablePage() {
   const { seats, heroSeat, communityCards, pot, actionRequired, toCall, minRaise, maxRaise, timeRemainingMs } = useGameStore();
 
   return (
-    <div className="relative w-full h-screen bg-background overflow-hidden">
-      <div className={`relative mx-auto mt-8 ${isDesktop ? 'w-11/12 max-w-6xl aspect-table-desktop rounded-3xl' : 'w-full h-2/3 rounded-xl'}`}>
+    <div className="relative w-full h-screen bg-background overflow-hidden" style={{ background: 'radial-gradient(circle at center, #1a1c1b 0%, #131313 100%)' }}>
+      <div className={`relative mx-auto mt-8 ${isDesktop ? 'w-[95%] max-w-[1100px] aspect-[2.2/1]' : 'w-full h-2/3'}`}>
         <TableRail />
         <TableFelt />
         <SeatGrid seats={seats} heroSeat={heroSeat} isDesktop={isDesktop} />
@@ -22,11 +22,15 @@ export function TablePage() {
         <div className="absolute top-4 left-1/2 -translate-x-1/2">
           <PotBadge amount={pot} />
         </div>
-        {actionRequired && <TimerBar remainingMs={timeRemainingMs} />}
+        {actionRequired && <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-64"><TimerBar remainingMs={timeRemainingMs} /></div>}
       </div>
       <AnalyticsPanel isDesktop={isDesktop} winProb={74} potOdds={3.2} bestHand="Two Pair" strength={92} />
-      <ActionBar isDesktop={isDesktop} actionRequired={actionRequired} toCall={toCall} minRaise={minRaise} maxRaise={maxRaise} onAction={sendAction} />
-      {connectionStatus !== 'connected' && <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-black/80 text-white px-4 py-2 rounded-full">Reconnecting...</div>}
+      <ActionBar isDesktop={isDesktop} actionRequired={actionRequired} toCall={toCall} minRaise={minRaise} maxRaise={maxRaise} pot={pot} onAction={sendAction} />
+      {connectionStatus !== 'connected' && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-black/80 text-white px-4 py-2 rounded-full text-sm z-50">
+          {connectionStatus === 'reconnecting' ? 'Reconnecting...' : 'Disconnected'}
+        </div>
+      )}
     </div>
   );
 }
