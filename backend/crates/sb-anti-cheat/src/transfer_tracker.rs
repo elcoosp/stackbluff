@@ -3,7 +3,6 @@ use dashmap::DashMap;
 use chrono::{DateTime, Utc, Duration};
 use metrics;
 use sb_shared_types::{UserId, ChipAmount};
-use metrics::counter;
 
 type Pair = (UserId, UserId);
 

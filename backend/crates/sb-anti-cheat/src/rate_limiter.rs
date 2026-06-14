@@ -2,7 +2,6 @@ use metrics;
 use dashmap::DashMap;
 use chrono::{DateTime, Utc, Duration};
 use std::env;
-use metrics::counter;
 
 #[derive(Default)]
 pub struct RateLimiter {

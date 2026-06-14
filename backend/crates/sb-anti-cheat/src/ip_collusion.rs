@@ -2,7 +2,6 @@ use metrics;
 use dashmap::DashMap;
 use chrono::{DateTime, Utc, Duration};
 use sb_shared_types::UserId;
-use metrics::counter;
 use std::env;
 
 type SessionKey = (String, UserId, UserId);
