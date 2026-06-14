@@ -1,4 +1,4 @@
-//! Integration test: create club → join → add XP → refresh leaderboard → read leaderboard.
+//! Integration test: create club -> join -> add XP -> refresh leaderboard -> read leaderboard.
 
 use sb_contracts::{ClubRepo, ClubService, LeaderboardPage, PersistenceError, DIVISION_SIZE};
 use sb_shared_types::{ClubId, UserId};
@@ -48,16 +48,9 @@ impl ClubRepo for MockClubRepo {
 
     async fn get_member_count(
         &self,
-        club_id: ClubId,
+        _club_id: ClubId,
     ) -> Result<u64, PersistenceError> {
-        // Return 600 for the large club test
-        let bytes = club_id.into_bytes();
-        let last_byte = bytes[15];
-        if last_byte % 2 == 0 {
-            Ok(600)
-        } else {
-            Ok(1)
-        }
+        Ok(600)
     }
 
     async fn get_leaderboard_page(
@@ -65,10 +58,10 @@ impl ClubRepo for MockClubRepo {
         club_id: ClubId,
         division: u32,
     ) -> Result<LeaderboardPage, PersistenceError> {
-        let total_members = self.get_member_count(club_id).await?;
-        let total_divisions = if total_members == 0 { 1 } else { ((total_members as u32 - 1) / DIVISION_SIZE) + 1 };
+        let total_members: u64 = 600;
+        let total_divisions = ((total_members as u32 - 1) / DIVISION_SIZE) + 1;
 
-        let entry_count = if division == 1 && total_members > 500 { 500 } else { total_members.min(500) as usize };
+        let entry_count = if division == 1 { 500 } else { 100 };
 
         let entries: Vec<sb_contracts::LeaderboardEntry> = (0..entry_count)
             .map(|i| sb_contracts::LeaderboardEntry {
@@ -121,7 +114,7 @@ async fn test_create_club() {
         .create_club("Test Club", Some("https://logo.example.com/img.png"), user_id)
         .await
         .expect("create club");
-    assert!(!club_id.is_nil());
+    assert!(!club_id.0.is_nil());
 }
 
 #[tokio::test]
@@ -141,7 +134,7 @@ async fn test_join_club_already_member() {
     let club_id = svc.create_club("Dup Club", None, owner_id).await.expect("create");
 
     let member_id = UserId::from(Uuid::new_v4());
-    svc.join_club(club_id, member_id).await.expect("first join");
+    svc.join_club(club_id, member_id).await.expect("join");
     // Mock always returns is_member=true, so this should fail
     let result = svc.join_club(club_id, member_id).await;
     assert!(matches!(result, Err(PersistenceError::AlreadyMember)));
@@ -160,8 +153,6 @@ async fn test_add_xp() {
 async fn test_leaderboard_divisions() {
     let svc = make_service();
     let owner_id = UserId::from(Uuid::new_v4());
-
-    // Create a club with an even last byte so mock returns 600 members
     let club_id = svc.create_club("Big Club", None, owner_id).await.expect("create");
 
     let page = svc.get_leaderboard(club_id, 1).await.expect("get leaderboard");
@@ -169,4 +160,9 @@ async fn test_leaderboard_divisions() {
     assert_eq!(page.total_members, 600);
     assert_eq!(page.total_divisions, 2);
     assert!(page.entries.len() <= 500);
+
+    // Division 2
+    let page2 = svc.get_leaderboard(club_id, 2).await.expect("get leaderboard div 2");
+    assert_eq!(page2.division, 2);
+    assert!(page2.entries.len() <= 100);
 }
