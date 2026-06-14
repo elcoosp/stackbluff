@@ -3,11 +3,13 @@ import { useGameWebSocket } from '../hooks/useGameWebSocket';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 import { SeatGrid, ActionBar, AnalyticsPanel, CommunityCards, TableFelt, TableRail, PotBadge, TimerBar } from '../components/game';
 import { useGameStore } from '@stackbluff/shared/stores/gameStore';
+
 export function TablePage() {
   const { tableId } = useParams({ from: '/table/$tableId' });
   const { sendAction, connectionStatus } = useGameWebSocket(tableId);
   const isDesktop = useResponsiveLayout();
   const { seats, heroSeat, communityCards, pot, actionRequired, toCall, minRaise, maxRaise, timeRemainingMs } = useGameStore();
+
   return (
     <div className="relative w-full h-screen bg-background overflow-hidden" style={{ background: 'radial-gradient(circle at center, #1a1c1b 0%, #131313 100%)' }}>
       <div className={`relative mx-auto mt-8 ${isDesktop ? 'w-[95%] max-w-[1100px] aspect-table-desktop' : 'w-full h-2/3'}`}>
