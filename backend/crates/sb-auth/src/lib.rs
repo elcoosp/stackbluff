@@ -17,3 +17,20 @@ impl Authenticator for NoopAuthenticator {
 }
 pub mod middleware;
 pub use middleware::{AuthUser, auth_middleware};
+
+use sea_orm::{EntityTrait, ActiveModelTrait, Set, QueryFilter, ColumnTrait};
+use sb_db_entities::system_counter;
+
+pub async fn increment_global_user_counter(db: &DatabaseConnection) -> Result<u64, DbErr> {
+    let counter = system_counter::Entity::find()
+        .filter(system_counter::Column::Name.eq("global_user_count"))
+        .one(db)
+        .await?;
+    if let Some(c) = counter {
+        let mut active: system_counter::ActiveModel = c.into();
+        let new_val = active.value.as_ref() + 1;
+        active.value = Set(new_val);
+        active.update(db).await?;
+        Ok(new_val as u64)
+    } else { Ok(0) }
+}
