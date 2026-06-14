@@ -1,12 +1,5 @@
 {
   "name": "@stackbluff/shared",
   "version": "0.0.1",
-  "type": "module",
-  "exports": {
-    "./auth/token": "./auth/token.ts",
-    "./auth/api": "./auth/api.ts",
-    "./stores/authStore": "./stores/authStore.ts",
-    "./ui/GlassPanel": "./ui/GlassPanel.tsx",
-    "./ui/LiquidMetalButton": "./ui/LiquidMetalButton.tsx"
-  }
+  "type": "module"
 }
