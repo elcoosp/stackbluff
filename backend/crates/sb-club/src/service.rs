@@ -50,7 +50,7 @@ impl ClubService for ClubServiceImpl {
 
     async fn get_leaderboard(
         &self,
-        ctx: &RequestContext,
+        _ctx: &RequestContext,
         club_id: ClubId,
         division: u32,
     ) -> Result<LeaderboardPage, ClubError> {
