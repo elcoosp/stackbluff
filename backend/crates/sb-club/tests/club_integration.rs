@@ -1,15 +1,25 @@
 //! Integration test against a temporary SQLite database.
 //! Tests actual SQL correctness, not mock behaviour.
+//!
+//! FK constraints remain ON — prerequisite user rows are inserted
+//! via the user entity's ActiveModel so all CHECK constraints
+//! (including the platform ENUM) are satisfied automatically.
+
 use migration::MigratorTrait;
 use sb_club::ClubServiceImpl;
 use sb_contracts::{ClubError, ClubRepo, ClubService, DIVISION_SIZE};
+use sb_db_entities::user::ActiveModel as UserActiveModel;
 use sb_db_repos::club_repo::ClubRepoImpl;
 use sb_shared_types::{ClubId, RequestContext, UserId};
-use sea_orm::{ConnectionTrait, Database};
+use sea_orm::{ActiveModelTrait, Database};
 use std::sync::Arc;
 use uuid::Uuid;
 
-async fn setup_db() -> (Arc<dyn ClubService>, Arc<dyn ClubRepo>) {
+async fn setup_db() -> (
+    Arc<dyn ClubService>,
+    Arc<dyn ClubRepo>,
+    sea_orm::DatabaseConnection,
+) {
     let db = Database::connect("sqlite::memory:")
         .await
         .expect("db connect");
@@ -19,17 +29,28 @@ async fn setup_db() -> (Arc<dyn ClubService>, Arc<dyn ClubRepo>) {
         .await
         .expect("migrations");
 
-    // Disable FK constraints for integration tests — we're testing
-    // club SQL correctness, not FK integrity. Without real user rows,
-    // FK constraints on clubs.owner_id and club_memberships.user_id
-    // would block all inserts.
-    db.execute_unprepared("PRAGMA foreign_keys = OFF")
-        .await
-        .expect("disable FK for tests");
-
-    let repo: Arc<dyn ClubRepo> = Arc::new(ClubRepoImpl::new(db));
+    let repo: Arc<dyn ClubRepo> = Arc::new(ClubRepoImpl::new(db.clone()));
     let service = Arc::new(ClubServiceImpl::new(repo.clone()));
-    (service, repo)
+    (service, repo, db)
+}
+
+/// Insert a user row via the entity's ActiveModel so all CHECK constraints
+/// (including the platform ENUM) are satisfied automatically.
+/// FK constraints remain ON — this proves they are correctly defined.
+async fn ensure_user(db: &sea_orm::DatabaseConnection, user_id: UserId) {
+    use sea_orm::ActiveValue::Set;
+
+    let new_user = UserActiveModel {
+        id: Set(user_id.as_uuid()),
+        display_name: Set(format!("test_{}", &user_id.as_uuid().to_string()[..8])),
+        chip_balance: Set(0),
+        streak_count: Set(0),
+        created_at: Set(chrono::Utc::now()),
+        updated_at: Set(chrono::Utc::now()),
+        ..Default::default()
+    };
+
+    new_user.insert(db).await.expect("insert test user");
 }
 
 fn test_ctx() -> RequestContext {
@@ -41,9 +62,10 @@ fn test_ctx() -> RequestContext {
 
 #[tokio::test]
 async fn test_create_club() {
-    let (svc, _repo) = setup_db().await;
+    let (svc, _repo, db) = setup_db().await;
     let ctx = test_ctx();
     let user_id = ctx.user_id.unwrap();
+    ensure_user(&db, user_id).await;
     let club_id = svc
         .create_club(
             &ctx,
@@ -58,9 +80,10 @@ async fn test_create_club() {
 
 #[tokio::test]
 async fn test_join_club_and_duplicate() {
-    let (svc, _repo) = setup_db().await;
+    let (svc, _repo, db) = setup_db().await;
     let ctx = test_ctx();
     let owner_id = ctx.user_id.unwrap();
+    ensure_user(&db, owner_id).await;
     let club_id = svc
         .create_club(&ctx, "Join Club", None, owner_id)
         .await
@@ -71,6 +94,7 @@ async fn test_join_club_and_duplicate() {
         user_id: Some(UserId(Uuid::new_v4())),
     };
     let member_id = member_ctx.user_id.unwrap();
+    ensure_user(&db, member_id).await;
     svc.join_club(&member_ctx, club_id, member_id)
         .await
         .expect("join club");
@@ -82,9 +106,10 @@ async fn test_join_club_and_duplicate() {
 
 #[tokio::test]
 async fn test_add_xp_not_member() {
-    let (svc, _repo) = setup_db().await;
+    let (svc, _repo, db) = setup_db().await;
     let ctx = test_ctx();
     let owner_id = ctx.user_id.unwrap();
+    ensure_user(&db, owner_id).await;
     let club_id = svc
         .create_club(&ctx, "NoXP Club", None, owner_id)
         .await
@@ -96,9 +121,10 @@ async fn test_add_xp_not_member() {
 
 #[tokio::test]
 async fn test_add_xp_member() {
-    let (svc, _repo) = setup_db().await;
+    let (svc, _repo, db) = setup_db().await;
     let ctx = test_ctx();
     let owner_id = ctx.user_id.unwrap();
+    ensure_user(&db, owner_id).await;
     let club_id = svc
         .create_club(&ctx, "XP Club", None, owner_id)
         .await
@@ -111,9 +137,10 @@ async fn test_add_xp_member() {
 
 #[tokio::test]
 async fn test_leaderboard_divisions() {
-    let (svc, repo) = setup_db().await;
+    let (svc, repo, db) = setup_db().await;
     let ctx = test_ctx();
     let owner_id = ctx.user_id.unwrap();
+    ensure_user(&db, owner_id).await;
     let club_id = svc
         .create_club(&ctx, "Big Club", None, owner_id)
         .await
@@ -131,6 +158,7 @@ async fn test_leaderboard_divisions() {
             user_id: Some(UserId(Uuid::new_v4())),
         };
         let member_id = member_ctx.user_id.unwrap();
+        ensure_user(&db, member_id).await;
         svc.join_club(&member_ctx, club_id, member_id)
             .await
             .expect("join");
@@ -160,9 +188,10 @@ async fn test_leaderboard_divisions() {
     assert_eq!(div2.division, 2);
     assert!(div2.entries.len() <= 100);
 }
+
 #[tokio::test]
 async fn test_club_not_found() {
-    let (svc, _repo) = setup_db().await;
+    let (svc, _repo, _db) = setup_db().await;
     let ctx = test_ctx();
     let fake_club = ClubId::new(Uuid::new_v4());
     let result = svc.get_leaderboard(&ctx, fake_club, 1).await;

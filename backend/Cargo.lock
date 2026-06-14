@@ -3498,6 +3498,7 @@ dependencies = [
  "migration",
  "parking_lot",
  "sb-contracts",
+ "sb-db-entities",
  "sb-db-repos",
  "sb-shared-types",
  "sea-orm",

@@ -21,5 +21,7 @@ uuid = { workspace = true }
 parking_lot = { workspace = true }
 tokio = { workspace = true }
 sb-db-repos = { path = "../sb-db-repos" }
+sb-db-entities = { path = "../sb-db-entities" }
 sea-orm = { workspace = true }
 migration = { path = "../../migration" }
+chrono = { workspace = true }
