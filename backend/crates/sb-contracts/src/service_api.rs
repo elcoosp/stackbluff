@@ -64,8 +64,22 @@ pub trait UserService: Send + Sync {
 
 #[async_trait]
 pub trait AntiCheatService: Send + Sync {
-    async fn check_transfer(&self, from: UserId, to: UserId, amount: ChipAmount) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
-    fn check_game_action_rate(&self, user_id: UserId) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
-    fn check_auth_rate(&self, ip: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
-    async fn record_heads_up(&self, ip: &str, user1: UserId, user2: UserId, ctx: &RequestContext) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    async fn check_transfer(&self, from: UserId, to: UserId, amount: ChipAmount, ctx: &RequestContext) -> Result<(), AntiCheatError>;
+    fn check_game_action_rate(&self, user_id: UserId) -> Result<(), AntiCheatError>;
+    fn check_auth_rate(&self, ip: &str) -> Result<(), AntiCheatError>;
+    async fn record_heads_up(&self, ip: &str, user1: UserId, user2: UserId, ctx: &RequestContext) -> Result<(), AntiCheatError>;
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum AntiCheatError {
+    #[error("Net transfer limit exceeded (max {0}/24h)")]
+    TransferLimitExceeded(i64),
+    #[error("Rate limit exceeded")]
+    RateLimited,
+    #[error("Database error: {0}")]
+    Database(String),
+    #[error("Internal error: {0}")]
+    Internal(String),
+    #[error("Self-transfer not allowed")]
+    SelfTransfer,
 }

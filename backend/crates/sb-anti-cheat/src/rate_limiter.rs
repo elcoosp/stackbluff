@@ -1,6 +1,8 @@
+use metrics;
 use dashmap::DashMap;
 use chrono::{DateTime, Utc, Duration};
 use std::env;
+use metrics::counter;
 
 #[derive(Default)]
 pub struct RateLimiter {
@@ -32,8 +34,9 @@ impl RateLimiter {
         let now = Utc::now();
         let key = (user_id.to_string(), "game_action".to_string());
         let mut timestamps = self.action_count.entry(key).or_default();
-        timestamps.retain(|&ts| now - ts <= Duration::seconds(1));
+        timestamps.retain(|&ts| ts >= now - Duration::seconds(1));
         if timestamps.len() >= self.game_action_limit {
+            metrics::counter!("anti_cheat_rate_limited").increment(1);
             return false;
         }
         timestamps.push(now);
@@ -43,8 +46,9 @@ impl RateLimiter {
     pub fn check_auth_ip(&self, ip: &str) -> bool {
         let now = Utc::now();
         let mut timestamps = self.auth_ip_count.entry(ip.to_string()).or_default();
-        timestamps.retain(|&ts| now - ts <= Duration::minutes(1));
+        timestamps.retain(|&ts| ts >= now - Duration::minutes(1));
         if timestamps.len() >= self.auth_limit {
+            metrics::counter!("anti_cheat_rate_limited").increment(1);
             return false;
         }
         timestamps.push(now);
@@ -53,16 +57,14 @@ impl RateLimiter {
 
     pub fn cleanup_expired(&self) {
         let now = Utc::now();
-        
-        
-
+        let action_cutoff = now - Duration::seconds(1);
+        let auth_cutoff = now - Duration::minutes(1);
         self.action_count.retain(|_, timestamps| {
-            timestamps.retain(|&ts| ts >= now - Duration::seconds(1));
+            timestamps.retain(|&ts| ts >= action_cutoff);
             !timestamps.is_empty()
         });
-
         self.auth_ip_count.retain(|_, timestamps| {
-            timestamps.retain(|&ts| ts >= now - Duration::minutes(1));
+            timestamps.retain(|&ts| ts >= auth_cutoff);
             !timestamps.is_empty()
         });
     }

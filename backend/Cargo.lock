@@ -2302,6 +2302,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "metrics"
+version = "0.23.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3045b4193fbdc5b5681f32f11070da9be3609f189a79f3390706d42587f46bb5"
+dependencies = [
+ "ahash 0.8.12",
+ "portable-atomic",
+]
+
+[[package]]
 name = "migration"
 version = "0.1.0"
 dependencies = [
@@ -3305,6 +3315,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9774ba4a74de5f7b1c1451ed6cd5285a32eddb5cccb8cc655a4e50009e06477f"
 
 [[package]]
+name = "sb-anti-cheat"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "dashmap",
+ "metrics",
+ "mockall",
+ "once_cell",
+ "sb-contracts",
+ "sb-db-entities",
+ "sb-shared-types",
+ "sea-orm",
+ "serde",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "sb-auth"
 version = "0.1.0"
 dependencies = [
@@ -3457,6 +3487,7 @@ dependencies = [
  "chrono",
  "jsonwebtoken",
  "mockall",
+ "sb-anti-cheat",
  "sb-auth",
  "sb-contracts",
  "sb-oracle",
@@ -3482,6 +3513,7 @@ dependencies = [
  "migration",
  "moka",
  "parking_lot",
+ "sb-anti-cheat",
  "sb-bot-handler",
  "sb-club",
  "sb-contracts",

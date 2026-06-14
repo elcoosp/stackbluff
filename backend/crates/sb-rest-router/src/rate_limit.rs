@@ -5,12 +5,19 @@ use axum::{
     response::Response,
 };
 use std::net::SocketAddr;
+use std::sync::Arc;
 use sb_anti_cheat::rate_limiter::RateLimiter;
-use once_cell::sync::Lazy;
 
-static RATE_LIMITER: Lazy<RateLimiter> = Lazy::new(RateLimiter::new);
+pub async fn rate_limit_middleware(
+    mut req: Request,
+    next: Next,
+) -> Result<Response, StatusCode> {
+    // Retrieve the shared rate limiter from request extensions
+    let limiter = req.extensions()
+        .get::<Arc<RateLimiter>>()
+        .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?
+        .clone();
 
-pub async fn rate_limit_middleware<B>(req: Request<B>, next: Next<B>) -> Result<Response, StatusCode> {
     let ip = req
         .extensions()
         .get::<ConnectInfo<SocketAddr>>()
@@ -18,13 +25,13 @@ pub async fn rate_limit_middleware<B>(req: Request<B>, next: Next<B>) -> Result<
         .unwrap_or_else(|| "unknown".to_string());
 
     if req.uri().path().starts_with("/api/auth") {
-        if !RATE_LIMITER.check_auth_ip(&ip) {
+        if !limiter.check_auth_ip(&ip) {
             return Err(StatusCode::TOO_MANY_REQUESTS);
         }
     }
 
     if let Some(user_id) = req.headers().get("X-User-Id").and_then(|h| h.to_str().ok()) {
-        if !RATE_LIMITER.check_game_action(user_id) {
+        if !limiter.check_game_action(user_id) {
             return Err(StatusCode::TOO_MANY_REQUESTS);
         }
     }

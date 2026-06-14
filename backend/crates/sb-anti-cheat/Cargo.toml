@@ -5,6 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+metrics = { workspace = true }
 sb-contracts = { path = "../sb-contracts" }
 sb-shared-types = { path = "../sb-shared-types" }
 sb-db-entities = { path = "../sb-db-entities" }
