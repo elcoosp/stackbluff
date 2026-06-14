@@ -1,9 +1,8 @@
 use async_trait::async_trait;
 use sb_shared_types::{ClubId, RequestContext, UserId};
 
-// Re-export PersistenceError and PersistenceResult from crate root
-// so that sb_contracts::repo_api::PersistenceError still works for downstream crates.
 pub use crate::{PersistenceError, PersistenceResult};
+pub use crate::club_error::ClubError;
 
 // ── Existing repository types ──────────────────────────────────
 
@@ -79,7 +78,16 @@ pub struct LeaderboardPage {
 /// Division size constant: 500 members per division.
 pub const DIVISION_SIZE: u32 = 500;
 
+/// Result type for club operations.
+pub type ClubResult<T> = Result<T, ClubError>;
+
 /// Repository interface for club persistence.
+///
+/// ## Contracts
+/// - `join_club`: If the user is already a member (UNIQUE constraint),
+///   returns `ClubError::AlreadyMember`. Callers need NOT check `is_member` first.
+/// - `increment_weekly_xp`: Must be atomic (single SQL statement).
+/// - `refresh_leaderboard`: Must run inside a transaction for atomicity.
 #[async_trait]
 pub trait ClubRepo: Send + Sync {
     async fn create_club(
@@ -87,47 +95,53 @@ pub trait ClubRepo: Send + Sync {
         name: &str,
         logo_url: Option<&str>,
         created_by: UserId,
-    ) -> Result<ClubId, PersistenceError>;
+    ) -> ClubResult<ClubId>;
 
     async fn find_club_by_id(
         &self,
         club_id: ClubId,
-    ) -> Result<Option<Club>, PersistenceError>;
+    ) -> ClubResult<Option<Club>>;
 
+    /// Join a club. Returns `ClubError::AlreadyMember` on duplicate.
+    /// Does NOT require a prior `is_member` check — the UNIQUE constraint
+    /// is the authoritative guard.
     async fn join_club(
         &self,
         club_id: ClubId,
         user_id: UserId,
-    ) -> Result<(), PersistenceError>;
+    ) -> ClubResult<()>;
 
     async fn is_member(
         &self,
         club_id: ClubId,
         user_id: UserId,
-    ) -> Result<bool, PersistenceError>;
+    ) -> ClubResult<bool>;
 
     async fn get_member_count(
         &self,
         club_id: ClubId,
-    ) -> Result<u64, PersistenceError>;
+    ) -> ClubResult<u64>;
 
     async fn get_leaderboard_page(
         &self,
         club_id: ClubId,
         division: u32,
-    ) -> Result<LeaderboardPage, PersistenceError>;
+    ) -> ClubResult<LeaderboardPage>;
 
+    /// Atomically add XP. Must use a single SQL UPDATE statement.
     async fn increment_weekly_xp(
         &self,
         club_id: ClubId,
         user_id: UserId,
         xp: i64,
-    ) -> Result<(), PersistenceError>;
+    ) -> ClubResult<()>;
 
+    /// Materialise the leaderboard snapshot. Must run in a transaction.
     async fn refresh_leaderboard(
         &self,
         club_id: ClubId,
-    ) -> Result<(), PersistenceError>;
+    ) -> ClubResult<()>;
 
-    async fn get_all_club_ids(&self) -> Result<Vec<ClubId>, PersistenceError>;
+    /// Return all club ids for the scheduled refresh job.
+    async fn get_all_club_ids(&self) -> ClubResult<Vec<ClubId>>;
 }

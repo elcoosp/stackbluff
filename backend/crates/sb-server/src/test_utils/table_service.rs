@@ -6,9 +6,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use parking_lot::RwLock;
 
-/// Simple in-memory table representation.
-#[derive(Debug, Clone)]
 #[allow(dead_code)]
+#[derive(Debug, Clone)]
 pub struct Table {
     pub id: TableId,
     pub name: String,
@@ -22,12 +21,6 @@ pub struct Table {
 
 pub struct InMemoryTableService {
     tables: Arc<RwLock<HashMap<TableId, Table>>>,
-}
-
-impl Default for InMemoryTableService {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 impl InMemoryTableService {
@@ -45,7 +38,7 @@ impl TableService for InMemoryTableService {
         _ctx: &RequestContext,
         input: CreateTableInput,
     ) -> Result<TableId, AppError> {
-        let id = TableId::new();
+        let id = TableId::generate();
         let table = Table {
             id,
             name: input.name,
@@ -66,7 +59,6 @@ impl TableService for InMemoryTableService {
         _table_id: TableId,
         _ctx: &RequestContext,
     ) -> Result<(), AppError> {
-        // TODO: implement join logic
         Ok(())
     }
 
@@ -76,7 +68,6 @@ impl TableService for InMemoryTableService {
         _table_id: TableId,
         _ctx: &RequestContext,
     ) -> Result<(), AppError> {
-        // TODO: implement leave logic
         Ok(())
     }
 }

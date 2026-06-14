@@ -1,5 +1,5 @@
-use sb_contracts::{ClubRepo, ClubService, LeaderboardPage, PersistenceError};
-use sb_shared_types::{ClubId, UserId};
+use sb_contracts::{ClubRepo, ClubService, ClubError, LeaderboardPage};
+use sb_shared_types::{ClubId, RequestContext, UserId};
 use std::sync::Arc;
 
 pub struct ClubServiceImpl {
@@ -16,54 +16,69 @@ impl ClubServiceImpl {
 impl ClubService for ClubServiceImpl {
     async fn create_club(
         &self,
+        ctx: &RequestContext,
         name: &str,
         logo_url: Option<&str>,
         created_by: UserId,
-    ) -> Result<ClubId, PersistenceError> {
+    ) -> Result<ClubId, ClubError> {
         if name.trim().is_empty() {
-            return Err(PersistenceError::ValidationError(
-                "club name must not be empty".into(),
-            ));
+            return Err(ClubError::validation("club name must not be empty"));
         }
+        tracing::debug!(
+            request_id = %ctx.request_id,
+            user_id = ?ctx.user_id,
+            "create_club: name={}",
+            name
+        );
         self.repo.create_club(name, logo_url, created_by).await
     }
 
     async fn join_club(
         &self,
+        ctx: &RequestContext,
         club_id: ClubId,
         user_id: UserId,
-    ) -> Result<(), PersistenceError> {
-        let club = self.repo.find_club_by_id(club_id).await?;
-        if club.is_none() {
-            return Err(PersistenceError::ClubNotFound);
-        }
-        if self.repo.is_member(club_id, user_id).await? {
-            return Err(PersistenceError::AlreadyMember);
-        }
+    ) -> Result<(), ClubError> {
+        // FIX 15: We no longer check is_member first — the repo's
+        // join_club handles UNIQUE constraint atomically.
+        tracing::debug!(
+            request_id = %ctx.request_id,
+            club_id = %club_id,
+            user_id = %user_id,
+            "join_club"
+        );
         self.repo.join_club(club_id, user_id).await
     }
 
     async fn get_leaderboard(
         &self,
+        ctx: &RequestContext,
         club_id: ClubId,
         division: u32,
-    ) -> Result<LeaderboardPage, PersistenceError> {
+    ) -> Result<LeaderboardPage, ClubError> {
         let club = self.repo.find_club_by_id(club_id).await?;
         if club.is_none() {
-            return Err(PersistenceError::ClubNotFound);
+            return Err(ClubError::not_found(club_id));
         }
         self.repo.get_leaderboard_page(club_id, division).await
     }
 
     async fn add_xp(
         &self,
+        ctx: &RequestContext,
         club_id: ClubId,
         user_id: UserId,
         xp: i64,
-    ) -> Result<(), PersistenceError> {
-        if !self.repo.is_member(club_id, user_id).await? {
-            return Err(PersistenceError::NotAMember);
-        }
+    ) -> Result<(), ClubError> {
+        tracing::debug!(
+            request_id = %ctx.request_id,
+            club_id = %club_id,
+            user_id = %user_id,
+            xp = xp,
+            "add_xp"
+        );
+        // FIX 1: increment_weekly_xp is now atomic; no is_member check needed.
+        // The repo returns NotAMember if no row was updated.
         self.repo.increment_weekly_xp(club_id, user_id, xp).await
     }
 }

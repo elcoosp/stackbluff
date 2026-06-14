@@ -1,5 +1,5 @@
 mod leaderboard_refresh;
-mod services;
+mod test_utils;
 
 use axum::Router;
 use sb_club::{club_router, ClubServiceImpl};
@@ -9,9 +9,9 @@ use sea_orm::Database;
 use sea_orm_migration::MigratorTrait;
 use std::sync::Arc;
 
-use services::table_service::InMemoryTableService;
-use services::notification_service::InMemoryNotificationService;
-use services::user_resolution_service::InMemoryUserResolutionService;
+use test_utils::table_service::InMemoryTableService;
+use test_utils::notification_service::InMemoryNotificationService;
+use test_utils::user_resolution_service::InMemoryUserResolutionService;
 
 #[tokio::main]
 async fn main() {
@@ -40,9 +40,9 @@ async fn main() {
         service: club_service,
     };
 
-    // Wire up bot handler services
+    // Wire up bot handler services (in-memory stubs for development)
     let table_service: Arc<dyn sb_contracts::service_api::TableService> = Arc::new(InMemoryTableService::new());
-    let notification_service: Arc<dyn sb_contracts::service_api::NotificationService> = Arc::new(InMemoryNotificationService::new());
+    let notification_service: Arc<dyn sb_contracts::notification_api::NotificationService> = Arc::new(InMemoryNotificationService::new());
     let user_resolution: Arc<dyn sb_contracts::user_resolution::UserResolutionService> = Arc::new(InMemoryUserResolutionService::new());
     let bot_state: Arc<sb_bot_handler::BotState> = Arc::new(sb_bot_handler::BotState::new(
         table_service,

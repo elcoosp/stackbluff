@@ -1,10 +1,10 @@
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    Json,
+    Extension, Json,
 };
 use sb_contracts::ClubService;
-use sb_shared_types::{ClubId, UserId};
+use sb_shared_types::{ClubId, RequestContext, UserId};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -18,24 +18,27 @@ pub struct ClubState {
     pub service: Arc<dyn ClubService>,
 }
 
+/// Extract authenticated user_id from the RequestContext extension.
+/// Returns 401 if no user is authenticated.
+fn extract_user_id(ctx: &RequestContext) -> Result<UserId, (StatusCode, String)> {
+    ctx.user_id.ok_or_else(|| {
+        (StatusCode::UNAUTHORIZED, "authentication required".to_string())
+    })
+}
+
 /// `POST /clubs` — create a new club.
 pub async fn create_club(
     State(state): State<ClubState>,
+    Extension(ctx): Extension<RequestContext>,
     Json(req): Json<CreateClubRequest>,
 ) -> Result<(StatusCode, Json<CreateClubResponse>), (StatusCode, String)> {
-    // TODO: extract user_id from auth middleware / request context
-    let user_id = UserId::from(Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap());
+    let user_id = extract_user_id(&ctx)?;
 
     let club_id = state
         .service
-        .create_club(&req.name, req.logo_url.as_deref(), user_id)
+        .create_club(&ctx, &req.name, req.logo_url.as_deref(), user_id)
         .await
-        .map_err(|e: sb_contracts::PersistenceError| match e {
-            sb_contracts::PersistenceError::ValidationError(msg) => {
-                (StatusCode::BAD_REQUEST, msg)
-            }
-            _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
-        })?;
+        .map_err(|e| map_club_error(e))?;
 
     Ok((StatusCode::CREATED, Json(CreateClubResponse { club_id })))
 }
@@ -43,24 +46,16 @@ pub async fn create_club(
 /// `POST /clubs/{club_id}/join` — join a club.
 pub async fn join_club(
     State(state): State<ClubState>,
+    Extension(ctx): Extension<RequestContext>,
     Path(club_id): Path<ClubId>,
 ) -> Result<Json<JoinClubResponse>, (StatusCode, String)> {
-    // TODO: extract user_id from auth middleware / request context
-    let user_id = UserId::from(Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap());
+    let user_id = extract_user_id(&ctx)?;
 
     state
         .service
-        .join_club(club_id, user_id)
+        .join_club(&ctx, club_id, user_id)
         .await
-        .map_err(|e: sb_contracts::PersistenceError| match e {
-            sb_contracts::PersistenceError::ClubNotFound => {
-                (StatusCode::NOT_FOUND, "club not found".into())
-            }
-            sb_contracts::PersistenceError::AlreadyMember => {
-                (StatusCode::CONFLICT, "already a member".into())
-            }
-            _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
-        })?;
+        .map_err(|e| map_club_error(e))?;
 
     Ok(Json(JoinClubResponse { success: true }))
 }
@@ -68,18 +63,28 @@ pub async fn join_club(
 /// `GET /clubs/{club_id}/leaderboard` — get leaderboard (defaults to division 1).
 pub async fn get_leaderboard(
     State(state): State<ClubState>,
+    Extension(ctx): Extension<RequestContext>,
     Path(club_id): Path<ClubId>,
 ) -> Result<Json<GetLeaderboardResponse>, (StatusCode, String)> {
     let page = state
         .service
-        .get_leaderboard(club_id, 1)
+        .get_leaderboard(&ctx, club_id, 1)
         .await
-        .map_err(|e: sb_contracts::PersistenceError| match e {
-            sb_contracts::PersistenceError::ClubNotFound => {
-                (StatusCode::NOT_FOUND, "club not found".into())
-            }
-            _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
-        })?;
+        .map_err(|e| map_club_error(e))?;
 
     Ok(Json(GetLeaderboardResponse::from(page)))
+}
+
+/// Map ClubError to HTTP status codes with descriptive messages.
+fn map_club_error(e: sb_contracts::ClubError) -> (StatusCode, String) {
+    match e {
+        sb_contracts::ClubError::NotFound { .. } => (StatusCode::NOT_FOUND, e.to_string()),
+        sb_contracts::ClubError::AlreadyMember { .. } => (StatusCode::CONFLICT, e.to_string()),
+        sb_contracts::ClubError::NotAMember { .. } => (StatusCode::FORBIDDEN, e.to_string()),
+        sb_contracts::ClubError::Validation { .. } => (StatusCode::BAD_REQUEST, e.to_string()),
+        sb_contracts::ClubError::Database { .. } => {
+            tracing::error!(error = %e, "club database error");
+            (StatusCode::INTERNAL_SERVER_ERROR, "internal error".to_string())
+        }
+    }
 }

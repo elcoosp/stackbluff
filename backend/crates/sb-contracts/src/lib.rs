@@ -2,44 +2,44 @@
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use sb_shared_types::{PlayerId, TableId, UserId};
-use thiserror::Error;
+use sb_shared_types::{ClubId, PlayerId, TableId, UserId};
 
-/// Unified persistence error type.
-/// Merges root, repo_api, and persistence_error variants into one enum.
-#[derive(Debug, Error)]
+// ── Base infrastructure error ──────────────────────────────────
+
+/// Low-level database/infrastructure error with preserved source chain.
+#[derive(Debug, thiserror::Error)]
 pub enum PersistenceError {
-    // Root variants
-    #[error("Database error: {0}")]
-    Database(String),
-    #[error("Not found")]
+    #[error("database error: {message}")]
+    Database {
+        message: String,
+        #[source]
+        source: Option<Box<dyn std::error::Error + Send + Sync>>,
+    },
+    #[error("not found")]
     NotFound,
-    #[error("Invalid state transition")]
-    InvalidState,
-    #[error("Write conflict")]
+    #[error("write conflict")]
     WriteConflict,
-    // repo_api variants
-    #[error("Constraint violation (UNIQUE/CHECK): {0}")]
-    ConstraintViolation(String),
-    #[error("Data integrity error: {0}")]
-    DataIntegrity(String),
-    #[error("Transient database error (retryable): {0}")]
-    Transient(String),
-    // persistence_error variants
-    #[error("Fatal error: {0}")]
-    Fatal(String),
-    // Club variants
-    #[error("Club not found")]
-    ClubNotFound,
-    #[error("Already a member of this club")]
-    AlreadyMember,
-    #[error("Not a member of this club")]
-    NotAMember,
-    #[error("Validation error: {0}")]
-    ValidationError(String),
+}
+
+impl PersistenceError {
+    pub fn database(msg: impl Into<String>) -> Self {
+        Self::Database { message: msg.into(), source: None }
+    }
+
+    pub fn database_with_source(
+        msg: impl Into<String>,
+        err: impl std::error::Error + Send + Sync + 'static,
+    ) -> Self {
+        Self::Database {
+            message: msg.into(),
+            source: Some(Box::new(err)),
+        }
+    }
 }
 
 pub type PersistenceResult<T> = Result<T, PersistenceError>;
+
+// ── Domain models ──────────────────────────────────────────────
 
 #[derive(Debug, Clone)]
 pub struct User {
@@ -79,17 +79,22 @@ pub trait MissionRepository: Send + Sync {
     ) -> PersistenceResult<()>;
 }
 
+// ── Modules ────────────────────────────────────────────────────
+
 pub mod repo_api;
 pub mod service_api;
 pub mod lobby_api;
 pub mod persistence_error;
+pub mod club_error;
 pub mod async_hooks;
+pub mod notification_api;
+pub mod user_resolution;
 
 pub use lobby_api::{TableInfo, TableRepo, TableService};
-pub use repo_api::{Club, ClubMembership, ClubRepo, DIVISION_SIZE, LeaderboardEntry, LeaderboardPage};
-pub use service_api::ClubService;
+pub use club_error::ClubError;
+pub use repo_api::ClubRepo;
 
-#[derive(Debug, Error)]
+#[derive(Debug, thiserror::Error)]
 pub enum TableError {
     #[error("Table {0} not found")]
     NotFound(TableId),
@@ -110,5 +115,3 @@ pub enum TableCommand {
         table_id: TableId,
     },
 }
-pub mod user_resolution;
-pub use sb_shared_types::ClubId;

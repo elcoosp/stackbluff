@@ -10,6 +10,7 @@ pub fn spawn_leaderboard_refresh_job(repo: Arc<dyn ClubRepo>) {
         loop {
             ticker.tick().await;
             tracing::info!("leaderboard refresh job: starting");
+            let start = std::time::Instant::now();
             match repo.get_all_club_ids().await {
                 Ok(club_ids) => {
                     for club_id in &club_ids {
@@ -21,8 +22,10 @@ pub fn spawn_leaderboard_refresh_job(repo: Arc<dyn ClubRepo>) {
                             );
                         }
                     }
+                    let elapsed = start.elapsed();
                     tracing::info!(
                         count = club_ids.len(),
+                        elapsed_ms = elapsed.as_millis(),
                         "leaderboard refresh job: completed"
                     );
                 }
