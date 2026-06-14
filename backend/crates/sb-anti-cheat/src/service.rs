@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use sb_contracts::service_api::AntiCheatService;
 use sb_shared_types::{UserId, ChipAmount, RequestContext};
 use crate::transfer_tracker::TransferTracker;
@@ -9,16 +10,16 @@ use tracing::error;
 
 pub struct AntiCheatServiceImpl {
     transfer_tracker: TransferTracker,
-    rate_limiter: RateLimiter,
+    rate_limiter: Arc<RateLimiter>,
     ip_collusion: IpCollusionTracker,
     db: DatabaseConnection,
 }
 
 impl AntiCheatServiceImpl {
-    pub fn new(db: DatabaseConnection) -> Self {
+    pub fn new(db: DatabaseConnection, rate_limiter: Arc<RateLimiter>) -> Self {
         Self {
             transfer_tracker: TransferTracker::new(),
-            rate_limiter: RateLimiter::new(),
+            rate_limiter,
             ip_collusion: IpCollusionTracker::new(),
             db,
         }
@@ -27,13 +28,13 @@ impl AntiCheatServiceImpl {
 
 #[async_trait::async_trait]
 impl AntiCheatService for AntiCheatServiceImpl {
-    async fn check_transfer(&self, from: UserId, to: UserId, amount: ChipAmount) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn check_transfer(&self, from: UserId, to: UserId, amount: ChipAmount, ctx: &RequestContext) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         if self.transfer_tracker.check_and_record(from, to, amount) {
             Ok(())
         } else {
             let event = ActiveModel {
                 user_ids: Set(format!("{},{}", from, to)),
-                ip: Set(Some("".to_string())),
+                ip: Set(Some(ctx.ip.to_string())),
                 event_type: Set("transfer_block".to_string()),
                 details: Set(Some(format!("net exceeded 5000: {} -> {}", from, to))),
                 created_at: Set(chrono::Utc::now()),

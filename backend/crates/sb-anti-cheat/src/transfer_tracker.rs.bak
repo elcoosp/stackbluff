@@ -20,7 +20,7 @@ impl TransferTracker {
         let cutoff = now - Duration::hours(24);
         let amount_i64: i64 = amount.into();
 
-        let mut entry = self.transfers.entry((from, to)).or_default();
+        let mut entry = self.transfers.entry((from, to)).or_insert_with(VecDeque::new);
         while let Some(&(ts, _)) = entry.front() {
             if ts < cutoff {
                 entry.pop_front();
@@ -47,11 +47,11 @@ impl TransferTracker {
             .map(|entry| entry.iter().filter(|(ts,_)| *ts >= cutoff).map(|(_,amt)| amt).sum())
             .unwrap_or(0)
     }
-
+}
     pub fn cleanup_expired(&self) {
         let now = Utc::now();
         let cutoff = now - Duration::hours(24);
-        self.transfers.retain(|_, deque| {
+        self.transfers.retain(|_, deque: &mut VecDeque<(DateTime<Utc>, i64)>| {
             while let Some(&(ts, _)) = deque.front() {
                 if ts < cutoff {
                     deque.pop_front();
@@ -62,10 +62,3 @@ impl TransferTracker {
             !deque.is_empty()
         });
     }
-}
-
-impl Default for TransferTracker {
-    fn default() -> Self {
-        Self::new()
-    }
-}

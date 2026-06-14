@@ -16,12 +16,18 @@ impl IpCollusionTracker {
     pub fn record_heads_up(&self, ip: &str, user1: UserId, user2: UserId) -> bool {
         let now = Utc::now();
         let cutoff = now - Duration::hours(24);
-        let (a, b) = if user1.0 < user2.0 { (user1, user2) } else { (user2, user1) };
+        let (a, b) = if user1 < user2 { (user1, user2) } else { (user2, user1) };
         let key = (ip.to_string(), a, b);
 
-        let mut timestamps = self.sessions.entry(key).or_insert_with(Vec::new);
+        let mut timestamps = self.sessions.entry(key).or_default();
         timestamps.retain(|&ts| ts >= cutoff);
         timestamps.push(now);
         timestamps.len() >= 5
+    }
+}
+
+impl Default for IpCollusionTracker {
+    fn default() -> Self {
+        Self::new()
     }
 }
