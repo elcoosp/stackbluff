@@ -1,44 +1,37 @@
 use async_trait::async_trait;
-use sb_contracts::user_resolution::{UserResolutionService, UserResolutionError};
-use sb_shared_types::ids::UserId;
+use sb_contracts::user_resolution::{UserResolutionError, UserResolutionService};
+use sb_shared_types::UserId;
+use std::sync::Arc;
 use moka::sync::Cache;
 use uuid::Uuid;
-use tracing::warn;
 
-pub struct CachedUserResolutionService {
-    cache: Cache<String, UserId>,
+pub struct InMemoryUserResolutionService {
+    cache: Arc<Cache<String, UserId>>,
 }
 
-impl CachedUserResolutionService {
+impl Default for InMemoryUserResolutionService {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl InMemoryUserResolutionService {
     pub fn new() -> Self {
         Self {
-            cache: Cache::builder()
-                .time_to_live(std::time::Duration::from_secs(60))
-                .build(),
-        }
-    }
-
-    fn resolve_inner(&self, telegram_id: &str) -> Option<UserId> {
-        if telegram_id.parse::<u64>().is_ok() {
-            Some(UserId::from_uuid(Uuid::new_v4()))
-        } else {
-            None
+            cache: Arc::new(Cache::new(10_000)),
         }
     }
 }
 
 #[async_trait]
-impl UserResolutionService for CachedUserResolutionService {
+impl UserResolutionService for InMemoryUserResolutionService {
     async fn resolve_telegram_user(&self, telegram_id: &str) -> Result<UserId, UserResolutionError> {
         if let Some(user_id) = self.cache.get(telegram_id) {
             return Ok(user_id);
         }
-        if let Some(user_id) = self.resolve_inner(telegram_id) {
-            self.cache.insert(telegram_id.to_string(), user_id);
-            Ok(user_id)
-        } else {
-            warn!("Telegram user {} not linked", telegram_id);
-            Err(UserResolutionError::TelegramNotLinked)
-        }
+        // Auto-create user for now
+        let user_id = UserId::from(Uuid::new_v4());
+        self.cache.insert(telegram_id.to_string(), user_id);
+        Ok(user_id)
     }
 }

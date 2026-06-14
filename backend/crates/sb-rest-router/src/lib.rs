@@ -144,6 +144,6 @@ fn bad_request(code: &str, msg: &str) -> (StatusCode, Json<ErrorResponse>) {
         }),
     )
 }
-mod oracle_routes;
+pub mod oracle_routes;
 pub use oracle_routes::oracle_router;
 

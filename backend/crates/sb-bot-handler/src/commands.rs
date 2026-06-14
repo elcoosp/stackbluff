@@ -124,7 +124,7 @@ pub async fn handle_challenge_command(
             return;
         }
     };
-    let challenged_id = match resolve_user_with_timeout(state, &challenged_telegram.as_ref().unwrap()).await {
+    let challenged_id = match resolve_user_with_timeout(state, challenged_telegram.as_ref().unwrap()).await {
         Ok(uid) => uid,
         Err(e) => {
             error!(request_id = %ctx.request_id, error = %e, "Challenged resolve failed");
@@ -164,7 +164,7 @@ pub async fn handle_challenge_command(
     let f1 = send_telegram_message_with_timeout(state, chat_id.0, message_text.clone(), None);
     let f2 = state.notification_service.send_telegram_message_to_user(challenged_id, message_text.clone(), None);
     let f3 = state.notification_service.send_telegram_message_to_user(challenger_id, message_text, None);
-    futures::join!(f1, f2, f3);
+    let _ = futures::join!(f1, f2, f3);
     info!(request_id = %ctx_with_user.request_id, user_id = %challenger_id, table_id = %table_id, challenged = %challenged_id, "Challenge table created");
 }
 
