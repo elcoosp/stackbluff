@@ -77,7 +77,7 @@ async fn process_batch(batch: &mut Vec<DbCommand>, db: &DatabaseConnection) {
         Err(e) => {
             error!("Failed to begin transaction: {}", e);
             for cmd in batch.drain(..) {
-                respond_err(cmd, PersistenceError::database(e.to_string()));
+                respond_err(cmd, PersistenceError::transient(e.to_string()));
             }
             return;
         }
@@ -93,7 +93,7 @@ async fn process_batch(batch: &mut Vec<DbCommand>, db: &DatabaseConnection) {
     if let Err(e) = txn.commit().await {
         error!("Transaction commit failed: {}", e);
         for (cmd, _) in batch.drain(..).zip(savepoint_results) {
-            respond_err(cmd, PersistenceError::database(e.to_string()));
+            respond_err(cmd, PersistenceError::transient(e.to_string()));
         }
     } else {
         for (cmd, result) in batch.drain(..).zip(savepoint_results) {
@@ -122,7 +122,7 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
     async {
         let create_sql = format!("SAVEPOINT {}", sp_name);
         if let Err(e) = conn.execute_unprepared(&create_sql).await {
-            return Err(PersistenceError::database(e.to_string()));
+            return Err(PersistenceError::transient(e.to_string()));
         }
 
         let result = match cmd {
@@ -186,15 +186,24 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                 use sea_orm::{ActiveModelTrait, Set};
                 let players: HandPlayers =
                     serde_json::from_value(players_json.clone()).map_err(|e| {
-                        PersistenceError::database(format!("Invalid players_json: {}", e))
+                        PersistenceError::constraint_violation(format!(
+                            "Invalid players_json: {}",
+                            e
+                        ))
                     })?;
                 let actions: HandActions =
                     serde_json::from_value(actions_json.clone()).map_err(|e| {
-                        PersistenceError::database(format!("Invalid actions_json: {}", e))
+                        PersistenceError::constraint_violation(format!(
+                            "Invalid actions_json: {}",
+                            e
+                        ))
                     })?;
                 let result: HandResult =
                     serde_json::from_value(result_json.clone()).map_err(|e| {
-                        PersistenceError::database(format!("Invalid result_json: {}", e))
+                        PersistenceError::constraint_violation(format!(
+                            "Invalid result_json: {}",
+                            e
+                        ))
                     })?;
                 let new_history = ActiveModel {
                     id: Set(uuid::Uuid::new_v4()),
@@ -233,25 +242,43 @@ fn map_db_error(e: sea_orm::DbErr) -> PersistenceError {
         sea_orm::DbErr::Query(qe) => {
             let msg = qe.to_string();
             if msg.contains("UNIQUE constraint") || msg.contains("CHECK constraint") {
-                PersistenceError::database(msg)
+                PersistenceError::constraint_violation(msg)
             } else if msg.contains("NOT NULL") || msg.contains("FOREIGN KEY") {
-                PersistenceError::database(msg)
+                PersistenceError::data_integrity(msg)
             } else {
-                PersistenceError::database(msg)
+                PersistenceError::transient(msg)
             }
         }
-        _ => PersistenceError::database(e.to_string()),
+        _ => PersistenceError::transient(e.to_string()),
     }
 }
 
 fn respond_ok(cmd: DbCommand, value: Option<String>) {
     match cmd {
         DbCommand::CreateUser { respond, .. } => {
-            let id = UserId::new(
-                value
-                    .and_then(|s| s.parse().ok())
-                    .unwrap_or_else(uuid::Uuid::new_v4),
-            );
+            let id = match value {
+                Some(ref s) => match s.parse::<uuid::Uuid>() {
+                    Ok(uuid) => UserId::new(uuid),
+                    Err(e) => {
+                        tracing::error!(
+                            uuid_str = %s,
+                            error = %e,
+                            "Failed to parse UUID returned from database insert — returning error"
+                        );
+                        let _ = respond.send(Err(PersistenceError::database(
+                            "insert returned invalid UUID".to_string(),
+                        )));
+                        return;
+                    }
+                },
+                None => {
+                    tracing::error!("CreateUser insert returned no UUID — returning error");
+                    let _ = respond.send(Err(PersistenceError::database(
+                        "insert returned no UUID".to_string(),
+                    )));
+                    return;
+                }
+            };
             let _ = respond.send(Ok(id));
         }
         DbCommand::GetUser { respond, .. } => {

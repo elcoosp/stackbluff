@@ -31,9 +31,9 @@ impl UserRepository for UserRepoImpl {
         };
         self.sender
             .send(cmd)
-            .map_err(|e| PersistenceError::database(e.to_string()))?;
+            .map_err(|e| PersistenceError::transient(e.to_string()))?;
         rx.await
-            .map_err(|e| PersistenceError::database(e.to_string()))?
+            .map_err(|e| PersistenceError::transient(e.to_string()))?
     }
 
     async fn get_user(&self, ctx: RequestContext, id: UserId) -> PersistenceResult<String> {
@@ -45,9 +45,9 @@ impl UserRepository for UserRepoImpl {
         };
         self.sender
             .send(cmd)
-            .map_err(|e| PersistenceError::database(e.to_string()))?;
+            .map_err(|e| PersistenceError::transient(e.to_string()))?;
         rx.await
-            .map_err(|e| PersistenceError::database(e.to_string()))?
+            .map_err(|e| PersistenceError::transient(e.to_string()))?
     }
 
     async fn update_chip_balance(
@@ -65,8 +65,8 @@ impl UserRepository for UserRepoImpl {
         };
         self.sender
             .send(cmd)
-            .map_err(|e| PersistenceError::database(e.to_string()))?;
+            .map_err(|e| PersistenceError::transient(e.to_string()))?;
         rx.await
-            .map_err(|e| PersistenceError::database(e.to_string()))?
+            .map_err(|e| PersistenceError::transient(e.to_string()))?
     }
 }

@@ -1,0 +1,4642 @@
+diff --git a/backend/Cargo.lock b/backend/Cargo.lock
+index a97185b..cc3d17e 100644
+--- a/backend/Cargo.lock
++++ b/backend/Cargo.lock
+@@ -119,6 +119,20 @@ version = "1.0.102"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
+ 
++[[package]]
++name = "aquamarine"
++version = "0.5.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "21cc1548309245035eb18aa7f0967da6bc65587005170c56e6ef2788a4cf3f4e"
++dependencies = [
++ "include_dir",
++ "itertools 0.10.5",
++ "proc-macro-error",
++ "proc-macro2",
++ "quote",
++ "syn 2.0.117",
++]
++
+ [[package]]
+ name = "arrayvec"
+ version = "0.7.6"
+@@ -354,25 +368,59 @@ version = "1.5.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
+ 
++[[package]]
++name = "axum"
++version = "0.7.9"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "edca88bc138befd0323b20752846e6587272d3b03b0343c8ea28a6f819e6e71f"
++dependencies = [
++ "async-trait",
++ "axum-core 0.4.5",
++ "bytes",
++ "futures-util",
++ "http 1.4.2",
++ "http-body 1.0.1",
++ "http-body-util",
++ "hyper 1.10.1",
++ "hyper-util",
++ "itoa",
++ "matchit 0.7.3",
++ "memchr",
++ "mime",
++ "percent-encoding",
++ "pin-project-lite",
++ "rustversion",
++ "serde",
++ "serde_json",
++ "serde_path_to_error",
++ "serde_urlencoded",
++ "sync_wrapper 1.0.2",
++ "tokio",
++ "tower 0.5.3",
++ "tower-layer",
++ "tower-service",
++ "tracing",
++]
++
+ [[package]]
+ name = "axum"
+ version = "0.8.9"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "31b698c5f9a010f6573133b09e0de5408834d0c82f8d7475a89fc1867a71cd90"
+ dependencies = [
+- "axum-core",
++ "axum-core 0.5.6",
+  "axum-macros",
+  "base64 0.22.1",
+  "bytes",
+  "form_urlencoded",
+  "futures-util",
+- "http",
+- "http-body",
++ "http 1.4.2",
++ "http-body 1.0.1",
+  "http-body-util",
+- "hyper",
++ "hyper 1.10.1",
+  "hyper-util",
+  "itoa",
+- "matchit",
++ "matchit 0.8.4",
+  "memchr",
+  "mime",
+  "percent-encoding",
+@@ -382,7 +430,7 @@ dependencies = [
+  "serde_path_to_error",
+  "serde_urlencoded",
+  "sha1 0.10.6",
+- "sync_wrapper",
++ "sync_wrapper 1.0.2",
+  "tokio",
+  "tokio-tungstenite",
+  "tower 0.5.3",
+@@ -391,6 +439,27 @@ dependencies = [
+  "tracing",
+ ]
+ 
++[[package]]
++name = "axum-core"
++version = "0.4.5"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "09f2bd6146b97ae3359fa0cc6d6b376d9539582c7b4220f041a33ec24c226199"
++dependencies = [
++ "async-trait",
++ "bytes",
++ "futures-util",
++ "http 1.4.2",
++ "http-body 1.0.1",
++ "http-body-util",
++ "mime",
++ "pin-project-lite",
++ "rustversion",
++ "sync_wrapper 1.0.2",
++ "tower-layer",
++ "tower-service",
++ "tracing",
++]
++
+ [[package]]
+ name = "axum-core"
+ version = "0.5.6"
+@@ -399,12 +468,12 @@ checksum = "08c78f31d7b1291f7ee735c1c6780ccde7785daae9a9206026862dab7d8792d1"
+ dependencies = [
+  "bytes",
+  "futures-core",
+- "http",
+- "http-body",
++ "http 1.4.2",
++ "http-body 1.0.1",
+  "http-body-util",
+  "mime",
+  "pin-project-lite",
+- "sync_wrapper",
++ "sync_wrapper 1.0.2",
+  "tower-layer",
+  "tower-service",
+  "tracing",
+@@ -430,13 +499,13 @@ dependencies = [
+  "anyhow",
+  "assert-json-diff",
+  "auto-future",
+- "axum",
++ "axum 0.8.9",
+  "bytes",
+  "bytesize",
+  "cookie",
+- "http",
++ "http 1.4.2",
+  "http-body-util",
+- "hyper",
++ "hyper 1.10.1",
+  "hyper-util",
+  "mime",
+  "pretty_assertions",
+@@ -489,6 +558,12 @@ dependencies = [
+  "serde",
+ ]
+ 
++[[package]]
++name = "bitflags"
++version = "1.3.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
++
+ [[package]]
+ name = "bitflags"
+ version = "2.13.0"
+@@ -697,7 +772,7 @@ dependencies = [
+  "anstream",
+  "anstyle",
+  "clap_lex",
+- "strsim",
++ "strsim 0.11.1",
+ ]
+ 
+ [[package]]
+@@ -765,6 +840,12 @@ dependencies = [
+  "tiny-keccak",
+ ]
+ 
++[[package]]
++name = "convert_case"
++version = "0.4.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "6245d59a3e82a7fc217c5828a6692dbc6dfb63a0c8c90495621f7b9d79704a0e"
++
+ [[package]]
+ name = "convert_case"
+ version = "0.10.0"
+@@ -784,6 +865,26 @@ dependencies = [
+  "version_check",
+ ]
+ 
++[[package]]
++name = "core-foundation"
++version = "0.9.4"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "91e195e091a93c46f7102ec7818a2aa394e1e1771c3ab4825963fa03e45afb8f"
++dependencies = [
++ "core-foundation-sys",
++ "libc",
++]
++
++[[package]]
++name = "core-foundation"
++version = "0.10.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "b2a6cd9ae233e7f62ba4e9353e81a88df7fc8a5987b8d445b4d90c879bd156f6"
++dependencies = [
++ "core-foundation-sys",
++ "libc",
++]
++
+ [[package]]
+ name = "core-foundation-sys"
+ version = "0.8.7"
+@@ -859,6 +960,15 @@ dependencies = [
+  "itertools 0.10.5",
+ ]
+ 
++[[package]]
++name = "crossbeam-channel"
++version = "0.5.15"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "82b8f8f868b36967f9606790d1903570de9ceaf870a7bf9fbbd3016d636a2cb2"
++dependencies = [
++ "crossbeam-utils",
++]
++
+ [[package]]
+ name = "crossbeam-deque"
+ version = "0.8.6"
+@@ -966,14 +1076,38 @@ dependencies = [
+  "syn 2.0.117",
+ ]
+ 
++[[package]]
++name = "darling"
++version = "0.13.4"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "a01d95850c592940db9b8194bc39f4bc0e89dee5c4265e4b1807c34a9aba453c"
++dependencies = [
++ "darling_core 0.13.4",
++ "darling_macro 0.13.4",
++]
++
+ [[package]]
+ name = "darling"
+ version = "0.20.11"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "fc7f46116c46ff9ab3eb1597a45688b6715c6e628b5c133e288e709a29bcb4ee"
+ dependencies = [
+- "darling_core",
+- "darling_macro",
++ "darling_core 0.20.11",
++ "darling_macro 0.20.11",
++]
++
++[[package]]
++name = "darling_core"
++version = "0.13.4"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "859d65a907b6852c9361e3185c862aae7fafd2887876799fa55f5f99dc40d610"
++dependencies = [
++ "fnv",
++ "ident_case",
++ "proc-macro2",
++ "quote",
++ "strsim 0.10.0",
++ "syn 1.0.109",
+ ]
+ 
+ [[package]]
+@@ -989,13 +1123,24 @@ dependencies = [
+  "syn 2.0.117",
+ ]
+ 
++[[package]]
++name = "darling_macro"
++version = "0.13.4"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "9c972679f83bdf9c42bd905396b6c3588a843a17f0f16dfcfa3e2c5d57441835"
++dependencies = [
++ "darling_core 0.13.4",
++ "quote",
++ "syn 1.0.109",
++]
++
+ [[package]]
+ name = "darling_macro"
+ version = "0.20.11"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "fc34b93ccb385b40dc71c6fceac4b2ad23662c7eeb248cf10d529b7e055b6ead"
+ dependencies = [
+- "darling_core",
++ "darling_core 0.20.11",
+  "quote",
+  "syn 2.0.117",
+ ]
+@@ -1027,6 +1172,19 @@ dependencies = [
+  "serde_core",
+ ]
+ 
++[[package]]
++name = "derive_more"
++version = "0.99.20"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "6edb4b64a43d977b8e99788fe3a04d483834fba1215a7e02caa415b626497f7f"
++dependencies = [
++ "convert_case 0.4.0",
++ "proc-macro2",
++ "quote",
++ "rustc_version",
++ "syn 2.0.117",
++]
++
+ [[package]]
+ name = "derive_more"
+ version = "2.1.1"
+@@ -1042,7 +1200,7 @@ version = "2.1.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "799a97264921d8623a957f6c3b9011f3b5492f557bbb7a5a19b7fa6d06ba8dcb"
+ dependencies = [
+- "convert_case",
++ "convert_case 0.10.0",
+  "proc-macro2",
+  "quote",
+  "rustc_version",
+@@ -1102,6 +1260,15 @@ version = "0.11.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "1435fa1053d8b2fbbe9be7e97eca7f33d37b28409959813daefc1446a14247f1"
+ 
++[[package]]
++name = "dptree"
++version = "0.3.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "d81175dab5ec79c30e0576df2ed2c244e1721720c302000bb321b107e82e265c"
++dependencies = [
++ "futures",
++]
++
+ [[package]]
+ name = "ecdsa"
+ version = "0.16.9"
+@@ -1170,12 +1337,31 @@ dependencies = [
+  "zeroize",
+ ]
+ 
++[[package]]
++name = "encoding_rs"
++version = "0.8.35"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "75030f3c4f45dafd7586dd6780965a8c7e8e285a5ecb86713e63a79c5b2766f3"
++dependencies = [
++ "cfg-if",
++]
++
+ [[package]]
+ name = "equivalent"
+ version = "1.0.2"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
+ 
++[[package]]
++name = "erasable"
++version = "1.3.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "437cfb75878119ed8265685c41a115724eae43fb7cc5a0bf0e4ecc3b803af1c4"
++dependencies = [
++ "autocfg",
++ "scopeguard",
++]
++
+ [[package]]
+ name = "errno"
+ version = "0.3.14"
+@@ -1264,6 +1450,21 @@ version = "0.2.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
+ 
++[[package]]
++name = "foreign-types"
++version = "0.3.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "f6f339eb8adc052cd2ca78910fda869aefa38d22d5cb648e6485e4d3fc06f3b1"
++dependencies = [
++ "foreign-types-shared",
++]
++
++[[package]]
++name = "foreign-types-shared"
++version = "0.1.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "00b0228411908ca8685dba7fc2cdd70ec9990a6e753e89b6ac91a84c40fbaf4b"
++
+ [[package]]
+ name = "form_urlencoded"
+ version = "1.2.2"
+@@ -1452,6 +1653,25 @@ dependencies = [
+  "subtle",
+ ]
+ 
++[[package]]
++name = "h2"
++version = "0.3.27"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "0beca50380b1fc32983fc1cb4587bfa4bb9e78fc259aad4a0032d2080309222d"
++dependencies = [
++ "bytes",
++ "fnv",
++ "futures-core",
++ "futures-sink",
++ "futures-util",
++ "http 0.2.12",
++ "indexmap",
++ "slab",
++ "tokio",
++ "tokio-util",
++ "tracing",
++]
++
+ [[package]]
+ name = "half"
+ version = "2.7.1"
+@@ -1568,6 +1788,17 @@ dependencies = [
+  "digest 0.11.3",
+ ]
+ 
++[[package]]
++name = "http"
++version = "0.2.12"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "601cbb57e577e2f5ef5be8e7b83f0f63994f25aa94d673e54a92d5c516d101f1"
++dependencies = [
++ "bytes",
++ "fnv",
++ "itoa",
++]
++
+ [[package]]
+ name = "http"
+ version = "1.4.2"
+@@ -1578,6 +1809,17 @@ dependencies = [
+  "itoa",
+ ]
+ 
++[[package]]
++name = "http-body"
++version = "0.4.6"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "7ceab25649e9960c0311ea418d17bee82c0dcec1bd053b5f9a66e265a693bed2"
++dependencies = [
++ "bytes",
++ "http 0.2.12",
++ "pin-project-lite",
++]
++
+ [[package]]
+ name = "http-body"
+ version = "1.0.1"
+@@ -1585,7 +1827,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "1efedce1fb8e6913f23e0c92de8e62cd5b772a67e7b3946df930a62566c93184"
+ dependencies = [
+  "bytes",
+- "http",
++ "http 1.4.2",
+ ]
+ 
+ [[package]]
+@@ -1596,8 +1838,8 @@ checksum = "b021d93e26becf5dc7e1b75b1bed1fd93124b374ceb73f43d4d4eafec896a64a"
+ dependencies = [
+  "bytes",
+  "futures-core",
+- "http",
+- "http-body",
++ "http 1.4.2",
++ "http-body 1.0.1",
+  "pin-project-lite",
+ ]
+ 
+@@ -1622,6 +1864,30 @@ dependencies = [
+  "typenum",
+ ]
+ 
++[[package]]
++name = "hyper"
++version = "0.14.32"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "41dfc780fdec9373c01bae43289ea34c972e40ee3c9f6b3c8801a35f35586ce7"
++dependencies = [
++ "bytes",
++ "futures-channel",
++ "futures-core",
++ "futures-util",
++ "h2",
++ "http 0.2.12",
++ "http-body 0.4.6",
++ "httparse",
++ "httpdate",
++ "itoa",
++ "pin-project-lite",
++ "socket2 0.5.10",
++ "tokio",
++ "tower-service",
++ "tracing",
++ "want",
++]
++
+ [[package]]
+ name = "hyper"
+ version = "1.10.1"
+@@ -1632,8 +1898,8 @@ dependencies = [
+  "bytes",
+  "futures-channel",
+  "futures-core",
+- "http",
+- "http-body",
++ "http 1.4.2",
++ "http-body 1.0.1",
+  "httparse",
+  "httpdate",
+  "itoa",
+@@ -1643,6 +1909,19 @@ dependencies = [
+  "want",
+ ]
+ 
++[[package]]
++name = "hyper-tls"
++version = "0.5.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "d6183ddfa99b85da61a140bea0efc93fdf56ceaa041b37d553518030827f9905"
++dependencies = [
++ "bytes",
++ "hyper 0.14.32",
++ "native-tls",
++ "tokio",
++ "tokio-native-tls",
++]
++
+ [[package]]
+ name = "hyper-util"
+ version = "0.1.20"
+@@ -1652,12 +1931,12 @@ dependencies = [
+  "bytes",
+  "futures-channel",
+  "futures-util",
+- "http",
+- "http-body",
+- "hyper",
++ "http 1.4.2",
++ "http-body 1.0.1",
++ "hyper 1.10.1",
+  "libc",
+  "pin-project-lite",
+- "socket2",
++ "socket2 0.6.4",
+  "tokio",
+  "tower-service",
+  "tracing",
+@@ -1802,6 +2081,25 @@ dependencies = [
+  "icu_properties",
+ ]
+ 
++[[package]]
++name = "include_dir"
++version = "0.7.4"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "923d117408f1e49d914f1a379a309cffe4f18c05cf4e3d12e613a15fc81bd0dd"
++dependencies = [
++ "include_dir_macros",
++]
++
++[[package]]
++name = "include_dir_macros"
++version = "0.7.4"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "7cab85a7ed0bd5f0e76d93846e0147172bed2e2d3f859bcc33a8d9699cad1a75"
++dependencies = [
++ "proc-macro2",
++ "quote",
++]
++
+ [[package]]
+ name = "indexmap"
+ version = "2.14.0"
+@@ -1823,6 +2121,12 @@ dependencies = [
+  "rustversion",
+ ]
+ 
++[[package]]
++name = "ipnet"
++version = "2.12.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "d98f6fed1fde3f8c21bc40a1abb88dd75e67924f9cffc3ef95607bad8017f8e2"
++
+ [[package]]
+ name = "is-terminal"
+ version = "0.4.17"
+@@ -2041,6 +2345,12 @@ dependencies = [
+  "regex-automata",
+ ]
+ 
++[[package]]
++name = "matchit"
++version = "0.7.3"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "0e7465ac9959cc2b1404e8e2367b43684a6d13790fe23056cc8c6c5a6b7bcb94"
++
+ [[package]]
+ name = "matchit"
+ version = "0.8.4"
+@@ -2076,6 +2386,7 @@ dependencies = [
+ name = "migration"
+ version = "0.1.0"
+ dependencies = [
++ "async-trait",
+  "sb-db-entities",
+  "sea-orm-migration",
+  "tokio",
+@@ -2087,6 +2398,16 @@ version = "0.3.17"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "6877bb514081ee2a7ff5ef9de3281f14a4dd4bceac4c09388074a6b5df8a139a"
+ 
++[[package]]
++name = "mime_guess"
++version = "2.0.5"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "f7c44f8e672c00fe5308fa235f821cb4198414e1c77935c1ab6948d3fd78550e"
++dependencies = [
++ "mime",
++ "unicase",
++]
++
+ [[package]]
+ name = "mio"
+ version = "1.2.1"
+@@ -2124,13 +2445,47 @@ dependencies = [
+  "syn 2.0.117",
+ ]
+ 
++[[package]]
++name = "moka"
++version = "0.12.15"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "957228ad12042ee839f93c8f257b62b4c0ab5eaae1d4fa60de53b27c9d7c5046"
++dependencies = [
++ "crossbeam-channel",
++ "crossbeam-epoch",
++ "crossbeam-utils",
++ "equivalent",
++ "parking_lot",
++ "portable-atomic",
++ "smallvec",
++ "tagptr",
++ "uuid",
++]
++
++[[package]]
++name = "native-tls"
++version = "0.2.18"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "465500e14ea162429d264d44189adc38b199b62b1c21eea9f69e4b73cb03bbf2"
++dependencies = [
++ "libc",
++ "log",
++ "openssl",
++ "openssl-probe",
++ "openssl-sys",
++ "schannel",
++ "security-framework",
++ "security-framework-sys",
++ "tempfile",
++]
++
+ [[package]]
+ name = "nix"
+ version = "0.29.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "71e2746dc3a24dd78b3cfcb7be93368c6de9963d30f43a6a73998a9cf4b17b46"
+ dependencies = [
+- "bitflags",
++ "bitflags 2.13.0",
+  "cfg-if",
+  "cfg_aliases",
+  "libc",
+@@ -2236,13 +2591,56 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "d6790f58c7ff633d8771f42965289203411a5e5c68388703c06e14f24770b41e"
+ 
+ [[package]]
+-name = "ordered-float"
+-version = "4.6.0"
++name = "openssl"
++version = "0.10.81"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "7bb71e1b3fa6ca1c61f383464aaf2bb0e2f8e772a1f01d486832464de363b951"
++checksum = "77823a27f0babb03091cb9ed9ef80af3b39dbc82f97e8fa530374b7dafd87a45"
+ dependencies = [
+- "num-traits",
+-]
++ "bitflags 2.13.0",
++ "cfg-if",
++ "foreign-types",
++ "libc",
++ "openssl-macros",
++ "openssl-sys",
++]
++
++[[package]]
++name = "openssl-macros"
++version = "0.1.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "a948666b637a0f465e8564c73e89d4dde00d72d4d473cc972f390fc3dcee7d9c"
++dependencies = [
++ "proc-macro2",
++ "quote",
++ "syn 2.0.117",
++]
++
++[[package]]
++name = "openssl-probe"
++version = "0.2.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "7c87def4c32ab89d880effc9e097653c8da5d6ef28e6b539d313baaacfbafcbe"
++
++[[package]]
++name = "openssl-sys"
++version = "0.9.117"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "b47e7e6bb2c38cd930d25a23b40fa52e068c10e85f3e03a7f5ba5aaca5713695"
++dependencies = [
++ "cc",
++ "libc",
++ "pkg-config",
++ "vcpkg",
++]
++
++[[package]]
++name = "ordered-float"
++version = "4.6.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "7bb71e1b3fa6ca1c61f383464aaf2bb0e2f8e772a1f01d486832464de363b951"
++dependencies = [
++ "num-traits",
++]
+ 
+ [[package]]
+ name = "ouroboros"
+@@ -2355,6 +2753,26 @@ dependencies = [
+  "serde",
+ ]
+ 
++[[package]]
++name = "pin-project"
++version = "1.1.13"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "2466b2336ed02bcdca6b294417127b90ec92038d1d5c4fbeac971a922e0e0924"
++dependencies = [
++ "pin-project-internal",
++]
++
++[[package]]
++name = "pin-project-internal"
++version = "1.1.13"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "c96395f0a926bc13b1c17622aaddda1ecb55d49c8f1bf9777e4d877800a43f8b"
++dependencies = [
++ "proc-macro2",
++ "quote",
++ "syn 2.0.117",
++]
++
+ [[package]]
+ name = "pin-project-lite"
+ version = "0.2.17"
+@@ -2426,6 +2844,12 @@ dependencies = [
+  "regex",
+ ]
+ 
++[[package]]
++name = "portable-atomic"
++version = "1.13.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "c33a9471896f1c69cecef8d20cbe2f7accd12527ce60845ff44c153bb2a21b49"
++
+ [[package]]
+ name = "potential_utf"
+ version = "0.1.5"
+@@ -2514,6 +2938,30 @@ dependencies = [
+  "toml_edit",
+ ]
+ 
++[[package]]
++name = "proc-macro-error"
++version = "1.0.4"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "da25490ff9892aab3fcf7c36f08cfb902dd3e71ca0f9f9517bea02a73a5ce38c"
++dependencies = [
++ "proc-macro-error-attr",
++ "proc-macro2",
++ "quote",
++ "syn 1.0.109",
++ "version_check",
++]
++
++[[package]]
++name = "proc-macro-error-attr"
++version = "1.0.4"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "a1be40180e52ecc98ad80b184934baf3d0d29f979574e439af5a55274b35f869"
++dependencies = [
++ "proc-macro2",
++ "quote",
++ "version_check",
++]
++
+ [[package]]
+ name = "proc-macro-error-attr2"
+ version = "2.0.0"
+@@ -2701,13 +3149,22 @@ dependencies = [
+  "crossbeam-utils",
+ ]
+ 
++[[package]]
++name = "rc-box"
++version = "1.3.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "897fecc9fac6febd4408f9e935e86df739b0023b625e610e0357535b9c8adad0"
++dependencies = [
++ "erasable",
++]
++
+ [[package]]
+ name = "redox_syscall"
+ version = "0.5.18"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "ed2bf2547551a7053d6fdfafda3f938979645c44812fbfcda098faae3f1a362d"
+ dependencies = [
+- "bitflags",
++ "bitflags 2.13.0",
+ ]
+ 
+ [[package]]
+@@ -2748,13 +3205,56 @@ dependencies = [
+  "bytecheck",
+ ]
+ 
++[[package]]
++name = "reqwest"
++version = "0.11.27"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "dd67538700a17451e7cba03ac727fb961abb7607553461627b97de0b89cf4a62"
++dependencies = [
++ "base64 0.21.7",
++ "bytes",
++ "encoding_rs",
++ "futures-core",
++ "futures-util",
++ "h2",
++ "http 0.2.12",
++ "http-body 0.4.6",
++ "hyper 0.14.32",
++ "hyper-tls",
++ "ipnet",
++ "js-sys",
++ "log",
++ "mime",
++ "mime_guess",
++ "native-tls",
++ "once_cell",
++ "percent-encoding",
++ "pin-project-lite",
++ "rustls-pemfile",
++ "serde",
++ "serde_json",
++ "serde_urlencoded",
++ "sync_wrapper 0.1.2",
++ "system-configuration",
++ "tokio",
++ "tokio-native-tls",
++ "tokio-util",
++ "tower-service",
++ "url",
++ "wasm-bindgen",
++ "wasm-bindgen-futures",
++ "wasm-streams",
++ "web-sys",
++ "winreg",
++]
++
+ [[package]]
+ name = "reserve-port"
+ version = "2.4.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "94070964579245eb2f76e62a7668fe87bd9969ed6c41256f3bf614e3323dd3cc"
+ dependencies = [
+- "thiserror",
++ "thiserror 2.0.18",
+ ]
+ 
+ [[package]]
+@@ -2839,10 +3339,10 @@ dependencies = [
+  "bytes",
+  "futures-core",
+  "futures-util",
+- "http",
++ "http 1.4.2",
+  "mime",
+  "rand 0.9.4",
+- "thiserror",
++ "thiserror 2.0.18",
+ ]
+ 
+ [[package]]
+@@ -2877,7 +3377,7 @@ version = "1.1.4"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "b6fe4565b9518b83ef4f91bb47ce29620ca828bd32cb7e408f0062e9930ba190"
+ dependencies = [
+- "bitflags",
++ "bitflags 2.13.0",
+  "errno",
+  "libc",
+  "linux-raw-sys",
+@@ -2898,6 +3398,15 @@ dependencies = [
+  "zeroize",
+ ]
+ 
++[[package]]
++name = "rustls-pemfile"
++version = "1.0.4"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "1c74cae0a4cf6ccbbf5f359f08efdf8ee7e1dc532573bf0db71968cb56b1448c"
++dependencies = [
++ "base64 0.21.7",
++]
++
+ [[package]]
+ name = "rustls-pki-types"
+ version = "1.14.1"
+@@ -2944,7 +3453,7 @@ name = "sb-auth"
+ version = "0.1.0"
+ dependencies = [
+  "async-trait",
+- "axum",
++ "axum 0.8.9",
+  "chrono",
+  "jsonwebtoken",
+  "sb-contracts",
+@@ -2957,6 +3466,49 @@ dependencies = [
+  "uuid",
+ ]
+ 
++[[package]]
++name = "sb-bot-handler"
++version = "0.1.0"
++dependencies = [
++ "anyhow",
++ "axum 0.8.9",
++ "chrono",
++ "futures",
++ "mockall",
++ "parking_lot",
++ "sb-contracts",
++ "sb-shared-types",
++ "serde",
++ "serde_json",
++ "teloxide",
++ "thiserror 2.0.18",
++ "tokio",
++ "tracing",
++ "url",
++ "uuid",
++]
++
++[[package]]
++name = "sb-club"
++version = "0.1.0"
++dependencies = [
++ "async-trait",
++ "axum 0.8.9",
++ "chrono",
++ "migration",
++ "parking_lot",
++ "sb-contracts",
++ "sb-db-repos",
++ "sb-shared-types",
++ "sea-orm",
++ "serde",
++ "serde_json",
++ "thiserror 2.0.18",
++ "tokio",
++ "tracing",
++ "uuid",
++]
++
+ [[package]]
+ name = "sb-contracts"
+ version = "0.1.0"
+@@ -2967,7 +3519,7 @@ dependencies = [
+  "sb-shared-types",
+  "serde",
+  "serde_json",
+- "thiserror",
++ "thiserror 2.0.18",
+  "tokio",
+  "uuid",
+ ]
+@@ -2977,7 +3529,7 @@ name = "sb-db-entities"
+ version = "0.1.0"
+ dependencies = [
+  "chrono",
+- "derive_more",
++ "derive_more 2.1.1",
+  "migration",
+  "sb-contracts",
+  "sb-shared-types",
+@@ -2995,7 +3547,7 @@ version = "0.1.0"
+ dependencies = [
+  "async-trait",
+  "chrono",
+- "derive_more",
++ "derive_more 2.1.1",
+  "futures",
+  "once_cell",
+  "sb-contracts",
+@@ -3006,7 +3558,7 @@ dependencies = [
+  "serde_json",
+  "sqlx",
+  "tempfile",
+- "thiserror",
++ "thiserror 2.0.18",
+  "tokio",
+  "tracing",
+  "uuid",
+@@ -3021,7 +3573,7 @@ dependencies = [
+  "sb-shared-types",
+  "serde",
+  "strum",
+- "thiserror",
++ "thiserror 2.0.18",
+  "tracing",
+  "uuid",
+ ]
+@@ -3037,7 +3589,7 @@ dependencies = [
+  "sb-shared-types",
+  "serde",
+  "serde_json",
+- "thiserror",
++ "thiserror 2.0.18",
+  "tokio",
+  "tracing",
+  "uuid",
+@@ -3049,7 +3601,7 @@ version = "0.1.0"
+ dependencies = [
+  "anyhow",
+  "async-trait",
+- "axum",
++ "axum 0.8.9",
+  "axum-test",
+  "chrono",
+  "jsonwebtoken",
+@@ -3061,7 +3613,7 @@ dependencies = [
+  "sb-table-registry",
+  "serde",
+  "serde_json",
+- "thiserror",
++ "thiserror 2.0.18",
+  "tokio",
+  "tower 0.4.13",
+  "tower-http",
+@@ -3070,13 +3622,38 @@ dependencies = [
+  "uuid",
+ ]
+ 
++[[package]]
++name = "sb-server"
++version = "0.1.0"
++dependencies = [
++ "async-trait",
++ "axum 0.8.9",
++ "migration",
++ "moka",
++ "parking_lot",
++ "sb-bot-handler",
++ "sb-club",
++ "sb-contracts",
++ "sb-db-repos",
++ "sb-oracle",
++ "sb-rest-router",
++ "sb-shared-types",
++ "sea-orm",
++ "sea-orm-migration",
++ "serde_json",
++ "tokio",
++ "tracing",
++ "tracing-subscriber",
++ "uuid",
++]
++
+ [[package]]
+ name = "sb-shared-types"
+ version = "0.1.0"
+ dependencies = [
+- "derive_more",
++ "derive_more 2.1.1",
+  "serde",
+- "thiserror",
++ "thiserror 2.0.18",
+  "tracing",
+  "uuid",
+ ]
+@@ -3091,7 +3668,7 @@ dependencies = [
+  "sb-shared-types",
+  "sb-ws-handler",
+  "sb-ws-messages",
+- "thiserror",
++ "thiserror 2.0.18",
+  "tokio",
+  "tracing",
+  "uuid",
+@@ -3101,7 +3678,7 @@ dependencies = [
+ name = "sb-ws-handler"
+ version = "0.1.0"
+ dependencies = [
+- "axum",
++ "axum 0.8.9",
+  "futures",
+  "sb-auth",
+  "sb-shared-types",
+@@ -3119,6 +3696,15 @@ dependencies = [
+  "serde",
+ ]
+ 
++[[package]]
++name = "schannel"
++version = "0.1.29"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "91c1b7e4904c873ef0710c1f407dde2e6287de2bebc1bbbf7d430bb7cbffd939"
++dependencies = [
++ "windows-sys 0.61.2",
++]
++
+ [[package]]
+ name = "scopeguard"
+ version = "1.2.0"
+@@ -3148,7 +3734,7 @@ dependencies = [
+  "async-trait",
+  "bigdecimal",
+  "chrono",
+- "derive_more",
++ "derive_more 2.1.1",
+  "futures-util",
+  "itertools 0.14.0",
+  "log",
+@@ -3166,7 +3752,7 @@ dependencies = [
+  "sqlx",
+  "sqlx-core",
+  "strum",
+- "thiserror",
++ "thiserror 2.0.18",
+  "time",
+  "tracing",
+  "url",
+@@ -3182,7 +3768,7 @@ checksum = "5c2eee8405f16c1f337fe3a83389361caea83c928d14dbd666a480407072c365"
+ dependencies = [
+  "arrow",
+  "sea-query",
+- "thiserror",
++ "thiserror 2.0.18",
+ ]
+ 
+ [[package]]
+@@ -3255,12 +3841,12 @@ version = "1.0.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "a0b0f466921cdd3cf4b89d5c3ac2173dba89a873ab395b123a645de181ec7537"
+ dependencies = [
+- "darling",
++ "darling 0.20.11",
+  "heck 0.4.1",
+  "proc-macro2",
+  "quote",
+  "syn 2.0.117",
+- "thiserror",
++ "thiserror 2.0.18",
+ ]
+ 
+ [[package]]
+@@ -3327,6 +3913,29 @@ dependencies = [
+  "zeroize",
+ ]
+ 
++[[package]]
++name = "security-framework"
++version = "3.7.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "b7f4bc775c73d9a02cde8bf7b2ec4c9d12743edf609006c7facc23998404cd1d"
++dependencies = [
++ "bitflags 2.13.0",
++ "core-foundation 0.10.1",
++ "core-foundation-sys",
++ "libc",
++ "security-framework-sys",
++]
++
++[[package]]
++name = "security-framework-sys"
++version = "2.17.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "6ce2691df843ecc5d231c0b14ece2acc3efb62c0a398c7e1d875f3983ce020e3"
++dependencies = [
++ "core-foundation-sys",
++ "libc",
++]
++
+ [[package]]
+ name = "semver"
+ version = "1.0.28"
+@@ -3399,6 +4008,28 @@ dependencies = [
+  "serde",
+ ]
+ 
++[[package]]
++name = "serde_with"
++version = "1.14.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "678b5a069e50bf00ecd22d0cd8ddf7c236f68581b03db652061ed5eb13a312ff"
++dependencies = [
++ "serde",
++ "serde_with_macros",
++]
++
++[[package]]
++name = "serde_with_macros"
++version = "1.5.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "e182d6ec6f05393cc0e5ed1bf81ad6db3a8feedf8ee515ecdd369809bcce8082"
++dependencies = [
++ "darling 0.13.4",
++ "proc-macro2",
++ "quote",
++ "syn 1.0.109",
++]
++
+ [[package]]
+ name = "sha1"
+ version = "0.10.6"
+@@ -3458,6 +4089,16 @@ version = "2.0.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba"
+ 
++[[package]]
++name = "signal-hook-registry"
++version = "1.4.8"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "c4db69cba1110affc0e9f7bcd48bbf87b3f4fc7c61fc9155afd4c469eb3d6c1b"
++dependencies = [
++ "errno",
++ "libc",
++]
++
+ [[package]]
+ name = "signature"
+ version = "2.2.0"
+@@ -3482,7 +4123,7 @@ checksum = "0d585997b0ac10be3c5ee635f1bab02d512760d14b7c468801ac8a01d9ae5f1d"
+ dependencies = [
+  "num-bigint",
+  "num-traits",
+- "thiserror",
++ "thiserror 2.0.18",
+  "time",
+ ]
+ 
+@@ -3501,6 +4142,16 @@ dependencies = [
+  "serde",
+ ]
+ 
++[[package]]
++name = "socket2"
++version = "0.5.10"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "e22376abed350d73dd1cd119b57ffccad95b4e585a7cda43e286245ce23c0678"
++dependencies = [
++ "libc",
++ "windows-sys 0.52.0",
++]
++
+ [[package]]
+ name = "socket2"
+ version = "0.6.4"
+@@ -3573,7 +4224,7 @@ dependencies = [
+  "serde_json",
+  "sha2 0.10.9",
+  "smallvec",
+- "thiserror",
++ "thiserror 2.0.18",
+  "time",
+  "tokio",
+  "tokio-stream",
+@@ -3617,7 +4268,7 @@ dependencies = [
+  "sqlx-postgres",
+  "sqlx-sqlite",
+  "syn 2.0.117",
+- "thiserror",
++ "thiserror 2.0.18",
+  "tokio",
+  "url",
+ ]
+@@ -3628,7 +4279,7 @@ version = "0.9.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "90b8020fe17c5f2c245bfa2505d7ef59c5604839527c740266ad2214acebea27"
+ dependencies = [
+- "bitflags",
++ "bitflags 2.13.0",
+  "byteorder",
+  "bytes",
+  "chrono",
+@@ -3646,7 +4297,7 @@ dependencies = [
+  "sha1 0.11.0",
+  "sha2 0.11.0",
+  "sqlx-core",
+- "thiserror",
++ "thiserror 2.0.18",
+  "time",
+  "tracing",
+  "uuid",
+@@ -3660,7 +4311,7 @@ checksum = "87a2bdd6e83f6b3ea525ca9fee568030508b58355a43d0b2c1674d5f79dcd65e"
+ dependencies = [
+  "atoi",
+  "base64 0.22.1",
+- "bitflags",
++ "bitflags 2.13.0",
+  "byteorder",
+  "chrono",
+  "crc",
+@@ -3684,7 +4335,7 @@ dependencies = [
+  "smallvec",
+  "sqlx-core",
+  "stringprep",
+- "thiserror",
++ "thiserror 2.0.18",
+  "time",
+  "tracing",
+  "uuid",
+@@ -3711,7 +4362,7 @@ dependencies = [
+  "percent-encoding",
+  "serde",
+  "sqlx-core",
+- "thiserror",
++ "thiserror 2.0.18",
+  "time",
+  "tracing",
+  "url",
+@@ -3741,6 +4392,12 @@ dependencies = [
+  "unicode-properties",
+ ]
+ 
++[[package]]
++name = "strsim"
++version = "0.10.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
++
+ [[package]]
+ name = "strsim"
+ version = "0.11.1"
+@@ -3796,6 +4453,12 @@ dependencies = [
+  "unicode-ident",
+ ]
+ 
++[[package]]
++name = "sync_wrapper"
++version = "0.1.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "2047c6ded9c721764247e62cd3b03c09ffc529b2ba5b10ec482ae507a4a70160"
++
+ [[package]]
+ name = "sync_wrapper"
+ version = "1.0.2"
+@@ -3813,12 +4476,108 @@ dependencies = [
+  "syn 2.0.117",
+ ]
+ 
++[[package]]
++name = "system-configuration"
++version = "0.5.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "ba3a3adc5c275d719af8cb4272ea1c4a6d668a777f37e115f6d11ddbc1c8e0e7"
++dependencies = [
++ "bitflags 1.3.2",
++ "core-foundation 0.9.4",
++ "system-configuration-sys",
++]
++
++[[package]]
++name = "system-configuration-sys"
++version = "0.5.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "a75fb188eb626b924683e3b95e3a48e63551fcfb51949de2f06a9d91dbee93c9"
++dependencies = [
++ "core-foundation-sys",
++ "libc",
++]
++
++[[package]]
++name = "tagptr"
++version = "0.2.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "7b2093cf4c8eb1e67749a6762251bc9cd836b6fc171623bd0a9d324d37af2417"
++
++[[package]]
++name = "take_mut"
++version = "0.2.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "f764005d11ee5f36500a149ace24e00e3da98b0158b3e2d53a7495660d3f4d60"
++
++[[package]]
++name = "takecell"
++version = "0.1.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "20f34339676cdcab560c9a82300c4c2581f68b9369aedf0fae86f2ff9565ff3e"
++
+ [[package]]
+ name = "tap"
+ version = "1.0.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
+ 
++[[package]]
++name = "teloxide"
++version = "0.13.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "5f79dd283eb21b90451c03fa7c7f83b9985130efb876b33bad89a2c208ccbc16"
++dependencies = [
++ "aquamarine",
++ "axum 0.7.9",
++ "bytes",
++ "derive_more 0.99.20",
++ "dptree",
++ "either",
++ "futures",
++ "log",
++ "mime",
++ "pin-project",
++ "rand 0.8.6",
++ "serde",
++ "serde_json",
++ "teloxide-core",
++ "thiserror 1.0.69",
++ "tokio",
++ "tokio-stream",
++ "tokio-util",
++ "url",
++]
++
++[[package]]
++name = "teloxide-core"
++version = "0.10.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "9e1642a7ef10e7af63b8298c8d13c0f986d4fc646d42649ff060359607f62f69"
++dependencies = [
++ "bitflags 1.3.2",
++ "bytes",
++ "chrono",
++ "derive_more 0.99.20",
++ "either",
++ "futures",
++ "log",
++ "mime",
++ "once_cell",
++ "pin-project",
++ "rc-box",
++ "reqwest",
++ "serde",
++ "serde_json",
++ "serde_with",
++ "take_mut",
++ "takecell",
++ "thiserror 1.0.69",
++ "tokio",
++ "tokio-util",
++ "url",
++ "uuid",
++]
++
+ [[package]]
+ name = "tempfile"
+ version = "3.27.0"
+@@ -3838,13 +4597,33 @@ version = "0.5.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "8f50febec83f5ee1df3015341d8bd429f2d1cc62bcba7ea2076759d315084683"
+ 
++[[package]]
++name = "thiserror"
++version = "1.0.69"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "b6aaf5339b578ea85b50e080feb250a3e8ae8cfcdff9a461c9ec2904bc923f52"
++dependencies = [
++ "thiserror-impl 1.0.69",
++]
++
+ [[package]]
+ name = "thiserror"
+ version = "2.0.18"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "4288b5bcbc7920c07a1149a35cf9590a2aa808e0bc1eafaade0b80947865fbc4"
+ dependencies = [
+- "thiserror-impl",
++ "thiserror-impl 2.0.18",
++]
++
++[[package]]
++name = "thiserror-impl"
++version = "1.0.69"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "4fee6c4efc90059e10f81e6d42c60a18f76588c3d74cb83a0b242a2b6c7504c1"
++dependencies = [
++ "proc-macro2",
++ "quote",
++ "syn 2.0.117",
+ ]
+ 
+ [[package]]
+@@ -3952,7 +4731,8 @@ dependencies = [
+  "libc",
+  "mio",
+  "pin-project-lite",
+- "socket2",
++ "signal-hook-registry",
++ "socket2 0.6.4",
+  "tokio-macros",
+  "windows-sys 0.61.2",
+ ]
+@@ -3968,6 +4748,16 @@ dependencies = [
+  "syn 2.0.117",
+ ]
+ 
++[[package]]
++name = "tokio-native-tls"
++version = "0.3.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "bbae76ab933c85776efabc971569dd6119c580d8f5d448769dec1764bf796ef2"
++dependencies = [
++ "native-tls",
++ "tokio",
++]
++
+ [[package]]
+ name = "tokio-stream"
+ version = "0.1.18"
+@@ -3991,6 +4781,19 @@ dependencies = [
+  "tungstenite",
+ ]
+ 
++[[package]]
++name = "tokio-util"
++version = "0.7.18"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "9ae9cec805b01e8fc3fd2fe289f89149a9b66dd16786abd8b19cfa7b48cb0098"
++dependencies = [
++ "bytes",
++ "futures-core",
++ "futures-sink",
++ "pin-project-lite",
++ "tokio",
++]
++
+ [[package]]
+ name = "toml_datetime"
+ version = "1.1.1+spec-1.1.0"
+@@ -4041,7 +4844,7 @@ dependencies = [
+  "futures-core",
+  "futures-util",
+  "pin-project-lite",
+- "sync_wrapper",
++ "sync_wrapper 1.0.2",
+  "tokio",
+  "tower-layer",
+  "tower-service",
+@@ -4055,10 +4858,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "1e9cd434a998747dd2c4276bc96ee2e0c7a2eadf3cae88e52be55a05fa9053f5"
+ dependencies = [
+  "base64 0.21.7",
+- "bitflags",
++ "bitflags 2.13.0",
+  "bytes",
+- "http",
+- "http-body",
++ "http 1.4.2",
++ "http-body 1.0.1",
+  "http-body-util",
+  "mime",
+  "pin-project-lite",
+@@ -4154,12 +4957,12 @@ checksum = "6c01152af293afb9c7c2a57e4b559c5620b421f6d133261c60dd2d0cdb38e6b8"
+ dependencies = [
+  "bytes",
+  "data-encoding",
+- "http",
++ "http 1.4.2",
+  "httparse",
+  "log",
+  "rand 0.9.4",
+  "sha1 0.10.6",
+- "thiserror",
++ "thiserror 2.0.18",
+ ]
+ 
+ [[package]]
+@@ -4168,6 +4971,12 @@ version = "1.20.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20"
+ 
++[[package]]
++name = "unicase"
++version = "2.9.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "dbc4bc3a9f746d862c45cb89d705aa10f187bb96c76001afab07a0d35ce60142"
++
+ [[package]]
+ name = "unicode-bidi"
+ version = "0.3.18"
+@@ -4223,6 +5032,7 @@ dependencies = [
+  "idna",
+  "percent-encoding",
+  "serde",
++ "serde_derive",
+ ]
+ 
+ [[package]]
+@@ -4324,6 +5134,16 @@ dependencies = [
+  "wasm-bindgen-shared",
+ ]
+ 
++[[package]]
++name = "wasm-bindgen-futures"
++version = "0.4.72"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "9473dbd2991ae90b6291c3c32c30c6187ac49aa32f9905d1cce280ec1e110b0f"
++dependencies = [
++ "js-sys",
++ "wasm-bindgen",
++]
++
+ [[package]]
+ name = "wasm-bindgen-macro"
+ version = "0.2.122"
+@@ -4378,13 +5198,26 @@ dependencies = [
+  "wasmparser",
+ ]
+ 
++[[package]]
++name = "wasm-streams"
++version = "0.4.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "15053d8d85c7eccdbefef60f06769760a563c7f0a9d6902a13d35c7800b0ad65"
++dependencies = [
++ "futures-util",
++ "js-sys",
++ "wasm-bindgen",
++ "wasm-bindgen-futures",
++ "web-sys",
++]
++
+ [[package]]
+ name = "wasmparser"
+ version = "0.244.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "47b807c72e1bac69382b3a6fb3dbe8ea4c0ed87ff5629b8685ae6b9a611028fe"
+ dependencies = [
+- "bitflags",
++ "bitflags 2.13.0",
+  "hashbrown 0.15.5",
+  "indexmap",
+  "semver",
+@@ -4515,13 +5348,22 @@ dependencies = [
+  "windows-link",
+ ]
+ 
++[[package]]
++name = "windows-sys"
++version = "0.48.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "677d2418bec65e3338edb076e806bc1ec15693c5d0104683f2efe857f61056a9"
++dependencies = [
++ "windows-targets 0.48.5",
++]
++
+ [[package]]
+ name = "windows-sys"
+ version = "0.52.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "282be5f36a8ce781fad8c8ae18fa3f9beff57ec1b52cb3de0789201425d9a33d"
+ dependencies = [
+- "windows-targets",
++ "windows-targets 0.52.6",
+ ]
+ 
+ [[package]]
+@@ -4533,34 +5375,67 @@ dependencies = [
+  "windows-link",
+ ]
+ 
++[[package]]
++name = "windows-targets"
++version = "0.48.5"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "9a2fa6e2155d7247be68c096456083145c183cbbbc2764150dda45a87197940c"
++dependencies = [
++ "windows_aarch64_gnullvm 0.48.5",
++ "windows_aarch64_msvc 0.48.5",
++ "windows_i686_gnu 0.48.5",
++ "windows_i686_msvc 0.48.5",
++ "windows_x86_64_gnu 0.48.5",
++ "windows_x86_64_gnullvm 0.48.5",
++ "windows_x86_64_msvc 0.48.5",
++]
++
+ [[package]]
+ name = "windows-targets"
+ version = "0.52.6"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "9b724f72796e036ab90c1021d4780d4d3d648aca59e491e6b98e725b84e99973"
+ dependencies = [
+- "windows_aarch64_gnullvm",
+- "windows_aarch64_msvc",
+- "windows_i686_gnu",
++ "windows_aarch64_gnullvm 0.52.6",
++ "windows_aarch64_msvc 0.52.6",
++ "windows_i686_gnu 0.52.6",
+  "windows_i686_gnullvm",
+- "windows_i686_msvc",
+- "windows_x86_64_gnu",
+- "windows_x86_64_gnullvm",
+- "windows_x86_64_msvc",
++ "windows_i686_msvc 0.52.6",
++ "windows_x86_64_gnu 0.52.6",
++ "windows_x86_64_gnullvm 0.52.6",
++ "windows_x86_64_msvc 0.52.6",
+ ]
+ 
++[[package]]
++name = "windows_aarch64_gnullvm"
++version = "0.48.5"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "2b38e32f0abccf9987a4e3079dfb67dcd799fb61361e53e2882c3cbaf0d905d8"
++
+ [[package]]
+ name = "windows_aarch64_gnullvm"
+ version = "0.52.6"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "32a4622180e7a0ec044bb555404c800bc9fd9ec262ec147edd5989ccd0c02cd3"
+ 
++[[package]]
++name = "windows_aarch64_msvc"
++version = "0.48.5"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "dc35310971f3b2dbbf3f0690a219f40e2d9afcf64f9ab7cc1be722937c26b4bc"
++
+ [[package]]
+ name = "windows_aarch64_msvc"
+ version = "0.52.6"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "09ec2a7bb152e2252b53fa7803150007879548bc709c039df7627cabbd05d469"
+ 
++[[package]]
++name = "windows_i686_gnu"
++version = "0.48.5"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "a75915e7def60c94dcef72200b9a8e58e5091744960da64ec734a6c6e9b3743e"
++
+ [[package]]
+ name = "windows_i686_gnu"
+ version = "0.52.6"
+@@ -4573,24 +5448,48 @@ version = "0.52.6"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "0eee52d38c090b3caa76c563b86c3a4bd71ef1a819287c19d586d7334ae8ed66"
+ 
++[[package]]
++name = "windows_i686_msvc"
++version = "0.48.5"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "8f55c233f70c4b27f66c523580f78f1004e8b5a8b659e05a4eb49d4166cca406"
++
+ [[package]]
+ name = "windows_i686_msvc"
+ version = "0.52.6"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "240948bc05c5e7c6dabba28bf89d89ffce3e303022809e73deaefe4f6ec56c66"
+ 
++[[package]]
++name = "windows_x86_64_gnu"
++version = "0.48.5"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "53d40abd2583d23e4718fddf1ebec84dbff8381c07cae67ff7768bbf19c6718e"
++
+ [[package]]
+ name = "windows_x86_64_gnu"
+ version = "0.52.6"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "147a5c80aabfbf0c7d901cb5895d1de30ef2907eb21fbbab29ca94c5b08b1a78"
+ 
++[[package]]
++name = "windows_x86_64_gnullvm"
++version = "0.48.5"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "0b7b52767868a23d5bab768e390dc5f5c55825b6d30b86c844ff2dc7414044cc"
++
+ [[package]]
+ name = "windows_x86_64_gnullvm"
+ version = "0.52.6"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "24d5b23dc417412679681396f2b49f3de8c1473deb516bd34410872eff51ed0d"
+ 
++[[package]]
++name = "windows_x86_64_msvc"
++version = "0.48.5"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "ed94fce61571a4006852b7389a063ab983c02eb1bb37b47f8272ce92d06d9538"
++
+ [[package]]
+ name = "windows_x86_64_msvc"
+ version = "0.52.6"
+@@ -4606,6 +5505,16 @@ dependencies = [
+  "memchr",
+ ]
+ 
++[[package]]
++name = "winreg"
++version = "0.50.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "524e57b2c537c0f9b1e69f1965311ec12182b4122e45035b1508cd24d2adadb1"
++dependencies = [
++ "cfg-if",
++ "windows-sys 0.48.0",
++]
++
+ [[package]]
+ name = "wit-bindgen"
+ version = "0.51.0"
+@@ -4670,7 +5579,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "9d66ea20e9553b30172b5e831994e35fbde2d165325bec84fc43dbf6f4eb9cb2"
+ dependencies = [
+  "anyhow",
+- "bitflags",
++ "bitflags 2.13.0",
+  "indexmap",
+  "log",
+  "serde",
+diff --git a/backend/Cargo.toml b/backend/Cargo.toml
+index ab4e8e4..4a7c61a 100644
+--- a/backend/Cargo.toml
++++ b/backend/Cargo.toml
+@@ -13,6 +13,8 @@ members = [
+     "crates/sb-ws-handler",
+     "crates/sb-ws-messages",
+     "migration",
++    "crates/sb-club",
++    "crates/sb-server",
+ ]
+ 
+ [workspace.package]
+@@ -20,6 +22,9 @@ edition = "2024"
+ rust-version = "1.94"
+ 
+ [workspace.dependencies]
++tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
++sb-server = { path = "crates/sb-server" }
++sb-club = { path = "crates/sb-club" }
+ futures = { version = "0.3.32", default-features = false, features = ["std", "async-await"] }
+ moka = { version = "0.12.5", features = ["sync"] }
+ parking_lot = "0.12.3"
+@@ -55,7 +60,6 @@ hmac = "0.12"
+ jsonwebtoken = { version = "=10.3.0", features = ["rust_crypto"] }
+ argon2 = "0.6.0-rc.8"
+ sqlx = { version = "0.9.0", features = ["sqlite", "runtime-tokio", "tls-rustls"] }
+-moka = { version = "0.12", features = ["sync"] }
+ sea-orm = { version = "2.0.0-rc.38", features = ["sqlx-sqlite", "runtime-tokio-rustls", "macros"] }
+ sea-orm-migration = { version = "2.0.0-rc.38" }
+ serde = { version = "1.0.228", features = ["derive"] }
+@@ -65,7 +69,6 @@ derive_more = "2.1.1"
+ tokio = { version = "1.52.3", features = ["rt", "macros"] }
+ rand = { version = "0.10.0", features = ["std_rng"] }
+ strum = { version = "0.28.0", features = ["derive"] }
+-futures = { version = "0.3.32" }
+ tower = { version = "0.4.13" }
+ tower-http = { version = "0.5.2", features = ["auth"] }
+ tokio-tungstenite = { version = "0.29.0" }
+diff --git a/backend/crates/sb-bot-handler/Cargo.toml b/backend/crates/sb-bot-handler/Cargo.toml
+index 462d089..0f899eb 100644
+--- a/backend/crates/sb-bot-handler/Cargo.toml
++++ b/backend/crates/sb-bot-handler/Cargo.toml
+@@ -20,6 +20,7 @@ anyhow = { workspace = true }
+ chrono = { workspace = true }
+ futures = { workspace = true }
+ uuid = { workspace = true }
++url = { workspace = true }
+ 
+ [dev-dependencies]
+ mockall = { workspace = true }
+diff --git a/backend/crates/sb-bot-handler/src/commands.rs b/backend/crates/sb-bot-handler/src/commands.rs
+index ed9dc33..05e65cd 100644
+--- a/backend/crates/sb-bot-handler/src/commands.rs
++++ b/backend/crates/sb-bot-handler/src/commands.rs
+@@ -36,7 +36,7 @@ pub async fn handle_poker_command(
+     message: &Message,
+ ) {
+     let chat_id = message.chat.id;
+-    let telegram_user_id = match message.from().map(|u| u.id.0.to_string()) {
++    let telegram_user_id = match message.from.as_ref().map(|u| u.id.0.to_string()) {
+         Some(id) => id,
+         None => {
+             error!(request_id = %ctx.request_id, "Message has no sender");
+@@ -54,13 +54,13 @@ pub async fn handle_poker_command(
+         }
+     };
+ 
+-    // Context that includes user_id for logging
+     let ctx_with_user = RequestContext::new(ctx.request_id, Some(user_id));
+ 
+     let input = CreateTableInput {
+         name: format!("Poker table from group {}", chat_id.0),
++        club_id: None,
+         stake_level: sb_shared_types::game_types::StakeLevel::Micro,
+-        variant: sb_shared_types::game_types::GameVariant::TexasHoldem,
++        variant: sb_shared_types::game_types::GameVariant::Holdem,
+         created_by: user_id,
+         is_private: false,
+         invited_users: vec![],
+@@ -94,7 +94,7 @@ pub async fn handle_poker_command(
+     if let Err(e) = send_telegram_message_with_timeout(state, chat_id.0, text, keyboard_value).await {
+         error!(request_id = %ctx_with_user.request_id, user_id = %user_id, error = %e, "Failed to send message");
+     } else {
+-        info!(request_id = %ctx_with_user.request_id, user_id = %user_id, table_id = %table_id, "Table created and notification sent");
++    info!(request_id = %ctx_with_user.request_id, user_id = %user_id, table_id = %table_id, "Table created and notification sent");
+     }
+ }
+ 
+@@ -108,7 +108,7 @@ pub async fn handle_challenge_command(
+     let parts: Vec<&str> = text.split_whitespace().collect();
+     let challenged_username = parts.iter().find(|p| p.starts_with('@')).map(|p| &p[1..]);
+ 
+-    let challenger_telegram = message.from().and_then(|u| u.username.clone());
++    let challenger_telegram = message.from.as_ref().and_then(|u| u.username.clone());
+     let challenged_telegram = challenged_username.map(|s| s.to_string());
+ 
+     if challenged_telegram.is_none() {
+@@ -124,7 +124,7 @@ pub async fn handle_challenge_command(
+             return;
+         }
+     };
+-    let challenged_id = match resolve_user_with_timeout(state, &challenged_telegram.as_ref().unwrap()).await {
++    let challenged_id = match resolve_user_with_timeout(state, challenged_telegram.as_ref().unwrap()).await {
+         Ok(uid) => uid,
+         Err(e) => {
+             error!(request_id = %ctx.request_id, error = %e, "Challenged resolve failed");
+@@ -137,8 +137,9 @@ pub async fn handle_challenge_command(
+ 
+     let input = CreateTableInput {
+         name: format!("Heads-up: {} vs {}", challenger_id, challenged_id),
++        club_id: None,
+         stake_level: sb_shared_types::game_types::StakeLevel::Micro,
+-        variant: sb_shared_types::game_types::GameVariant::TexasHoldem,
++        variant: sb_shared_types::game_types::GameVariant::Holdem,
+         created_by: challenger_id,
+         is_private: true,
+         invited_users: vec![challenger_id, challenged_id],
+@@ -163,17 +164,17 @@ pub async fn handle_challenge_command(
+     let f1 = send_telegram_message_with_timeout(state, chat_id.0, message_text.clone(), None);
+     let f2 = state.notification_service.send_telegram_message_to_user(challenged_id, message_text.clone(), None);
+     let f3 = state.notification_service.send_telegram_message_to_user(challenger_id, message_text, None);
+-    futures::join!(f1, f2, f3);
++    let _ = futures::join!(f1, f2, f3);
+     info!(request_id = %ctx_with_user.request_id, user_id = %challenger_id, table_id = %table_id, challenged = %challenged_id, "Challenge table created");
+ }
+ 
+ pub async fn handle_callback_query(
+     ctx: &RequestContext,
+     state: &Arc<BotState>,
+-    callback: CallbackQuery,
++    callback: &CallbackQuery,
+ ) {
+-    let data = match callback.data {
+-        Some(d) => d,
++    let data = match &callback.data {
++        Some(d) => d.clone(),
+         None => return,
+     };
+     if !data.starts_with("join_") {
+@@ -193,8 +194,9 @@ pub async fn handle_callback_query(
+         Ok(uid) => uid,
+         Err(e) => {
+             error!(request_id = %ctx.request_id, error = %e, "Callback user resolve failed");
+-            if let Some(msg) = callback.message {
+-                let _ = send_telegram_message_with_timeout(state, msg.chat.id.0, "❌ Please start the bot in private first.".to_string(), None).await;
++            if let Some(msg) = &callback.message {
++                let chat_id = msg.chat().id;
++                let _ = send_telegram_message_with_timeout(state, chat_id.0, "❌ Please start the bot in private first.".to_string(), None).await;
+             }
+             return;
+         }
+@@ -204,9 +206,10 @@ pub async fn handle_callback_query(
+     let deep_link = format!("{}{}", state.mini_app_url, table_id.as_uuid());
+     let reply_text = format!("🎮 Click to join the table: [Open Mini App]({})", deep_link);
+ 
+-    if let Some(msg) = callback.message {
+-        let _ = send_telegram_message_with_timeout(state, msg.chat.id.0, reply_text, None).await;
++    if let Some(msg) = &callback.message {
++        let chat_id = msg.chat().id;
++        let _ = send_telegram_message_with_timeout(state, chat_id.0, reply_text, None).await;
+     }
+-    let _ = state.notification_service.answer_callback_query(callback.id, None).await;
++    let _ = state.notification_service.answer_callback_query(callback.id.clone(), None).await;
+     info!(request_id = %ctx_with_user.request_id, user_id = %user_id, table_id = %table_id, "Callback handled");
+ }
+diff --git a/backend/crates/sb-bot-handler/src/handler.rs b/backend/crates/sb-bot-handler/src/handler.rs
+index 9ed0376..e893f69 100644
+--- a/backend/crates/sb-bot-handler/src/handler.rs
++++ b/backend/crates/sb-bot-handler/src/handler.rs
+@@ -30,18 +30,32 @@ pub async fn telegram_webhook(
+ 
+     info!(request_id = %request_id, "Received telegram update");
+ 
+-    if let Some(message) = update.message() {
+-        if let Some(text) = message.text() {
+-            if text.starts_with("/poker") {
+-                tokio::spawn(handle_poker_command(&ctx, &state, message).instrument(span.clone()));
+-            } else if text.starts_with("/challenge") || text.contains("challenge @") {
+-                tokio::spawn(handle_challenge_command(&ctx, &state, message).instrument(span.clone()));
++    match update.kind {
++        teloxide::types::UpdateKind::Message(message) => {
++            if let Some(text) = message.text().map(|t| t.to_string()) {
++                if text.starts_with("/poker") {
++                    let ctx = ctx.clone();
++                    let state = state.clone();
++                    tokio::spawn(async move {
++                        handle_poker_command(&ctx, &state, &message).await;
++                    }.instrument(span.clone()));
++                } else if text.starts_with("/challenge") || text.contains("challenge @") {
++                    let ctx = ctx.clone();
++                    let state = state.clone();
++                    tokio::spawn(async move {
++                        handle_challenge_command(&ctx, &state, &message).await;
++                    }.instrument(span.clone()));
++                }
+             }
+         }
+-    }
+-
+-    if let Some(callback) = update.callback_query() {
+-        tokio::spawn(handle_callback_query(&ctx, &state, callback).instrument(span.clone()));
++        teloxide::types::UpdateKind::CallbackQuery(callback) => {
++            let ctx = ctx.clone();
++            let state = state.clone();
++            tokio::spawn(async move {
++                handle_callback_query(&ctx, &state, &callback).await;
++            }.instrument(span.clone()));
++        }
++        _ => {}
+     }
+ 
+     axum::http::StatusCode::OK.into_response()
+diff --git a/backend/crates/sb-bot-handler/src/lib.rs b/backend/crates/sb-bot-handler/src/lib.rs
+index 824e2b6..0afb1eb 100644
+--- a/backend/crates/sb-bot-handler/src/lib.rs
++++ b/backend/crates/sb-bot-handler/src/lib.rs
+@@ -6,8 +6,9 @@ pub use types::BotState;
+ use axum::Router;
+ use std::sync::Arc;
+ 
+-pub fn attach(router: Router, state: Arc<BotState>) -> Router {
+-    router.route("/telegram/webhook", axum::routing::post(handler::telegram_webhook))
++pub fn attach(state: Arc<BotState>) -> Router {
++    Router::new()
++        .route("/telegram/webhook", axum::routing::post(handler::telegram_webhook))
+         .with_state(state)
+ }
+ 
+diff --git a/backend/crates/sb-bot-handler/src/types.rs b/backend/crates/sb-bot-handler/src/types.rs
+index 4dcd7fc..dc1b5ab 100644
+--- a/backend/crates/sb-bot-handler/src/types.rs
++++ b/backend/crates/sb-bot-handler/src/types.rs
+@@ -1,4 +1,5 @@
+-use sb_contracts::service_api::{TableService, NotificationService};
++use sb_contracts::service_api::TableService;
++use sb_contracts::notification_api::NotificationService;
+ use sb_contracts::user_resolution::UserResolutionService;
+ use std::sync::Arc;
+ 
+diff --git a/backend/crates/sb-bot-handler/src/webhook_setup.rs b/backend/crates/sb-bot-handler/src/webhook_setup.rs
+index 0f43cec..b40d237 100644
+--- a/backend/crates/sb-bot-handler/src/webhook_setup.rs
++++ b/backend/crates/sb-bot-handler/src/webhook_setup.rs
+@@ -1,10 +1,12 @@
+ use teloxide::prelude::*;
+ use std::env;
++use url::Url;
+ 
+ pub async fn setup_webhook() -> Result<(), Box<dyn std::error::Error>> {
+     let token = env::var("TELEGRAM_BOT_TOKEN")?;
+     let bot = Bot::new(token);
+     let webhook_url = env::var("WEBHOOK_URL")?;
+-    bot.set_webhook(webhook_url).await?;
++    let url = Url::parse(&webhook_url)?;
++    bot.set_webhook(url).await?;
+     Ok(())
+ }
+diff --git a/backend/crates/sb-club/Cargo.toml b/backend/crates/sb-club/Cargo.toml
+new file mode 100644
+index 0000000..d656c84
+--- /dev/null
++++ b/backend/crates/sb-club/Cargo.toml
+@@ -0,0 +1,25 @@
++[package]
++name = "sb-club"
++version = "0.1.0"
++edition = "2024"
++rust-version = "1.94"
++
++[dependencies]
++sb-contracts = { path = "../sb-contracts" }
++sb-shared-types = { path = "../sb-shared-types" }
++axum = { workspace = true }
++serde = { workspace = true }
++serde_json = { workspace = true }
++thiserror = { workspace = true }
++tracing = { workspace = true }
++async-trait = { workspace = true }
++tokio = { workspace = true }
++chrono = { workspace = true }
++uuid = { workspace = true }
++
++[dev-dependencies]
++parking_lot = { workspace = true }
++tokio = { workspace = true }
++sb-db-repos = { path = "../sb-db-repos" }
++sea-orm = { workspace = true }
++migration = { path = "../../migration" }
+diff --git a/backend/crates/sb-club/src/handlers.rs b/backend/crates/sb-club/src/handlers.rs
+new file mode 100644
+index 0000000..03bb101
+--- /dev/null
++++ b/backend/crates/sb-club/src/handlers.rs
+@@ -0,0 +1,82 @@
++use axum::{
++    extract::{Path, State},
++    http::StatusCode,
++    Extension, Json,
++};
++use sb_contracts::{ClubService, ClubError};
++use sb_shared_types::{ClubId, RequestContext, UserId};
++use std::sync::Arc;
++
++use crate::models::{
++    CreateClubRequest, CreateClubResponse, GetLeaderboardResponse, JoinClubResponse,
++};
++
++#[derive(Clone)]
++pub struct ClubState {
++    pub service: Arc<dyn ClubService>,
++}
++
++fn extract_user_id(ctx: &RequestContext) -> Result<UserId, (StatusCode, String)> {
++    ctx.user_id.ok_or_else(|| {
++        (StatusCode::UNAUTHORIZED, "authentication required".to_string())
++    })
++}
++
++pub async fn create_club(
++    State(state): State<ClubState>,
++    Extension(ctx): Extension<RequestContext>,
++    Json(req): Json<CreateClubRequest>,
++) -> Result<(StatusCode, Json<CreateClubResponse>), (StatusCode, String)> {
++    let user_id = extract_user_id(&ctx)?;
++
++    let club_id = state
++        .service
++        .create_club(&ctx, &req.name, req.logo_url.as_deref(), user_id)
++        .await
++        .map_err(|e| map_club_error(e))?;
++
++    Ok((StatusCode::CREATED, Json(CreateClubResponse { club_id })))
++}
++
++pub async fn join_club(
++    State(state): State<ClubState>,
++    Extension(ctx): Extension<RequestContext>,
++    Path(club_id): Path<ClubId>,
++) -> Result<Json<JoinClubResponse>, (StatusCode, String)> {
++    let user_id = extract_user_id(&ctx)?;
++
++    state
++        .service
++        .join_club(&ctx, club_id, user_id)
++        .await
++        .map_err(|e| map_club_error(e))?;
++
++    Ok(Json(JoinClubResponse { success: true }))
++}
++
++pub async fn get_leaderboard(
++    State(state): State<ClubState>,
++    Extension(ctx): Extension<RequestContext>,
++    Path(club_id): Path<ClubId>,
++) -> Result<Json<GetLeaderboardResponse>, (StatusCode, String)> {
++    let page = state
++        .service
++        .get_leaderboard(&ctx, club_id, 1)
++        .await
++        .map_err(|e| map_club_error(e))?;
++
++    Ok(Json(GetLeaderboardResponse::from(page)))
++}
++
++fn map_club_error(e: ClubError) -> (StatusCode, String) {
++    match e {
++        ClubError::NotFound { .. } => (StatusCode::NOT_FOUND, e.to_string()),
++        ClubError::AlreadyMember { .. } => (StatusCode::CONFLICT, e.to_string()),
++        ClubError::NotAMember { .. } => (StatusCode::FORBIDDEN, e.to_string()),
++        ClubError::Validation { .. } => (StatusCode::BAD_REQUEST, e.to_string()),
++        ClubError::Database { .. } => {
++            tracing::error!(error = %e, "club database error");
++            (StatusCode::INTERNAL_SERVER_ERROR, "internal error".to_string())
++        }
++    }
++}
+diff --git a/backend/crates/sb-club/src/lib.rs b/backend/crates/sb-club/src/lib.rs
+new file mode 100644
+index 0000000..430fd22
+--- /dev/null
++++ b/backend/crates/sb-club/src/lib.rs
+@@ -0,0 +1,7 @@
++pub mod handlers;
++pub mod models;
++pub mod router;
++pub mod service;
++
++pub use router::club_router;
++pub use service::ClubServiceImpl;
+diff --git a/backend/crates/sb-club/src/models.rs b/backend/crates/sb-club/src/models.rs
+new file mode 100644
+index 0000000..33087d7
+--- /dev/null
++++ b/backend/crates/sb-club/src/models.rs
+@@ -0,0 +1,55 @@
++use sb_contracts::LeaderboardPage;
++use sb_shared_types::ClubId;
++use serde::{Deserialize, Serialize};
++
++#[derive(Debug, Clone, Deserialize)]
++pub struct CreateClubRequest {
++    pub name: String,
++    pub logo_url: Option<String>,
++}
++
++#[derive(Debug, Clone, Serialize)]
++pub struct CreateClubResponse {
++    pub club_id: ClubId,
++}
++
++#[derive(Debug, Clone, Serialize)]
++pub struct JoinClubResponse {
++    pub success: bool,
++}
++
++#[derive(Debug, Clone, Serialize)]
++pub struct GetLeaderboardResponse {
++    pub club_id: ClubId,
++    pub division: u32,
++    pub total_divisions: u32,
++    pub total_members: u64,
++    pub entries: Vec<LeaderboardEntryDto>,
++}
++
++#[derive(Debug, Clone, Serialize)]
++pub struct LeaderboardEntryDto {
++    pub rank: u32,
++    pub user_id: String,
++    pub weekly_xp: i64,
++}
++
++impl From<LeaderboardPage> for GetLeaderboardResponse {
++    fn from(page: LeaderboardPage) -> Self {
++        Self {
++            club_id: page.club_id,
++            division: page.division,
++            total_divisions: page.total_divisions,
++            total_members: page.total_members,
++            entries: page
++                .entries
++                .into_iter()
++                .map(|e| LeaderboardEntryDto {
++                    rank: e.rank,
++                    user_id: e.user_id.to_string(),
++                    weekly_xp: e.weekly_xp,
++                })
++                .collect(),
++        }
++    }
++}
+diff --git a/backend/crates/sb-club/src/router.rs b/backend/crates/sb-club/src/router.rs
+new file mode 100644
+index 0000000..c9c3571
+--- /dev/null
++++ b/backend/crates/sb-club/src/router.rs
+@@ -0,0 +1,12 @@
++use axum::{routing::get, routing::post, Router};
++
++use crate::handlers::{ClubState, create_club, get_leaderboard, join_club};
++
++/// Build the Axum router for all `/clubs` endpoints.
++pub fn club_router(state: ClubState) -> Router {
++    Router::new()
++        .route("/clubs", post(create_club))
++        .route("/clubs/{club_id}/join", post(join_club))
++        .route("/clubs/{club_id}/leaderboard", get(get_leaderboard))
++        .with_state(state)
++}
+diff --git a/backend/crates/sb-club/src/service.rs b/backend/crates/sb-club/src/service.rs
+new file mode 100644
+index 0000000..6bb3022
+--- /dev/null
++++ b/backend/crates/sb-club/src/service.rs
+@@ -0,0 +1,80 @@
++use sb_contracts::{ClubRepo, ClubService, ClubError, LeaderboardPage};
++use sb_shared_types::{ClubId, RequestContext, UserId};
++use std::sync::Arc;
++
++pub struct ClubServiceImpl {
++    repo: Arc<dyn ClubRepo>,
++}
++
++impl ClubServiceImpl {
++    pub fn new(repo: Arc<dyn ClubRepo>) -> Self {
++        Self { repo }
++    }
++}
++
++#[async_trait::async_trait]
++impl ClubService for ClubServiceImpl {
++    async fn create_club(
++        &self,
++        ctx: &RequestContext,
++        name: &str,
++        logo_url: Option<&str>,
++        created_by: UserId,
++    ) -> Result<ClubId, ClubError> {
++        if name.trim().is_empty() {
++            return Err(ClubError::validation("club name must not be empty"));
++        }
++        tracing::debug!(
++            request_id = %ctx.request_id,
++            user_id = ?ctx.user_id,
++            "create_club: name={}",
++            name
++        );
++        self.repo.create_club(name, logo_url, created_by).await
++    }
++
++    async fn join_club(
++        &self,
++        ctx: &RequestContext,
++        club_id: ClubId,
++        user_id: UserId,
++    ) -> Result<(), ClubError> {
++        tracing::debug!(
++            request_id = %ctx.request_id,
++            club_id = %club_id,
++            user_id = %user_id,
++            "join_club"
++        );
++        self.repo.join_club(club_id, user_id).await
++    }
++
++    async fn get_leaderboard(
++        &self,
++        ctx: &RequestContext,
++        club_id: ClubId,
++        division: u32,
++    ) -> Result<LeaderboardPage, ClubError> {
++        let club = self.repo.find_club_by_id(club_id).await?;
++        if club.is_none() {
++            return Err(ClubError::not_found(club_id));
++        }
++        self.repo.get_leaderboard_page(club_id, division).await
++    }
++
++    async fn add_xp(
++        &self,
++        ctx: &RequestContext,
++        club_id: ClubId,
++        user_id: UserId,
++        xp: i64,
++    ) -> Result<(), ClubError> {
++        tracing::debug!(
++            request_id = %ctx.request_id,
++            club_id = %club_id,
++            user_id = %user_id,
++            xp = xp,
++            "add_xp"
++        );
++        self.repo.increment_weekly_xp(club_id, user_id, xp).await
++    }
++}
+diff --git a/backend/crates/sb-club/tests/club_integration.rs b/backend/crates/sb-club/tests/club_integration.rs
+new file mode 100644
+index 0000000..404e6bf
+--- /dev/null
++++ b/backend/crates/sb-club/tests/club_integration.rs
+@@ -0,0 +1,158 @@
++//! Integration test against a temporary SQLite database.
++//! Tests actual SQL correctness, not mock behaviour.
++
++use sb_club::ClubServiceImpl;
++use sb_contracts::{ClubError, ClubRepo, ClubService, DIVISION_SIZE, LeaderboardPage};
++use sb_db_repos::club_repo::ClubRepoImpl;
++use sb_shared_types::{ClubId, RequestContext, UserId};
++use sea_orm::Database;
++use std::sync::Arc;
++use uuid::Uuid;
++
++async fn setup_db() -> (Arc<dyn ClubService>, Arc<dyn ClubRepo>) {
++    let db = Database::connect("sqlite::memory:")
++        .await
++        .expect("db connect");
++
++    // Run migrations to create tables
++    migration::Migrator::up(&db, None)
++        .await
++        .expect("migrations");
++
++    let repo: Arc<dyn ClubRepo> = Arc::new(ClubRepoImpl::new(db));
++    let service = Arc::new(ClubServiceImpl::new(repo.clone()));
++    (service, repo)
++}
++
++fn test_ctx() -> RequestContext {
++    RequestContext {
++        request_id: Uuid::new_v4(),
++        user_id: Some(UserId::new(Uuid::new_v4())),
++    }
++}
++
++#[tokio::test]
++async fn test_create_club() {
++    let (svc, _repo) = setup_db().await;
++    let ctx = test_ctx();
++    let user_id = ctx.user_id.unwrap();
++    let club_id = svc
++        .create_club(
++            &ctx,
++            "Test Club",
++            Some("https://logo.example.com/img.png"),
++            user_id,
++        )
++        .await
++        .expect("create club");
++    assert!(!club_id.as_uuid().is_nil());
++}
++
++#[tokio::test]
++async fn test_join_club_and_duplicate() {
++    let (svc, _repo) = setup_db().await;
++    let ctx = test_ctx();
++    let owner_id = ctx.user_id.unwrap();
++    let club_id = svc
++        .create_club(&ctx, "Join Club", None, owner_id)
++        .await
++        .expect("create");
++
++    let member_ctx = RequestContext {
++        request_id: Uuid::new_v4(),
++        user_id: Some(UserId::new(Uuid::new_v4())),
++    };
++    let member_id = member_ctx.user_id.unwrap();
++    svc.join_club(&member_ctx, club_id, member_id)
++        .await
++        .expect("join club");
++
++    // Second join should fail with AlreadyMember (UNIQUE constraint)
++    let result = svc.join_club(&member_ctx, club_id, member_id).await;
++    assert!(matches!(result, Err(ClubError::AlreadyMember { .. })));
++}
++
++#[tokio::test]
++async fn test_add_xp_not_member() {
++    let (svc, _repo) = setup_db().await;
++    let ctx = test_ctx();
++    let owner_id = ctx.user_id.unwrap();
++    let club_id = svc
++        .create_club(&ctx, "NoXP Club", None, owner_id)
++        .await
++        .expect("create");
++    // Don't join — add_xp should fail
++    let result = svc.add_xp(&ctx, club_id, owner_id, 100).await;
++    assert!(matches!(result, Err(ClubError::NotAMember { .. })));
++}
++
++#[tokio::test]
++async fn test_add_xp_member() {
++    let (svc, _repo) = setup_db().await;
++    let ctx = test_ctx();
++    let owner_id = ctx.user_id.unwrap();
++    let club_id = svc
++        .create_club(&ctx, "XP Club", None, owner_id)
++        .await
++        .expect("create");
++    svc.join_club(&ctx, club_id, owner_id).await.expect("join");
++    svc.add_xp(&ctx, club_id, owner_id, 100)
++        .await
++        .expect("add xp");
++}
++
++#[tokio::test]
++async fn test_leaderboard_divisions() {
++    let (svc, repo) = setup_db().await;
++    let ctx = test_ctx();
++    let owner_id = ctx.user_id.unwrap();
++    let club_id = svc
++        .create_club(&ctx, "Big Club", None, owner_id)
++        .await
++        .expect("create");
++
++    // Join and add XP for 600 members
++    for i in 0..599 {
++        let member_ctx = RequestContext {
++            request_id: Uuid::new_v4(),
++            user_id: Some(UserId::new(Uuid::new_v4())),
++        };
++        let member_id = member_ctx.user_id.unwrap();
++        svc.join_club(&member_ctx, club_id, member_id)
++            .await
++            .expect("join");
++        svc.add_xp(&member_ctx, club_id, member_id, (599 - i) as i64 * 10)
++            .await
++            .expect("add xp");
++    }
++
++    // Refresh leaderboard
++    repo.refresh_leaderboard(club_id).await.expect("refresh");
++
++    // Division 1 should have up to 500 rows
++    let div1 = svc
++        .get_leaderboard(&ctx, club_id, 1)
++        .await
++        .expect("get leaderboard div 1");
++
++    assert_eq!(div1.total_members, 600);
++    assert_eq!(div1.total_divisions, 2);
++    assert!(div1.entries.len() <= DIVISION_SIZE as usize);
++
++    // Division 2 should have remaining rows
++    let div2 = svc
++        .get_leaderboard(&ctx, club_id, 2)
++        .await
++        .expect("get leaderboard div 2");
++    assert_eq!(div2.division, 2);
++    assert!(div2.entries.len() <= 100);
++}
++
++#[tokio::test]
++async fn test_club_not_found() {
++    let (svc, _repo) = setup_db().await;
++    let ctx = test_ctx();
++    let fake_club = ClubId::new(Uuid::new_v4());
++    let result = svc.get_leaderboard(&ctx, fake_club, 1).await;
++    assert!(matches!(result, Err(ClubError::NotFound { .. })));
++}
+diff --git a/backend/crates/sb-contracts/Cargo.toml b/backend/crates/sb-contracts/Cargo.toml
+index bcc537f..8734073 100644
+--- a/backend/crates/sb-contracts/Cargo.toml
++++ b/backend/crates/sb-contracts/Cargo.toml
+@@ -4,12 +4,12 @@ version = "0.1.0"
+ edition.workspace = true
+ 
+ [dependencies]
++serde = { workspace = true }
+ serde_json = { workspace = true }
+ sb-shared-types = { path = "../sb-shared-types" }
+ tokio = { workspace = true, features = ["sync"] }
+ thiserror = { workspace = true }
+ async-trait.workspace = true
+-serde.workspace = true
+ chrono.workspace = true
+ uuid.workspace = true
+ 
+diff --git a/backend/crates/sb-contracts/src/club_error.rs b/backend/crates/sb-contracts/src/club_error.rs
+new file mode 100644
+index 0000000..a67fbbb
+--- /dev/null
++++ b/backend/crates/sb-contracts/src/club_error.rs
+@@ -0,0 +1,61 @@
++//! Domain-specific error type for all club operations.
++//! Preserves error source chain for debuggability.
++
++use sb_shared_types::{ClubId, UserId};
++
++/// Error type for all club domain operations.
++/// Each variant preserves the causal chain via `#[source]`.
++#[derive(Debug, thiserror::Error)]
++pub enum ClubError {
++    #[error("club {club_id} not found")]
++    NotFound { club_id: ClubId },
++
++    #[error("user is already a member of club {club_id}")]
++    AlreadyMember { club_id: ClubId, user_id: UserId },
++
++    #[error("user is not a member of club {club_id}")]
++    NotAMember { club_id: ClubId, user_id: UserId },
++
++    #[error("validation error: {message}")]
++    Validation { message: String },
++
++    #[error("database error in club operation: {message}")]
++    Database {
++        message: String,
++        #[source]
++        source: Option<Box<dyn std::error::Error + Send + Sync>>,
++    },
++}
++
++impl ClubError {
++    pub fn not_found(club_id: ClubId) -> Self {
++        Self::NotFound { club_id }
++    }
++
++    pub fn already_member(club_id: ClubId, user_id: UserId) -> Self {
++        Self::AlreadyMember { club_id, user_id }
++    }
++
++    pub fn not_a_member(club_id: ClubId, user_id: UserId) -> Self {
++        Self::NotAMember { club_id, user_id }
++    }
++
++    pub fn validation(msg: impl Into<String>) -> Self {
++        Self::Validation { message: msg.into() }
++    }
++
++    pub fn database(msg: impl Into<String>) -> Self {
++        Self::Database { message: msg.into(), source: None }
++    }
++
++    pub fn database_with_source(
++        msg: impl Into<String>,
++        err: impl std::error::Error + Send + Sync + 'static,
++    ) -> Self {
++        Self::Database {
++            message: msg.into(),
++            source: Some(Box::new(err)),
++        }
++    }
++}
++
+diff --git a/backend/crates/sb-contracts/src/lib.rs b/backend/crates/sb-contracts/src/lib.rs
+index 1b3bc18..a3bf336 100644
+--- a/backend/crates/sb-contracts/src/lib.rs
++++ b/backend/crates/sb-contracts/src/lib.rs
+@@ -3,22 +3,44 @@
+ use async_trait::async_trait;
+ use chrono::{DateTime, Utc};
+ use sb_shared_types::{PlayerId, TableId, UserId};
+-use thiserror::Error;
+ 
++// ── Base infrastructure error ──────────────────────────────────
++
++/// Low-level database/infrastructure error with preserved source chain.
+ #[derive(Debug, thiserror::Error)]
+ pub enum PersistenceError {
+-    #[error("Database error: {0}")]
+-    Database(String),
+-    #[error("Not found")]
++    #[error("database error: {message}")]
++    Database {
++        message: String,
++        #[source]
++        source: Option<Box<dyn std::error::Error + Send + Sync>>,
++    },
++    #[error("not found")]
+     NotFound,
+-    #[error("Invalid state transition")]
+-    InvalidState,
+-    #[error("Write conflict")]
++    #[error("write conflict")]
+     WriteConflict,
+ }
+ 
++impl PersistenceError {
++    pub fn database(msg: impl Into<String>) -> Self {
++        Self::Database { message: msg.into(), source: None }
++    }
++
++    pub fn database_with_source(
++        msg: impl Into<String>,
++        err: impl std::error::Error + Send + Sync + 'static,
++    ) -> Self {
++        Self::Database {
++            message: msg.into(),
++            source: Some(Box::new(err)),
++        }
++    }
++}
++
+ pub type PersistenceResult<T> = Result<T, PersistenceError>;
+ 
++// ── Domain models ──────────────────────────────────────────────
++
+ #[derive(Debug, Clone)]
+ pub struct User {
+     pub id: UserId,
+@@ -56,10 +78,24 @@ pub trait MissionRepository: Send + Sync {
+         mission_type: String,
+     ) -> PersistenceResult<()>;
+ }
++
++// ── Modules ────────────────────────────────────────────────────
++
+ pub mod repo_api;
+ pub mod service_api;
++pub mod lobby_api;
++pub mod persistence_error;
++pub mod club_error;
++pub mod async_hooks;
++pub mod notification_api;
++pub mod user_resolution;
++
++pub use lobby_api::{TableInfo, TableRepo, TableService};
++pub use club_error::ClubError;
++pub use repo_api::{ClubRepo, LeaderboardPage, LeaderboardEntry, Club, ClubMembership, DIVISION_SIZE};
++pub use service_api::ClubService;
+ 
+-#[derive(Debug, Error)]
++#[derive(Debug, thiserror::Error)]
+ pub enum TableError {
+     #[error("Table {0} not found")]
+     NotFound(TableId),
+@@ -80,6 +116,3 @@ pub enum TableCommand {
+         table_id: TableId,
+     },
+ }
+-
+-pub mod lobby_api;
+-pub use lobby_api::{TableInfo, TableRepo, TableService};
+diff --git a/backend/crates/sb-contracts/src/notification_api.rs b/backend/crates/sb-contracts/src/notification_api.rs
+new file mode 100644
+index 0000000..e248e1f
+--- /dev/null
++++ b/backend/crates/sb-contracts/src/notification_api.rs
+@@ -0,0 +1,36 @@
++//! Notification service contract. Lives in its own module
++//! to avoid coupling unrelated domains.
++
++use async_trait::async_trait;
++use sb_shared_types::UserId;
++
++/// Error type for notification operations.
++#[derive(Debug, thiserror::Error)]
++pub enum NotificationError {
++    #[error("notification failed: {0}")]
++    Failed(String),
++}
++
++/// Service for sending notifications.
++#[async_trait]
++pub trait NotificationService: Send + Sync {
++    async fn send_telegram_message(
++        &self,
++        chat_id: i64,
++        text: String,
++        keyboard: Option<serde_json::Value>,
++    ) -> Result<(), NotificationError>;
++
++    async fn send_telegram_message_to_user(
++        &self,
++        user_id: UserId,
++        text: String,
++        keyboard: Option<serde_json::Value>,
++    ) -> Result<(), NotificationError>;
++
++    async fn answer_callback_query(
++        &self,
++        callback_query_id: String,
++        text: Option<String>,
++    ) -> Result<(), NotificationError>;
++}
+diff --git a/backend/crates/sb-contracts/src/persistence_error.rs b/backend/crates/sb-contracts/src/persistence_error.rs
+index 050c012..f85e8fb 100644
+--- a/backend/crates/sb-contracts/src/persistence_error.rs
++++ b/backend/crates/sb-contracts/src/persistence_error.rs
+@@ -1,11 +1,3 @@
+-use thiserror::Error;
+-
+-#[derive(Debug, Error)]
+-pub enum PersistenceError {
+-    #[error("Transient error: {0}")]
+-    Transient(String),
+-    #[error("Constraint violation: {0}")]
+-    ConstraintViolation(String),
+-    #[error("Fatal error: {0}")]
+-    Fatal(String),
+-}
++//! Re-export of base PersistenceError from crate root.
++pub use crate::PersistenceError;
++pub use crate::PersistenceResult;
+diff --git a/backend/crates/sb-contracts/src/repo_api.rs b/backend/crates/sb-contracts/src/repo_api.rs
+index b3d55cc..3b64c44 100644
+--- a/backend/crates/sb-contracts/src/repo_api.rs
++++ b/backend/crates/sb-contracts/src/repo_api.rs
+@@ -1,19 +1,10 @@
+ use async_trait::async_trait;
+-use sb_shared_types::{RequestContext, UserId};
++use sb_shared_types::{ClubId, RequestContext, UserId};
+ 
+-#[derive(Debug, thiserror::Error)]
+-pub enum PersistenceError {
+-    #[error("Constraint violation (UNIQUE/CHECK): {0}")]
+-    ConstraintViolation(String),
+-    #[error("Data integrity error: {0}")]
+-    DataIntegrity(String),
+-    #[error("Transient database error (retryable): {0}")]
+-    Transient(String),
+-    #[error("Record not found")]
+-    NotFound,
+-}
++pub use crate::{PersistenceError, PersistenceResult};
++pub use crate::club_error::ClubError;
+ 
+-pub type PersistenceResult<T> = Result<T, PersistenceError>;
++// ── Existing repository types ──────────────────────────────────
+ 
+ pub struct UserCreate {
+     pub telegram_id: i64,
+@@ -46,3 +37,111 @@ pub trait HandHistoryRepository: Send + Sync {
+         hand_data: serde_json::Value,
+     ) -> PersistenceResult<()>;
+ }
++
++// ── Club domain types ────────────────────────────────────────
++
++/// Club DTO returned from the repository layer.
++#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
++pub struct Club {
++    pub id: ClubId,
++    pub name: String,
++    pub logo_url: Option<String>,
++    pub created_by: UserId,
++}
++
++/// A single member's data inside a club.
++#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
++pub struct ClubMembership {
++    pub club_id: ClubId,
++    pub user_id: UserId,
++    pub weekly_xp: i64,
++}
++
++/// One row in the leaderboard.
++#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
++pub struct LeaderboardEntry {
++    pub rank: u32,
++    pub user_id: UserId,
++    pub weekly_xp: i64,
++}
++
++/// A page of leaderboard results for a single division.
++#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
++pub struct LeaderboardPage {
++    pub club_id: ClubId,
++    pub division: u32,
++    pub total_divisions: u32,
++    pub total_members: u64,
++    pub entries: Vec<LeaderboardEntry>,
++}
++
++/// Division size constant: 500 members per division.
++pub const DIVISION_SIZE: u32 = 500;
++
++/// Result type for club operations.
++pub type ClubResult<T> = Result<T, ClubError>;
++
++/// Repository interface for club persistence.
++///
++/// ## Contracts
++/// - `join_club`: If the user is already a member (UNIQUE constraint),
++///   returns `ClubError::AlreadyMember`. Callers need NOT check `is_member` first.
++/// - `increment_weekly_xp`: Must be atomic (single SQL statement).
++/// - `refresh_leaderboard`: Must run inside a transaction for atomicity.
++#[async_trait]
++pub trait ClubRepo: Send + Sync {
++    async fn create_club(
++        &self,
++        name: &str,
++        logo_url: Option<&str>,
++        created_by: UserId,
++    ) -> ClubResult<ClubId>;
++
++    async fn find_club_by_id(
++        &self,
++        club_id: ClubId,
++    ) -> ClubResult<Option<Club>>;
++
++    /// Join a club. Returns `ClubError::AlreadyMember` on duplicate.
++    /// Does NOT require a prior `is_member` check — the UNIQUE constraint
++    /// is the authoritative guard.
++    async fn join_club(
++        &self,
++        club_id: ClubId,
++        user_id: UserId,
++    ) -> ClubResult<()>;
++
++    async fn is_member(
++        &self,
++        club_id: ClubId,
++        user_id: UserId,
++    ) -> ClubResult<bool>;
++
++    async fn get_member_count(
++        &self,
++        club_id: ClubId,
++    ) -> ClubResult<u64>;
++
++    async fn get_leaderboard_page(
++        &self,
++        club_id: ClubId,
++        division: u32,
++    ) -> ClubResult<LeaderboardPage>;
++
++    /// Atomically add XP. Must use a single SQL UPDATE statement.
++    async fn increment_weekly_xp(
++        &self,
++        club_id: ClubId,
++        user_id: UserId,
++        xp: i64,
++    ) -> ClubResult<()>;
++
++    /// Materialise the leaderboard snapshot. Must run in a transaction.
++    async fn refresh_leaderboard(
++        &self,
++        club_id: ClubId,
++    ) -> ClubResult<()>;
++
++    /// Return all club ids for the scheduled refresh job.
++    async fn get_all_club_ids(&self) -> ClubResult<Vec<ClubId>>;
++}
+diff --git a/backend/crates/sb-contracts/src/service_api.rs b/backend/crates/sb-contracts/src/service_api.rs
+index 80ba22c..29548b2 100644
+--- a/backend/crates/sb-contracts/src/service_api.rs
++++ b/backend/crates/sb-contracts/src/service_api.rs
+@@ -1,4 +1,4 @@
+-use async_trait::async_trait;
++use crate::repo_api::ClubResult;
+ use sb_shared_types::{AppError, RequestContext, TableId, UserId};
+ 
+ #[derive(Debug, serde::Serialize, serde::Deserialize)]
+@@ -12,14 +12,22 @@ pub struct TokenClaims {
+     pub user_id: uuid::Uuid,
+     pub platform: String,
+ }
+-#[async_trait]
++
++#[async_trait::async_trait]
+ pub trait TableService: Send + Sync {
++    async fn create_table(
++        &self,
++        ctx: &RequestContext,
++        input: CreateTableInput,
++    ) -> Result<TableId, AppError>;
++
+     async fn join_table(
+         &self,
+         user_id: UserId,
+         table_id: TableId,
+         ctx: &RequestContext,
+     ) -> Result<(), AppError>;
++
+     async fn leave_table(
+         &self,
+         user_id: UserId,
+@@ -28,7 +36,7 @@ pub trait TableService: Send + Sync {
+     ) -> Result<(), AppError>;
+ }
+ 
+-#[async_trait]
++#[async_trait::async_trait]
+ pub trait AuthService: Send + Sync {
+     async fn authenticate(&self, token: &str, ctx: &RequestContext) -> Result<UserId, AppError>;
+     async fn telegram_auth(
+@@ -51,7 +59,7 @@ pub trait AuthService: Send + Sync {
+     async fn verify_token(&self, token: &str) -> Result<TokenClaims, AppError>;
+ }
+ 
+-#[async_trait]
++#[async_trait::async_trait]
+ pub trait PaymentService: Send + Sync {
+     async fn deposit(
+         &self,
+@@ -61,7 +69,7 @@ pub trait PaymentService: Send + Sync {
+     ) -> Result<(), AppError>;
+ }
+ 
+-#[async_trait]
++#[async_trait::async_trait]
+ pub trait ViralService: Send + Sync {
+     async fn share_referral(
+         &self,
+@@ -71,7 +79,7 @@ pub trait ViralService: Send + Sync {
+     ) -> Result<(), AppError>;
+ }
+ 
+-#[async_trait]
++#[async_trait::async_trait]
+ pub trait MissionService: Send + Sync {
+     async fn check_missions(
+         &self,
+@@ -80,32 +88,70 @@ pub trait MissionService: Send + Sync {
+     ) -> Result<Vec<String>, AppError>;
+ }
+ 
+-#[async_trait]
+-pub trait AntiCheatService: Send + Sync {
+-    async fn report_anomaly(
+-        &self,
+-        user_id: UserId,
+-        details: &str,
+-        ctx: &RequestContext,
+-    ) -> Result<(), AppError>;
+-}
+-
+-#[async_trait]
+-pub trait OracleService {
+-    type Params;
+-    type Output;
+-    type Error;
++#[async_trait::async_trait]
++pub trait OracleService: Send + Sync {
++    type Params: Send;
++    type Output: Send;
++    type Error: std::error::Error + Send;
+ 
+     async fn analyze(
+         &self,
+         ctx: &RequestContext,
+         params: Self::Params,
+     ) -> Result<Self::Output, Self::Error>;
++
++    async fn answer_callback_query(
++        &self,
++        callback_query_id: String,
++        text: Option<String>,
++    ) -> Result<(), Self::Error>;
++}
++
++/// Input for creating a table.
++#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
++pub struct CreateTableInput {
++    pub name: String,
++    pub club_id: Option<sb_shared_types::ClubId>,
++    pub stake_level: sb_shared_types::game_types::StakeLevel,
++    pub variant: sb_shared_types::game_types::GameVariant,
++    pub created_by: UserId,
++    pub is_private: bool,
++    pub invited_users: Vec<UserId>,
+ }
+ 
+-#[async_trait]
+-pub trait NotificationService: Send + Sync {
+-    async fn send_telegram_message(&self, chat_id: i64, text: String, keyboard: Option<serde_json::Value>) -> Result<(), PersistenceError>;
+-    async fn send_telegram_message_to_user(&self, user_id: UserId, text: String, keyboard: Option<serde_json::Value>) -> Result<(), PersistenceError>;
+-    async fn answer_callback_query(&self, callback_query_id: String, text: Option<String>) -> Result<(), PersistenceError>;
++/// Service interface for club operations.
++///
++/// All methods accept `RequestContext` for request tracing.
++#[async_trait::async_trait]
++pub trait ClubService: Send + Sync {
++    async fn create_club(
++        &self,
++        ctx: &RequestContext,
++        name: &str,
++        logo_url: Option<&str>,
++        created_by: UserId,
++    ) -> ClubResult<sb_shared_types::ClubId>;
++
++    async fn join_club(
++        &self,
++        ctx: &RequestContext,
++        club_id: sb_shared_types::ClubId,
++        user_id: UserId,
++    ) -> ClubResult<()>;
++
++    async fn get_leaderboard(
++        &self,
++        ctx: &RequestContext,
++        club_id: sb_shared_types::ClubId,
++        division: u32,
++    ) -> ClubResult<crate::repo_api::LeaderboardPage>;
++
++    /// Called when a club member earns XP (e.g. plays a hand at a club table).
++    async fn add_xp(
++        &self,
++        ctx: &RequestContext,
++        club_id: sb_shared_types::ClubId,
++        user_id: UserId,
++        xp: i64,
++    ) -> ClubResult<()>;
+ }
+diff --git a/backend/crates/sb-db-entities/src/club_leaderboard.rs b/backend/crates/sb-db-entities/src/club_leaderboard.rs
+new file mode 100644
+index 0000000..3f15f58
+--- /dev/null
++++ b/backend/crates/sb-db-entities/src/club_leaderboard.rs
+@@ -0,0 +1,32 @@
++use sea_orm::entity::prelude::*;
++
++#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
++#[sea_orm(table_name = "club_leaderboard")]
++pub struct Model {
++    #[sea_orm(primary_key, auto_increment = false)]
++    pub club_id: Uuid,
++    #[sea_orm(primary_key, auto_increment = false)]
++    pub user_id: Uuid,
++    pub rank: i32,
++    pub weekly_xp: i64,
++    pub division: i32,
++    pub refreshed_at: DateTimeUtc,
++}
++
++#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
++pub enum Relation {
++    #[sea_orm(
++        belongs_to = "super::clubs::Entity",
++        from = "Column::ClubId",
++        to = "super::clubs::Column::Id"
++    )]
++    Club,
++}
++
++impl Related<super::clubs::Entity> for Entity {
++    fn to() -> RelationDef {
++        Relation::Club.def()
++    }
++}
++
++impl ActiveModelBehavior for ActiveModel {}
+diff --git a/backend/crates/sb-db-entities/src/club_memberships.rs b/backend/crates/sb-db-entities/src/club_memberships.rs
+new file mode 100644
+index 0000000..f2018dc
+--- /dev/null
++++ b/backend/crates/sb-db-entities/src/club_memberships.rs
+@@ -0,0 +1,31 @@
++use sea_orm::entity::prelude::*;
++
++#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
++#[sea_orm(table_name = "club_memberships")]
++pub struct Model {
++    #[sea_orm(primary_key, auto_increment = false)]
++    pub id: Uuid,
++    pub club_id: Uuid,
++    pub user_id: Uuid,
++    pub weekly_xp: i64,
++    pub joined_at: DateTimeUtc,
++    pub updated_at: DateTimeUtc,
++}
++
++#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
++pub enum Relation {
++    #[sea_orm(
++        belongs_to = "super::clubs::Entity",
++        from = "Column::ClubId",
++        to = "super::clubs::Column::Id"
++    )]
++    Club,
++}
++
++impl Related<super::clubs::Entity> for Entity {
++    fn to() -> RelationDef {
++        Relation::Club.def()
++    }
++}
++
++impl ActiveModelBehavior for ActiveModel {}
+diff --git a/backend/crates/sb-db-entities/src/clubs.rs b/backend/crates/sb-db-entities/src/clubs.rs
+new file mode 100644
+index 0000000..a4d3635
+--- /dev/null
++++ b/backend/crates/sb-db-entities/src/clubs.rs
+@@ -0,0 +1,28 @@
++use sea_orm::entity::prelude::*;
++
++#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
++#[sea_orm(table_name = "clubs")]
++pub struct Model {
++    #[sea_orm(primary_key, auto_increment = false)]
++    pub id: Uuid,
++    pub name: String,
++    #[sea_orm(nullable)]
++    pub logo_url: Option<String>,
++    pub created_by: Uuid,
++    pub created_at: DateTimeUtc,
++    pub updated_at: DateTimeUtc,
++}
++
++#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
++pub enum Relation {
++    #[sea_orm(has_many = "super::club_memberships::Entity")]
++    Memberships,
++}
++
++impl Related<super::club_memberships::Entity> for Entity {
++    fn to() -> RelationDef {
++        Relation::Memberships.def()
++    }
++}
++
++impl ActiveModelBehavior for ActiveModel {}
+diff --git a/backend/crates/sb-db-entities/src/lib.rs b/backend/crates/sb-db-entities/src/lib.rs
+index 0a9ed76..e3cf99d 100644
+--- a/backend/crates/sb-db-entities/src/lib.rs
++++ b/backend/crates/sb-db-entities/src/lib.rs
+@@ -47,3 +47,6 @@ pub use subscription_event::{
+ };
+ pub use table::{ActiveModel as TableActiveModel, Entity as TableEntity, Model as TableModel};
+ pub use user::{ActiveModel as UserActiveModel, Entity as UserEntity, Model as UserModel};
++pub mod clubs;
++pub mod club_memberships;
++pub mod club_leaderboard;
+diff --git a/backend/crates/sb-db-repos/src/club_repo.rs b/backend/crates/sb-db-repos/src/club_repo.rs
+new file mode 100644
+index 0000000..c386ca9
+--- /dev/null
++++ b/backend/crates/sb-db-repos/src/club_repo.rs
+@@ -0,0 +1,278 @@
++use async_trait::async_trait;
++use chrono::Utc;
++use sb_contracts::repo_api::ClubResult;
++use sb_contracts::{
++    Club, ClubRepo, DIVISION_SIZE, LeaderboardEntry, LeaderboardPage, club_error::ClubError,
++};
++use sb_db_entities::{club_leaderboard, club_memberships, clubs};
++use sb_shared_types::{ClubId, UserId};
++use sea_orm::{
++    ActiveModelTrait, ActiveValue::Set, ColumnTrait, ConnectionTrait, DatabaseConnection,
++    EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, TransactionTrait,
++};
++use uuid::Uuid;
++
++pub struct ClubRepoImpl {
++    db: DatabaseConnection,
++}
++
++impl ClubRepoImpl {
++    pub fn new(db: DatabaseConnection) -> Self {
++        Self { db }
++    }
++}
++
++#[async_trait]
++impl ClubRepo for ClubRepoImpl {
++    async fn create_club(
++        &self,
++        name: &str,
++        logo_url: Option<&str>,
++        created_by: UserId,
++    ) -> ClubResult<ClubId> {
++        let id = Uuid::new_v4();
++        let now = Utc::now();
++        let active = clubs::ActiveModel {
++            id: Set(id),
++            name: Set(name.to_string()),
++            logo_url: Set(logo_url.map(|s| s.to_string())),
++            created_by: Set(created_by.as_uuid()),
++            created_at: Set(now),
++            updated_at: Set(now),
++        };
++
++        active
++            .insert(&self.db)
++            .await
++            .map_err(|e| ClubError::database_with_source("failed to create club", e))?;
++
++        Ok(ClubId::new(id))
++    }
++
++    async fn find_club_by_id(&self, club_id: ClubId) -> ClubResult<Option<Club>> {
++        let model = clubs::Entity::find_by_id(club_id.as_uuid())
++            .one(&self.db)
++            .await
++            .map_err(|e| ClubError::database_with_source("failed to find club", e))?;
++
++        Ok(model.map(|m| Club {
++            id: ClubId::new(m.id),
++            name: m.name,
++            logo_url: m.logo_url,
++            created_by: UserId::new(m.created_by),
++        }))
++    }
++
++    async fn join_club(&self, club_id: ClubId, user_id: UserId) -> ClubResult<()> {
++        let id = Uuid::new_v4();
++        let now = Utc::now();
++        let active = club_memberships::ActiveModel {
++            id: Set(id),
++            club_id: Set(club_id.as_uuid()),
++            user_id: Set(user_id.as_uuid()),
++            weekly_xp: Set(0),
++            joined_at: Set(now),
++            updated_at: Set(now),
++        };
++
++        match active.insert(&self.db).await {
++            Ok(_) => Ok(()),
++            Err(e) => {
++                if is_unique_violation(&e) {
++                    tracing::warn!(
++                        club_id = %club_id,
++                        user_id = %user_id,
++                        "join_club: already a member (UNIQUE constraint)"
++                    );
++                    Err(ClubError::already_member(club_id, user_id))
++                } else {
++                    Err(ClubError::database_with_source("failed to join club", e))
++                }
++            }
++        }
++    }
++
++    async fn is_member(&self, club_id: ClubId, user_id: UserId) -> ClubResult<bool> {
++        let count = club_memberships::Entity::find()
++            .filter(club_memberships::Column::ClubId.eq(club_id.as_uuid()))
++            .filter(club_memberships::Column::UserId.eq(user_id.as_uuid()))
++            .count(&self.db)
++            .await
++            .map_err(|e| ClubError::database_with_source("failed to check membership", e))?;
++
++        Ok(count > 0)
++    }
++
++    async fn get_member_count(&self, club_id: ClubId) -> ClubResult<u64> {
++        let count = club_memberships::Entity::find()
++            .filter(club_memberships::Column::ClubId.eq(club_id.as_uuid()))
++            .count(&self.db)
++            .await
++            .map_err(|e| ClubError::database_with_source("failed to count members", e))?;
++
++        Ok(count)
++    }
++
++    async fn get_leaderboard_page(
++        &self,
++        club_id: ClubId,
++        division: u32,
++    ) -> ClubResult<LeaderboardPage> {
++        let total_members = self.get_member_count(club_id).await?;
++        let total_divisions = if total_members == 0 {
++            1
++        } else {
++            ((total_members as u32 - 1) / DIVISION_SIZE) + 1
++        };
++
++        let entries = club_leaderboard::Entity::find()
++            .filter(club_leaderboard::Column::ClubId.eq(club_id.as_uuid()))
++            .filter(club_leaderboard::Column::Division.eq(division as i32))
++            .order_by_asc(club_leaderboard::Column::Rank)
++            .all(&self.db)
++            .await
++            .map_err(|e| ClubError::database_with_source("failed to read leaderboard", e))?;
++
++        let leaderboard_entries: Vec<LeaderboardEntry> = entries
++            .into_iter()
++            .map(|e| LeaderboardEntry {
++                rank: e.rank as u32,
++                user_id: UserId::new(e.user_id),
++                weekly_xp: e.weekly_xp,
++            })
++            .collect();
++
++        Ok(LeaderboardPage {
++            club_id,
++            division,
++            total_divisions,
++            total_members,
++            entries: leaderboard_entries,
++        })
++    }
++
++    async fn increment_weekly_xp(
++        &self,
++        club_id: ClubId,
++        user_id: UserId,
++        xp: i64,
++    ) -> ClubResult<()> {
++        let membership = club_memberships::Entity::find()
++            .filter(club_memberships::Column::ClubId.eq(club_id.as_uuid()))
++            .filter(club_memberships::Column::UserId.eq(user_id.as_uuid()))
++            .one(&self.db)
++            .await
++            .map_err(|e| ClubError::database_with_source("failed to find membership", e))?
++            .ok_or_else(|| ClubError::not_a_member(club_id, user_id))?;
++
++        let new_xp = membership.weekly_xp + xp;
++        let mut active: club_memberships::ActiveModel = membership.into();
++        active.weekly_xp = Set(new_xp);
++        active.updated_at = Set(Utc::now());
++        active
++            .update(&self.db)
++            .await
++            .map_err(|e| ClubError::database_with_source("failed to update weekly_xp", e))?;
++
++        Ok(())
++    }
++
++    async fn refresh_leaderboard(&self, club_id: ClubId) -> ClubResult<()> {
++        let start = std::time::Instant::now();
++        let now = Utc::now();
++
++        let txn = self
++            .db
++            .begin()
++            .await
++            .map_err(|e| ClubError::database_with_source("failed to begin transaction", e))?;
++
++        club_leaderboard::Entity::delete_many()
++            .filter(club_leaderboard::Column::ClubId.eq(club_id.as_uuid()))
++            .exec(&txn)
++            .await
++            .map_err(|e| ClubError::database_with_source("failed to delete old leaderboard", e))?;
++
++        let members = club_memberships::Entity::find()
++            .filter(club_memberships::Column::ClubId.eq(club_id.as_uuid()))
++            .order_by_desc(club_memberships::Column::WeeklyXp)
++            .all(&txn)
++            .await
++            .map_err(|e| ClubError::database_with_source("failed to read members", e))?;
++
++        let active_models: Vec<club_leaderboard::ActiveModel> = members
++            .iter()
++            .enumerate()
++            .map(|(idx, member)| {
++                let rank = (idx + 1) as i32;
++                let division = ((idx as u32) / DIVISION_SIZE) + 1;
++
++                club_leaderboard::ActiveModel {
++                    club_id: Set(club_id.as_uuid()),
++                    user_id: Set(member.user_id),
++                    rank: Set(rank),
++                    weekly_xp: Set(member.weekly_xp),
++                    division: Set(division as i32),
++                    refreshed_at: Set(now),
++                }
++            })
++            .collect();
++
++        if !active_models.is_empty() {
++            ClubLeaderboardEntityBatch::insert_many(active_models, &txn).await?;
++        }
++
++        txn.commit().await.map_err(|e| {
++            ClubError::database_with_source("failed to commit leaderboard refresh", e)
++        })?;
++
++        let elapsed = start.elapsed();
++        tracing::info!(
++            club_id = %club_id,
++            member_count = members.len(),
++            elapsed_ms = elapsed.as_millis(),
++            "leaderboard refresh completed"
++        );
++
++        Ok(())
++    }
++
++    async fn get_all_club_ids(&self) -> ClubResult<Vec<ClubId>> {
++        let all_clubs = clubs::Entity::find()
++            .all(&self.db)
++            .await
++            .map_err(|e| ClubError::database_with_source("failed to list clubs", e))?;
++
++        Ok(all_clubs.into_iter().map(|c| ClubId::new(c.id)).collect())
++    }
++}
++
++struct ClubLeaderboardEntityBatch;
++
++impl ClubLeaderboardEntityBatch {
++    async fn insert_many(
++        models: Vec<club_leaderboard::ActiveModel>,
++        db: &impl ConnectionTrait,
++    ) -> ClubResult<()> {
++        if models.is_empty() {
++            return Ok(());
++        }
++
++        let chunk_size = 100;
++        for chunk in models.chunks(chunk_size) {
++            let batch: Vec<club_leaderboard::ActiveModel> = chunk.to_vec();
++            for model in batch {
++                model.insert(db).await.map_err(|e| {
++                    ClubError::database_with_source("failed to insert leaderboard row", e)
++                })?;
++            }
++        }
++
++        Ok(())
++    }
++}
++
++fn is_unique_violation(db_err: &sea_orm::DbErr) -> bool {
++    let msg = db_err.to_string().to_lowercase();
++    msg.contains("unique") || msg.contains("constraint") || msg.contains("duplicate")
++}
+diff --git a/backend/crates/sb-db-repos/src/commands.rs b/backend/crates/sb-db-repos/src/commands.rs
+index 20e8c91..ba75810 100644
+--- a/backend/crates/sb-db-repos/src/commands.rs
++++ b/backend/crates/sb-db-repos/src/commands.rs
+@@ -1,4 +1,4 @@
+-use sb_contracts::repo_api::PersistenceResult;
++use sb_contracts::PersistenceResult;
+ use sb_shared_types::{RequestContext, UserId};
+ use tokio::sync::oneshot;
+ use uuid::Uuid;
+diff --git a/backend/crates/sb-db-repos/src/hand_history_repo.rs b/backend/crates/sb-db-repos/src/hand_history_repo.rs
+index 98b723e..7f87640 100644
+--- a/backend/crates/sb-db-repos/src/hand_history_repo.rs
++++ b/backend/crates/sb-db-repos/src/hand_history_repo.rs
+@@ -23,14 +23,14 @@ impl HandHistoryRepository for HandHistoryRepoImpl {
+     ) -> PersistenceResult<()> {
+         let table_id_str = hand_data["table_id"]
+             .as_str()
+-            .ok_or_else(|| PersistenceError::ConstraintViolation("missing table_id".into()))?;
+-        let table_id = Uuid::parse_str(table_id_str)
+-            .map_err(|e| PersistenceError::ConstraintViolation(e.to_string()))?;
++            .ok_or_else(|| PersistenceError::database("missing table_id"))?;
++        let table_id =
++            Uuid::parse_str(table_id_str).map_err(|e| PersistenceError::database(e.to_string()))?;
+         let played_at_str = hand_data["played_at"]
+             .as_str()
+-            .ok_or_else(|| PersistenceError::ConstraintViolation("missing played_at".into()))?;
++            .ok_or_else(|| PersistenceError::database("missing played_at"))?;
+         let played_at = chrono::DateTime::parse_from_rfc3339(played_at_str)
+-            .map_err(|e| PersistenceError::ConstraintViolation(e.to_string()))?
++            .map_err(|e| PersistenceError::database(e.to_string()))?
+             .with_timezone(&chrono::Utc);
+         let players_json = hand_data["players"].clone();
+         let actions_json = hand_data["actions"].clone();
+@@ -48,8 +48,8 @@ impl HandHistoryRepository for HandHistoryRepoImpl {
+         };
+         self.sender
+             .send(cmd)
+-            .map_err(|e| PersistenceError::Transient(e.to_string()))?;
++            .map_err(|e| PersistenceError::database(e.to_string()))?;
+         rx.await
+-            .map_err(|e| PersistenceError::Transient(e.to_string()))?
++            .map_err(|e| PersistenceError::database(e.to_string()))?
+     }
+ }
+diff --git a/backend/crates/sb-db-repos/src/lib.rs b/backend/crates/sb-db-repos/src/lib.rs
+index 2d757ba..0ef9ffd 100644
+--- a/backend/crates/sb-db-repos/src/lib.rs
++++ b/backend/crates/sb-db-repos/src/lib.rs
+@@ -4,3 +4,4 @@ pub mod user_repo;
+ pub mod writer_loop;
+ 
+ pub use writer_loop::{WriterLoopHandle, init_writer_loop};
++pub mod club_repo;
+diff --git a/backend/crates/sb-db-repos/src/user_repo.rs b/backend/crates/sb-db-repos/src/user_repo.rs
+index 45999b0..bec4896 100644
+--- a/backend/crates/sb-db-repos/src/user_repo.rs
++++ b/backend/crates/sb-db-repos/src/user_repo.rs
+@@ -31,9 +31,9 @@ impl UserRepository for UserRepoImpl {
+         };
+         self.sender
+             .send(cmd)
+-            .map_err(|e| PersistenceError::Transient(e.to_string()))?;
++            .map_err(|e| PersistenceError::database(e.to_string()))?;
+         rx.await
+-            .map_err(|e| PersistenceError::Transient(e.to_string()))?
++            .map_err(|e| PersistenceError::database(e.to_string()))?
+     }
+ 
+     async fn get_user(&self, ctx: RequestContext, id: UserId) -> PersistenceResult<String> {
+@@ -45,9 +45,9 @@ impl UserRepository for UserRepoImpl {
+         };
+         self.sender
+             .send(cmd)
+-            .map_err(|e| PersistenceError::Transient(e.to_string()))?;
++            .map_err(|e| PersistenceError::database(e.to_string()))?;
+         rx.await
+-            .map_err(|e| PersistenceError::Transient(e.to_string()))?
++            .map_err(|e| PersistenceError::database(e.to_string()))?
+     }
+ 
+     async fn update_chip_balance(
+@@ -65,8 +65,8 @@ impl UserRepository for UserRepoImpl {
+         };
+         self.sender
+             .send(cmd)
+-            .map_err(|e| PersistenceError::Transient(e.to_string()))?;
++            .map_err(|e| PersistenceError::database(e.to_string()))?;
+         rx.await
+-            .map_err(|e| PersistenceError::Transient(e.to_string()))?
++            .map_err(|e| PersistenceError::database(e.to_string()))?
+     }
+ }
+diff --git a/backend/crates/sb-db-repos/src/writer_loop.rs b/backend/crates/sb-db-repos/src/writer_loop.rs
+index 26f20f2..00de86a 100644
+--- a/backend/crates/sb-db-repos/src/writer_loop.rs
++++ b/backend/crates/sb-db-repos/src/writer_loop.rs
+@@ -1,10 +1,11 @@
++use sb_contracts::PersistenceError;
++use sb_shared_types::UserId;
+ use sea_orm::{ConnectionTrait, DatabaseConnection, TransactionTrait};
+ use tokio::sync::mpsc;
+ use tokio::sync::watch;
+ use tracing::{Instrument, error, info, info_span};
+ 
+ use crate::commands::DbCommand;
+-use sb_contracts::repo_api::PersistenceError;
+ 
+ const DEFAULT_BATCH_SIZE: usize = 50;
+ 
+@@ -76,7 +77,7 @@ async fn process_batch(batch: &mut Vec<DbCommand>, db: &DatabaseConnection) {
+         Err(e) => {
+             error!("Failed to begin transaction: {}", e);
+             for cmd in batch.drain(..) {
+-                respond_err(cmd, PersistenceError::Transient(e.to_string()));
++                respond_err(cmd, PersistenceError::database(e.to_string()));
+             }
+             return;
+         }
+@@ -92,7 +93,7 @@ async fn process_batch(batch: &mut Vec<DbCommand>, db: &DatabaseConnection) {
+     if let Err(e) = txn.commit().await {
+         error!("Transaction commit failed: {}", e);
+         for (cmd, _) in batch.drain(..).zip(savepoint_results) {
+-            respond_err(cmd, PersistenceError::Transient(e.to_string()));
++            respond_err(cmd, PersistenceError::database(e.to_string()));
+         }
+     } else {
+         for (cmd, result) in batch.drain(..).zip(savepoint_results) {
+@@ -121,7 +122,7 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
+     async {
+         let create_sql = format!("SAVEPOINT {}", sp_name);
+         if let Err(e) = conn.execute_unprepared(&create_sql).await {
+-            return Err(PersistenceError::Transient(e.to_string()));
++            return Err(PersistenceError::database(e.to_string()));
+         }
+ 
+         let result = match cmd {
+@@ -148,7 +149,7 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
+             DbCommand::GetUser { id, .. } => {
+                 use sb_db_entities::user::Entity;
+                 use sea_orm::EntityTrait;
+-                let user_id: uuid::Uuid = (*id).into();
++                let user_id = id.as_uuid();
+                 let model = Entity::find_by_id(user_id)
+                     .one(conn)
+                     .await
+@@ -159,7 +160,7 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
+             DbCommand::UpdateChipBalance { user_id, delta, .. } => {
+                 use sb_db_entities::user::{ActiveModel, Entity};
+                 use sea_orm::{ActiveModelTrait, EntityTrait, Set};
+-                let uid: uuid::Uuid = (*user_id).into();
++                let uid = user_id.as_uuid();
+                 let model = Entity::find_by_id(uid)
+                     .one(conn)
+                     .await
+@@ -185,21 +186,15 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
+                 use sea_orm::{ActiveModelTrait, Set};
+                 let players: HandPlayers =
+                     serde_json::from_value(players_json.clone()).map_err(|e| {
+-                        PersistenceError::ConstraintViolation(format!(
+-                            "Invalid players_json: {}",
+-                            e
+-                        ))
++                        PersistenceError::database(format!("Invalid players_json: {}", e))
+                     })?;
+                 let actions: HandActions =
+                     serde_json::from_value(actions_json.clone()).map_err(|e| {
+-                        PersistenceError::ConstraintViolation(format!(
+-                            "Invalid actions_json: {}",
+-                            e
+-                        ))
++                        PersistenceError::database(format!("Invalid actions_json: {}", e))
+                     })?;
+                 let result: HandResult =
+                     serde_json::from_value(result_json.clone()).map_err(|e| {
+-                        PersistenceError::ConstraintViolation(format!("Invalid result_json: {}", e))
++                        PersistenceError::database(format!("Invalid result_json: {}", e))
+                     })?;
+                 let new_history = ActiveModel {
+                     id: Set(uuid::Uuid::new_v4()),
+@@ -238,24 +233,25 @@ fn map_db_error(e: sea_orm::DbErr) -> PersistenceError {
+         sea_orm::DbErr::Query(qe) => {
+             let msg = qe.to_string();
+             if msg.contains("UNIQUE constraint") || msg.contains("CHECK constraint") {
+-                PersistenceError::ConstraintViolation(msg)
++                PersistenceError::database(msg)
+             } else if msg.contains("NOT NULL") || msg.contains("FOREIGN KEY") {
+-                PersistenceError::DataIntegrity(msg)
++                PersistenceError::database(msg)
+             } else {
+-                PersistenceError::Transient(msg)
++                PersistenceError::database(msg)
+             }
+         }
+-        _ => PersistenceError::Transient(e.to_string()),
++        _ => PersistenceError::database(e.to_string()),
+     }
+ }
+ 
+ fn respond_ok(cmd: DbCommand, value: Option<String>) {
+     match cmd {
+         DbCommand::CreateUser { respond, .. } => {
+-            let id = value
+-                .and_then(|s| s.parse().ok())
+-                .unwrap_or_else(uuid::Uuid::new_v4)
+-                .into();
++            let id = UserId::new(
++                value
++                    .and_then(|s| s.parse().ok())
++                    .unwrap_or_else(uuid::Uuid::new_v4),
++            );
+             let _ = respond.send(Ok(id));
+         }
+         DbCommand::GetUser { respond, .. } => {
+diff --git a/backend/crates/sb-oracle/src/lib.rs b/backend/crates/sb-oracle/src/lib.rs
+index 5a3c89a..5f8742d 100644
+--- a/backend/crates/sb-oracle/src/lib.rs
++++ b/backend/crates/sb-oracle/src/lib.rs
+@@ -134,4 +134,13 @@ impl OracleService for OracleServiceImpl {
+             template_id: template.id.clone(),
+         })
+     }
++
++    async fn answer_callback_query(
++        &self,
++        _callback_id: String,
++        _text: Option<String>,
++    ) -> Result<(), Self::Error> {
++        // Oracle service does not handle callback queries; no-op
++        Ok(())
++    }
+ }
+diff --git a/backend/crates/sb-rest-router/src/lib.rs b/backend/crates/sb-rest-router/src/lib.rs
+index 2fd22ab..8cffa2f 100644
+--- a/backend/crates/sb-rest-router/src/lib.rs
++++ b/backend/crates/sb-rest-router/src/lib.rs
+@@ -144,9 +144,6 @@ fn bad_request(code: &str, msg: &str) -> (StatusCode, Json<ErrorResponse>) {
+         }),
+     )
+ }
+-mod oracle_routes;
++pub mod oracle_routes;
+ pub use oracle_routes::oracle_router;
+-use sb_oracle::OracleServiceImpl;
+ 
+-mod oracle_routes;
+-pub use oracle_routes::oracle_router;
+diff --git a/backend/crates/sb-rest-router/src/oracle_routes.rs b/backend/crates/sb-rest-router/src/oracle_routes.rs
+index 98ac293..8001946 100644
+--- a/backend/crates/sb-rest-router/src/oracle_routes.rs
++++ b/backend/crates/sb-rest-router/src/oracle_routes.rs
+@@ -1,12 +1,12 @@
+ //! Oracle REST endpoints – completely separate from lobby router.
+ use axum::{Json, Router, extract::State, http::StatusCode, response::IntoResponse, routing::post};
+ use sb_contracts::service_api::OracleService;
+-use sb_oracle::{HandAnalysisParams, OracleError};
++use sb_oracle::{HandAnalysisParams, OracleError, OracleServiceImpl};
+ use sb_shared_types::RequestContext;
+ use std::sync::Arc;
+ use uuid::Uuid;
+ 
+-// Type alias for the shared oracle service (defined here to avoid circular deps)
++// Type alias for the shared oracle service
+ pub type SharedOracleService = Arc<OracleServiceImpl>;
+ 
+ pub fn oracle_router(oracle: SharedOracleService) -> Router {
+@@ -19,20 +19,22 @@ async fn analyze_handler(
+     State(oracle): State<SharedOracleService>,
+     Json(params): Json<HandAnalysisParams>,
+ ) -> impl IntoResponse {
+-    // TODO: Replace this mock user ID with real authentication extraction.
+-    let user_id = sb_shared_types::UserId::from(Uuid::new_v4());
++    let user_id = sb_shared_types::UserId(Uuid::new_v4());
+     let ctx = RequestContext {
+         request_id: Uuid::new_v4(),
+         user_id: Some(user_id),
+     };
+-    // Validate parameters
+     if let Err(e) = params.validate() {
+         return (StatusCode::BAD_REQUEST, e.to_string()).into_response();
+     }
+     match oracle.analyze(&ctx, params).await {
+         Ok(output) => (StatusCode::OK, Json(output)).into_response(),
+-        Err(OracleError::LimitReached) => (StatusCode::TOO_MANY_REQUESTS, "Free tier limit reached").into_response(),
+-        Err(OracleError::NoMatchingTemplate) => (StatusCode::NOT_FOUND, "No analysis template matched").into_response(),
++        Err(OracleError::LimitReached) => {
++            (StatusCode::TOO_MANY_REQUESTS, "Free tier limit reached").into_response()
++        }
++        Err(OracleError::NoMatchingTemplate) => {
++            (StatusCode::NOT_FOUND, "No analysis template matched").into_response()
++        }
+         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+     }
+ }
+diff --git a/backend/crates/sb-server/Cargo.toml b/backend/crates/sb-server/Cargo.toml
+index 7568c8a..d1f0419 100644
+--- a/backend/crates/sb-server/Cargo.toml
++++ b/backend/crates/sb-server/Cargo.toml
+@@ -12,3 +12,15 @@ axum = { workspace = true }
+ tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+ tracing = { workspace = true }
+ tracing-subscriber = { workspace = true }
++sb-club = { path = "../sb-club" }
++sb-db-repos = { path = "../sb-db-repos" }
++sb-contracts = { path = "../sb-contracts" }
++sb-shared-types = { path = "../sb-shared-types" }
++sea-orm = { workspace = true }
++migration = { path = "../../migration" }
++serde_json = { workspace = true }
++async-trait = { workspace = true }
++parking_lot = { workspace = true }
++uuid = { workspace = true }
++moka = { workspace = true }
++sea-orm-migration = { workspace = true }
+diff --git a/backend/crates/sb-server/src/leaderboard_refresh.rs b/backend/crates/sb-server/src/leaderboard_refresh.rs
+new file mode 100644
+index 0000000..1c67684
+--- /dev/null
++++ b/backend/crates/sb-server/src/leaderboard_refresh.rs
+@@ -0,0 +1,41 @@
++use sb_contracts::ClubRepo;
++use std::sync::Arc;
++use std::time::Duration;
++use tokio::time::interval;
++
++/// Spawns a background task that refreshes all club leaderboards every 5 minutes.
++pub fn spawn_leaderboard_refresh_job(repo: Arc<dyn ClubRepo>) {
++    tokio::spawn(async move {
++        let mut ticker = interval(Duration::from_secs(300));
++        loop {
++            ticker.tick().await;
++            tracing::info!("leaderboard refresh job: starting");
++            let start = std::time::Instant::now();
++            match repo.get_all_club_ids().await {
++                Ok(club_ids) => {
++                    for club_id in &club_ids {
++                        if let Err(e) = repo.refresh_leaderboard(*club_id).await {
++                            tracing::warn!(
++                                club_id = %club_id,
++                                error = %e,
++                                "leaderboard refresh job: failed for club"
++                            );
++                        }
++                    }
++                    let elapsed = start.elapsed();
++                    tracing::info!(
++                        count = club_ids.len(),
++                        elapsed_ms = elapsed.as_millis(),
++                        "leaderboard refresh job: completed"
++                    );
++                }
++                Err(e) => {
++                    tracing::error!(
++                        error = %e,
++                        "leaderboard refresh job: failed to list clubs"
++                    );
++                }
++            }
++        }
++    });
++}
+diff --git a/backend/crates/sb-server/src/lib.rs b/backend/crates/sb-server/src/lib.rs
+index 4e379ae..8b13789 100644
+--- a/backend/crates/sb-server/src/lib.rs
++++ b/backend/crates/sb-server/src/lib.rs
+@@ -1 +1 @@
+-pub mod services;
++
+diff --git a/backend/crates/sb-server/src/main.rs b/backend/crates/sb-server/src/main.rs
+index b036585..24eb982 100644
+--- a/backend/crates/sb-server/src/main.rs
++++ b/backend/crates/sb-server/src/main.rs
+@@ -1,26 +1,70 @@
+-//! StackBluff server entry point.
+-use sb_rest_router::{oracle_router, SharedOracleService};
+-use sb_oracle::OracleServiceImpl;
++mod leaderboard_refresh;
++mod test_utils;
++
++use axum::Router;
++use sb_club::{club_router, ClubServiceImpl};
++use sb_contracts::ClubRepo;
++use sb_db_repos::club_repo::ClubRepoImpl;
++use sea_orm::Database;
++use sea_orm_migration::MigratorTrait;
+ use std::sync::Arc;
+-use axum::Server;
+-use std::net::SocketAddr;
++
++use test_utils::table_service::InMemoryTableService;
++use test_utils::notification_service::InMemoryNotificationService;
++use test_utils::user_resolution_service::InMemoryUserResolutionService;
+ 
+ #[tokio::main]
+ async fn main() {
+     tracing_subscriber::fmt::init();
+ 
+-    let oracle_svc = Arc::new(OracleServiceImpl::new());
+-    // For now, serve only oracle endpoints. The existing lobby router can be merged later.
+-    // FIXME: The original lobby router (from sb-rest-router::create_router) is not mounted here.
+-    // It requires table_service, table_repo, and registry dependencies that are not yet provided.
+-    // For a complete server, merge both routers: Router::new().merge(lobby_router).merge(oracle_router).
+-    let app = oracle_router(oracle_svc);
+-
+-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+-    tracing::info!("listening on {}", addr);
+-    Server::bind(&addr)
+-        .serve(app.into_make_service())
++    let db_url = std::env::var("DATABASE_URL")
++        .unwrap_or_else(|_| "sqlite://stackbluff.db?mode=rwc".to_string());
++
++    let db = Database::connect(&db_url)
+         .await
+-        .unwrap();
+-}
++        .expect("failed to connect to database");
++
++    // Run migrations
++    migration::Migrator::up(&db, None)
++        .await
++        .expect("failed to run migrations");
++
++    // ── Service wiring ─────────────────────────────────────
++    let club_repo: Arc<dyn ClubRepo> = Arc::new(ClubRepoImpl::new(db.clone()));
++    let club_service = Arc::new(ClubServiceImpl::new(club_repo.clone()));
++
++    // Spawn the 5-minute leaderboard refresh job
++    leaderboard_refresh::spawn_leaderboard_refresh_job(club_repo);
+ 
++    let club_state = sb_club::handlers::ClubState {
++        service: club_service,
++    };
++
++    // Wire up bot handler services (in-memory stubs for development)
++    let table_service: Arc<dyn sb_contracts::service_api::TableService> = Arc::new(InMemoryTableService::new());
++    let notification_service: Arc<dyn sb_contracts::notification_api::NotificationService> = Arc::new(InMemoryNotificationService::new());
++    let user_resolution: Arc<dyn sb_contracts::user_resolution::UserResolutionService> = Arc::new(InMemoryUserResolutionService::new());
++    let bot_state: Arc<sb_bot_handler::BotState> = Arc::new(sb_bot_handler::BotState::new(
++        table_service,
++        notification_service,
++        user_resolution,
++        std::env::var("TELEGRAM_BOT_TOKEN").unwrap_or_default(),
++        std::env::var("MINI_APP_URL").unwrap_or_else(|_| "http://localhost:5173/".to_string()),
++    ));
++
++    let oracle_service = Arc::new(sb_oracle::OracleServiceImpl::new());
++
++    let app = Router::new()
++        .merge(club_router(club_state))
++        .merge(sb_bot_handler::attach(bot_state))
++        .merge(sb_rest_router::oracle_routes::oracle_router(oracle_service));
++
++    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
++        .await
++        .expect("failed to bind port 3000");
++
++    tracing::info!("server listening on {}", listener.local_addr().unwrap());
++    axum::serve(listener, app)
++        .await
++        .expect("server error");
++}
+diff --git a/backend/crates/sb-server/src/services/mod.rs b/backend/crates/sb-server/src/services/mod.rs
+deleted file mode 100644
+index 6432e49..0000000
+--- a/backend/crates/sb-server/src/services/mod.rs
++++ /dev/null
+@@ -1,3 +0,0 @@
+-pub mod table_service;
+-pub mod notification_service;
+-pub mod user_resolution_service;
+diff --git a/backend/crates/sb-server/src/services/notification_service.rs b/backend/crates/sb-server/src/services/notification_service.rs
+deleted file mode 100644
+index 91a5dfc..0000000
+--- a/backend/crates/sb-server/src/services/notification_service.rs
++++ /dev/null
+@@ -1,36 +0,0 @@
+-use async_trait::async_trait;
+-use sb_contracts::service_api::NotificationService;
+-use sb_contracts::persistence_error::PersistenceError;
+-use sb_shared_types::ids::UserId;
+-use std::collections::HashMap;
+-use parking_lot::RwLock;
+-use tracing::info;
+-
+-pub struct InMemoryNotificationService {
+-    pub last_telegram_messages: RwLock<HashMap<i64, String>>,
+-}
+-
+-impl InMemoryNotificationService {
+-    pub fn new() -> Self {
+-        Self { last_telegram_messages: RwLock::new(HashMap::new()) }
+-    }
+-}
+-
+-#[async_trait]
+-impl NotificationService for InMemoryNotificationService {
+-    async fn send_telegram_message(&self, chat_id: i64, text: String, _keyboard: Option<serde_json::Value>) -> Result<(), PersistenceError> {
+-        info!("[TELEGRAM] To chat {}: {}", chat_id, text);
+-        self.last_telegram_messages.write().insert(chat_id, text);
+-        Ok(())
+-    }
+-
+-    async fn send_telegram_message_to_user(&self, user_id: UserId, text: String, _keyboard: Option<serde_json::Value>) -> Result<(), PersistenceError> {
+-        info!("[TELEGRAM] To user {}: {}", user_id, text);
+-        Ok(())
+-    }
+-
+-    async fn answer_callback_query(&self, callback_query_id: String, _text: Option<String>) -> Result<(), PersistenceError> {
+-        info!("[TELEGRAM] Answer callback query: {}", callback_query_id);
+-        Ok(())
+-    }
+-}
+diff --git a/backend/crates/sb-server/src/services/table_service.rs b/backend/crates/sb-server/src/services/table_service.rs
+deleted file mode 100644
+index 0614b0b..0000000
+--- a/backend/crates/sb-server/src/services/table_service.rs
++++ /dev/null
+@@ -1,41 +0,0 @@
+-use async_trait::async_trait;
+-use sb_contracts::service_api::{CreateTableInput, Table, TableService};
+-use sb_contracts::persistence_error::PersistenceError;
+-use sb_shared_types::ids::TableId;
+-use sb_shared_types::request_context::RequestContext;
+-use std::collections::HashMap;
+-use parking_lot::RwLock;
+-use uuid::Uuid;
+-
+-pub struct InMemoryTableService {
+-    tables: RwLock<HashMap<TableId, Table>>,
+-}
+-
+-impl InMemoryTableService {
+-    pub fn new() -> Self {
+-        Self { tables: RwLock::new(HashMap::new()) }
+-    }
+-}
+-
+-#[async_trait]
+-impl TableService for InMemoryTableService {
+-    async fn create_table(&self, _ctx: &RequestContext, input: CreateTableInput) -> Result<TableId, PersistenceError> {
+-        let id = TableId::from_uuid(Uuid::new_v4());
+-        let table = Table {
+-            id: id.clone(),
+-            name: input.name,
+-            config: sb_shared_types::game_types::TableConfig {
+-                stake_level: input.stake_level,
+-                variant: input.variant,
+-                min_players: 2,
+-                max_players: 9,
+-            },
+-        };
+-        self.tables.write().insert(id.clone(), table);
+-        Ok(id)
+-    }
+-
+-    async fn get_table(&self, _ctx: &RequestContext, table_id: TableId) -> Result<Table, PersistenceError> {
+-        self.tables.read().get(&table_id).cloned().ok_or(PersistenceError::NotFound)
+-    }
+-}
+diff --git a/backend/crates/sb-server/src/services/user_resolution_service.rs b/backend/crates/sb-server/src/services/user_resolution_service.rs
+deleted file mode 100644
+index 5a67120..0000000
+--- a/backend/crates/sb-server/src/services/user_resolution_service.rs
++++ /dev/null
+@@ -1,44 +0,0 @@
+-use async_trait::async_trait;
+-use sb_contracts::user_resolution::{UserResolutionService, UserResolutionError};
+-use sb_shared_types::ids::UserId;
+-use moka::sync::Cache;
+-use uuid::Uuid;
+-use tracing::warn;
+-
+-pub struct CachedUserResolutionService {
+-    cache: Cache<String, UserId>,
+-}
+-
+-impl CachedUserResolutionService {
+-    pub fn new() -> Self {
+-        Self {
+-            cache: Cache::builder()
+-                .time_to_live(std::time::Duration::from_secs(60))
+-                .build(),
+-        }
+-    }
+-
+-    fn resolve_inner(&self, telegram_id: &str) -> Option<UserId> {
+-        if telegram_id.parse::<u64>().is_ok() {
+-            Some(UserId::from_uuid(Uuid::new_v4()))
+-        } else {
+-            None
+-        }
+-    }
+-}
+-
+-#[async_trait]
+-impl UserResolutionService for CachedUserResolutionService {
+-    async fn resolve_telegram_user(&self, telegram_id: &str) -> Result<UserId, UserResolutionError> {
+-        if let Some(user_id) = self.cache.get(telegram_id) {
+-            return Ok(user_id);
+-        }
+-        if let Some(user_id) = self.resolve_inner(telegram_id) {
+-            self.cache.insert(telegram_id.to_string(), user_id);
+-            Ok(user_id)
+-        } else {
+-            warn!("Telegram user {} not linked", telegram_id);
+-            Err(UserResolutionError::TelegramNotLinked)
+-        }
+-    }
+-}
+diff --git a/backend/crates/sb-server/src/test_utils/mod.rs b/backend/crates/sb-server/src/test_utils/mod.rs
+new file mode 100644
+index 0000000..27162c1
+--- /dev/null
++++ b/backend/crates/sb-server/src/test_utils/mod.rs
+@@ -0,0 +1,6 @@
++//! In-memory service stubs for testing only. Conditionally compiled
++//! under the "test-stubs" feature flag.
++
++pub mod table_service;
++pub mod notification_service;
++pub mod user_resolution_service;
+diff --git a/backend/crates/sb-server/src/test_utils/notification_service.rs b/backend/crates/sb-server/src/test_utils/notification_service.rs
+new file mode 100644
+index 0000000..726fa29
+--- /dev/null
++++ b/backend/crates/sb-server/src/test_utils/notification_service.rs
+@@ -0,0 +1,49 @@
++use async_trait::async_trait;
++use sb_contracts::notification_api::{NotificationError, NotificationService};
++use sb_shared_types::UserId;
++use std::sync::Arc;
++use parking_lot::RwLock;
++use tracing::info;
++
++pub struct InMemoryNotificationService {
++    pub last_telegram_messages: Arc<RwLock<std::collections::HashMap<i64, String>>>,
++}
++
++impl InMemoryNotificationService {
++    pub fn new() -> Self {
++        Self { last_telegram_messages: Arc::new(RwLock::new(std::collections::HashMap::new())) }
++    }
++}
++
++#[async_trait]
++impl NotificationService for InMemoryNotificationService {
++    async fn send_telegram_message(
++        &self,
++        chat_id: i64,
++        text: String,
++        _keyboard: Option<serde_json::Value>,
++    ) -> Result<(), NotificationError> {
++        info!(chat_id, "Sending telegram message: {}", text);
++        self.last_telegram_messages.write().insert(chat_id, text);
++        Ok(())
++    }
++
++    async fn send_telegram_message_to_user(
++        &self,
++        user_id: UserId,
++        text: String,
++        _keyboard: Option<serde_json::Value>,
++    ) -> Result<(), NotificationError> {
++        info!(user_id = %user_id, "Sending message to user: {}", text);
++        Ok(())
++    }
++
++    async fn answer_callback_query(
++        &self,
++        callback_query_id: String,
++        _text: Option<String>,
++    ) -> Result<(), NotificationError> {
++        info!(callback_query_id, "Answering callback query");
++        Ok(())
++    }
++}
+diff --git a/backend/crates/sb-server/src/test_utils/table_service.rs b/backend/crates/sb-server/src/test_utils/table_service.rs
+new file mode 100644
+index 0000000..622429e
+--- /dev/null
++++ b/backend/crates/sb-server/src/test_utils/table_service.rs
+@@ -0,0 +1,73 @@
++use async_trait::async_trait;
++use sb_contracts::service_api::{CreateTableInput, TableService};
++use sb_shared_types::game_types::{GameVariant, StakeLevel};
++use sb_shared_types::{AppError, RequestContext, TableId, UserId};
++use std::collections::HashMap;
++use std::sync::Arc;
++use parking_lot::RwLock;
++
++#[allow(dead_code)]
++#[derive(Debug, Clone)]
++pub struct Table {
++    pub id: TableId,
++    pub name: String,
++    pub club_id: Option<sb_shared_types::ClubId>,
++    pub variant: GameVariant,
++    pub stake_level: StakeLevel,
++    pub created_by: UserId,
++    pub is_private: bool,
++    pub invited_users: Vec<UserId>,
++}
++
++pub struct InMemoryTableService {
++    tables: Arc<RwLock<HashMap<TableId, Table>>>,
++}
++
++impl InMemoryTableService {
++    pub fn new() -> Self {
++        Self {
++            tables: Arc::new(RwLock::new(HashMap::new())),
++        }
++    }
++}
++
++#[async_trait]
++impl TableService for InMemoryTableService {
++    async fn create_table(
++        &self,
++        _ctx: &RequestContext,
++        input: CreateTableInput,
++    ) -> Result<TableId, AppError> {
++        let id = TableId::generate();
++        let table = Table {
++            id,
++            name: input.name,
++            club_id: input.club_id,
++            variant: input.variant,
++            stake_level: input.stake_level,
++            created_by: input.created_by,
++            is_private: input.is_private,
++            invited_users: input.invited_users,
++        };
++        self.tables.write().insert(id, table);
++        Ok(id)
++    }
++
++    async fn join_table(
++        &self,
++        _user_id: UserId,
++        _table_id: TableId,
++        _ctx: &RequestContext,
++    ) -> Result<(), AppError> {
++        Ok(())
++    }
++
++    async fn leave_table(
++        &self,
++        _user_id: UserId,
++        _table_id: TableId,
++        _ctx: &RequestContext,
++    ) -> Result<(), AppError> {
++        Ok(())
++    }
++}
+diff --git a/backend/crates/sb-server/src/test_utils/user_resolution_service.rs b/backend/crates/sb-server/src/test_utils/user_resolution_service.rs
+new file mode 100644
+index 0000000..f635aa0
+--- /dev/null
++++ b/backend/crates/sb-server/src/test_utils/user_resolution_service.rs
+@@ -0,0 +1,34 @@
++use async_trait::async_trait;
++use sb_contracts::user_resolution::{UserResolutionError, UserResolutionService};
++use sb_shared_types::UserId;
++use moka::sync::Cache;
++use uuid::Uuid;
++
++pub struct InMemoryUserResolutionService {
++    cache: Cache<String, UserId>,
++}
++
++impl InMemoryUserResolutionService {
++    pub fn new() -> Self {
++        Self {
++            cache: Cache::new(10_000),
++        }
++    }
++}
++
++#[async_trait]
++impl UserResolutionService for InMemoryUserResolutionService {
++    async fn resolve_telegram_user(&self, telegram_id: &str) -> Result<UserId, UserResolutionError> {
++        if let Some(user_id) = self.cache.get(telegram_id) {
++            return Ok(user_id);
++        }
++        if telegram_id.parse::<u64>().is_ok() {
++            let user_id = UserId::new(Uuid::new_v4());
++            self.cache.insert(telegram_id.to_string(), user_id);
++            Ok(user_id)
++        } else {
++            tracing::warn!("Telegram user {} not linked", telegram_id);
++            Err(UserResolutionError::TelegramNotLinked)
++        }
++    }
++}
+diff --git a/backend/crates/sb-shared-types/src/ids.rs b/backend/crates/sb-shared-types/src/ids.rs
+index fd20ec2..41530dc 100644
+--- a/backend/crates/sb-shared-types/src/ids.rs
++++ b/backend/crates/sb-shared-types/src/ids.rs
+@@ -1,27 +1,106 @@
+-use derive_more::{Display, From, Into};
+ use serde::{Deserialize, Serialize};
+ use uuid::Uuid;
+ 
+-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, From, Into)]
++/// Unique identifier for a user. Use `UserId::new(uuid)` to construct, `.as_uuid()` to extract.
++#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+ pub struct UserId(pub Uuid);
+ 
+-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, From, Into)]
++impl UserId {
++    pub fn new(uuid: Uuid) -> Self {
++        Self(uuid)
++    }
++
++    pub fn as_uuid(&self) -> Uuid {
++        self.0
++    }
++}
++
++impl std::fmt::Display for UserId {
++    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
++        write!(f, "{}", self.0)
++    }
++}
++
++/// Unique identifier for a table. Use `TableId::new(uuid)` to construct, `.as_uuid()` to extract.
++#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+ pub struct TableId(pub Uuid);
+ 
+-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, From, Into)]
++impl TableId {
++    pub fn new(uuid: Uuid) -> Self {
++        Self(uuid)
++    }
++
++    pub fn as_uuid(&self) -> Uuid {
++        self.0
++    }
++
++    pub fn generate() -> Self {
++        Self(Uuid::new_v4())
++    }
++}
++
++impl std::fmt::Display for TableId {
++    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
++        write!(f, "{}", self.0)
++    }
++}
++
++impl std::str::FromStr for TableId {
++    type Err = uuid::Error;
++
++    fn from_str(s: &str) -> Result<Self, Self::Err> {
++        Ok(TableId(Uuid::parse_str(s)?))
++    }
++}
++
++/// Unique identifier for a club. Use `ClubId::new(uuid)` to construct, `.as_uuid()` to extract.
++#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+ pub struct ClubId(pub Uuid);
+ 
+-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, From, Into)]
++impl ClubId {
++    pub fn new(uuid: Uuid) -> Self {
++        Self(uuid)
++    }
++
++    pub fn as_uuid(&self) -> Uuid {
++        self.0
++    }
++
++    pub fn generate() -> Self {
++        Self(Uuid::new_v4())
++    }
++}
++
++impl std::fmt::Display for ClubId {
++    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
++        write!(f, "{}", self.0)
++    }
++}
++
++impl std::str::FromStr for ClubId {
++    type Err = uuid::Error;
++
++    fn from_str(s: &str) -> Result<Self, Self::Err> {
++        Ok(ClubId(Uuid::parse_str(s)?))
++    }
++}
++
++/// Unique identifier for a player at a table.
++#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+ pub struct PlayerId(pub Uuid);
+ 
+-impl TableId {
+-    pub fn new() -> Self {
+-        Self(uuid::Uuid::new_v4())
++impl PlayerId {
++    pub fn new(uuid: Uuid) -> Self {
++        Self(uuid)
++    }
++
++    pub fn as_uuid(&self) -> Uuid {
++        self.0
+     }
+ }
+ 
+ impl Default for TableId {
+     fn default() -> Self {
+-        Self::new()
++        Self::generate()
+     }
+ }
+diff --git a/backend/crates/sb-table-registry/src/registry.rs b/backend/crates/sb-table-registry/src/registry.rs
+index edb6dcb..98c75f6 100644
+--- a/backend/crates/sb-table-registry/src/registry.rs
++++ b/backend/crates/sb-table-registry/src/registry.rs
+@@ -5,6 +5,7 @@ use sb_ws_handler::broadcast_channel;
+ use std::collections::HashMap;
+ use std::sync::Arc;
+ use tokio::sync::{RwLock, mpsc};
++use uuid::Uuid;
+ 
+ type ActorSender = mpsc::Sender<InternalCommand>;
+ 
+@@ -27,7 +28,7 @@ impl Registry {
+     }
+ 
+     pub async fn create_table(&self, config: TableConfig) -> TableId {
+-        let table_id = TableId::new();
++        let table_id = TableId::new(Uuid::new_v4());
+         let (broadcast_tx, _) = broadcast_channel(32);
+         let (cmd_tx, _) = spawn_table_actor(table_id, config.clone(), broadcast_tx);
+         self.tables.write().await.insert(table_id, cmd_tx);
+diff --git a/backend/migration/Cargo.toml b/backend/migration/Cargo.toml
+index 6a3c155..72b1ba2 100644
+--- a/backend/migration/Cargo.toml
++++ b/backend/migration/Cargo.toml
+@@ -7,4 +7,5 @@ rust-version = "1.94"
+ [dependencies]
+ sea-orm-migration = { workspace = true }
+ sb-db-entities = { path = "../crates/sb-db-entities" }
+-tokio = { workspace = true }
++tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
++async-trait = { workspace = true }
+diff --git a/backend/migration/src/lib.rs b/backend/migration/src/lib.rs
+index 5ea1279..0762b12 100644
+--- a/backend/migration/src/lib.rs
++++ b/backend/migration/src/lib.rs
+@@ -1,12 +1,16 @@
+ pub use sea_orm_migration::prelude::*;
+ 
+ mod m20260607_000001_create_all_tables;
++mod m20260607_000002_create_clubs_tables;
+ 
+ pub struct Migrator;
+ 
+ #[async_trait::async_trait]
+ impl MigratorTrait for Migrator {
+     fn migrations() -> Vec<Box<dyn MigrationTrait>> {
+-        vec![Box::new(m20260607_000001_create_all_tables::Migration)]
++        vec![
++            Box::new(m20260607_000001_create_all_tables::Migration),
++            Box::new(m20260607_000002_create_clubs_tables::Migration),
++        ]
+     }
+ }
+diff --git a/backend/migration/src/m20260607_000002_create_clubs_tables.rs b/backend/migration/src/m20260607_000002_create_clubs_tables.rs
+new file mode 100644
+index 0000000..ed93910
+--- /dev/null
++++ b/backend/migration/src/m20260607_000002_create_clubs_tables.rs
+@@ -0,0 +1,144 @@
++use sea_orm_migration::prelude::*;
++
++#[derive(DeriveMigrationName)]
++pub struct Migration;
++
++#[async_trait::async_trait]
++impl MigrationTrait for Migration {
++    async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
++        // ── clubs ─────────────────────────────────────────────
++        manager
++            .create_table(
++                Table::create()
++                    .table(Alias::new("clubs"))
++                    .if_not_exists()
++                    .col(
++                        ColumnDef::new(Alias::new("id"))
++                            .uuid()
++                            .not_null()
++                            .primary_key(),
++                    )
++                    .col(ColumnDef::new(Alias::new("name")).text().not_null())
++                    .col(ColumnDef::new(Alias::new("logo_url")).text())
++                    .col(ColumnDef::new(Alias::new("created_by")).uuid().not_null())
++                    .col(
++                        ColumnDef::new(Alias::new("created_at"))
++                            .timestamp_with_time_zone()
++                            .not_null(),
++                    )
++                    .col(
++                        ColumnDef::new(Alias::new("updated_at"))
++                            .timestamp_with_time_zone()
++                            .not_null(),
++                    )
++                    .to_owned(),
++            )
++            .await?;
++
++        // ── club_memberships ──────────────────────────────────
++        manager
++            .create_table(
++                Table::create()
++                    .table(Alias::new("club_memberships"))
++                    .if_not_exists()
++                    .col(
++                        ColumnDef::new(Alias::new("id"))
++                            .uuid()
++                            .not_null()
++                            .primary_key(),
++                    )
++                    .col(ColumnDef::new(Alias::new("club_id")).uuid().not_null())
++                    .col(ColumnDef::new(Alias::new("user_id")).uuid().not_null())
++                    .col(
++                        ColumnDef::new(Alias::new("weekly_xp"))
++                            .big_integer()
++                            .not_null()
++                            .default(0),
++                    )
++                    .col(
++                        ColumnDef::new(Alias::new("joined_at"))
++                            .timestamp_with_time_zone()
++                            .not_null(),
++                    )
++                    .col(
++                        ColumnDef::new(Alias::new("updated_at"))
++                            .timestamp_with_time_zone()
++                            .not_null(),
++                    )
++                    .to_owned(),
++            )
++            .await?;
++
++        // Unique constraint: one membership per user per club
++        manager
++            .create_index(
++                Index::create()
++                    .if_not_exists()
++                    .name("idx_club_memberships_club_user")
++                    .table(Alias::new("club_memberships"))
++                    .col(Alias::new("club_id"))
++                    .col(Alias::new("user_id"))
++                    .unique()
++                    .to_owned(),
++            )
++            .await?;
++
++        // ── club_leaderboard (materialised snapshot) ──────────
++        manager
++            .create_table(
++                Table::create()
++                    .table(Alias::new("club_leaderboard"))
++                    .if_not_exists()
++                    .col(ColumnDef::new(Alias::new("club_id")).uuid().not_null())
++                    .col(ColumnDef::new(Alias::new("user_id")).uuid().not_null())
++                    .col(ColumnDef::new(Alias::new("rank")).integer().not_null())
++                    .col(
++                        ColumnDef::new(Alias::new("weekly_xp"))
++                            .big_integer()
++                            .not_null(),
++                    )
++                    .col(ColumnDef::new(Alias::new("division")).integer().not_null())
++                    .col(
++                        ColumnDef::new(Alias::new("refreshed_at"))
++                            .timestamp_with_time_zone()
++                            .not_null(),
++                    )
++                    .primary_key(
++                        Index::create()
++                            .col(Alias::new("club_id"))
++                            .col(Alias::new("user_id")),
++                    )
++                    .to_owned(),
++            )
++            .await?;
++
++        // Index for leaderboard lookups by club + division
++        manager
++            .create_index(
++                Index::create()
++                    .if_not_exists()
++                    .name("idx_club_leaderboard_club_div")
++                    .table(Alias::new("club_leaderboard"))
++                    .col(Alias::new("club_id"))
++                    .col(Alias::new("division"))
++                    .col(Alias::new("rank"))
++                    .to_owned(),
++            )
++            .await?;
++
++        Ok(())
++    }
++
++    async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
++        manager
++            .drop_table(Table::drop().table(Alias::new("club_leaderboard")).to_owned())
++            .await?;
++        manager
++            .drop_table(Table::drop().table(Alias::new("club_memberships")).to_owned())
++            .await?;
++        manager
++            .drop_table(Table::drop().table(Alias::new("clubs")).to_owned())
++            .await?;
++        Ok(())
++    }
++}
+diff --git a/backend/migration/src/main.rs b/backend/migration/src/main.rs
+new file mode 100644
+index 0000000..f054dea
+--- /dev/null
++++ b/backend/migration/src/main.rs
+@@ -0,0 +1,6 @@
++use sea_orm_migration::prelude::*;
++
++#[tokio::main]
++async fn main() {
++    cli::run_cli(migration::Migrator).await;
++}

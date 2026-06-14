@@ -1,11 +1,21 @@
-use async_trait::async_trait;
-use sb_contracts::service_api::{CreateTableInput, TableService};
-use sb_shared_types::game_types::{GameVariant, StakeLevel};
-use sb_shared_types::{AppError, RequestContext, TableId, UserId};
-use std::collections::HashMap;
-use std::sync::Arc;
-use parking_lot::RwLock;
+//! In-memory table service stub for testing.
 
+#[cfg(feature = "test-stubs")]
+use async_trait::async_trait;
+#[cfg(feature = "test-stubs")]
+use parking_lot::RwLock;
+#[cfg(feature = "test-stubs")]
+use sb_contracts::service_api::{CreateTableInput, TableService};
+#[cfg(feature = "test-stubs")]
+use sb_shared_types::game_types::{GameVariant, StakeLevel};
+#[cfg(feature = "test-stubs")]
+use sb_shared_types::{AppError, RequestContext, TableId, UserId};
+#[cfg(feature = "test-stubs")]
+use std::collections::HashMap;
+#[cfg(feature = "test-stubs")]
+use std::sync::Arc;
+
+#[cfg(feature = "test-stubs")]
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct Table {
@@ -19,10 +29,12 @@ pub struct Table {
     pub invited_users: Vec<UserId>,
 }
 
+#[cfg(feature = "test-stubs")]
 pub struct InMemoryTableService {
     tables: Arc<RwLock<HashMap<TableId, Table>>>,
 }
 
+#[cfg(feature = "test-stubs")]
 impl InMemoryTableService {
     pub fn new() -> Self {
         Self {
@@ -31,6 +43,7 @@ impl InMemoryTableService {
     }
 }
 
+#[cfg(feature = "test-stubs")]
 #[async_trait]
 impl TableService for InMemoryTableService {
     async fn create_table(

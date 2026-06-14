@@ -1,3 +1,2 @@
-//! Re-export of base PersistenceError from crate root.
-pub use crate::PersistenceError;
-pub use crate::PersistenceResult;
+//! Re-export of PersistenceError and related types from crate root.
+pub use crate::{PersistenceError, PersistenceResult};

@@ -6,7 +6,19 @@ use sb_shared_types::{PlayerId, TableId, UserId};
 
 // ── Base infrastructure error ──────────────────────────────────
 
-/// Low-level database/infrastructure error with preserved source chain.
+/// Database/infrastructure error with preserved source chain.
+///
+/// Variant semantics:
+/// - `Database`: Unexpected infrastructure failure (connection lost, query syntax error).
+///   Caller should log and return 500. Not safe to retry without investigation.
+/// - `Transient`: Retryable infrastructure error (deadlock, timeout, connection pool exhaustion).
+///   Safe to retry with backoff.
+/// - `ConstraintViolation`: Client sent data that violates a database constraint
+///   (UNIQUE, CHECK). Should map to 400/409. Never retry with the same data.
+/// - `DataIntegrity`: Schema-level violation (NOT NULL, FOREIGN KEY).
+///   Indicates a bug in application logic. Should map to 422/500.
+/// - `NotFound`: Requested entity does not exist. Maps to 404.
+/// - `WriteConflict`: Optimistic concurrency conflict. Maps to 409.
 #[derive(Debug, thiserror::Error)]
 pub enum PersistenceError {
     #[error("database error: {message}")]
@@ -15,15 +27,35 @@ pub enum PersistenceError {
         #[source]
         source: Option<Box<dyn std::error::Error + Send + Sync>>,
     },
+
+    #[error("transient error: {message}")]
+    Transient {
+        message: String,
+        #[source]
+        source: Option<Box<dyn std::error::Error + Send + Sync>>,
+    },
+
+    #[error("constraint violation: {message}")]
+    ConstraintViolation { message: String },
+
+    #[error("data integrity error: {message}")]
+    DataIntegrity { message: String },
+
     #[error("not found")]
     NotFound,
+
     #[error("write conflict")]
     WriteConflict,
 }
 
 impl PersistenceError {
+    // ── Database (non-retryable infrastructure error) ──────
+
     pub fn database(msg: impl Into<String>) -> Self {
-        Self::Database { message: msg.into(), source: None }
+        Self::Database {
+            message: msg.into(),
+            source: None,
+        }
     }
 
     pub fn database_with_source(
@@ -34,6 +66,46 @@ impl PersistenceError {
             message: msg.into(),
             source: Some(Box::new(err)),
         }
+    }
+
+    // ── Transient (retryable infrastructure error) ─────────
+
+    pub fn transient(msg: impl Into<String>) -> Self {
+        Self::Transient {
+            message: msg.into(),
+            source: None,
+        }
+    }
+
+    pub fn transient_with_source(
+        msg: impl Into<String>,
+        err: impl std::error::Error + Send + Sync + 'static,
+    ) -> Self {
+        Self::Transient {
+            message: msg.into(),
+            source: Some(Box::new(err)),
+        }
+    }
+
+    // ── ConstraintViolation (client data error) ────────────
+
+    pub fn constraint_violation(msg: impl Into<String>) -> Self {
+        Self::ConstraintViolation {
+            message: msg.into(),
+        }
+    }
+
+    // ── DataIntegrity (schema/logic violation) ─────────────
+
+    pub fn data_integrity(msg: impl Into<String>) -> Self {
+        Self::DataIntegrity {
+            message: msg.into(),
+        }
+    }
+
+    /// Returns `true` if this error is safe to retry (Transient or WriteConflict).
+    pub fn is_retryable(&self) -> bool {
+        matches!(self, Self::Transient { .. } | Self::WriteConflict)
     }
 }
 
@@ -81,18 +153,20 @@ pub trait MissionRepository: Send + Sync {
 
 // ── Modules ────────────────────────────────────────────────────
 
+pub mod async_hooks;
+pub mod club_error;
+pub mod lobby_api;
+pub mod notification_api;
+pub mod persistence_error;
 pub mod repo_api;
 pub mod service_api;
-pub mod lobby_api;
-pub mod persistence_error;
-pub mod club_error;
-pub mod async_hooks;
-pub mod notification_api;
 pub mod user_resolution;
 
-pub use lobby_api::{TableInfo, TableRepo, TableService};
 pub use club_error::ClubError;
-pub use repo_api::{ClubRepo, LeaderboardPage, LeaderboardEntry, Club, ClubMembership, DIVISION_SIZE};
+pub use lobby_api::{TableInfo, TableRepo, TableService};
+pub use repo_api::{
+    Club, ClubMembership, ClubRepo, DIVISION_SIZE, LeaderboardEntry, LeaderboardPage,
+};
 pub use service_api::ClubService;
 
 #[derive(Debug, thiserror::Error)]

@@ -1,13 +1,22 @@
+//! In-memory user resolution service stub for testing.
+
+#[cfg(feature = "test-stubs")]
 use async_trait::async_trait;
-use sb_contracts::user_resolution::{UserResolutionError, UserResolutionService};
-use sb_shared_types::UserId;
+#[cfg(feature = "test-stubs")]
 use moka::sync::Cache;
+#[cfg(feature = "test-stubs")]
+use sb_contracts::user_resolution::{UserResolutionError, UserResolutionService};
+#[cfg(feature = "test-stubs")]
+use sb_shared_types::UserId;
+#[cfg(feature = "test-stubs")]
 use uuid::Uuid;
 
+#[cfg(feature = "test-stubs")]
 pub struct InMemoryUserResolutionService {
     cache: Cache<String, UserId>,
 }
 
+#[cfg(feature = "test-stubs")]
 impl InMemoryUserResolutionService {
     pub fn new() -> Self {
         Self {
@@ -16,9 +25,13 @@ impl InMemoryUserResolutionService {
     }
 }
 
+#[cfg(feature = "test-stubs")]
 #[async_trait]
 impl UserResolutionService for InMemoryUserResolutionService {
-    async fn resolve_telegram_user(&self, telegram_id: &str) -> Result<UserId, UserResolutionError> {
+    async fn resolve_telegram_user(
+        &self,
+        telegram_id: &str,
+    ) -> Result<UserId, UserResolutionError> {
         if let Some(user_id) = self.cache.get(telegram_id) {
             return Ok(user_id);
         }

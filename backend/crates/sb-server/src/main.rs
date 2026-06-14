@@ -1,16 +1,20 @@
 mod leaderboard_refresh;
+#[cfg(feature = "test-stubs")]
 mod test_utils;
 
 use axum::Router;
-use sb_club::{club_router, ClubServiceImpl};
+use sb_club::{ClubServiceImpl, club_router};
 use sb_contracts::ClubRepo;
 use sb_db_repos::club_repo::ClubRepoImpl;
 use sea_orm::Database;
 use sea_orm_migration::MigratorTrait;
 use std::sync::Arc;
 
-use test_utils::table_service::InMemoryTableService;
+#[cfg(feature = "test-stubs")]
 use test_utils::notification_service::InMemoryNotificationService;
+#[cfg(feature = "test-stubs")]
+use test_utils::table_service::InMemoryTableService;
+#[cfg(feature = "test-stubs")]
 use test_utils::user_resolution_service::InMemoryUserResolutionService;
 
 #[tokio::main]
@@ -40,10 +44,27 @@ async fn main() {
         service: club_service,
     };
 
-    // Wire up bot handler services (in-memory stubs for development)
-    let table_service: Arc<dyn sb_contracts::service_api::TableService> = Arc::new(InMemoryTableService::new());
-    let notification_service: Arc<dyn sb_contracts::notification_api::NotificationService> = Arc::new(InMemoryNotificationService::new());
-    let user_resolution: Arc<dyn sb_contracts::user_resolution::UserResolutionService> = Arc::new(InMemoryUserResolutionService::new());
+    // Wire up bot handler services
+    // In production, replace with real implementations; test-stubs are for development only.
+    #[cfg(feature = "test-stubs")]
+    let (table_service, notification_service, user_resolution) = {
+        let table_service: Arc<dyn sb_contracts::service_api::TableService> =
+            Arc::new(InMemoryTableService::new());
+        let notification_service: Arc<dyn sb_contracts::notification_api::NotificationService> =
+            Arc::new(InMemoryNotificationService::new());
+        let user_resolution: Arc<dyn sb_contracts::user_resolution::UserResolutionService> =
+            Arc::new(InMemoryUserResolutionService::new());
+        (table_service, notification_service, user_resolution)
+    };
+
+    #[cfg(not(feature = "test-stubs"))]
+    let (table_service, notification_service, user_resolution) = {
+        // Production wiring — TODO: replace with real service implementations
+        unimplemented!(
+            "Production service wiring not yet configured. Build with --features test-stubs for development."
+        )
+    };
+
     let bot_state: Arc<sb_bot_handler::BotState> = Arc::new(sb_bot_handler::BotState::new(
         table_service,
         notification_service,
@@ -64,7 +85,5 @@ async fn main() {
         .expect("failed to bind port 3000");
 
     tracing::info!("server listening on {}", listener.local_addr().unwrap());
-    axum::serve(listener, app)
-        .await
-        .expect("server error");
+    axum::serve(listener, app).await.expect("server error");
 }

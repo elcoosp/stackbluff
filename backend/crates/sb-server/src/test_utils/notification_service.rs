@@ -1,20 +1,33 @@
+//! In-memory notification service stub for testing.
+
+#[cfg(feature = "test-stubs")]
 use async_trait::async_trait;
-use sb_contracts::notification_api::{NotificationError, NotificationService};
-use sb_shared_types::UserId;
-use std::sync::Arc;
+#[cfg(feature = "test-stubs")]
 use parking_lot::RwLock;
+#[cfg(feature = "test-stubs")]
+use sb_contracts::notification_api::{NotificationError, NotificationService};
+#[cfg(feature = "test-stubs")]
+use sb_shared_types::UserId;
+#[cfg(feature = "test-stubs")]
+use std::sync::Arc;
+#[cfg(feature = "test-stubs")]
 use tracing::info;
 
+#[cfg(feature = "test-stubs")]
 pub struct InMemoryNotificationService {
     pub last_telegram_messages: Arc<RwLock<std::collections::HashMap<i64, String>>>,
 }
 
+#[cfg(feature = "test-stubs")]
 impl InMemoryNotificationService {
     pub fn new() -> Self {
-        Self { last_telegram_messages: Arc::new(RwLock::new(std::collections::HashMap::new())) }
+        Self {
+            last_telegram_messages: Arc::new(RwLock::new(std::collections::HashMap::new())),
+        }
     }
 }
 
+#[cfg(feature = "test-stubs")]
 #[async_trait]
 impl NotificationService for InMemoryNotificationService {
     async fn send_telegram_message(

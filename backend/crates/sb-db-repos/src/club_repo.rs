@@ -6,9 +6,10 @@ use sb_contracts::{
 };
 use sb_db_entities::{club_leaderboard, club_memberships, clubs};
 use sb_shared_types::{ClubId, UserId};
+use sea_orm::sea_query::ExprTrait;
 use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, ConnectionTrait, DatabaseConnection,
-    EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, TransactionTrait,
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseConnection, EntityTrait,
+    PaginatorTrait, QueryFilter, QueryOrder, TransactionTrait,
 };
 use uuid::Uuid;
 
@@ -151,32 +152,38 @@ impl ClubRepo for ClubRepoImpl {
         })
     }
 
+    /// Atomic XP increment using a single SQL UPDATE via `Entity::update_many()`.
+    /// This eliminates the read-modify-write race condition — no TOCTOU gap.
     async fn increment_weekly_xp(
         &self,
         club_id: ClubId,
         user_id: UserId,
         xp: i64,
     ) -> ClubResult<()> {
-        let membership = club_memberships::Entity::find()
+        use sea_orm::sea_query::Expr;
+
+        let result = club_memberships::Entity::update_many()
+            .col_expr(
+                club_memberships::Column::WeeklyXp,
+                Expr::col(club_memberships::Column::WeeklyXp).add(Expr::value(xp)),
+            )
+            .col_expr(club_memberships::Column::UpdatedAt, Expr::value(Utc::now()))
             .filter(club_memberships::Column::ClubId.eq(club_id.as_uuid()))
             .filter(club_memberships::Column::UserId.eq(user_id.as_uuid()))
-            .one(&self.db)
+            .exec(&self.db)
             .await
-            .map_err(|e| ClubError::database_with_source("failed to find membership", e))?
-            .ok_or_else(|| ClubError::not_a_member(club_id, user_id))?;
+            .map_err(|e| ClubError::database_with_source("failed to increment weekly_xp", e))?;
 
-        let new_xp = membership.weekly_xp + xp;
-        let mut active: club_memberships::ActiveModel = membership.into();
-        active.weekly_xp = Set(new_xp);
-        active.updated_at = Set(Utc::now());
-        active
-            .update(&self.db)
-            .await
-            .map_err(|e| ClubError::database_with_source("failed to update weekly_xp", e))?;
+        if result.rows_affected == 0 {
+            return Err(ClubError::not_a_member(club_id, user_id));
+        }
 
         Ok(())
     }
 
+    /// Refresh leaderboard inside a transaction.
+    /// Uses `Entity::insert_many()` in chunks for true batch INSERT
+    /// (single SQL statement per chunk, not N individual round-trips).
     async fn refresh_leaderboard(&self, club_id: ClubId) -> ClubResult<()> {
         let start = std::time::Instant::now();
         let now = Utc::now();
@@ -187,12 +194,14 @@ impl ClubRepo for ClubRepoImpl {
             .await
             .map_err(|e| ClubError::database_with_source("failed to begin transaction", e))?;
 
+        // 1. Delete existing leaderboard entries for this club
         club_leaderboard::Entity::delete_many()
             .filter(club_leaderboard::Column::ClubId.eq(club_id.as_uuid()))
             .exec(&txn)
             .await
             .map_err(|e| ClubError::database_with_source("failed to delete old leaderboard", e))?;
 
+        // 2. Read all members sorted by weekly_xp descending
         let members = club_memberships::Entity::find()
             .filter(club_memberships::Column::ClubId.eq(club_id.as_uuid()))
             .order_by_desc(club_memberships::Column::WeeklyXp)
@@ -200,6 +209,10 @@ impl ClubRepo for ClubRepoImpl {
             .await
             .map_err(|e| ClubError::database_with_source("failed to read members", e))?;
 
+        // 3. Batch insert new leaderboard rows using Entity::insert_many()
+        //    Chunked to stay under SQLite's SQLITE_MAX_VARIABLE_NUMBER limit
+        //    (999 variables default; each row has ~6 columns → ~160 rows per chunk).
+        const INSERT_CHUNK_SIZE: usize = 150;
         let active_models: Vec<club_leaderboard::ActiveModel> = members
             .iter()
             .enumerate()
@@ -218,8 +231,13 @@ impl ClubRepo for ClubRepoImpl {
             })
             .collect();
 
-        if !active_models.is_empty() {
-            ClubLeaderboardEntityBatch::insert_many(active_models, &txn).await?;
+        for chunk in active_models.chunks(INSERT_CHUNK_SIZE) {
+            club_leaderboard::Entity::insert_many(chunk.to_vec())
+                .exec(&txn)
+                .await
+                .map_err(|e| {
+                    ClubError::database_with_source("failed to batch insert leaderboard rows", e)
+                })?;
         }
 
         txn.commit().await.map_err(|e| {
@@ -247,31 +265,7 @@ impl ClubRepo for ClubRepoImpl {
     }
 }
 
-struct ClubLeaderboardEntityBatch;
-
-impl ClubLeaderboardEntityBatch {
-    async fn insert_many(
-        models: Vec<club_leaderboard::ActiveModel>,
-        db: &impl ConnectionTrait,
-    ) -> ClubResult<()> {
-        if models.is_empty() {
-            return Ok(());
-        }
-
-        let chunk_size = 100;
-        for chunk in models.chunks(chunk_size) {
-            let batch: Vec<club_leaderboard::ActiveModel> = chunk.to_vec();
-            for model in batch {
-                model.insert(db).await.map_err(|e| {
-                    ClubError::database_with_source("failed to insert leaderboard row", e)
-                })?;
-            }
-        }
-
-        Ok(())
-    }
-}
-
+/// Detect UNIQUE constraint violation from sea_orm::DbErr.
 fn is_unique_violation(db_err: &sea_orm::DbErr) -> bool {
     let msg = db_err.to_string().to_lowercase();
     msg.contains("unique") || msg.contains("constraint") || msg.contains("duplicate")
