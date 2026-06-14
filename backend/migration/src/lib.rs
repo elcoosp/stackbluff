@@ -12,3 +12,4 @@ impl MigratorTrait for Migrator {
         ]
     }
 }
+pub mod m20250614_create_payment_intents;

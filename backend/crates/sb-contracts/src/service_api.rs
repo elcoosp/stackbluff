@@ -83,3 +83,29 @@ pub enum AntiCheatError {
     #[error("Self-transfer not allowed")]
     SelfTransfer,
 }
+
+#[async_trait::async_trait]
+pub trait PaymentService: Send + Sync {
+    async fn create_intent(
+        &self,
+        user_id: sb_shared_types::UserId,
+        amount: sb_shared_types::ChipAmount,
+        currency: String,
+        provider: String,
+        metadata: serde_json::Value,
+    ) -> Result<String, sb_shared_types::AppError>;
+
+    async fn confirm_payment(
+        &self,
+        payment_id: &str,
+        provider: &str,
+        status: &str,
+        completed_at: Option<chrono::DateTime<chrono::Utc>>,
+    ) -> Result<(), sb_shared_types::AppError>;
+
+    async fn award_chips_on_success(
+        &self,
+        user_id: sb_shared_types::UserId,
+        amount: sb_shared_types::ChipAmount,
+    ) -> Result<(), sb_shared_types::AppError>;
+}

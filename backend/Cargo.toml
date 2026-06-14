@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "crates/sb-payment",
     "crates/sb-anti-cheat",
     "crates/sb-viral",
     "crates/sb-oracle",
@@ -24,6 +25,14 @@ edition = "2024"
 rust-version = "1.94"
 
 [workspace.dependencies]
+    lazy_static = "1.4"
+    prometheus = { version = "0.13", features = ["process"] }
+    dotenvy = "0.15"
+    reqwest = { version = "0.12", features = ["json"] }
+    async-stripe-types = "=1.0.0-rc.6"
+    async-stripe-webhook = "=1.0.0-rc.6"
+    async-stripe-checkout = { version = "=1.0.0-rc.6", features = ["checkout_session"] }
+    async-stripe = { version = "=1.0.0-rc.6", features = ["default-tls"] }
 metrics = "0.23.0"
 dashmap = { version = "6", features = ["serde"] }
 
