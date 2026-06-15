@@ -1,33 +1,171 @@
-import { useState } from 'react';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
-import { ActionButton, RaiseSlider } from './';
-import { Gamepad2 } from 'lucide-react';
-export const ActionBar = ({ isDesktop, actionRequired, toCall, minRaise, maxRaise, pot, onAction }: any) => {
+import { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ActionButton } from './ActionButton';
+import { RaiseSlider } from './RaiseSlider';
+import { ChevronUp, ChevronDown } from 'lucide-react';
+
+const glassStyle: React.CSSProperties = {
+  background: 'rgba(8, 8, 8, 0.8)',
+  backdropFilter: 'blur(32px)',
+  WebkitBackdropFilter: 'blur(32px)',
+  border: '1px solid rgba(255,255,255,0.08)',
+  borderTopColor: 'rgba(255,255,255,0.14)',
+  boxShadow:
+    '0 12px 48px rgba(0,0,0,0.9), 0 0 0 1px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)',
+};
+
+const transition = { duration: 0.25, ease: [0.22, 1, 0.36, 1] as const };
+
+function useActionKeys(onAction: (action: string, amount?: number) => void, actionRequired: boolean) {
+  const handleKey = useCallback((e: KeyboardEvent) => {
+    if (!actionRequired) return;
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+    switch (e.key.toLowerCase()) {
+      case 'f': onAction('fold'); break;
+      case 'c': onAction('call'); break;
+      case 'r': onAction('raise'); break;
+      case 'a': onAction('all-in'); break;
+    }
+  }, [onAction, actionRequired]);
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [handleKey]);
+}
+
+/* ── Desktop ── */
+const DesktopActionBar = ({
+  actionRequired, toCall, minRaise, maxRaise, pot, onAction,
+}: {
+  actionRequired: boolean; toCall: number; minRaise: number; maxRaise: number; pot: number;
+  onAction: (action: string, amount?: number) => void;
+}) => {
   const [raiseOpen, setRaiseOpen] = useState(false);
-  if (!actionRequired) return null;
-  if (isDesktop) {
-    return (
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex gap-4 bg-black/80 backdrop-blur-2xl px-8 py-4 rounded-full border border-white/10 shadow-2xl z-[450]">
-        <ActionButton variant="fold" onClick={() => onAction('fold')}>Fold</ActionButton>
-        <ActionButton variant="call" onClick={() => onAction('call')}>Call ${toCall}</ActionButton>
-        <ActionButton variant="raise" onClick={() => setRaiseOpen(true)}>Raise</ActionButton>
-        <ActionButton variant="all-in" onClick={() => onAction('all-in')}>All-in</ActionButton>
-        {raiseOpen && <RaiseSlider min={minRaise} max={maxRaise} step={10} pot={pot} onConfirm={(amt) => { onAction('raise', amt); setRaiseOpen(false); }} />}
-      </div>
-    );
-  }
+  useActionKeys(onAction, actionRequired);
+
   return (
-    <Dialog>
-      <DialogTrigger><button className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-tertiary text-black px-6 py-2 rounded-full z-[450] flex items-center gap-2"><Gamepad2 className="w-4 h-4" /> Actions</button></DialogTrigger>
-      <DialogContent className="bottom-0 top-auto translate-y-0 rounded-t-xl">
-        <div className="flex flex-col gap-3 p-4">
-          <ActionButton variant="fold" onClick={() => onAction('fold')}>Fold</ActionButton>
-          <ActionButton variant="call" onClick={() => onAction('call')}>Call ${toCall}</ActionButton>
-          <ActionButton variant="raise" onClick={() => setRaiseOpen(true)}>Raise</ActionButton>
-          <ActionButton variant="all-in" onClick={() => onAction('all-in')}>All-in</ActionButton>
-          {raiseOpen && <RaiseSlider min={minRaise} max={maxRaise} step={10} pot={pot} onConfirm={(amt) => { onAction('raise', amt); setRaiseOpen(false); }} />}
+    <motion.div
+      key="desktop-bar"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 20 }}
+      transition={transition}
+      className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[450]"
+    >
+      <div className="rounded-2xl overflow-hidden" style={glassStyle}>
+        {raiseOpen && actionRequired && (
+          <div className="px-5 pt-4 pb-3 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+            <RaiseSlider
+              min={minRaise || 10} max={maxRaise || 1000} step={10} pot={pot || 0}
+              onConfirm={(amt) => { onAction('raise', amt); setRaiseOpen(false); }}
+            />
+          </div>
+        )}
+        <div className="flex items-center gap-2 px-4 py-3">
+          <ActionButton variant="fold" onClick={() => onAction('fold')} disabled={!actionRequired} shortcut="F">Fold</ActionButton>
+          <ActionButton variant="call" onClick={() => onAction('call')} disabled={!actionRequired} shortcut="C">
+            {actionRequired && toCall > 0 ? `Call $${toCall}` : 'Check'}
+          </ActionButton>
+          <ActionButton variant="raise" onClick={() => setRaiseOpen(!raiseOpen)} disabled={!actionRequired} shortcut="R">
+            {raiseOpen ? <span className="flex items-center gap-1">Raise <ChevronUp className="w-3 h-3" /></span>
+              : <span className="flex items-center gap-1">Raise <ChevronDown className="w-3 h-3" /></span>}
+          </ActionButton>
+          <ActionButton variant="all-in" onClick={() => onAction('all-in')} disabled={!actionRequired} shortcut="A">All-in</ActionButton>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </motion.div>
+  );
+};
+
+/* ── Mobile ── */
+const MobileActionBar = ({
+  actionRequired, toCall, minRaise, maxRaise, pot, onAction,
+}: {
+  actionRequired: boolean; toCall: number; minRaise: number; maxRaise: number; pot: number;
+  onAction: (action: string, amount?: number) => void;
+}) => {
+  const [raiseOpen, setRaiseOpen] = useState(false);
+
+  return (
+    <motion.div
+      key="mobile-bar"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 20 }}
+      transition={transition}
+      className="fixed inset-0 z-[450] pointer-events-none"
+    >
+      {/* Backdrop */}
+      {raiseOpen && (
+        <div
+          className="fixed inset-0 z-[449] pointer-events-auto"
+          onClick={() => setRaiseOpen(false)}
+        />
+      )}
+
+      {/* Raise panel */}
+      {raiseOpen && actionRequired && (
+        <div className="fixed left-2 right-2 z-[455] pointer-events-auto" style={{ bottom: '100px' }}>
+          <div className="rounded-xl p-3" style={{
+            background: 'rgba(8, 8, 8, 0.92)',
+            backdropFilter: 'blur(32px)',
+            WebkitBackdropFilter: 'blur(32px)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderTopColor: 'rgba(255,255,255,0.14)',
+            boxShadow: '0 -4px 32px rgba(0,0,0,0.9)',
+          }}>
+            <RaiseSlider
+              min={minRaise || 10} max={maxRaise || 1000} step={10} pot={pot || 0}
+              onConfirm={(amt) => { onAction('raise', amt); setRaiseOpen(false); }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Action bar */}
+      <div className="fixed bottom-0 left-0 right-0 pointer-events-auto">
+        <div style={glassStyle} className="border-x-0 border-b-0 rounded-none">
+          <div className="px-2 py-2 space-y-1.5">
+            <div className="grid grid-cols-[1fr_2.5fr] gap-1.5">
+              <ActionButton isMobile variant="fold" onClick={() => { onAction('fold'); setRaiseOpen(false); }} disabled={!actionRequired}>
+                Fold
+              </ActionButton>
+              <ActionButton isMobile variant="call" onClick={() => { onAction('call'); setRaiseOpen(false); }} disabled={!actionRequired}>
+                {actionRequired && toCall > 0 ? `Call $${toCall}` : 'Check'}
+              </ActionButton>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              <ActionButton isMobile variant="raise" onClick={() => setRaiseOpen(!raiseOpen)} disabled={!actionRequired}>
+                {raiseOpen ? 'Cancel' : 'Raise'}
+              </ActionButton>
+              <ActionButton isMobile variant="all-in" onClick={() => { onAction('all-in'); setRaiseOpen(false); }} disabled={!actionRequired}>
+                All-in
+              </ActionButton>
+            </div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+/* ── Export with AnimatePresence ── */
+export const ActionBar = ({
+  isDesktop, actionRequired, toCall, minRaise, maxRaise, pot, onAction,
+}: {
+  isDesktop: boolean; actionRequired: boolean; toCall: number; minRaise: number; maxRaise: number; pot: number;
+  onAction: (action: string, amount?: number) => void;
+}) => {
+  const props = { actionRequired, toCall, minRaise, maxRaise, pot, onAction };
+
+  return (
+    <AnimatePresence mode="wait">
+      {isDesktop ? (
+        <DesktopActionBar key="desktop" {...props} />
+      ) : (
+        <MobileActionBar key="mobile" {...props} />
+      )}
+    </AnimatePresence>
   );
 };

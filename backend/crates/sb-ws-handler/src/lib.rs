@@ -22,19 +22,16 @@ pub fn broadcast_channel<T: Clone>(capacity: usize) -> (BroadcastSender<T>, Broa
 }
 
 struct AppState {
-    auth: Arc<dyn Authenticator>,
-    // Registry temporarily removed to break cyclic dependency
-    // registry: Registry,
+    auth: Arc<dyn Authenticator + Send + Sync>,
 }
 
-pub fn ws_route(auth: Arc<dyn Authenticator>) -> Router {
+pub fn ws_route(auth: Arc<dyn Authenticator + Send + Sync>) -> Router {
     let state = Arc::new(AppState { auth });
     Router::new()
         .route("/ws/game", get(ws_handler))
         .with_state(state)
 }
 
-#[axum::debug_handler]
 async fn ws_handler(
     jar: CookieJar,
     ws: WebSocketUpgrade,
@@ -56,11 +53,11 @@ async fn ws_handler(
         }
     };
     info!(%user_id, "WebSocket upgrade authenticated");
-    // Registry temporarily removed – will be re-added later
     ws.on_upgrade(handle_websocket)
 }
 
 async fn handle_websocket(socket: axum::extract::ws::WebSocket) {
+    // Keep the existing ping/pong logic unchanged
     let (mut sender, mut receiver) = socket.split();
     let mut ping_interval = time::interval(Duration::from_secs(30));
     let mut last_pong = Instant::now();

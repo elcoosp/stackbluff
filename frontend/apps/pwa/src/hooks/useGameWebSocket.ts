@@ -1,17 +1,17 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useGameStore } from '@stackbluff/shared/stores/gameStore';
-import { toast } from 'sonner'; // Added Sonner import
+import { toast } from 'sonner';
 
-const getToken = () => {
-  return localStorage.getItem('auth_token')!;
-};
+function getToken(): string | null {
+  return localStorage.getItem('auth_token');
+}
 
 const parseMessage = (data: any) => {
   switch (data.type) {
     case 'TableState':
       return {
         type: 'TableState',
-        seats: data.players.map((player: any, idx: number) => ({
+        seats: data.players?.map((player: any, idx: number) => ({
           seat_index: idx,
           user_id: player[0],
           stack: player[1],
@@ -33,82 +33,111 @@ const parseMessage = (data: any) => {
         type: 'ActionRequired',
         to_call: data.to_call,
         min_raise: data.min_raise,
-        max_raise: data.min_raise * 2, // placeholder
+        max_raise: data.min_raise * 2,
         remaining_ms: data.remaining_ms,
       };
+    case 'ActionBroadcast':
+      return { type: 'ActionBroadcast', ...data };
     case 'HandResult':
       return {
         type: 'HandResult',
-        winners: data.winners.map((w: any) => ({ seat: 0, amount: w[1], cards: undefined })),
+        winners: data.winners?.map((w: any) => ({ seat: 0, amount: w[1], cards: undefined })),
         pot: data.pot,
         community_cards: data.community_cards,
       };
     default:
-      console.warn('Unknown message type', data);
       return null;
   }
 };
 
 export function useGameWebSocket(tableId: string) {
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const mountedRef = useRef(true);
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'reconnecting' | 'disconnected'>('disconnected');
-  const { setSnapshot, setHeroHoleCards, setActionRequired, applyActionBroadcast, setHandResult, clearActionRequired } = useGameStore();
+  const gameStore = useGameStore();
 
-  const connect = () => {
+  const connect = useCallback(() => {
+    if (!mountedRef.current) return;
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
-    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3000';
-      const ws = new WebSocket(`${wsUrl}/ws/game`);
+
+    // Build URL: same-origin (via Vite proxy) by default, or direct with token fallback
+    const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const baseWs = import.meta.env.VITE_WS_URL || `${proto}://${window.location.host}`;
+    const token = getToken();
+    const url = token
+      ? `${baseWs}/ws/game?token=${encodeURIComponent(token)}`
+      : `${baseWs}/ws/game`;
+
+    const ws = new WebSocket(url);
     wsRef.current = ws;
 
     ws.onopen = () => {
+      if (!mountedRef.current) return;
       setConnectionStatus('connected');
       ws.send(JSON.stringify({ type: 'join_table', table_id: tableId }));
-      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
-
-      // Optional: Let the user know they've reconnected successfully
       if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = undefined;
         toast.success('Reconnected', { description: 'Back at the table' });
       }
     };
 
     ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      const message = parseMessage(data);
-      if (!message) return;
-      if (message.type === 'TableState') setSnapshot(message);
-      else if (message.type === 'ActionRequired') setActionRequired(message);
-      else if (message.type === 'ActionBroadcast') applyActionBroadcast(message);
-      else if (message.type === 'HandResult') setHandResult(message);
+      try {
+        const data = JSON.parse(event.data);
+        const message = parseMessage(data);
+        if (!message) return;
+        if (message.type === 'TableState') gameStore.setSnapshot(message);
+        else if (message.type === 'ActionRequired') gameStore.setActionRequired(message);
+        else if (message.type === 'ActionBroadcast') gameStore.applyActionBroadcast(message);
+        else if (message.type === 'HandResult') gameStore.setHandResult(message);
+      } catch (e) {
+        console.error('Failed to parse WS message', e);
+      }
     };
 
     ws.onclose = () => {
+      if (!mountedRef.current) return;
+      wsRef.current = null;
       setConnectionStatus('reconnecting');
-      // Updated to use Sonner's API
-      toast.info('Disconnected', { description: 'Attempting to reconnect in 3 seconds...' });
-      reconnectTimeoutRef.current = setTimeout(connect, 3000);
+      reconnectTimeoutRef.current = setTimeout(() => {
+        if (mountedRef.current) connect();
+      }, 3000);
     };
 
-    ws.onerror = (err) => {
-      console.error('WebSocket error', err);
-      toast.error('Connection Error', { description: 'Lost connection to the game server.' });
+    ws.onerror = () => {
+      // onclose fires immediately after onerror, nothing extra needed
     };
-  };
-
-  const sendAction = (action: string, amount?: number) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: 'player_action', action, amount }));
-      clearActionRequired();
-    }
-  };
+  }, [tableId, gameStore]);
 
   useEffect(() => {
+    mountedRef.current = true;
     connect();
+
     return () => {
-      wsRef.current?.close();
-      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+      mountedRef.current = false;
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = undefined;
+      }
+      if (wsRef.current) {
+        // ★ KEY FIX: Nullify onclose BEFORE closing to prevent the stale
+        // callback from overriding state after the component unmounts.
+        // This fixes the React StrictMode race condition.
+        wsRef.current.onclose = null;
+        wsRef.current.close();
+        wsRef.current = null;
+      }
     };
-  }, [tableId]);
+  }, [connect]);
+
+  const sendAction = useCallback((action: string, amount?: number) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'player_action', action, amount }));
+      gameStore.clearActionRequired();
+    }
+  }, [gameStore]);
 
   return { sendAction, connectionStatus };
 }
