@@ -18,7 +18,7 @@ export const ActionBar = ({ isDesktop, actionRequired, toCall, minRaise, maxRais
   }
   return (
     <Dialog>
-      <DialogTrigger asChild><button className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-tertiary text-black px-6 py-2 rounded-full z-[450] flex items-center gap-2"><Gamepad2 className="w-4 h-4" /> Actions</button></DialogTrigger>
+      <DialogTrigger><button className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-tertiary text-black px-6 py-2 rounded-full z-[450] flex items-center gap-2"><Gamepad2 className="w-4 h-4" /> Actions</button></DialogTrigger>
       <DialogContent className="bottom-0 top-auto translate-y-0 rounded-t-xl">
         <div className="flex flex-col gap-3 p-4">
           <ActionButton variant="fold" onClick={() => onAction('fold')}>Fold</ActionButton>

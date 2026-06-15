@@ -1,8 +1,12 @@
-use sb_contracts::PersistenceError;
+use sb_contracts::repo_api::PersistenceError;
 use sb_shared_types::UserId;
-use sea_orm::{ConnectionTrait, DatabaseConnection, TransactionTrait};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseConnection, EntityTrait, QueryFilter,
+    TransactionTrait,
+};
 use tokio::sync::mpsc;
 use tokio::sync::watch;
+use tokio::time::{Duration, interval};
 use tracing::{Instrument, error, info, info_span};
 
 use crate::commands::DbCommand;
@@ -34,6 +38,9 @@ async fn writer_loop(
     batch_size: usize,
 ) {
     let mut batch = Vec::with_capacity(batch_size);
+    // Flush interval ensures we don't hang indefinitely waiting for the batch to fill
+    let mut flush_interval = interval(Duration::from_millis(100));
+
     loop {
         tokio::select! {
             cmd = rx.recv() => {
@@ -42,66 +49,6 @@ async fn writer_loop(
                         batch.push(cmd);
                         if batch.len() >= batch_size {
                             process_batch(&mut batch, &db).await;
-        DbCommand::FindOrCreateByTelegram { ctx, tg_id, respond } => {
-            use sb_db_entities::user::ActiveModel;
-            use sea_orm::{ActiveModelTrait, Set};
-            // Try to find existing user by telegram_id
-            let user = sb_db_entities::user::Entity::find()
-                .filter(sb_db_entities::user::Column::TelegramId.eq(Some(*tg_id)))
-                .one(conn)
-                .await
-                .map_err(map_db_error)?;
-            let user_id = if let Some(u) = user {
-                UserId::new(u.id)
-            } else {
-                let new_user = ActiveModel {
-                    id: Set(uuid::Uuid::new_v4()),
-                    telegram_id: Set(Some(*tg_id)),
-                    email: Set(Some(format!("telegram_{}@temp.local", tg_id))),
-                    display_name: Set(format!("tg_user_{}", tg_id)),
-                    chip_balance: Set(0),
-                    streak_count: Set(0),
-                    created_at: Set(chrono::Utc::now()),
-                    updated_at: Set(chrono::Utc::now()),
-                };
-                let model = new_user.insert(conn).await.map_err(map_db_error)?;
-                UserId::new(model.id)
-            };
-            let _ = respond.send(Ok(user_id));
-            Ok(Some(user_id.to_string()))
-        }
-        DbCommand::CreateEmailUser { ctx, email, password_hash, respond } => {
-            use sb_db_entities::user::ActiveModel;
-            use sea_orm::{ActiveModelTrait, Set};
-            let new_user = ActiveModel {
-                id: Set(uuid::Uuid::new_v4()),
-                email: Set(Some(email.clone())),
-                display_name: Set(email.split('@').next().unwrap_or("user").to_string()),
-                chip_balance: Set(0),
-                streak_count: Set(0),
-                created_at: Set(chrono::Utc::now()),
-                updated_at: Set(chrono::Utc::now()),
-                // password_hash would need a column; for now we ignore. We'll store in a separate table later.
-                ..Default::default()
-            };
-            let model = new_user.insert(conn).await.map_err(map_db_error)?;
-            let user_id = UserId::new(model.id);
-            // TODO: store password_hash in a separate email_auth table.
-            let _ = respond.send(Ok(user_id));
-            Ok(Some(user_id.to_string()))
-        }
-        DbCommand::FindByEmail { ctx, email, respond } => {
-            use sb_db_entities::user::Entity;
-            let user = Entity::find()
-                .filter(sb_db_entities::user::Column::Email.eq(Some(email.clone())))
-                .one(conn)
-                .await
-                .map_err(map_db_error)?;
-            let user_id = user.map(|u| UserId::new(u.id));
-            let _ = respond.send(Ok(user_id));
-            Ok(user_id.map(|id| id.to_string()))
-        }
-
                         }
                     }
                     None => {
@@ -112,6 +59,12 @@ async fn writer_loop(
                     }
                 }
             }
+            _ = flush_interval.tick() => {
+                // If the batch has items but isn't full, flush it anyway after 100ms
+                if !batch.is_empty() {
+                    process_batch(&mut batch, &db).await;
+                }
+            }
             _ = shutdown_rx.changed() => {
                 if *shutdown_rx.borrow() {
                     info!("Shutdown signal received, processing remaining {} commands", batch.len());
@@ -119,11 +72,6 @@ async fn writer_loop(
                         process_batch(&mut batch, &db).await;
                     }
                     break;
-                }
-            }
-            else => {
-                if !batch.is_empty() {
-                    process_batch(&mut batch, &db).await;
                 }
             }
         }
@@ -137,7 +85,7 @@ async fn process_batch(batch: &mut Vec<DbCommand>, db: &DatabaseConnection) {
         Err(e) => {
             error!("Failed to begin transaction: {}", e);
             for cmd in batch.drain(..) {
-                respond_err(cmd, PersistenceError::transient(e.to_string()));
+                respond_err(cmd, PersistenceError::Database(e.to_string()));
             }
             return;
         }
@@ -153,7 +101,7 @@ async fn process_batch(batch: &mut Vec<DbCommand>, db: &DatabaseConnection) {
     if let Err(e) = txn.commit().await {
         error!("Transaction commit failed: {}", e);
         for (cmd, _) in batch.drain(..).zip(savepoint_results) {
-            respond_err(cmd, PersistenceError::transient(e.to_string()));
+            respond_err(cmd, PersistenceError::Database(e.to_string()));
         }
     } else {
         for (cmd, result) in batch.drain(..).zip(savepoint_results) {
@@ -176,73 +124,17 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
         DbCommand::UpdateChipBalance { ctx, .. } => ctx,
         DbCommand::StoreHandHistory { ctx, .. } => ctx,
         DbCommand::ExecuteRaw { ctx, .. } => ctx,
-        DbCommand::FindOrCreateByTelegram { ctx, tg_id, respond } => {
-            use sb_db_entities::user::ActiveModel;
-            use sea_orm::{ActiveModelTrait, Set};
-            // Try to find existing user by telegram_id
-            let user = sb_db_entities::user::Entity::find()
-                .filter(sb_db_entities::user::Column::TelegramId.eq(Some(*tg_id)))
-                .one(conn)
-                .await
-                .map_err(map_db_error)?;
-            let user_id = if let Some(u) = user {
-                UserId::new(u.id)
-            } else {
-                let new_user = ActiveModel {
-                    id: Set(uuid::Uuid::new_v4()),
-                    telegram_id: Set(Some(*tg_id)),
-                    email: Set(Some(format!("telegram_{}@temp.local", tg_id))),
-                    display_name: Set(format!("tg_user_{}", tg_id)),
-                    chip_balance: Set(0),
-                    streak_count: Set(0),
-                    created_at: Set(chrono::Utc::now()),
-                    updated_at: Set(chrono::Utc::now()),
-                };
-                let model = new_user.insert(conn).await.map_err(map_db_error)?;
-                UserId::new(model.id)
-            };
-            let _ = respond.send(Ok(user_id));
-            Ok(Some(user_id.to_string()))
-        }
-        DbCommand::CreateEmailUser { ctx, email, password_hash, respond } => {
-            use sb_db_entities::user::ActiveModel;
-            use sea_orm::{ActiveModelTrait, Set};
-            let new_user = ActiveModel {
-                id: Set(uuid::Uuid::new_v4()),
-                email: Set(Some(email.clone())),
-                display_name: Set(email.split('@').next().unwrap_or("user").to_string()),
-                chip_balance: Set(0),
-                streak_count: Set(0),
-                created_at: Set(chrono::Utc::now()),
-                updated_at: Set(chrono::Utc::now()),
-                // password_hash would need a column; for now we ignore. We'll store in a separate table later.
-                ..Default::default()
-            };
-            let model = new_user.insert(conn).await.map_err(map_db_error)?;
-            let user_id = UserId::new(model.id);
-            // TODO: store password_hash in a separate email_auth table.
-            let _ = respond.send(Ok(user_id));
-            Ok(Some(user_id.to_string()))
-        }
-        DbCommand::FindByEmail { ctx, email, respond } => {
-            use sb_db_entities::user::Entity;
-            let user = Entity::find()
-                .filter(sb_db_entities::user::Column::Email.eq(Some(email.clone())))
-                .one(conn)
-                .await
-                .map_err(map_db_error)?;
-            let user_id = user.map(|u| UserId::new(u.id));
-            let _ = respond.send(Ok(user_id));
-            Ok(user_id.map(|id| id.to_string()))
-        }
-
+        DbCommand::FindOrCreateByTelegram { ctx, .. } => ctx,
+        DbCommand::CreateEmailUser { ctx, .. } => ctx,
+        DbCommand::FindByEmail { ctx, .. } => ctx,
     };
+
     let request_id = ctx.request_id;
     let span = info_span!("db_command", savepoint = sp_name, request_id = %request_id);
     async {
         let create_sql = format!("SAVEPOINT {}", sp_name);
         if let Err(e) = conn.execute_unprepared(&create_sql).await {
-            return Err(PersistenceError::transient(e.to_string()));
+            return Err(PersistenceError::Database(e.to_string()));
         }
 
         let result = match cmd {
@@ -251,86 +143,27 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                 email,
                 display_name,
                 ..
-        DbCommand::FindOrCreateByTelegram { ctx, tg_id, respond } => {
-            use sb_db_entities::user::ActiveModel;
-            use sea_orm::{ActiveModelTrait, Set};
-            // Try to find existing user by telegram_id
-            let user = sb_db_entities::user::Entity::find()
-                .filter(sb_db_entities::user::Column::TelegramId.eq(Some(*tg_id)))
-                .one(conn)
-                .await
-                .map_err(map_db_error)?;
-            let user_id = if let Some(u) = user {
-                UserId::new(u.id)
-            } else {
-                let new_user = ActiveModel {
-                    id: Set(uuid::Uuid::new_v4()),
-                    telegram_id: Set(Some(*tg_id)),
-                    email: Set(Some(format!("telegram_{}@temp.local", tg_id))),
-                    display_name: Set(format!("tg_user_{}", tg_id)),
-                    chip_balance: Set(0),
-                    streak_count: Set(0),
-                    created_at: Set(chrono::Utc::now()),
-                    updated_at: Set(chrono::Utc::now()),
-                };
-                let model = new_user.insert(conn).await.map_err(map_db_error)?;
-                UserId::new(model.id)
-            };
-            let _ = respond.send(Ok(user_id));
-            Ok(Some(user_id.to_string()))
-        }
-        DbCommand::CreateEmailUser { ctx, email, password_hash, respond } => {
-            use sb_db_entities::user::ActiveModel;
-            use sea_orm::{ActiveModelTrait, Set};
-            let new_user = ActiveModel {
-                id: Set(uuid::Uuid::new_v4()),
-                email: Set(Some(email.clone())),
-                display_name: Set(email.split('@').next().unwrap_or("user").to_string()),
-                chip_balance: Set(0),
-                streak_count: Set(0),
-                created_at: Set(chrono::Utc::now()),
-                updated_at: Set(chrono::Utc::now()),
-                // password_hash would need a column; for now we ignore. We'll store in a separate table later.
-                ..Default::default()
-            };
-            let model = new_user.insert(conn).await.map_err(map_db_error)?;
-            let user_id = UserId::new(model.id);
-            // TODO: store password_hash in a separate email_auth table.
-            let _ = respond.send(Ok(user_id));
-            Ok(Some(user_id.to_string()))
-        }
-        DbCommand::FindByEmail { ctx, email, respond } => {
-            use sb_db_entities::user::Entity;
-            let user = Entity::find()
-                .filter(sb_db_entities::user::Column::Email.eq(Some(email.clone())))
-                .one(conn)
-                .await
-                .map_err(map_db_error)?;
-            let user_id = user.map(|u| UserId::new(u.id));
-            let _ = respond.send(Ok(user_id));
-            Ok(user_id.map(|id| id.to_string()))
-        }
-
             } => {
-                use sb_db_entities::user::ActiveModel;
-                use sea_orm::{ActiveModelTrait, Set};
-                let new_user = ActiveModel {
+                use sb_db_entities::enums::Platform;
+                use sb_db_entities::user;
+                use sea_orm::Set;
+                let new_user = user::ActiveModel {
                     id: Set(uuid::Uuid::new_v4()),
                     telegram_id: Set(Some(*telegram_id)),
                     email: Set(Some(email.clone())),
                     display_name: Set(display_name.clone()),
                     streak_count: Set(0),
                     created_at: Set(chrono::Utc::now()),
+                    platform: Set(Platform::Telegram), // FIXED: Added missing platform field
                     ..Default::default()
                 };
                 let model = new_user.insert(conn).await.map_err(map_db_error)?;
                 Ok(Some(model.id.to_string()))
             }
             DbCommand::GetUser { id, .. } => {
-                use sb_db_entities::user::Entity;
-                use sea_orm::EntityTrait;
+                use sb_db_entities::user;
                 let user_id = id.as_uuid();
-                let model = Entity::find_by_id(user_id)
+                let model = user::Entity::find_by_id(user_id)
                     .one(conn)
                     .await
                     .map_err(map_db_error)?
@@ -338,15 +171,15 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                 Ok(Some(model.display_name))
             }
             DbCommand::UpdateChipBalance { user_id, delta, .. } => {
-                use sb_db_entities::user::{ActiveModel, Entity};
-                use sea_orm::{ActiveModelTrait, EntityTrait, Set};
+                use sb_db_entities::user;
+                use sea_orm::Set;
                 let uid = user_id.as_uuid();
-                let model = Entity::find_by_id(uid)
+                let model = user::Entity::find_by_id(uid)
                     .one(conn)
                     .await
                     .map_err(map_db_error)?
                     .ok_or(PersistenceError::NotFound)?;
-                let mut active: ActiveModel = model.into();
+                let mut active: user::ActiveModel = model.into();
                 let current = active.chip_balance.take().unwrap_or(0);
                 let new_balance = current + *delta;
                 active.chip_balance = Set(new_balance);
@@ -361,31 +194,22 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                 result_json,
                 ..
             } => {
-                use sb_db_entities::hand_history::ActiveModel;
+                use sb_db_entities::hand_history;
                 use sb_db_entities::hand_history_json::{HandActions, HandPlayers, HandResult};
-                use sea_orm::{ActiveModelTrait, Set};
+                use sea_orm::Set;
                 let players: HandPlayers =
                     serde_json::from_value(players_json.clone()).map_err(|e| {
-                        PersistenceError::constraint_violation(format!(
-                            "Invalid players_json: {}",
-                            e
-                        ))
+                        PersistenceError::Database(format!("Invalid players_json: {}", e))
                     })?;
                 let actions: HandActions =
                     serde_json::from_value(actions_json.clone()).map_err(|e| {
-                        PersistenceError::constraint_violation(format!(
-                            "Invalid actions_json: {}",
-                            e
-                        ))
+                        PersistenceError::Database(format!("Invalid actions_json: {}", e))
                     })?;
                 let result: HandResult =
                     serde_json::from_value(result_json.clone()).map_err(|e| {
-                        PersistenceError::constraint_violation(format!(
-                            "Invalid result_json: {}",
-                            e
-                        ))
+                        PersistenceError::Database(format!("Invalid result_json: {}", e))
                     })?;
-                let new_history = ActiveModel {
+                let new_history = hand_history::ActiveModel {
                     id: Set(uuid::Uuid::new_v4()),
                     table_id: Set(*table_id),
                     played_at: Set(*played_at),
@@ -400,6 +224,64 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
             DbCommand::ExecuteRaw { sql, .. } => {
                 conn.execute_unprepared(sql).await.map_err(map_db_error)?;
                 Ok(None)
+            }
+            DbCommand::FindOrCreateByTelegram { tg_id, .. } => {
+                use sb_db_entities::enums::Platform;
+                use sb_db_entities::user;
+                use sea_orm::Set;
+                let user_model = user::Entity::find()
+                    .filter(user::Column::TelegramId.eq(Some(*tg_id)))
+                    .one(conn)
+                    .await
+                    .map_err(map_db_error)?;
+                let user_id = if let Some(u) = user_model {
+                    UserId::new(u.id)
+                } else {
+                    let new_user = user::ActiveModel {
+                        id: Set(uuid::Uuid::new_v4()),
+                        telegram_id: Set(Some(*tg_id)),
+                        email: Set(Some(format!("telegram_{}@temp.local", tg_id))),
+                        display_name: Set(format!("tg_user_{}", tg_id)),
+                        chip_balance: Set(0),
+                        streak_count: Set(0),
+                        created_at: Set(chrono::Utc::now()),
+                        updated_at: Set(chrono::Utc::now()),
+                        platform: Set(Platform::Telegram), // FIXED: Added missing platform field
+                        ..Default::default()
+                    };
+                    let model = new_user.insert(conn).await.map_err(map_db_error)?;
+                    UserId::new(model.id)
+                };
+                Ok(Some(user_id.to_string()))
+            }
+            DbCommand::CreateEmailUser { email, .. } => {
+                use sb_db_entities::enums::Platform;
+                use sb_db_entities::user;
+                use sea_orm::Set;
+                let new_user = user::ActiveModel {
+                    id: Set(uuid::Uuid::new_v4()),
+                    email: Set(Some(email.clone())),
+                    display_name: Set(email.split('@').next().unwrap_or("user").to_string()),
+                    chip_balance: Set(0),
+                    streak_count: Set(0),
+                    created_at: Set(chrono::Utc::now()),
+                    updated_at: Set(chrono::Utc::now()),
+                    platform: Set(Platform::Pwa), // FIXED: Added missing platform field
+                    ..Default::default()
+                };
+                let model = new_user.insert(conn).await.map_err(map_db_error)?;
+                let user_id = UserId::new(model.id);
+                Ok(Some(user_id.to_string()))
+            }
+            DbCommand::FindByEmail { email, .. } => {
+                use sb_db_entities::user;
+                let user_model = user::Entity::find()
+                    .filter(user::Column::Email.eq(Some(email.clone())))
+                    .one(conn)
+                    .await
+                    .map_err(map_db_error)?;
+                let user_id = user_model.map(|u| UserId::new(u.id));
+                Ok(user_id.map(|id: UserId| id.to_string()))
             }
         };
 
@@ -422,116 +304,51 @@ fn map_db_error(e: sea_orm::DbErr) -> PersistenceError {
         sea_orm::DbErr::Query(qe) => {
             let msg = qe.to_string();
             if msg.contains("UNIQUE constraint") || msg.contains("CHECK constraint") {
-                PersistenceError::constraint_violation(msg)
-            } else if msg.contains("NOT NULL") || msg.contains("FOREIGN KEY") {
-                PersistenceError::data_integrity(msg)
+                PersistenceError::UniqueViolation
             } else {
-                PersistenceError::transient(msg)
+                PersistenceError::Database(msg)
             }
         }
-        _ => PersistenceError::transient(e.to_string()),
+        _ => PersistenceError::Database(e.to_string()),
     }
 }
 
 fn respond_ok(cmd: DbCommand, value: Option<String>) {
     match cmd {
-        DbCommand::CreateUser { respond, .. } => {
+        DbCommand::CreateUser { respond, .. }
+        | DbCommand::FindOrCreateByTelegram { respond, .. }
+        | DbCommand::CreateEmailUser { respond, .. } => {
             let id = match value {
                 Some(ref s) => match s.parse::<uuid::Uuid>() {
                     Ok(uuid) => UserId::new(uuid),
                     Err(e) => {
-                        tracing::error!(
-                            uuid_str = %s,
-                            error = %e,
-                            "Failed to parse UUID returned from database insert — returning error"
-                        );
-                        let _ = respond.send(Err(PersistenceError::database(
-                            "insert returned invalid UUID".to_string(),
-                        )));
+                        tracing::error!(uuid_str = %s, error = %e, "Failed to parse UUID");
+                        let _ = respond
+                            .send(Err(PersistenceError::Database("Invalid UUID".to_string())));
                         return;
-        DbCommand::FindOrCreateByTelegram { ctx, tg_id, respond } => {
-            use sb_db_entities::user::ActiveModel;
-            use sea_orm::{ActiveModelTrait, Set};
-            // Try to find existing user by telegram_id
-            let user = sb_db_entities::user::Entity::find()
-                .filter(sb_db_entities::user::Column::TelegramId.eq(Some(*tg_id)))
-                .one(conn)
-                .await
-                .map_err(map_db_error)?;
-            let user_id = if let Some(u) = user {
-                UserId::new(u.id)
-            } else {
-                let new_user = ActiveModel {
-                    id: Set(uuid::Uuid::new_v4()),
-                    telegram_id: Set(Some(*tg_id)),
-                    email: Set(Some(format!("telegram_{}@temp.local", tg_id))),
-                    display_name: Set(format!("tg_user_{}", tg_id)),
-                    chip_balance: Set(0),
-                    streak_count: Set(0),
-                    created_at: Set(chrono::Utc::now()),
-                    updated_at: Set(chrono::Utc::now()),
-                };
-                let model = new_user.insert(conn).await.map_err(map_db_error)?;
-                UserId::new(model.id)
-            };
-            let _ = respond.send(Ok(user_id));
-            Ok(Some(user_id.to_string()))
-        }
-        DbCommand::CreateEmailUser { ctx, email, password_hash, respond } => {
-            use sb_db_entities::user::ActiveModel;
-            use sea_orm::{ActiveModelTrait, Set};
-            let new_user = ActiveModel {
-                id: Set(uuid::Uuid::new_v4()),
-                email: Set(Some(email.clone())),
-                display_name: Set(email.split('@').next().unwrap_or("user").to_string()),
-                chip_balance: Set(0),
-                streak_count: Set(0),
-                created_at: Set(chrono::Utc::now()),
-                updated_at: Set(chrono::Utc::now()),
-                // password_hash would need a column; for now we ignore. We'll store in a separate table later.
-                ..Default::default()
-            };
-            let model = new_user.insert(conn).await.map_err(map_db_error)?;
-            let user_id = UserId::new(model.id);
-            // TODO: store password_hash in a separate email_auth table.
-            let _ = respond.send(Ok(user_id));
-            Ok(Some(user_id.to_string()))
-        }
-        DbCommand::FindByEmail { ctx, email, respond } => {
-            use sb_db_entities::user::Entity;
-            let user = Entity::find()
-                .filter(sb_db_entities::user::Column::Email.eq(Some(email.clone())))
-                .one(conn)
-                .await
-                .map_err(map_db_error)?;
-            let user_id = user.map(|u| UserId::new(u.id));
-            let _ = respond.send(Ok(user_id));
-            Ok(user_id.map(|id| id.to_string()))
-        }
-
                     }
                 },
                 None => {
-                    tracing::error!("CreateUser insert returned no UUID — returning error");
-                    let _ = respond.send(Err(PersistenceError::database(
-                        "insert returned no UUID".to_string(),
+                    let _ = respond.send(Err(PersistenceError::Database(
+                        "No UUID returned".to_string(),
                     )));
                     return;
                 }
             };
             let _ = respond.send(Ok(id));
         }
+        DbCommand::FindByEmail { respond, .. } => {
+            let id = value
+                .and_then(|s| s.parse::<uuid::Uuid>().ok())
+                .map(UserId::new);
+            let _ = respond.send(Ok(id));
+        }
         DbCommand::GetUser { respond, .. } => {
-            let name = value.unwrap_or_default();
-            let _ = respond.send(Ok(name));
+            let _ = respond.send(Ok(value.unwrap_or_default()));
         }
-        DbCommand::UpdateChipBalance { respond, .. } => {
-            let _ = respond.send(Ok(()));
-        }
-        DbCommand::StoreHandHistory { respond, .. } => {
-            let _ = respond.send(Ok(()));
-        }
-        DbCommand::ExecuteRaw { respond, .. } => {
+        DbCommand::UpdateChipBalance { respond, .. }
+        | DbCommand::StoreHandHistory { respond, .. }
+        | DbCommand::ExecuteRaw { respond, .. } => {
             let _ = respond.send(Ok(()));
         }
     }
@@ -541,66 +358,6 @@ fn respond_err(cmd: DbCommand, err: PersistenceError) {
     match cmd {
         DbCommand::CreateUser { respond, .. } => {
             let _ = respond.send(Err(err));
-        DbCommand::FindOrCreateByTelegram { ctx, tg_id, respond } => {
-            use sb_db_entities::user::ActiveModel;
-            use sea_orm::{ActiveModelTrait, Set};
-            // Try to find existing user by telegram_id
-            let user = sb_db_entities::user::Entity::find()
-                .filter(sb_db_entities::user::Column::TelegramId.eq(Some(*tg_id)))
-                .one(conn)
-                .await
-                .map_err(map_db_error)?;
-            let user_id = if let Some(u) = user {
-                UserId::new(u.id)
-            } else {
-                let new_user = ActiveModel {
-                    id: Set(uuid::Uuid::new_v4()),
-                    telegram_id: Set(Some(*tg_id)),
-                    email: Set(Some(format!("telegram_{}@temp.local", tg_id))),
-                    display_name: Set(format!("tg_user_{}", tg_id)),
-                    chip_balance: Set(0),
-                    streak_count: Set(0),
-                    created_at: Set(chrono::Utc::now()),
-                    updated_at: Set(chrono::Utc::now()),
-                };
-                let model = new_user.insert(conn).await.map_err(map_db_error)?;
-                UserId::new(model.id)
-            };
-            let _ = respond.send(Ok(user_id));
-            Ok(Some(user_id.to_string()))
-        }
-        DbCommand::CreateEmailUser { ctx, email, password_hash, respond } => {
-            use sb_db_entities::user::ActiveModel;
-            use sea_orm::{ActiveModelTrait, Set};
-            let new_user = ActiveModel {
-                id: Set(uuid::Uuid::new_v4()),
-                email: Set(Some(email.clone())),
-                display_name: Set(email.split('@').next().unwrap_or("user").to_string()),
-                chip_balance: Set(0),
-                streak_count: Set(0),
-                created_at: Set(chrono::Utc::now()),
-                updated_at: Set(chrono::Utc::now()),
-                // password_hash would need a column; for now we ignore. We'll store in a separate table later.
-                ..Default::default()
-            };
-            let model = new_user.insert(conn).await.map_err(map_db_error)?;
-            let user_id = UserId::new(model.id);
-            // TODO: store password_hash in a separate email_auth table.
-            let _ = respond.send(Ok(user_id));
-            Ok(Some(user_id.to_string()))
-        }
-        DbCommand::FindByEmail { ctx, email, respond } => {
-            use sb_db_entities::user::Entity;
-            let user = Entity::find()
-                .filter(sb_db_entities::user::Column::Email.eq(Some(email.clone())))
-                .one(conn)
-                .await
-                .map_err(map_db_error)?;
-            let user_id = user.map(|u| UserId::new(u.id));
-            let _ = respond.send(Ok(user_id));
-            Ok(user_id.map(|id| id.to_string()))
-        }
-
         }
         DbCommand::GetUser { respond, .. } => {
             let _ = respond.send(Err(err));
@@ -612,6 +369,15 @@ fn respond_err(cmd: DbCommand, err: PersistenceError) {
             let _ = respond.send(Err(err));
         }
         DbCommand::ExecuteRaw { respond, .. } => {
+            let _ = respond.send(Err(err));
+        }
+        DbCommand::FindOrCreateByTelegram { respond, .. } => {
+            let _ = respond.send(Err(err));
+        }
+        DbCommand::CreateEmailUser { respond, .. } => {
+            let _ = respond.send(Err(err));
+        }
+        DbCommand::FindByEmail { respond, .. } => {
             let _ = respond.send(Err(err));
         }
     }

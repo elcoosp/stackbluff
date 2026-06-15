@@ -1,4 +1,4 @@
-use super::{HandActions, HandPlayers, HandResult};
+use crate::hand_history_json::{HandActions, HandPlayers, HandResult};
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;

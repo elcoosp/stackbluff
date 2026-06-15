@@ -1,40 +1,129 @@
 @import "tailwindcss";
+@import "../../../packages/shared/src/theme.css";
 
-@theme {
-  --color-background: #131313;
-  --color-foreground: #e2e2e2;
-  --color-card: #1f1f1f;
-  --color-card-foreground: #e2e2e2;
-  --color-primary: #c6c6cf;
-  --color-primary-foreground: #2f3037;
-  --color-secondary: #c7c6c9;
-  --color-secondary-foreground: #303033;
-  --color-accent: #4edea3;
-  --color-accent-foreground: #003824;
-  --color-destructive: #ffb4ab;
-  --color-destructive-foreground: #690005;
-  --color-border: #353535;
-  --color-ring: #4edea3;
-  --radius: 0.5rem;
+@source "../../../packages/shared/src/**/*.tsx";
+@source "../../../packages/shared/src/**/*.ts";
+
+html { color-scheme: dark; }
+body { color: var(--color-on-surface); background: var(--color-background); }
+
+input, textarea, select {
+  color: var(--color-on-surface);
+  background: transparent;
+  border: none;
+  outline: none;
+  border-radius: 0;
+  padding: 0;
 }
+input::placeholder, textarea::placeholder { color: rgba(255,255,255,.3); }
+
+
+.input-field {
+  display: flex;
+  align-items: center;
+  position: relative;
+  border: 1px solid var(--color-outline-variant);
+  border-top-color: rgba(255,255,255,.15);
+  border-radius: var(--radius-lg);
+  background: rgba(0,0,0,.4);
+  transition: border-color .15s, box-shadow .15s;
+}
+.input-field:focus-within {
+  border-color: var(--color-outline);
+  border-top-color: rgba(255,255,255,.3);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.05);
+}
+.input-field .input-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-outline);
+  pointer-events: none;
+}
+.input-field input,
+.input-field textarea,
+.input-field select {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  font-size: 0.875rem;
+  font-family: var(--font-data-mono);
+}
+.input-field input::placeholder,
+.input-field textarea::placeholder {
+  color: rgba(255,255,255,.3);
+}
+
+label { color: var(--color-on-surface-variant); }
+@layer base { button { color: var(--color-on-surface); } }
+a { color: var(--color-tertiary); }
+a:hover { color: var(--color-tertiary-fixed); }
 
 @layer components {
   .glass-hub {
     backdrop-filter: blur(16px);
-    background: rgba(10, 10, 10, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+    background: rgba(10,10,10,.85);
+    border: 1px solid rgba(255,255,255,.1);
+    border-top-color: rgba(255,255,255,.15);
+    box-shadow: 0 8px 32px rgba(0,0,0,.8);
+    color: var(--color-on-surface);
   }
   .card-back {
-    background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    position: relative;
-    overflow: hidden;
+    background: linear-gradient(135deg,#0f0f0f 0%,#1a1a1a 100%);
+    border: 1px solid rgba(255,255,255,.15);
+    border-top-color: rgba(255,255,255,.2);
+    position: relative; overflow: hidden;
   }
   .card-back::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image: repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(78, 222, 163, 0.05) 2px, rgba(78, 222, 163, 0.05) 4px);
+    content:''; position:absolute; inset:0;
+    background-image: repeating-linear-gradient(45deg,transparent,transparent 2px,rgba(78,222,163,.05) 2px 4px);
+  }
+
+  /* ── Liquid Metal: Silver (primary CTA) ── */
+  .liquid-metal { color: #0a0a0a !important;
+    background: linear-gradient(135deg, #d4d4dc 0%, #a1a1aa 50%, #71717a 100%);
+    color: #0a0a0a;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border: 1px solid rgba(255,255,255,.25);
+    border-top-color: rgba(255,255,255,.4);
+    box-shadow: 0 4px 20px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.15);
+    transition: all .2s;
+  }
+  .liquid-metal:hover {
+    background: linear-gradient(135deg, #e4e4ec 0%, #b0b0b9 50%, #8b8b94 100%);
+    box-shadow: 0 4px 24px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.2);
+  }
+  .liquid-metal:active { transform: scale(.97); }
+
+  /* ── Liquid Metal: Emerald (success/active only) ── */
+  .liquid-metal-emerald { color: #022c22 !important;
+    background: linear-gradient(135deg, #4edea3 0%, #10b981 50%, #059669 100%);
+    color: #022c22;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border: 1px solid rgba(78,222,163,.35);
+    border-top-color: rgba(111,251,190,.5);
+    box-shadow: 0 4px 20px rgba(78,222,163,.2), inset 0 1px 0 rgba(255,255,255,.1);
+    transition: all .2s;
+  }
+  .liquid-metal-emerald:hover {
+    background: linear-gradient(135deg, #6ffbbe 0%, #34d399 50%, #10b981 100%);
+    box-shadow: 0 4px 24px rgba(78,222,163,.3), inset 0 1px 0 rgba(255,255,255,.15);
+  }
+  .liquid-metal-emerald:active { transform: scale(.97); }
+
+  /* ── Error message ── */
+  .field-error {
+    color: #f87171;
+    font-size: 0.75rem;
+    font-family: var(--font-data-mono);
+    margin-top: 0.375rem;
+    padding: 0.375rem 0.625rem;
+    background: rgba(239,68,68,.08);
+    border-left: 2px solid rgba(239,68,68,.4);
+    border-radius: 0.25rem;
   }
 }

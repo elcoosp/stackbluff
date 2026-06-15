@@ -6,11 +6,13 @@ use axum::Router;
 use sea_orm::Database;
 use sea_orm_migration::MigratorTrait;
 use std::sync::Arc;
+use tower_http::cors::{Any, CorsLayer};
 
-// TODO: Wire up ClubRepoImpl once sb_db_repos exports it
-// use sb_club::{ClubServiceImpl, club_router};
-// use sb_contracts::ClubRepo;
-// use sb_db_repos::club_repo::ClubRepoImpl;
+// Import the necessary types from your crates
+use sb_auth::{AuthServiceImpl, SharedAuthService, config::AuthConfig, routes::auth_router};
+use sb_contracts::repo_api::UserRepo;
+use sb_db_repos::init_writer_loop;
+use sb_db_repos::user_repo::UserRepoImpl;
 
 #[cfg(feature = "test-stubs")]
 use test_utils::notification_service::InMemoryNotificationService;
@@ -35,26 +37,31 @@ async fn main() {
         .await
         .expect("failed to run migrations");
 
-    // ── Service wiring ─────────────────────────────────────
-    // let club_repo: Arc<dyn ClubRepo> = Arc::new(ClubRepoImpl::new(db.clone()));
-    // let club_service = Arc::new(ClubServiceImpl::new(club_repo.clone()));
+    // ── Initialize DB Writer Loop & Repos ─────────────────
+    let writer_handle = init_writer_loop(db.clone(), None);
+    let user_repo: Arc<dyn UserRepo> = Arc::new(UserRepoImpl::new(writer_handle.sender.clone()));
 
-    // Spawn the 5-minute leaderboard refresh job
-    // leaderboard_refresh::spawn_leaderboard_refresh_job(club_repo);
+    // ── Wire up Auth Service ──────────────────────────────
+    let auth_config = AuthConfig::from_env();
+    let auth_service: SharedAuthService = Arc::new(AuthServiceImpl::new(user_repo, auth_config));
 
-    // let club_state = sb_club::handlers::ClubState {
-    //     service: club_service,
-    // };
-
-    // Wire up bot handler services
+    // ── Wire up bot handler services ──────────────────────
     let bot_state = build_bot_state();
 
     let oracle_service = Arc::new(sb_oracle::OracleServiceImpl::new());
 
+    // Configure CORS
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
+
     let app = Router::new()
         // .merge(club_router(club_state))
         .merge(sb_bot_handler::attach(bot_state))
-        .merge(sb_rest_router::oracle_routes::oracle_router(oracle_service));
+        .merge(sb_rest_router::oracle_routes::oracle_router(oracle_service))
+        .merge(auth_router(auth_service)) // Use the sb-auth router!
+        .layer(cors);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
         .await
@@ -84,8 +91,6 @@ fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
 
 #[cfg(not(feature = "test-stubs"))]
 fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
-    // Production wiring — replace with real service implementations.
-    // Build with `--features test-stubs` for local development.
     compile_error!(
         "Production service wiring not yet configured. \
          Build with --features test-stubs for development."

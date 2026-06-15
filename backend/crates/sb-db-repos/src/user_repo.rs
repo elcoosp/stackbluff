@@ -26,50 +26,14 @@ impl UserRepository for UserRepoImpl {
             telegram_id: create.telegram_id,
             email: create.email,
             display_name: create.display_name,
-            platform: create.platform,
             respond: tx,
         };
         self.sender
             .send(cmd)
-            .map_err(|e| PersistenceError::transient(e.to_string()))?;
+            .map_err(|e| PersistenceError::Database(e.to_string()))?;
         rx.await
-            .map_err(|e| PersistenceError::transient(e.to_string()))?
+            .map_err(|e| PersistenceError::Database(e.to_string()))?
     }
-
-    async fn get_user(&self, ctx: RequestContext, id: UserId) -> PersistenceResult<String> {
-        let (tx, rx) = oneshot::channel();
-        let cmd = DbCommand::GetUser {
-            ctx,
-            id,
-            respond: tx,
-        };
-        self.sender
-            .send(cmd)
-            .map_err(|e| PersistenceError::transient(e.to_string()))?;
-        rx.await
-            .map_err(|e| PersistenceError::transient(e.to_string()))?
-    }
-
-    async fn update_chip_balance(
-        &self,
-        ctx: RequestContext,
-        user_id: UserId,
-        delta: i64,
-    ) -> PersistenceResult<()> {
-        let (tx, rx) = oneshot::channel();
-        let cmd = DbCommand::UpdateChipBalance {
-            ctx,
-            user_id,
-            delta,
-            respond: tx,
-        };
-        self.sender
-            .send(cmd)
-            .map_err(|e| PersistenceError::transient(e.to_string()))?;
-        rx.await
-            .map_err(|e| PersistenceError::transient(e.to_string()))?
-    }
-
 
     async fn find_or_create_by_telegram(
         &self,
@@ -84,9 +48,9 @@ impl UserRepository for UserRepoImpl {
         };
         self.sender
             .send(cmd)
-            .map_err(|e| PersistenceError::transient(e.to_string()))?;
+            .map_err(|e| PersistenceError::Database(e.to_string()))?;
         rx.await
-            .map_err(|e| PersistenceError::transient(e.to_string()))?
+            .map_err(|e| PersistenceError::Database(e.to_string()))?
     }
 
     async fn create_email_user(
@@ -104,9 +68,9 @@ impl UserRepository for UserRepoImpl {
         };
         self.sender
             .send(cmd)
-            .map_err(|e| PersistenceError::transient(e.to_string()))?;
+            .map_err(|e| PersistenceError::Database(e.to_string()))?;
         rx.await
-            .map_err(|e| PersistenceError::transient(e.to_string()))?
+            .map_err(|e| PersistenceError::Database(e.to_string()))?
     }
 
     async fn find_by_email(
@@ -122,9 +86,43 @@ impl UserRepository for UserRepoImpl {
         };
         self.sender
             .send(cmd)
-            .map_err(|e| PersistenceError::transient(e.to_string()))?;
+            .map_err(|e| PersistenceError::Database(e.to_string()))?;
         rx.await
-            .map_err(|e| PersistenceError::transient(e.to_string()))?
+            .map_err(|e| PersistenceError::Database(e.to_string()))?
     }
 
+    // Added missing trait methods
+    async fn get_user(&self, ctx: RequestContext, id: UserId) -> PersistenceResult<String> {
+        let (tx, rx) = oneshot::channel();
+        let cmd = DbCommand::GetUser {
+            ctx,
+            id,
+            respond: tx,
+        };
+        self.sender
+            .send(cmd)
+            .map_err(|e| PersistenceError::Database(e.to_string()))?;
+        rx.await
+            .map_err(|e| PersistenceError::Database(e.to_string()))?
+    }
+
+    async fn update_chip_balance(
+        &self,
+        ctx: RequestContext,
+        user_id: UserId,
+        delta: i64,
+    ) -> PersistenceResult<()> {
+        let (tx, rx) = oneshot::channel();
+        let cmd = DbCommand::UpdateChipBalance {
+            ctx,
+            user_id,
+            delta,
+            respond: tx,
+        };
+        self.sender
+            .send(cmd)
+            .map_err(|e| PersistenceError::Database(e.to_string()))?;
+        rx.await
+            .map_err(|e| PersistenceError::Database(e.to_string()))?
+    }
 }

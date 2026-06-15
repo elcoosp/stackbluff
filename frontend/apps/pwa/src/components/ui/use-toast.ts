@@ -1,3 +1,10 @@
 import { useState } from "react"
-interface Toast { title: string; description: string; variant?: 'default' | 'destructive' }
-export function useToast() { const [toasts, setToasts] = useState<Toast[]>([]); const toast = (t: Toast) => { console.log("Toast:", t); setToasts(prev => [...prev, t]); setTimeout(() => setToasts(prev => prev.slice(1)), 3000); }; return { toast, toasts }; }
+export function useToast() {
+  const [toasts, setToasts] = useState<Array<{ id: number; message: string; type: 'error' | 'success' | 'info' }>>([])
+  const show = (message: string, type: 'error' | 'success' | 'info' = 'error') => {
+    const id = Date.now()
+    setToasts((prev) => [...prev, { id, message, type }])
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id), 5000)
+  }
+  return { show, toasts }
+}

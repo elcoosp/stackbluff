@@ -9,7 +9,13 @@
     "strict": true,
     "jsx": "react-jsx",
     "isolatedModules": true,
-    "skipLibCheck": true
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "paths": {
+      "@/*": ["./src/*"],
+      "@stackbluff/shared/*": ["../../packages/shared/src/*"],
+      "@stackbluff/shared": ["../../packages/shared/src/index.ts"]
+    }
   },
   "include": ["src"]
 }

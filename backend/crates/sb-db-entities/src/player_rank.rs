@@ -1,4 +1,4 @@
-use super::RankTier;
+use crate::enums::RankTier;
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;

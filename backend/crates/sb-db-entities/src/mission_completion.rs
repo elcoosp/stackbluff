@@ -1,4 +1,4 @@
-use super::MissionType;
+use crate::enums::MissionType;
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;

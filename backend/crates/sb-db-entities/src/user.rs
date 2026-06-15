@@ -1,4 +1,4 @@
-use super::Platform;
+use crate::enums::Platform;
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -20,6 +20,7 @@ pub struct Model {
     pub updated_at: DateTimeUtc,
     pub platform: Platform,
     pub email_verified_at: Option<DateTimeUtc>,
+    pub registration_order: Option<i64>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

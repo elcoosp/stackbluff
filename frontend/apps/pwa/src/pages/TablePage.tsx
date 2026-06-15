@@ -14,7 +14,7 @@ export function TablePage() {
     <div className="relative w-full h-screen bg-background overflow-hidden" style={{ background: 'radial-gradient(circle at center, #1a1c1b 0%, #131313 100%)' }}>
       <div className={`relative mx-auto mt-8 ${isDesktop ? 'w-[95%] max-w-[1100px] aspect-table-desktop' : 'w-full h-2/3'}`}>
         <TableRail /><TableFelt />
-        <SeatGrid seats={seats} heroSeat={heroSeat} isDesktop={isDesktop} />
+        <SeatGrid seats={seats} heroSeat={heroSeat ?? 0} isDesktop={isDesktop} />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"><CommunityCards cards={communityCards} /></div>
         <div className="absolute top-4 left-1/2 -translate-x-1/2"><PotBadge amount={pot} /></div>
         {actionRequired && <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-64"><TimerBar remainingMs={timeRemainingMs} /></div>}

@@ -1,7 +1,6 @@
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
 import { useMutation } from '@tanstack/react-query';
-import { zodValidator } from '@tanstack/zod-form-adapter';
 import { z } from 'zod';
 import { useState } from 'react';
 import { authApi } from '@stackbluff/shared/auth/api';
@@ -17,46 +16,32 @@ const step2Schema = z.object({ email: z.string().email('Invalid email address') 
 const step3Schema = z.object({ password: z.string().min(8, 'Password must be at least 8 characters') });
 
 export const Route = createFileRoute('/register')({
-  beforeLoad: () => {
-    if (useAuthStore.getState().user) throw redirect({ to: '/' });
-  },
+  beforeLoad: () => { if (useAuthStore.getState().user) throw redirect({ to: '/' }); },
   component: RegisterPage,
 });
 
 function RegisterPage() {
   const navigate = useNavigate();
-  const setAuth = useAuthStore((state) => state.setAuth);
+  const setAuth = useAuthStore((s) => s.setAuth);
   const [step, setStep] = useState(1);
   const mutation = useMutation({
     mutationFn: authApi.register,
-    onSuccess: (data) => {
-      setToken(data.token);
-      setAuth(data.user, data.token);
-      navigate({ to: '/' });
-    },
+    onSuccess: (data) => { setToken(data.token); setAuth(data.user, data.token); navigate({ to: '/' }); },
   });
   const form = useForm({
     defaultValues: { username: '', email: '', password: '' },
-    validatorAdapter: zodValidator(),
     validators: { onChange: step1Schema.and(step2Schema).and(step3Schema) },
     onSubmit: ({ value }) => mutation.mutate(value),
   });
+
   const nextStep = async () => {
-    let ok = false;
-    if (step === 1) ok = await form.validateField('username');
-    else if (step === 2) ok = await form.validateField('email');
-    if (ok !== false) setStep(step + 1);
+    let errs: any[] = [];
+    if (step === 1) errs = await form.validateField('username', 'change');
+    else if (step === 2) errs = await form.validateField('email', 'change');
+    if (errs.length === 0) setStep(step + 1);
   };
   const prevStep = () => setStep(step - 1);
-
-  // Helper to extract error message from Zod error object
-  const getErrorMessage = (err: any) => {
-    if (typeof err === 'string') return err;
-    if (err?.message) return err.message;
-    if (err?.code === 'too_small') return err.message || `Minimum length ${err.minimum}`;
-    if (err?.code === 'invalid_string') return err.message || 'Invalid value';
-    return 'Validation error';
-  };
+  const getErrorMessage = (err: any) => { if (typeof err === 'string') return err; if (err?.message) return err.message; return 'Validation error'; };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
@@ -64,11 +49,11 @@ function RegisterPage() {
       <div className="relative z-10 w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter">STACKBLUFF</h1>
-          <p className="font-data-mono text-xs text-tertiary mt-2 tracking-widest">CREATE ACCOUNT</p>
+          <p className="font-data-mono text-xs text-outline mt-2 tracking-widest">CREATE ACCOUNT</p>
         </div>
         <GlassPanel>
           <div className="flex gap-2 mb-8">
-            {[1,2,3].map(i => <div key={i} className={`h-1 flex-1 rounded-full transition-all duration-500 ${i <= step ? 'bg-tertiary' : 'bg-outline-variant'}`} />)}
+            {[1, 2, 3].map(i => <div key={i} className={`h-1 flex-1 rounded-full transition-all duration-500 ${i <= step ? 'bg-primary' : 'bg-outline-variant'}`} />)}
           </div>
           <form onSubmit={(e) => { e.preventDefault(); if (step === 3) form.handleSubmit(); }} className="space-y-6">
             {step === 1 && (
@@ -76,21 +61,11 @@ function RegisterPage() {
                 {(field) => (
                   <div className="space-y-2">
                     <label className="block font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">Username</label>
-                    <div className="relative border border-outline-variant/50 rounded-lg bg-black/40">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-outline-variant">
-                        <User size={16} />
-                      </span>
-                      <input
-                        type="text"
-                        value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        className="w-full bg-transparent py-3 pl-10 pr-4 text-on-surface font-data-mono text-sm focus:outline-none focus:ring-1 focus:ring-tertiary rounded-lg placeholder:text-outline-variant/50"
-                        placeholder="PLAYER_01"
-                      />
+                    <div className="input-field">
+                      <span className="input-icon"><User size={16} /></span>
+                      <input type="text" value={field.state.value} onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} className="text-on-surface placeholder:text-outline-variant/50" placeholder="PLAYER_01" />
                     </div>
-                    {field.state.meta.errors.map((err) => (
-                      <p key={err} className="text-error text-xs font-mono mt-1">{getErrorMessage(err)}</p>
-                    ))}
+                    {field.state.meta.errors.length > 0 && <div className="field-error">{field.state.meta.errors.map((e: any) => getErrorMessage(e)).join(', ')}</div>}
                   </div>
                 )}
               </form.Field>
@@ -100,21 +75,11 @@ function RegisterPage() {
                 {(field) => (
                   <div className="space-y-2">
                     <label className="block font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">Email Address</label>
-                    <div className="relative border border-outline-variant/50 rounded-lg bg-black/40">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-outline-variant">
-                        <Mail size={16} />
-                      </span>
-                      <input
-                        type="email"
-                        value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        className="w-full bg-transparent py-3 pl-10 pr-4 text-on-surface font-data-mono text-sm focus:outline-none focus:ring-1 focus:ring-tertiary rounded-lg placeholder:text-outline-variant/50"
-                        placeholder="user@stackbluff.com"
-                      />
+                    <div className="input-field">
+                      <span className="input-icon"><Mail size={16} /></span>
+                      <input type="email" value={field.state.value} onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} className="text-on-surface placeholder:text-outline-variant/50" placeholder="user@stackbluff.com" />
                     </div>
-                    {field.state.meta.errors.map((err) => (
-                      <p key={err} className="text-error text-xs font-mono mt-1">{getErrorMessage(err)}</p>
-                    ))}
+                    {field.state.meta.errors.length > 0 && <div className="field-error">{field.state.meta.errors.map((e: any) => getErrorMessage(e)).join(', ')}</div>}
                   </div>
                 )}
               </form.Field>
@@ -124,42 +89,42 @@ function RegisterPage() {
                 {(field) => (
                   <div className="space-y-2">
                     <label className="block font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">Password</label>
-                    <div className="relative border border-outline-variant/50 rounded-lg bg-black/40">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-outline-variant">
-                        <Lock size={16} />
-                      </span>
-                      <input
-                        type="password"
-                        value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        className="w-full bg-transparent py-3 pl-10 pr-4 text-on-surface font-data-mono text-sm focus:outline-none focus:ring-1 focus:ring-tertiary rounded-lg placeholder:text-outline-variant/50"
-                        placeholder="••••••••"
-                      />
+                    <div className="input-field">
+                      <span className="input-icon"><Lock size={16} /></span>
+                      <input type="password" value={field.state.value} onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} className="text-on-surface placeholder:text-outline-variant/50" placeholder="••••••••" />
                     </div>
-                    {field.state.meta.errors.map((err) => (
-                      <p key={err} className="text-error text-xs font-mono mt-1">{getErrorMessage(err)}</p>
-                    ))}
+                    {field.state.meta.errors.length > 0 && <div className="field-error">{field.state.meta.errors.map((e: any) => getErrorMessage(e)).join(', ')}</div>}
                   </div>
                 )}
               </form.Field>
             )}
-            <div className="flex justify-between pt-4">
-              {step > 1 && <LiquidMetalButton type="button" onClick={prevStep} className="w-auto px-6">BACK</LiquidMetalButton>}
-              <div className="flex-grow" />
-              {step < 3 ? (
-                <LiquidMetalButton type="button" onClick={nextStep} className="w-auto px-6">CONTINUE</LiquidMetalButton>
-              ) : (
-                <LiquidMetalButton type="submit" disabled={mutation.isPending}>
-                  {mutation.isPending ? 'INITIALIZING...' : 'CREATE ACCOUNT'}
-                </LiquidMetalButton>
-              )}
-            </div>
-            {mutation.error && <p className="text-error text-xs font-mono text-center mt-4">{mutation.error.message}</p>}
+            <form.Subscribe selector={(state) => [state.values.username, state.values.email, state.values.password]}>
+              {([username, email, password]) => {
+                const fieldName = step === 1 ? 'username' : step === 2 ? 'email' : 'password';
+                const current = step === 1 ? username : step === 2 ? email : password;
+                const currentSchema = step === 1 ? step1Schema : step === 2 ? step2Schema : step3Schema;
+                const canContinue = currentSchema.safeParse({ [fieldName]: current }).success;
+
+                return (
+                  <div className="flex justify-between pt-4">
+                    {step > 1 && <LiquidMetalButton type="button" onClick={prevStep} variant="silver" className="w-auto px-6">BACK</LiquidMetalButton>}
+                    <div className="flex-grow" />
+                    {step < 3 ? (
+                      <LiquidMetalButton type="button" onClick={nextStep} disabled={!canContinue} variant="silver" className="w-auto px-6">
+                        CONTINUE
+                      </LiquidMetalButton>
+                    ) : (
+                      <LiquidMetalButton type="submit" disabled={mutation.isPending || !canContinue} variant="silver">
+                        {mutation.isPending ? 'INITIALIZING...' : 'CREATE ACCOUNT'}
+                      </LiquidMetalButton>
+                    )}
+                  </div>
+                );
+              }}
+            </form.Subscribe>
+            {mutation.error && <div className="field-error text-center mt-4">{mutation.error.message}</div>}
             <div className="text-center pt-4">
-              <Link
-                to="/login"
-                className="font-label-caps text-[10px] text-on-surface-variant hover:text-tertiary transition-all tracking-widest uppercase"
-              >
+              <Link to="/login" className="font-label-caps text-[10px] text-on-surface-variant hover:text-on-surface transition-all tracking-widest uppercase">
                 ALREADY HAVE AN ACCOUNT? <span className="text-tertiary">SIGN IN</span>
               </Link>
             </div>

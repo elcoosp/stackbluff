@@ -54,7 +54,7 @@ const parseMessage = (data: any) => {
 
 export function useGameWebSocket(tableId: string) {
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'reconnecting' | 'disconnected'>('disconnected');
   const { toast } = useToast();
   const { setSnapshot, setHeroHoleCards, setActionRequired, applyActionBroadcast, setHandResult, clearActionRequired } = useGameStore();
@@ -76,9 +76,9 @@ export function useGameWebSocket(tableId: string) {
       const data = JSON.parse(event.data);
       const message = parseMessage(data);
       if (!message) return;
-      if (message.type === 'TableState') setSnapshot(message);
-      else if (message.type === 'ActionRequired') setActionRequired(message);
-      else if (message.type === 'ActionBroadcast') applyActionBroadcast(message);
+      if (message.type === 'TableState') setSnapshot(message as any);
+      else if (message.type === 'ActionRequired') setActionRequired(message as any);
+      else if (message.type === 'ActionBroadcast') applyActionBroadcast(message as any);
       else if (message.type === 'HandResult') setHandResult(message);
     };
 
