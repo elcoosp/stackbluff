@@ -4,7 +4,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   const token = getToken();
   if (token) headers['Authorization'] = `Bearer ${token}`;
-  const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
+  const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers, credentials: "include" });
   if (!res.ok) throw new Error((await res.json().catch(() => ({ message: res.statusText }))).message);
   return res.json();
 }

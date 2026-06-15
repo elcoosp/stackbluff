@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { Button } from '@/components/ui/button';
 import { motion } from 'motion/react';
@@ -16,27 +16,13 @@ import {
   MessageSquare,
   User,
   ArrowUpDown,
-  Wallet, // Added Wallet icon
+  Wallet,
 } from 'lucide-react';
+import { CreateTableModal } from '../components/CreateTableModal';
 
 export const Route = createFileRoute('/lobby')({
   component: LobbyPage,
 });
-
-const tables = [
-  { id: 1, name: 'The Obsidian Room', game: 'NO LIMIT HOLD\'EM', stakes: '$50 / $100', players: 6, maxPlayers: 9, isLive: true },
-  { id: 2, name: 'Titanium Lounge', game: 'POT LIMIT OMAHA', stakes: '$25 / $50', players: 8, maxPlayers: 9, isLive: false },
-  { id: 3, name: 'Machined Limits', game: 'NO LIMIT HOLD\'EM', stakes: '$100 / $200', players: 2, maxPlayers: 9, isLive: false },
-];
-
-const rowVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { delay: i * 0.1, ease: [0.22, 1, 0.36, 1] },
-  }),
-};
 
 const parseStakes = (stakes: string) => {
   const match = stakes.match(/\$(\d+)/);
@@ -44,9 +30,29 @@ const parseStakes = (stakes: string) => {
 };
 
 function LobbyPage() {
-  const [sortConfig, setSortConfig] = useState<{ key: 'none' | 'stakes' | 'players'; direction: 'asc' | 'desc' }>({ key: 'none', direction: 'asc' });
+  const [tables, setTables] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [sortConfig, setSortConfig] = useState({ key: 'none', direction: 'asc' });
 
-  const toggleSort = (key: 'stakes' | 'players') => {
+  useEffect(() => {
+    fetch('/api/lobby', { credentials: 'include' })
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to load tables');
+        return res.json();
+      })
+      .then(data => {
+        setTables(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        setError(err.message);
+        setLoading(false);
+      });
+  }, []);
+
+  const toggleSort = (key) => {
     setSortConfig((current) => {
       if (current.key === key) {
         if (current.direction === 'asc') return { key, direction: 'desc' };
@@ -58,15 +64,23 @@ function LobbyPage() {
 
   const sortedTables = [...tables].sort((a, b) => {
     if (sortConfig.key === 'none') return 0;
-    const valA = sortConfig.key === 'stakes' ? parseStakes(a.stakes) : a.players;
-    const valB = sortConfig.key === 'stakes' ? parseStakes(b.stakes) : b.players;
+    const valA = sortConfig.key === 'stakes' ? parseStakes(a.stake_level) : a.current_players;
+    const valB = sortConfig.key === 'stakes' ? parseStakes(b.stake_level) : b.current_players;
     return sortConfig.direction === 'asc' ? valA - valB : valB - valA;
   });
 
-  const renderSortIcon = (key: 'stakes' | 'players') => {
+  const renderSortIcon = (key) => {
     if (sortConfig.key !== key) return <ArrowUpDown className="w-3 h-3 opacity-50" />;
     return sortConfig.direction === 'asc' ? <span className="text-tertiary">↑</span> : <span className="text-tertiary">↓</span>;
   };
+
+  if (loading) {
+    return <div className="flex justify-center p-8 text-on-surface">Loading tables...</div>;
+  }
+
+  if (error) {
+    return <div className="text-error p-8 text-center">Error: {error}</div>;
+  }
 
   return (
     <div className="flex min-h-[calc(100vh-64px)] relative">
@@ -99,7 +113,7 @@ function LobbyPage() {
         </nav>
 
         <div className="px-4 pt-6 border-t border-outline-variant">
-          <Button className="w-full mb-4 py-3 rounded-lg liquid-metal font-label-caps text-label-caps active:scale-95 transition-transform uppercase">
+          <Button onClick={() => setModalOpen(true)} className="w-full mb-4 py-3 rounded-lg liquid-metal font-label-caps text-label-caps active:scale-95 transition-transform uppercase">
             <Plus className="w-4 h-4 mr-2" /> New Table
           </Button>
           <button className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface w-full transition-colors font-label-caps text-label-caps">
@@ -118,7 +132,6 @@ function LobbyPage() {
         <div className="absolute inset-0 carbon-bg pointer-events-none" />
 
         <div className="max-w-6xl mx-auto p-4 md:p-6 lg:p-8 pb-28 md:pb-8 relative z-10">
-          {/* Header & Hero */}
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 mb-8 md:mb-12">
             <div>
               <h1 className="font-display-lg text-3xl md:text-display-lg text-on-surface mb-2">Game Lobby</h1>
@@ -133,16 +146,12 @@ function LobbyPage() {
 
           {/* Mobile Sort Controls */}
           <div className="flex lg:hidden justify-end mb-2 gap-2">
-            <button
-              className={`flex items-center gap-1.5 text-[10px] ${sortConfig.key === 'stakes' ? 'text-tertiary border-tertiary/50' : 'text-outline'} font-label-caps uppercase border border-outline-variant px-3 py-1.5 rounded-lg hover:text-on-surface transition-colors`}
-              onClick={() => toggleSort('stakes')}
-            >
+            <button className={`flex items-center gap-1.5 text-[10px] ${sortConfig.key === 'stakes' ? 'text-tertiary border-tertiary/50' : 'text-outline'} font-label-caps uppercase border border-outline-variant px-3 py-1.5 rounded-lg hover:text-on-surface transition-colors`}
+              onClick={() => toggleSort('stakes')}>
               Stakes {renderSortIcon('stakes')}
             </button>
-            <button
-              className={`flex items-center gap-1.5 text-[10px] ${sortConfig.key === 'players' ? 'text-tertiary border-tertiary/50' : 'text-outline'} font-label-caps uppercase border border-outline-variant px-3 py-1.5 rounded-lg hover:text-on-surface transition-colors`}
-              onClick={() => toggleSort('players')}
-            >
+            <button className={`flex items-center gap-1.5 text-[10px] ${sortConfig.key === 'players' ? 'text-tertiary border-tertiary/50' : 'text-outline'} font-label-caps uppercase border border-outline-variant px-3 py-1.5 rounded-lg hover:text-on-surface transition-colors`}
+              onClick={() => toggleSort('players')}>
               Players {renderSortIcon('players')}
             </button>
           </div>
@@ -152,16 +161,12 @@ function LobbyPage() {
             {/* Desktop Header */}
             <div className="hidden lg:grid grid-cols-12 px-6 py-2 text-outline font-label-caps text-[10px] uppercase">
               <div className="col-span-4">Room Name</div>
-              <div
-                className="col-span-2 text-center flex items-center justify-center gap-1 cursor-pointer hover:text-on-surface transition-colors"
-                onClick={() => toggleSort('stakes')}
-              >
+              <div className="col-span-2 text-center flex items-center justify-center gap-1 cursor-pointer hover:text-on-surface transition-colors"
+                onClick={() => toggleSort('stakes')}>
                 Stakes {renderSortIcon('stakes')}
               </div>
-              <div
-                className="col-span-2 text-center flex items-center justify-center gap-1 cursor-pointer hover:text-on-surface transition-colors"
-                onClick={() => toggleSort('players')}
-              >
+              <div className="col-span-2 text-center flex items-center justify-center gap-1 cursor-pointer hover:text-on-surface transition-colors"
+                onClick={() => toggleSort('players')}>
                 Players {renderSortIcon('players')}
               </div>
               <div className="col-span-4 text-right">Action</div>
@@ -170,106 +175,58 @@ function LobbyPage() {
             {sortedTables.map((table, i) => (
               <motion.div
                 layout
-                key={table.id}
+                key={table.table_id}
                 className="flex flex-col lg:grid lg:grid-cols-12 items-start lg:items-center px-4 lg:px-8 py-4 lg:py-5 bg-surface-container-lowest/80 backdrop-blur-xl border border-white/10 rounded-xl razor-highlight group hover:border-tertiary/40 transition-all duration-200 gap-3 lg:gap-0"
                 custom={i}
-                variants={rowVariants}
-                initial="hidden"
-                animate="visible"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
               >
                 <div className="w-full lg:col-span-4 flex items-start lg:items-center gap-3 lg:gap-4">
-                  <div className={`mt-1.5 lg:mt-0 w-1.5 h-1.5 rounded-full shrink-0 ${table.isLive ? 'bg-tertiary status-led animate-pulse' : 'bg-outline-variant'}`} />
+                  <div className={`mt-1.5 lg:mt-0 w-1.5 h-1.5 rounded-full shrink-0 ${table.status === 'active' ? 'bg-tertiary status-led animate-pulse' : 'bg-outline-variant'}`} />
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-headline-md text-base text-on-surface truncate">{table.name}</h4>
-                    <p className="text-[10px] text-outline font-label-caps mt-0.5">{table.game}</p>
+                    <h4 className="font-headline-md text-base text-on-surface truncate">Table {table.table_id.slice(0,8)}</h4>
+                    <p className="text-[10px] text-outline font-label-caps mt-0.5">NO LIMIT HOLD'EM</p>
 
                     <div className="flex items-center gap-3 mt-2.5 lg:hidden">
                       <span className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-md px-2 py-0.5 text-[10px] font-data-mono text-tertiary tracking-wide">
-                        {table.stakes}
+                        ${table.stake_level}
                       </span>
                       <span className="text-[10px] text-on-surface-variant font-data-mono">
-                        {table.players}/{table.maxPlayers} seated
+                        {table.current_players}/{table.max_players} seated
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="hidden lg:block lg:col-span-2 text-center font-data-mono text-on-surface">{table.stakes}</div>
+                <div className="hidden lg:block lg:col-span-2 text-center font-data-mono text-on-surface">${table.stake_level}</div>
 
                 <div className="hidden lg:flex lg:col-span-2 text-center flex-col items-center">
                   <div className="flex gap-1">
-                    {Array.from({ length: table.maxPlayers }).map((_, idx) => (
-                      <span key={idx} className={`w-1.5 h-1.5 rounded-full transition-colors ${idx < table.players ? 'bg-tertiary/70' : 'bg-outline-variant/30'}`} />
+                    {Array.from({ length: table.max_players }).map((_, idx) => (
+                      <span key={idx} className={`w-1.5 h-1.5 rounded-full transition-colors ${idx < table.current_players ? 'bg-tertiary/70' : 'bg-outline-variant/30'}`} />
                     ))}
                   </div>
-                  <span className="text-[10px] text-outline mt-1 font-data-mono">{table.players}/{table.maxPlayers}</span>
+                  <span className="text-[10px] text-outline mt-1 font-data-mono">{table.current_players}/{table.max_players}</span>
                 </div>
 
                 <div className="w-full lg:col-span-4 flex lg:justify-end gap-2 mt-1 lg:mt-0">
                   <Button variant="outline" className="flex-1 lg:flex-initial px-3 lg:px-4 py-2 border-white/10 font-label-caps text-[10px] text-on-surface-variant hover:border-tertiary/50 hover:text-tertiary uppercase tracking-wider rounded-lg">
                     Observe
                   </Button>
-                  <Button className="flex-1 lg:flex-initial px-3 lg:px-4 py-2 bg-tertiary text-on-tertiary font-label-caps text-[10px] hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg shadow-emerald-500/10 rounded-lg">
-                    <Wallet className="w-3.5 h-3.5 mr-1.5" /> Buy In
-                  </Button>
+                  <Link to="/table/$tableId" params={{ tableId: table.table_id }} className="flex-1 lg:flex-initial">
+                    <Button className="w-full px-3 lg:px-4 py-2 bg-tertiary text-on-tertiary font-label-caps text-[10px] hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg shadow-emerald-500/10 rounded-lg">
+                      <Wallet className="w-3.5 h-3.5 mr-1.5" /> Buy In
+                    </Button>
+                  </Link>
                 </div>
               </motion.div>
             ))}
           </div>
-
-          {/* Featured Section */}
-          <div className="mt-8 md:mt-16 grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-gutter">
-            <div className="lg:col-span-2 relative h-64 rounded-2xl overflow-hidden razor-highlight border border-outline-variant group">
-              <img
-                className="absolute inset-0 w-full h-full object-cover grayscale opacity-40 group-hover:opacity-60 transition-opacity"
-                src="/grand-masters-invitational.png"
-                alt="Grand Masters Invitational Poker Room"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-surface to-transparent" />
-              <div className="absolute bottom-0 p-6 md:p-8">
-                <span className="font-label-caps text-[10px] text-tertiary bg-tertiary/10 px-2 py-1 rounded mb-4 inline-block">LIVE EVENT</span>
-                <h2 className="font-display-lg text-xl md:text-display-lg-mobile text-on-surface mb-2">Grand Masters Invitational</h2>
-                <p className="text-on-surface-variant max-w-sm text-sm md:text-base">Final table streaming live with real-time data analytics. Watch the legends compete.</p>
-              </div>
-            </div>
-
-            <div className="bg-surface-container p-6 md:p-8 rounded-2xl border border-outline-variant razor-highlight flex flex-col">
-              <BarChart3 className="text-tertiary w-10 h-10 mb-4" strokeWidth={1.5} />
-              <h3 className="font-headline-md text-headline-md text-on-surface mb-2">Strategy Lab</h3>
-              <p className="text-on-surface-variant mb-6 flex-1 text-sm md:text-base">Analyze your last 500 hands with our proprietary GTO engine. Refine your edges.</p>
-              <Button variant="outline" className="w-full py-3 border-outline-variant rounded-lg font-label-caps text-label-caps hover:bg-surface-container-highest transition-colors">
-                Launch Lab
-              </Button>
-            </div>
-          </div>
         </div>
       </section>
 
-      {/* Floating Action Button */}
-      <button className="fixed bottom-24 right-6 md:bottom-8 md:right-8 z-50 w-14 h-14 md:w-auto md:px-8 md:h-14 bg-tertiary text-on-tertiary flex items-center justify-center gap-3 shadow-lg active:scale-95 transition-transform hover:shadow-emerald-500/20 group rounded-full md:rounded-lg">
-        <Zap className="w-5 h-5" />
-        <span className="hidden md:inline font-label-caps text-label-caps">Quick Join</span>
-      </button>
-
-      {/* BottomNavBar (Mobile) */}
-      <nav className="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-4 h-20 bg-surface-container-lowest/80 backdrop-blur-xl border-t border-white/10 shadow-lg rounded-t-xl">
-        <button className="flex flex-col items-center justify-center bg-tertiary-container text-on-tertiary-container rounded-xl p-2 transition-transform duration-150 active:scale-90">
-          <Diamond className="w-5 h-5" />
-          <span className="font-label-caps text-[10px]">Play</span>
-        </button>
-        <button className="flex flex-col items-center justify-center text-outline p-2 hover:text-on-surface transition-transform duration-150 active:scale-90">
-          <BarChart2 className="w-5 h-5" />
-          <span className="font-label-caps text-[10px]">Stats</span>
-        </button>
-        <button className="flex flex-col items-center justify-center text-outline p-2 hover:text-on-surface transition-transform duration-150 active:scale-90">
-          <MessageSquare className="w-5 h-5" />
-          <span className="font-label-caps text-[10px]">Messages</span>
-        </button>
-        <button className="flex flex-col items-center justify-center text-outline p-2 hover:text-on-surface transition-transform duration-150 active:scale-90">
-          <User className="w-5 h-5" />
-          <span className="font-label-caps text-[10px]">Profile</span>
-        </button>
-      </nav>
+      <CreateTableModal open={modalOpen} onClose={() => setModalOpen(false)} onTableCreated={() => window.location.reload()} />
     </div>
   );
 }

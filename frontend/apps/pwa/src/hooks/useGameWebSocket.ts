@@ -58,8 +58,7 @@ export function useGameWebSocket(tableId: string) {
   const connect = () => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
     const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3000';
-    const token = getToken();
-    const ws = new WebSocket(`${wsUrl}/ws/game?token=${token}`);
+      const ws = new WebSocket(`${wsUrl}/ws/game`);
     wsRef.current = ws;
 
     ws.onopen = () => {
