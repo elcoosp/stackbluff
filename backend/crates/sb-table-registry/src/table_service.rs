@@ -29,6 +29,8 @@ impl TableService for TableServiceImpl {
             max_buy_in: ChipAmount::new(10000).unwrap(),
         };
         let table_id = self.registry.create_table(config).await;
+        // TODO: update table name in database
+        // For now, ignore name parameter
         Ok(table_id)
     }
 }

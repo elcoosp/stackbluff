@@ -30,7 +30,7 @@ const cardVariants = {
     scale: 1,
     transition: {
       duration: 0.6,
-      ease: [0.22, 1, 0.36, 1], // Premium cubic-bezier ease out
+      ease: 'easeOut', // Premium cubic-bezier ease out
     },
   },
 };

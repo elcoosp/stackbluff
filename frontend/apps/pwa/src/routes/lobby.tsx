@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { createFileRoute, Link } from '@tanstack/react-router';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { motion } from 'motion/react';
 import {
+  BookOpen,
   LayoutGrid,
   Trophy,
   History,
@@ -10,49 +12,48 @@ import {
   HelpCircle,
   LogOut,
   Plus,
-  Zap,
-  Diamond,
-  BarChart2,
-  MessageSquare,
-  User,
   ArrowUpDown,
   Wallet,
 } from 'lucide-react';
 import { CreateTableModal } from '../components/CreateTableModal';
+import { apiClient } from '@stackbluff/shared';
+
+const STAKE_CONFIG = {
+  Micro: { text: "$0.02/$0.05", bb: 5 },
+  Low: { text: "$0.10/$0.25", bb: 25 },
+  Medium: { text: "$0.50/$1.00", bb: 100 },
+  High: { text: "$2/$4", bb: 400 },
+  VeryHigh: { text: "$5/$10", bb: 1000 },
+};
+
+const getStakeBB = (stakeLevel: keyof typeof STAKE_CONFIG) => STAKE_CONFIG[stakeLevel]?.bb ?? 0;
+
+interface Table {
+  table_id: string;
+  name: string;
+  stake_level: keyof typeof STAKE_CONFIG;
+  current_players: number;
+  max_players: number;
+  status: string;
+}
 
 export const Route = createFileRoute('/lobby')({
   component: LobbyPage,
 });
 
-const parseStakes = (stakes: string) => {
-  const match = stakes.match(/\$(\d+)/);
-  return match ? parseInt(match[1], 10) : 0;
-};
-
 function LobbyPage() {
-  const [tables, setTables] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [sortConfig, setSortConfig] = useState({ key: 'none', direction: 'asc' });
+  const [sortConfig, setSortConfig] = useState<{ key: 'none' | 'stakes' | 'players'; direction: 'asc' | 'desc' }>({
+    key: 'none',
+    direction: 'asc',
+  });
 
-  useEffect(() => {
-    fetch('/api/lobby', { credentials: 'include' })
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to load tables');
-        return res.json();
-      })
-      .then(data => {
-        setTables(data);
-        setLoading(false);
-      })
-      .catch(err => {
-        setError(err.message);
-        setLoading(false);
-      });
-  }, []);
+  const { data: tables = [], isLoading, error, refetch } = useQuery<Table[]>({
+    queryKey: ['tables'],
+    queryFn: () => apiClient<Table[]>('/lobby'),
+  });
 
-  const toggleSort = (key) => {
+  const toggleSort = (key: 'stakes' | 'players') => {
     setSortConfig((current) => {
       if (current.key === key) {
         if (current.direction === 'asc') return { key, direction: 'desc' };
@@ -64,22 +65,22 @@ function LobbyPage() {
 
   const sortedTables = [...tables].sort((a, b) => {
     if (sortConfig.key === 'none') return 0;
-    const valA = sortConfig.key === 'stakes' ? parseStakes(a.stake_level) : a.current_players;
-    const valB = sortConfig.key === 'stakes' ? parseStakes(b.stake_level) : b.current_players;
+    const valA = sortConfig.key === 'stakes' ? getStakeBB(a.stake_level) : a.current_players;
+    const valB = sortConfig.key === 'stakes' ? getStakeBB(b.stake_level) : b.current_players;
     return sortConfig.direction === 'asc' ? valA - valB : valB - valA;
   });
 
-  const renderSortIcon = (key) => {
+  const renderSortIcon = (key: 'stakes' | 'players') => {
     if (sortConfig.key !== key) return <ArrowUpDown className="w-3 h-3 opacity-50" />;
     return sortConfig.direction === 'asc' ? <span className="text-tertiary">↑</span> : <span className="text-tertiary">↓</span>;
   };
 
-  if (loading) {
+  if (isLoading) {
     return <div className="flex justify-center p-8 text-on-surface">Loading tables...</div>;
   }
 
   if (error) {
-    return <div className="text-error p-8 text-center">Error: {error}</div>;
+    return <div className="text-error p-8 text-center">Error: {(error as Error).message}</div>;
   }
 
   return (
@@ -146,12 +147,16 @@ function LobbyPage() {
 
           {/* Mobile Sort Controls */}
           <div className="flex lg:hidden justify-end mb-2 gap-2">
-            <button className={`flex items-center gap-1.5 text-[10px] ${sortConfig.key === 'stakes' ? 'text-tertiary border-tertiary/50' : 'text-outline'} font-label-caps uppercase border border-outline-variant px-3 py-1.5 rounded-lg hover:text-on-surface transition-colors`}
-              onClick={() => toggleSort('stakes')}>
+            <button
+              className={`flex items-center gap-1.5 text-[10px] ${sortConfig.key === 'stakes' ? 'text-tertiary border-tertiary/50' : 'text-outline'} font-label-caps uppercase border border-outline-variant px-3 py-1.5 rounded-lg hover:text-on-surface transition-colors`}
+              onClick={() => toggleSort('stakes')}
+            >
               Stakes {renderSortIcon('stakes')}
             </button>
-            <button className={`flex items-center gap-1.5 text-[10px] ${sortConfig.key === 'players' ? 'text-tertiary border-tertiary/50' : 'text-outline'} font-label-caps uppercase border border-outline-variant px-3 py-1.5 rounded-lg hover:text-on-surface transition-colors`}
-              onClick={() => toggleSort('players')}>
+            <button
+              className={`flex items-center gap-1.5 text-[10px] ${sortConfig.key === 'players' ? 'text-tertiary border-tertiary/50' : 'text-outline'} font-label-caps uppercase border border-outline-variant px-3 py-1.5 rounded-lg hover:text-on-surface transition-colors`}
+              onClick={() => toggleSort('players')}
+            >
               Players {renderSortIcon('players')}
             </button>
           </div>
@@ -161,12 +166,16 @@ function LobbyPage() {
             {/* Desktop Header */}
             <div className="hidden lg:grid grid-cols-12 px-6 py-2 text-outline font-label-caps text-[10px] uppercase">
               <div className="col-span-4">Room Name</div>
-              <div className="col-span-2 text-center flex items-center justify-center gap-1 cursor-pointer hover:text-on-surface transition-colors"
-                onClick={() => toggleSort('stakes')}>
+              <div
+                className="col-span-2 text-center flex items-center justify-center gap-1 cursor-pointer hover:text-on-surface transition-colors"
+                onClick={() => toggleSort('stakes')}
+              >
                 Stakes {renderSortIcon('stakes')}
               </div>
-              <div className="col-span-2 text-center flex items-center justify-center gap-1 cursor-pointer hover:text-on-surface transition-colors"
-                onClick={() => toggleSort('players')}>
+              <div
+                className="col-span-2 text-center flex items-center justify-center gap-1 cursor-pointer hover:text-on-surface transition-colors"
+                onClick={() => toggleSort('players')}
+              >
                 Players {renderSortIcon('players')}
               </div>
               <div className="col-span-4 text-right">Action</div>
@@ -177,20 +186,23 @@ function LobbyPage() {
                 layout
                 key={table.table_id}
                 className="flex flex-col lg:grid lg:grid-cols-12 items-start lg:items-center px-4 lg:px-8 py-4 lg:py-5 bg-surface-container-lowest/80 backdrop-blur-xl border border-white/10 rounded-xl razor-highlight group hover:border-tertiary/40 transition-all duration-200 gap-3 lg:gap-0"
-                custom={i}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
               >
                 <div className="w-full lg:col-span-4 flex items-start lg:items-center gap-3 lg:gap-4">
-                  <div className={`mt-1.5 lg:mt-0 w-1.5 h-1.5 rounded-full shrink-0 ${table.status === 'active' ? 'bg-tertiary status-led animate-pulse' : 'bg-outline-variant'}`} />
+                  <div
+                    className={`mt-1.5 lg:mt-0 w-1.5 h-1.5 rounded-full shrink-0 ${
+                      table.status === 'active' ? 'bg-tertiary status-led animate-pulse' : 'bg-outline-variant'
+                    }`}
+                  />
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-headline-md text-base text-on-surface truncate">Table {table.table_id.slice(0,8)}</h4>
+                    <h4 className="font-headline-md text-base text-on-surface truncate">{table.name}</h4>
                     <p className="text-[10px] text-outline font-label-caps mt-0.5">NO LIMIT HOLD'EM</p>
 
                     <div className="flex items-center gap-3 mt-2.5 lg:hidden">
                       <span className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-md px-2 py-0.5 text-[10px] font-data-mono text-tertiary tracking-wide">
-                        ${table.stake_level}
+                        {STAKE_CONFIG[table.stake_level]?.text || table.stake_level}
                       </span>
                       <span className="text-[10px] text-on-surface-variant font-data-mono">
                         {table.current_players}/{table.max_players} seated
@@ -199,15 +211,24 @@ function LobbyPage() {
                   </div>
                 </div>
 
-                <div className="hidden lg:block lg:col-span-2 text-center font-data-mono text-on-surface">${table.stake_level}</div>
+                <div className="hidden lg:block lg:col-span-2 text-center font-data-mono text-on-surface">
+                  {STAKE_CONFIG[table.stake_level]?.text || table.stake_level}
+                </div>
 
                 <div className="hidden lg:flex lg:col-span-2 text-center flex-col items-center">
                   <div className="flex gap-1">
                     {Array.from({ length: table.max_players }).map((_, idx) => (
-                      <span key={idx} className={`w-1.5 h-1.5 rounded-full transition-colors ${idx < table.current_players ? 'bg-tertiary/70' : 'bg-outline-variant/30'}`} />
+                      <span
+                        key={idx}
+                        className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                          idx < table.current_players ? 'bg-tertiary/70' : 'bg-outline-variant/30'
+                        }`}
+                      />
                     ))}
                   </div>
-                  <span className="text-[10px] text-outline mt-1 font-data-mono">{table.current_players}/{table.max_players}</span>
+                  <span className="text-[10px] text-outline mt-1 font-data-mono">
+                    {table.current_players}/{table.max_players}
+                  </span>
                 </div>
 
                 <div className="w-full lg:col-span-4 flex lg:justify-end gap-2 mt-1 lg:mt-0">
@@ -226,7 +247,7 @@ function LobbyPage() {
         </div>
       </section>
 
-      <CreateTableModal open={modalOpen} onClose={() => setModalOpen(false)} onTableCreated={() => window.location.reload()} />
+      <CreateTableModal open={modalOpen} onClose={() => setModalOpen(false)} onTableCreated={() => refetch()} />
     </div>
   );
 }

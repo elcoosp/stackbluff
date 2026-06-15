@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TableInfo {
     pub table_id: TableId,
+    pub name: String,
     pub stake_level: StakeLevel,
     pub current_players: u32,
     pub max_players: u32,
@@ -18,6 +19,7 @@ pub trait TableRepo: Send + Sync {
     async fn list_tables(&self) -> Result<Vec<TableInfo>, AppError>;
     async fn create_table(
         &self,
+        name: Option<String>,
         stake_level: StakeLevel,
         max_players: u32,
     ) -> Result<TableId, AppError>;

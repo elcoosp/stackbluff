@@ -1,64 +1,135 @@
 import { useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiClient } from '@stackbluff/shared';
+import { LiquidMetalButton } from '@stackbluff/shared/ui/LiquidMetalButton';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
-export function CreateTableModal({ open, onClose, onTableCreated }) {
+interface CreateTableModalProps {
+  open: boolean;
+  onClose: () => void;
+  onTableCreated: () => void;
+}
+
+export function CreateTableModal({ open, onClose, onTableCreated }: CreateTableModalProps) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [tableName, setTableName] = useState('');
   const [stakeLevel, setStakeLevel] = useState('Micro');
-  const [maxPlayers, setMaxPlayers] = useState(6);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [maxPlayers, setMaxPlayers] = useState('6');
 
-  if (!open) return null;
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      const res = await fetch('/api/tables', {
+  const createMutation = useMutation({
+    mutationFn: (data: { name: string; stake_level: string; max_players: number }) =>
+      apiClient<{ table_id: string }>('/tables', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ stake_level: stakeLevel, max_players: maxPlayers }),
-      });
-      if (!res.ok) throw new Error('Failed to create table');
-      const data = await res.json();
+        body: JSON.stringify(data),
+      }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['tables'] });
       onTableCreated();
       onClose();
       navigate({ to: '/table/$tableId', params: { tableId: data.table_id } });
-    } catch (err) {
-      console.error(err);
-      alert('Failed to create table');
-    } finally {
-      setIsSubmitting(false);
+    },
+    onError: (error: Error) => {
+      console.error('Failed to create table:', error);
+      alert(error.message);
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!tableName.trim()) {
+      alert('Table name is required');
+      return;
     }
+    createMutation.mutate({
+      name: tableName.trim(),
+      stake_level: stakeLevel,
+      max_players: parseInt(maxPlayers, 10),
+    });
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-surface-container rounded-lg shadow-lg w-full max-w-md p-6">
-        <h2 className="text-xl font-semibold mb-4">Create New Table</h2>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-1">Stake Level</label>
-            <select value={stakeLevel} onChange={(e) => setStakeLevel(e.target.value)} className="w-full border rounded-md p-2 bg-surface-container-high">
-              <option value="Micro">Micro ($0.02/$0.05)</option>
-              <option value="Low">Low ($0.10/$0.25)</option>
-              <option value="Medium">Medium ($0.50/$1.00)</option>
-              <option value="High">High ($2/$4)</option>
-              <option value="VeryHigh">Very High ($5/$10)</option>
-            </select>
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md bg-surface-container/90 backdrop-blur-xl border border-white/10">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-display-lg">Create New Table</DialogTitle>
+          <DialogDescription className="text-on-surface-variant">
+            Enter a name and choose the stakes.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <label className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+              Table Name
+            </label>
+            <Input
+              value={tableName}
+              onChange={(e) => setTableName(e.target.value)}
+              placeholder="e.g., My Private Table"
+              className="bg-surface-container-high border-outline-variant/50 text-on-surface"
+              autoFocus
+            />
           </div>
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-1">Max Players ({maxPlayers})</label>
-            <input type="range" min={2} max={9} value={maxPlayers} onChange={(e) => setMaxPlayers(Number(e.target.value))} className="w-full" />
+          <div className="space-y-2">
+            <label className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+              Stake Level
+            </label>
+            <Select value={stakeLevel} onValueChange={setStakeLevel}>
+              <SelectTrigger className="bg-surface-container-high border-outline-variant/50 text-on-surface">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-surface-container-high border-outline-variant/50">
+                <SelectItem value="Micro">Micro ($0.02/$0.05)</SelectItem>
+                <SelectItem value="Low">Low ($0.10/$0.25)</SelectItem>
+                <SelectItem value="Medium">Medium ($0.50/$1.00)</SelectItem>
+                <SelectItem value="High">High ($2/$4)</SelectItem>
+                <SelectItem value="VeryHigh">Very High ($5/$10)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 border rounded-md">Cancel</button>
-            <button type="submit" disabled={isSubmitting} className="px-4 py-2 bg-tertiary text-on-tertiary rounded-md disabled:opacity-50">
-              {isSubmitting ? 'Creating...' : 'Create Table'}
-            </button>
+          <div className="space-y-2">
+            <label className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+              Max Players: {maxPlayers}
+            </label>
+            <input
+              type="range"
+              min={2}
+              max={9}
+              value={maxPlayers}
+              onChange={(e) => setMaxPlayers(e.target.value)}
+              className="w-full h-2 bg-outline-variant/30 rounded-lg appearance-none cursor-pointer accent-tertiary"
+            />
+            <div className="flex justify-between text-[10px] text-on-surface-variant">
+              <span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span>
+            </div>
           </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <LiquidMetalButton type="submit" variant="emerald" disabled={createMutation.isPending}>
+              {createMutation.isPending ? 'Creating...' : 'Create Table'}
+            </LiquidMetalButton>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

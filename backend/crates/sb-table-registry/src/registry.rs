@@ -106,12 +106,12 @@ impl Registry {
             .iter()
             .map(|(id, cfg)| TableInfo {
                 table_id: *id,
+                name: format!("{} Table", cfg.stake_level),
                 stake_level: cfg.stake_level,
                 max_players: cfg.max_players as u32,
                 current_players: 0,
                 status: "active".to_string(),
-            })
-            .collect()
+            })            .collect()
     }
 
     async fn get_sender(&self, id: TableId) -> Option<ActorSender> {

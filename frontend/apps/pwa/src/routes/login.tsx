@@ -26,7 +26,22 @@ function LoginPage() {
   const setAuth = useAuthStore((s) => s.setAuth);
   const mutation = useMutation({
     mutationFn: authApi.login,
-    onSuccess: (data) => { setToken(data.token); setAuth(data.user, data.token); navigate({ to: '/' }); },
+    onSuccess: async (data) => {
+      setToken(data.token);
+      // Fetch user balance from /auth/me
+      try {
+        const res = await fetch('/auth/me', { credentials: 'include', headers: { 'Authorization': `Bearer ${data.token}` } });
+        if (res.ok) {
+          const userData = await res.json();
+          setAuth(data.user, data.token, userData.chip_balance || 0);
+        } else {
+          setAuth(data.user, data.token, 0);
+        }
+      } catch (e) {
+        setAuth(data.user, data.token, 0);
+      }
+      navigate({ to: '/' });
+    },
     onError: (error) => {
       // Trigger toast with fallback message
       toast.error(error.message || 'Invalid credentials');

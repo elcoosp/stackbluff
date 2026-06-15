@@ -22,6 +22,7 @@ pub use rate_limit::rate_limit_middleware;
 #[derive(Debug, Serialize)]
 pub struct LobbyTableInfo {
     pub table_id: TableId,
+    pub name: String,
     pub stake_level: StakeLevel,
     pub current_players: u32,
     pub max_players: u32,
@@ -32,6 +33,7 @@ impl From<TableInfo> for LobbyTableInfo {
     fn from(t: TableInfo) -> Self {
         LobbyTableInfo {
             table_id: t.table_id,
+            name: t.name,
             stake_level: t.stake_level,
             current_players: t.current_players,
             max_players: t.max_players,
@@ -42,6 +44,7 @@ impl From<TableInfo> for LobbyTableInfo {
 
 #[derive(Debug, Deserialize)]
 pub struct CreateTableRequest {
+    pub name: Option<String>,
     pub stake_level: StakeLevel,
     pub max_players: u32,
 }

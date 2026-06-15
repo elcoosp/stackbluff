@@ -33,6 +33,7 @@ pub struct BlindLevel {
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
+    pub name: String,
     pub created_by: Uuid,
     #[sea_orm(column_type = "Json")]
     pub config_json: TableConfig,

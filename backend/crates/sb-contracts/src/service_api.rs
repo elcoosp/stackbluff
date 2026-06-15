@@ -239,4 +239,6 @@ pub trait AuthService: Send + Sync {
         password: &str,
     ) -> Result<AuthResult, sb_shared_types::AppError>;
     async fn verify_token(&self, token: &str) -> Result<TokenClaims, sb_shared_types::AppError>;
+
+    async fn validate_token(&self, token: &str) -> Result<sb_shared_types::UserId, sb_shared_types::AppError>;
 }

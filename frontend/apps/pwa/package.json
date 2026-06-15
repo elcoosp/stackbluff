@@ -11,7 +11,11 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.16",
+    "@radix-ui/react-select": "^2.3.0",
+    "@radix-ui/react-slot": "^1.2.5",
     "@stackbluff/shared": "workspace:*",
+    "class-variance-authority": "^0.7.1",
     "motion": "^12.40.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
@@ -26,6 +30,7 @@
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
     "jsdom": "^26.0.0",
+    "tailwindcss-animate": "^1.0.7",
     "typescript": "~6.0.0",
     "vite": "^8.0.8",
     "vite-plugin-pwa": "^1.0.0",

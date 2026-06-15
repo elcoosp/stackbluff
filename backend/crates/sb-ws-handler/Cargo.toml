@@ -5,6 +5,7 @@ edition = { workspace = true }
 rust-version = { workspace = true }
 
 [dependencies]
+sb-contracts = { path = "../sb-contracts" }
 axum-extra = { workspace = true }
 sb-auth = { workspace = true }
 sb-shared-types = { workspace = true }

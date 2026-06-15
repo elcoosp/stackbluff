@@ -37,7 +37,6 @@ impl TableRepo for TableRepoImpl {
                 };
                 TableInfo {
                     table_id: TableId::new(m.id),
-                    name: m.name.clone(),
                     stake_level,
                     current_players: 0,
                     max_players: m.config_json.max_players as u32,
@@ -51,7 +50,6 @@ impl TableRepo for TableRepoImpl {
 
     async fn create_table(
         &self,
-        name: Option<String>,
         stake_level: StakeLevel,
         max_players: u32,
     ) -> Result<TableId, AppError> {
@@ -64,17 +62,18 @@ impl TableRepo for TableRepoImpl {
             tournament_config: None,
         };
         let now = chrono::Utc::now();
-        let table_name = name.unwrap_or_else(|| format!("Table {}", id.to_string().chars().take(8).collect::<String>()));
         let active = table::ActiveModel {
             id: Set(id),
-            name: Set(table_name),
             created_by: Set(Uuid::nil()), // TODO: get from auth
             config_json: Set(db_config),
             status: Set(sb_db_entities::enums::TableStatus::Waiting),
             club_id: Set(None),
             created_at: Set(now),
         };
-        active.insert(&self.db).await.map_err(|e| AppError::Database(e.to_string()))?;
+        active
+            .insert(&self.db)
+            .await
+            .map_err(|e| AppError::Database(e.to_string()))?;
         Ok(TableId::new(id))
     }
 }

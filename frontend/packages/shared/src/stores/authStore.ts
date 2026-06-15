@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 interface User { id: string; username: string; email: string; }
-interface AuthState { user: User | null; token: string | null; setAuth: (user: User, token: string) => void; logout: () => void; }
+interface AuthState { user: User | null; token: string | null; balance: number; setAuth: (user: User, token: string, balance: number) => void; logout: () => void; }
 export const useAuthStore = create<AuthState>()(
-  persist((set) => ({ user: null, token: null, setAuth: (u, t) => set({ user: u, token: t }), logout: () => set({ user: null, token: null }) }), { name: 'auth-storage' })
+  persist((set) => ({ user: null, token: null, setAuth: (u, t, balance) => set({ user: u, token: t, balance: balance || 0 }), logout: () => set({ user: null, token: null, balance: 0 }) }), { name: 'auth-storage' })
 );
