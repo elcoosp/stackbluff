@@ -1,7 +1,7 @@
+use crate::Registry;
 use async_trait::async_trait;
 use sb_contracts::lobby_api::TableService;
-use sb_shared_types::{AppError, StakeLevel, TableId, TableConfig, ChipAmount, GameVariant};
-use crate::Registry;
+use sb_shared_types::{AppError, ChipAmount, GameVariant, StakeLevel, TableConfig, TableId};
 use std::sync::Arc;
 
 pub struct TableServiceImpl {

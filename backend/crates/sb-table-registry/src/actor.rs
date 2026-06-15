@@ -276,13 +276,14 @@ impl TableActor {
             return;
         }
 
-        let state = match GameState::new_hand(self.table_id, players_for_engine, dealer_index, (sb, bb)) {
-            Ok(s) => s,
-            Err(e) => {
-                error!(error = %e, "Failed to create hand");
-                return;
-            }
-        };
+        let state =
+            match GameState::new_hand(self.table_id, players_for_engine, dealer_index, (sb, bb)) {
+                Ok(s) => s,
+                Err(e) => {
+                    error!(error = %e, "Failed to create hand");
+                    return;
+                }
+            };
 
         let mut user_by_player_id = HashMap::new();
         let mut player_by_user_id = HashMap::new();

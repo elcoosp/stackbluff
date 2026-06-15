@@ -1,19 +1,16 @@
 use sb_ws_messages;
 // Game state for a poker hand – fully production‑ready.
 
-    /// Returns the action required for the current player, if any.
+/// Returns the action required for the current player, if any.
 
-
-    /// Returns a view of the table state suitable for sending to a specific player.
-    /// Hole cards of other players are hidden.
-    
-
+/// Returns a view of the table state suitable for sending to a specific player.
+/// Hole cards of other players are hidden.
 use crate::deck::Deck;
 use crate::evaluate::evaluate_hand_strength;
 use crate::hand_rank::HandRank;
 use crate::pot::compute_side_pots;
-use sb_shared_types::{PlayerId, TableId, ChipAmount, Card};
 use sb_shared_types::UserId;
+use sb_shared_types::{Card, ChipAmount, PlayerId, TableId};
 
 use sb_ws_messages::ActionRequired as WsActionRequired;
 use tracing::{debug, warn};
@@ -95,12 +92,13 @@ pub struct GameState {
 }
 
 impl GameState {
-    pub fn new_hand(table_id: TableId, 
+    pub fn new_hand(
+        table_id: TableId,
         players: Vec<(PlayerId, ChipAmount)>,
         dealer_index: usize,
         blinds: (ChipAmount, ChipAmount),
     ) -> Result<Self, &'static str> {
-    let _ = table_id;
+        let _ = table_id;
         if players.len() < 2 {
             return Err("Need at least 2 players");
         }
@@ -902,19 +900,31 @@ impl GameState {
 
     /// Returns a player-specific snapshot of the game state, hiding other players' hole cards.
     /// Returns a player-specific snapshot of the game state, hiding other players' hole cards.
-    pub fn public_snapshot_for_player(&self, _viewer_id: PlayerId) -> sb_ws_messages::TableStateUpdate {
-        let players = self.players.iter().map(|p| {
-            // Convert PlayerId to UserId (same underlying UUID)
-            let user_id = sb_shared_types::UserId(p.player_id.0);
-            (user_id, p.stack, p.total_bet, p.is_all_in)
-        }).collect();
+    pub fn public_snapshot_for_player(
+        &self,
+        _viewer_id: PlayerId,
+    ) -> sb_ws_messages::TableStateUpdate {
+        let players = self
+            .players
+            .iter()
+            .map(|p| {
+                // Convert PlayerId to UserId (same underlying UUID)
+                let user_id = sb_shared_types::UserId(p.player_id.0);
+                (user_id, p.stack, p.total_bet, p.is_all_in)
+            })
+            .collect();
         sb_ws_messages::TableStateUpdate {
             table_id: sb_shared_types::TableId::new(uuid::Uuid::nil()), // Placeholder – caller should set
             players,
             current_hand_in_progress: !self.hand_complete,
-            community_cards: self.community_cards.iter().map(|c| sb_ws_messages::Card {
-                suit: format!("{:?}", c.suit).to_lowercase(),
-                rank: format!("{:?}", c.rank),
-            }).collect(),
+            community_cards: self
+                .community_cards
+                .iter()
+                .map(|c| sb_ws_messages::Card {
+                    suit: format!("{:?}", c.suit).to_lowercase(),
+                    rank: format!("{:?}", c.rank),
+                })
+                .collect(),
         }
-    }}
+    }
+}

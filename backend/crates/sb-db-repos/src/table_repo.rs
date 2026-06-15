@@ -1,9 +1,8 @@
 use sb_contracts::lobby_api::{TableInfo, TableRepo};
-use sb_shared_types::{AppError, StakeLevel, TableId, ChipAmount, GameVariant};
-use sb_shared_types::TableConfig as SharedTableConfig;
-use sea_orm::{DatabaseConnection, EntityTrait, QueryOrder, ActiveModelTrait, Set};
 use sb_db_entities::table;
 use sb_db_entities::table::TableConfig as DbTableConfig;
+use sb_shared_types::{AppError, StakeLevel, TableId};
+use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, QueryOrder, Set};
 use uuid::Uuid;
 
 pub struct TableRepoImpl {
@@ -71,7 +70,10 @@ impl TableRepo for TableRepoImpl {
             club_id: Set(None),
             created_at: Set(now),
         };
-        active.insert(&self.db).await.map_err(|e| AppError::Database(e.to_string()))?;
+        active
+            .insert(&self.db)
+            .await
+            .map_err(|e| AppError::Database(e.to_string()))?;
         Ok(TableId::new(id))
     }
 }

@@ -1,10 +1,10 @@
 use crate::actor::{InternalCommand, spawn_table_actor};
 use sb_contracts::{TableCommand, TableError, lobby_api::TableInfo};
+use sb_game_engine::game_state::Action;
 use sb_shared_types::{ChipAmount, TableConfig, TableId, UserId};
+use sb_ws_handler::BroadcastSender;
 use sb_ws_handler::broadcast_channel;
 use sb_ws_messages::ServerMessage;
-use sb_ws_handler::BroadcastSender;
-use sb_game_engine::game_state::Action;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{RwLock, mpsc};
@@ -47,8 +47,15 @@ impl Registry {
         table_id
     }
 
-    pub async fn subscribe_to_table(&self, table_id: TableId) -> Option<BroadcastSender<ServerMessage>> {
-        self.tables.read().await.get(&table_id).map(|entry| entry.broadcast_tx.clone())
+    pub async fn subscribe_to_table(
+        &self,
+        table_id: TableId,
+    ) -> Option<BroadcastSender<ServerMessage>> {
+        self.tables
+            .read()
+            .await
+            .get(&table_id)
+            .map(|entry| entry.broadcast_tx.clone())
     }
 
     pub async fn send_action(
@@ -75,18 +82,22 @@ impl Registry {
             seat,
             stack,
         };
-        entry.cmd_tx.send(cmd).await.map_err(|_| TableError::ActorError("actor dropped".into()))
+        entry
+            .cmd_tx
+            .send(cmd)
+            .await
+            .map_err(|_| TableError::ActorError("actor dropped".into()))
     }
 
-    pub async fn send_leave(
-        &self,
-        table_id: TableId,
-        user_id: UserId,
-    ) -> Result<(), TableError> {
+    pub async fn send_leave(&self, table_id: TableId, user_id: UserId) -> Result<(), TableError> {
         let guard = self.tables.read().await;
         let entry = guard.get(&table_id).ok_or(TableError::NotFound(table_id))?;
         let cmd = InternalCommand::Leave { user_id };
-        entry.cmd_tx.send(cmd).await.map_err(|_| TableError::ActorError("actor dropped".into()))
+        entry
+            .cmd_tx
+            .send(cmd)
+            .await
+            .map_err(|_| TableError::ActorError("actor dropped".into()))
     }
 
     pub async fn list_active_tables(&self) -> Vec<TableInfo> {
@@ -104,7 +115,11 @@ impl Registry {
     }
 
     async fn get_sender(&self, id: TableId) -> Option<ActorSender> {
-        self.tables.read().await.get(&id).map(|entry| entry.cmd_tx.clone())
+        self.tables
+            .read()
+            .await
+            .get(&id)
+            .map(|entry| entry.cmd_tx.clone())
     }
 
     pub async fn send_command(
