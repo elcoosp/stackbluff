@@ -16,6 +16,7 @@ import {
   MessageSquare,
   User,
   ArrowUpDown,
+  Wallet, // Added Wallet icon
 } from 'lucide-react';
 
 export const Route = createFileRoute('/lobby')({
@@ -79,12 +80,10 @@ function LobbyPage() {
         </div>
 
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto min-h-0">
-          {/* Active Link: Green */}
           <Link to="/lobby" className="flex items-center gap-3 px-4 py-3 rounded-lg text-tertiary font-bold font-label-caps text-label-caps">
             <LayoutGrid className="w-5 h-5" />
             <span className="font-label-caps text-label-caps">Lobby</span>
           </Link>
-          {/* Inactive Links: Muted Gray/White */}
           <Link to="/tournaments" className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors">
             <Trophy className="w-5 h-5" />
             <span className="font-label-caps text-label-caps">Tournaments</span>
@@ -118,7 +117,7 @@ function LobbyPage() {
       <section className="flex-1 relative overflow-hidden">
         <div className="absolute inset-0 carbon-bg pointer-events-none" />
 
-        <div className="max-w-6xl mx-auto p-4 md:p-8 pb-28 md:pb-8 relative z-10">
+        <div className="max-w-6xl mx-auto p-4 md:p-6 lg:p-8 pb-28 md:pb-8 relative z-10">
           {/* Header & Hero */}
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 mb-8 md:mb-12">
             <div>
@@ -133,7 +132,7 @@ function LobbyPage() {
           </div>
 
           {/* Mobile Sort Controls */}
-          <div className="flex md:hidden justify-end mb-2 gap-2">
+          <div className="flex lg:hidden justify-end mb-2 gap-2">
             <button
               className={`flex items-center gap-1.5 text-[10px] ${sortConfig.key === 'stakes' ? 'text-tertiary border-tertiary/50' : 'text-outline'} font-label-caps uppercase border border-outline-variant px-3 py-1.5 rounded-lg hover:text-on-surface transition-colors`}
               onClick={() => toggleSort('stakes')}
@@ -151,8 +150,8 @@ function LobbyPage() {
           {/* Table List */}
           <div className="space-y-3 gap-4">
             {/* Desktop Header */}
-            <div className="hidden md:grid grid-cols-12 px-6 py-2 text-outline font-label-caps text-[10px] uppercase">
-              <div className="col-span-5">Room Name</div>
+            <div className="hidden lg:grid grid-cols-12 px-6 py-2 text-outline font-label-caps text-[10px] uppercase">
+              <div className="col-span-4">Room Name</div>
               <div
                 className="col-span-2 text-center flex items-center justify-center gap-1 cursor-pointer hover:text-on-surface transition-colors"
                 onClick={() => toggleSort('stakes')}
@@ -165,27 +164,26 @@ function LobbyPage() {
               >
                 Players {renderSortIcon('players')}
               </div>
-              <div className="col-span-3 text-right">Action</div>
+              <div className="col-span-4 text-right">Action</div>
             </div>
 
             {sortedTables.map((table, i) => (
               <motion.div
                 layout
                 key={table.id}
-                className="flex flex-col md:grid md:grid-cols-12 items-start md:items-center px-4 md:px-8 py-4 md:py-5 bg-surface-container-lowest/80 backdrop-blur-xl border border-white/10 rounded-xl razor-highlight group hover:border-tertiary/40 transition-all duration-200 gap-3 md:gap-0"
+                className="flex flex-col lg:grid lg:grid-cols-12 items-start lg:items-center px-4 lg:px-8 py-4 lg:py-5 bg-surface-container-lowest/80 backdrop-blur-xl border border-white/10 rounded-xl razor-highlight group hover:border-tertiary/40 transition-all duration-200 gap-3 lg:gap-0"
                 custom={i}
                 variants={rowVariants}
                 initial="hidden"
                 animate="visible"
               >
-                <div className="w-full md:col-span-5 flex items-start md:items-center gap-3 md:gap-4">
-                  <div className={`mt-1.5 md:mt-0 w-1.5 h-1.5 rounded-full shrink-0 ${table.isLive ? 'bg-tertiary status-led animate-pulse' : 'bg-outline-variant'}`} />
+                <div className="w-full lg:col-span-4 flex items-start lg:items-center gap-3 lg:gap-4">
+                  <div className={`mt-1.5 lg:mt-0 w-1.5 h-1.5 rounded-full shrink-0 ${table.isLive ? 'bg-tertiary status-led animate-pulse' : 'bg-outline-variant'}`} />
                   <div className="flex-1 min-w-0">
                     <h4 className="font-headline-md text-base text-on-surface truncate">{table.name}</h4>
                     <p className="text-[10px] text-outline font-label-caps mt-0.5">{table.game}</p>
 
-                    {/* Mobile Glass Blinds Badge */}
-                    <div className="flex items-center gap-3 mt-2.5 md:hidden">
+                    <div className="flex items-center gap-3 mt-2.5 lg:hidden">
                       <span className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-md px-2 py-0.5 text-[10px] font-data-mono text-tertiary tracking-wide">
                         {table.stakes}
                       </span>
@@ -196,9 +194,9 @@ function LobbyPage() {
                   </div>
                 </div>
 
-                <div className="hidden md:block md:col-span-2 text-center font-data-mono text-on-surface">{table.stakes}</div>
+                <div className="hidden lg:block lg:col-span-2 text-center font-data-mono text-on-surface">{table.stakes}</div>
 
-                <div className="hidden md:flex md:col-span-2 text-center flex-col items-center">
+                <div className="hidden lg:flex lg:col-span-2 text-center flex-col items-center">
                   <div className="flex gap-1">
                     {Array.from({ length: table.maxPlayers }).map((_, idx) => (
                       <span key={idx} className={`w-1.5 h-1.5 rounded-full transition-colors ${idx < table.players ? 'bg-tertiary/70' : 'bg-outline-variant/30'}`} />
@@ -207,12 +205,12 @@ function LobbyPage() {
                   <span className="text-[10px] text-outline mt-1 font-data-mono">{table.players}/{table.maxPlayers}</span>
                 </div>
 
-                <div className="w-full md:col-span-3 flex md:justify-end gap-2 mt-1 md:mt-0">
-                  <Button variant="outline" className="flex-1 md:flex-initial px-4 md:px-6 py-2 border-white/10 font-label-caps text-[10px] text-on-surface-variant hover:border-tertiary/50 hover:text-tertiary uppercase tracking-widest rounded-lg">
+                <div className="w-full lg:col-span-4 flex lg:justify-end gap-2 mt-1 lg:mt-0">
+                  <Button variant="outline" className="flex-1 lg:flex-initial px-3 lg:px-4 py-2 border-white/10 font-label-caps text-[10px] text-on-surface-variant hover:border-tertiary/50 hover:text-tertiary uppercase tracking-wider rounded-lg">
                     Observe
                   </Button>
-                  <Button className="flex-1 md:flex-initial px-4 md:px-6 py-2 bg-tertiary text-on-tertiary font-label-caps text-[10px] hover:bg-tertiary-fixed uppercase tracking-widest shadow-lg shadow-emerald-500/10 rounded-lg">
-                    Buy In
+                  <Button className="flex-1 lg:flex-initial px-3 lg:px-4 py-2 bg-tertiary text-on-tertiary font-label-caps text-[10px] hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg shadow-emerald-500/10 rounded-lg">
+                    <Wallet className="w-3.5 h-3.5 mr-1.5" /> Buy In
                   </Button>
                 </div>
               </motion.div>
