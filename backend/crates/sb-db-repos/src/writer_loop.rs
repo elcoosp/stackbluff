@@ -254,19 +254,25 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                 };
                 Ok(Some(user_id.to_string()))
             }
-            DbCommand::CreateEmailUser { email, .. } => {
+            DbCommand::CreateEmailUser {
+                username,
+                email,
+                password_hash,
+                ..
+            } => {
                 use sb_db_entities::enums::Platform;
                 use sb_db_entities::user;
                 use sea_orm::Set;
                 let new_user = user::ActiveModel {
                     id: Set(uuid::Uuid::new_v4()),
                     email: Set(Some(email.clone())),
-                    display_name: Set(email.split('@').next().unwrap_or("user").to_string()),
+                    display_name: Set(username.clone()),
+                    password_hash: Set(Some(password_hash.clone())), // SAVE IT HERE
                     chip_balance: Set(0),
                     streak_count: Set(0),
                     created_at: Set(chrono::Utc::now()),
                     updated_at: Set(chrono::Utc::now()),
-                    platform: Set(Platform::Pwa), // FIXED: Added missing platform field
+                    platform: Set(Platform::Pwa),
                     ..Default::default()
                 };
                 let model = new_user.insert(conn).await.map_err(map_db_error)?;

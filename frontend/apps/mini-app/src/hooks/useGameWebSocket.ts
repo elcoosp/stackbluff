@@ -1,11 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '@stackbluff/shared/stores/gameStore';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from 'sonner'; // Added Sonner import
 
 const getToken = () => {
-  if (!localStorage.getItem('auth_token')) {
-    localStorage.setItem('auth_token', 'dev-token-12345');
-  }
   return localStorage.getItem('auth_token')!;
 };
 
@@ -56,7 +53,6 @@ export function useGameWebSocket(tableId: string) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'reconnecting' | 'disconnected'>('disconnected');
-  const { toast } = useToast();
   const { setSnapshot, setHeroHoleCards, setActionRequired, applyActionBroadcast, setHandResult, clearActionRequired } = useGameStore();
 
   const connect = () => {
@@ -70,6 +66,11 @@ export function useGameWebSocket(tableId: string) {
       setConnectionStatus('connected');
       ws.send(JSON.stringify({ type: 'join_table', table_id: tableId }));
       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+
+      // Optional: Let the user know they've reconnected successfully
+      if (reconnectTimeoutRef.current) {
+        toast.success('Reconnected', { description: 'Back at the table' });
+      }
     };
 
     ws.onmessage = (event) => {
@@ -84,11 +85,15 @@ export function useGameWebSocket(tableId: string) {
 
     ws.onclose = () => {
       setConnectionStatus('reconnecting');
-      toast({ title: 'Disconnected', description: 'Reconnecting...', variant: 'default' });
+      // Updated to use Sonner's API
+      toast.info('Disconnected', { description: 'Attempting to reconnect in 3 seconds...' });
       reconnectTimeoutRef.current = setTimeout(connect, 3000);
     };
 
-    ws.onerror = (err) => console.error('WebSocket error', err);
+    ws.onerror = (err) => {
+      console.error('WebSocket error', err);
+      toast.error('Connection Error', { description: 'Lost connection to the game server.' });
+    };
   };
 
   const sendAction = (action: string, amount?: number) => {

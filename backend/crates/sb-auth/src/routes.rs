@@ -28,6 +28,14 @@ struct TelegramAuthRequest {
     init_data: String,
 }
 
+// Updated: Added username field for registration
+#[derive(Deserialize)]
+struct RegisterRequest {
+    username: String,
+    email: String,
+    password: String,
+}
+
 #[derive(Deserialize)]
 struct EmailPasswordRequest {
     email: String,
@@ -35,9 +43,14 @@ struct EmailPasswordRequest {
 }
 
 #[derive(Serialize)]
+struct AuthUser {
+    id: String,
+}
+
+#[derive(Serialize)]
 struct AuthResponse {
-    jwt: String,
-    user_id: String,
+    token: String,
+    user: AuthUser,
 }
 
 async fn telegram_auth(
@@ -49,8 +62,10 @@ async fn telegram_auth(
         Ok(r) => (
             StatusCode::OK,
             Json(AuthResponse {
-                jwt: r.jwt,
-                user_id: r.user_id.to_string(),
+                token: r.jwt,
+                user: AuthUser {
+                    id: r.user_id.to_string(),
+                },
             }),
         )
             .into_response(),
@@ -62,17 +77,23 @@ async fn telegram_auth(
     }
 }
 
+// Updated: Accept RegisterRequest and pass username to service
 async fn register(
     State(svc): State<SharedAuthService>,
-    Json(req): Json<EmailPasswordRequest>,
+    Json(req): Json<RegisterRequest>,
 ) -> impl IntoResponse {
     let ctx = dummy_ctx();
-    match svc.register(&ctx, &req.email, &req.password).await {
+    match svc
+        .register(&ctx, &req.username, &req.email, &req.password)
+        .await
+    {
         Ok(r) => (
             StatusCode::OK,
             Json(AuthResponse {
-                jwt: r.jwt,
-                user_id: r.user_id.to_string(),
+                token: r.jwt,
+                user: AuthUser {
+                    id: r.user_id.to_string(),
+                },
             }),
         )
             .into_response(),
@@ -93,8 +114,10 @@ async fn login(
         Ok(r) => (
             StatusCode::OK,
             Json(AuthResponse {
-                jwt: r.jwt,
-                user_id: r.user_id.to_string(),
+                token: r.jwt,
+                user: AuthUser {
+                    id: r.user_id.to_string(),
+                },
             }),
         )
             .into_response(),

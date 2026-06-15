@@ -4,6 +4,8 @@ use sha2::Sha256;
 use url::form_urlencoded;
 use uuid::Uuid;
 
+use argon2::PasswordHasher; // Only this import is needed for hashing
+
 use crate::config::AuthConfig;
 use crate::jwt::{create_jwt, verify_jwt};
 use sb_contracts::repo_api::{PersistenceError, UserRepo};
@@ -114,9 +116,13 @@ impl AuthService for AuthServiceImpl {
     async fn register(
         &self,
         ctx: &RequestContext,
+        username: &str,
         email: &str,
         password: &str,
     ) -> Result<AuthResult, AppError> {
+        if username.is_empty() {
+            return Err(AppError::InvalidInput("Username is required".into()));
+        }
         if email.is_empty() || !email.contains('@') {
             return Err(AppError::InvalidInput("Invalid email".into()));
         }
@@ -124,11 +130,15 @@ impl AuthService for AuthServiceImpl {
             return Err(AppError::InvalidInput("Password too short".into()));
         }
 
-        // Store password in plaintext (temporary)
-        let dummy_hash = password.to_string();
+        // The new password-hash 0.6 API generates the salt automatically!
+        let hash = crate::config::argon2_instance()
+            .hash_password(password.as_bytes())
+            .map_err(|e| AppError::Internal(format!("Failed to hash password: {}", e)))?
+            .to_string();
+
         let user_id = self
             .user_repo
-            .create_email_user(ctx.clone(), email, &dummy_hash)
+            .create_email_user(ctx.clone(), username, email, &hash)
             .await
             .map_err(map_persistence_error)?;
 
@@ -208,7 +218,6 @@ impl Authenticator for AuthServiceImpl {
     }
 
     async fn validate_token(&self, token: &str) -> Result<UserId, AppError> {
-        // Same as authenticate (or could call verify_token but need to return UserId)
         let dummy_ctx = RequestContext::new(Uuid::new_v4(), None);
         <Self as AuthService>::authenticate(self, token, &dummy_ctx).await
     }

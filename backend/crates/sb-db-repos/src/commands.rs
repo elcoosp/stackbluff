@@ -45,6 +45,7 @@ pub enum DbCommand {
     },
     CreateEmailUser {
         ctx: RequestContext,
+        username: String, // Changed from email to username for display name
         email: String,
         password_hash: String,
         respond: ResponseSender<UserId>,

@@ -56,14 +56,16 @@ impl UserRepository for UserRepoImpl {
     async fn create_email_user(
         &self,
         ctx: RequestContext,
+        username: &str,
         email: &str,
         password_hash: &str,
     ) -> PersistenceResult<UserId> {
         let (tx, rx) = oneshot::channel();
         let cmd = DbCommand::CreateEmailUser {
             ctx,
+            username: username.to_string(),
             email: email.to_string(),
-            password_hash: password_hash.to_string(),
+            password_hash: password_hash.to_string(), // Pass it here
             respond: tx,
         };
         self.sender

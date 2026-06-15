@@ -11,6 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as LobbyRouteImport } from './routes/lobby'
+import { Route as LeaderboardRouteImport } from './routes/leaderboard'
+import { Route as GuideRouteImport } from './routes/guide'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TableTableIdRouteImport } from './routes/table/$tableId'
 
@@ -22,6 +25,21 @@ const RegisterRoute = RegisterRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LobbyRoute = LobbyRouteImport.update({
+  id: '/lobby',
+  path: '/lobby',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LeaderboardRoute = LeaderboardRouteImport.update({
+  id: '/leaderboard',
+  path: '/leaderboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GuideRoute = GuideRouteImport.update({
+  id: '/guide',
+  path: '/guide',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -37,12 +55,18 @@ const TableTableIdRoute = TableTableIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/guide': typeof GuideRoute
+  '/leaderboard': typeof LeaderboardRoute
+  '/lobby': typeof LobbyRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/table/$tableId': typeof TableTableIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/guide': typeof GuideRoute
+  '/leaderboard': typeof LeaderboardRoute
+  '/lobby': typeof LobbyRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/table/$tableId': typeof TableTableIdRoute
@@ -50,20 +74,48 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/guide': typeof GuideRoute
+  '/leaderboard': typeof LeaderboardRoute
+  '/lobby': typeof LobbyRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/table/$tableId': typeof TableTableIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/register' | '/table/$tableId'
+  fullPaths:
+    | '/'
+    | '/guide'
+    | '/leaderboard'
+    | '/lobby'
+    | '/login'
+    | '/register'
+    | '/table/$tableId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/register' | '/table/$tableId'
-  id: '__root__' | '/' | '/login' | '/register' | '/table/$tableId'
+  to:
+    | '/'
+    | '/guide'
+    | '/leaderboard'
+    | '/lobby'
+    | '/login'
+    | '/register'
+    | '/table/$tableId'
+  id:
+    | '__root__'
+    | '/'
+    | '/guide'
+    | '/leaderboard'
+    | '/lobby'
+    | '/login'
+    | '/register'
+    | '/table/$tableId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  GuideRoute: typeof GuideRoute
+  LeaderboardRoute: typeof LeaderboardRoute
+  LobbyRoute: typeof LobbyRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
   TableTableIdRoute: typeof TableTableIdRoute
@@ -85,6 +137,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lobby': {
+      id: '/lobby'
+      path: '/lobby'
+      fullPath: '/lobby'
+      preLoaderRoute: typeof LobbyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/leaderboard': {
+      id: '/leaderboard'
+      path: '/leaderboard'
+      fullPath: '/leaderboard'
+      preLoaderRoute: typeof LeaderboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guide': {
+      id: '/guide'
+      path: '/guide'
+      fullPath: '/guide'
+      preLoaderRoute: typeof GuideRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -104,6 +177,9 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  GuideRoute: GuideRoute,
+  LeaderboardRoute: LeaderboardRoute,
+  LobbyRoute: LobbyRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
   TableTableIdRoute: TableTableIdRoute,

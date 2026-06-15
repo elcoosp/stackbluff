@@ -5,6 +5,7 @@ mod m20260614_145806_add_referrals_and_counters;
 mod m20260614_152712_add_registration_order_to_users; // ADDED
 mod m20260614_152713_add_referrer_id_index;
 mod m20260614_171633_create_anti_cheat_events;
+mod m20260615_add_password_hash_to_users;
 
 use sea_orm_migration::prelude::*;
 
@@ -21,6 +22,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260614_152712_add_registration_order_to_users::Migration), // ADDED
             Box::new(m20260614_152713_add_referrer_id_index::Migration),
             Box::new(m20260614_171633_create_anti_cheat_events::Migration),
+            Box::new(m20260615_add_password_hash_to_users::Migration),
         ]
     }
 }

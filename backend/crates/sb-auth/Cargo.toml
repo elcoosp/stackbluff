@@ -5,7 +5,6 @@ edition.workspace = true
 
 [dependencies]
 
-argon2 = { workspace = true }
 
 
 hmac = { workspace = true }
@@ -17,6 +16,8 @@ serde_json = { workspace = true }
 url = { workspace = true }
 hex = { workspace = true }
 dashmap = { workspace = true }
+argon2 = { workspace = true }
+password-hash = { workspace = true, features = ["rand_core"] }
 
 sb-shared-types = { workspace = true }
 sb-contracts = { workspace = true }
