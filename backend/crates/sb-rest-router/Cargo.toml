@@ -27,7 +27,7 @@ sb-auth = { path = "../sb-auth" }
 sb-table-registry = { path = "../sb-table-registry" }
 
 [dev-dependencies]
-axum-test = "17.0.0"
+axum-test = "20"
 mockall = "0.14.0"
 tokio = { workspace = true, features = ["rt", "macros"] }
 jsonwebtoken = { workspace = true }

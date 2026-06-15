@@ -47,18 +47,25 @@ impl MigrationTrait for Migration {
                             .json_binary()
                             .not_null(),
                     )
+                    // Only the UNIQUE index can be inline for SQLite
                     .index(
                         Index::create()
                             .name("idx_payment_intents_payment_id")
                             .col(PaymentIntents::PaymentId)
                             .unique(),
                     )
-                    .index(
-                        Index::create()
-                            .name("idx_payment_intents_user_status")
-                            .col(PaymentIntents::UserId)
-                            .col(PaymentIntents::Status),
-                    )
+                    .to_owned(),
+            )
+            .await?;
+
+        // Create the non-unique index separately (SQLite doesn't support inline non-unique indexes)
+        manager
+            .create_index(
+                Index::create()
+                    .name("idx_payment_intents_user_status")
+                    .table(PaymentIntents::Table)
+                    .col(PaymentIntents::UserId)
+                    .col(PaymentIntents::Status)
                     .to_owned(),
             )
             .await

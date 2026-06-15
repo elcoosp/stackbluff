@@ -23,15 +23,16 @@ impl HandHistoryRepository for HandHistoryRepoImpl {
     ) -> PersistenceResult<()> {
         let table_id_str = hand_data["table_id"]
             .as_str()
-            .ok_or_else(|| PersistenceError::constraint_violation("missing table_id"))?;
-        let table_id = Uuid::parse_str(table_id_str)
-            .map_err(|e| PersistenceError::constraint_violation(e.to_string()))?;
+            .ok_or_else(|| PersistenceError::Database("missing table_id".into()))?;
+        let table_id =
+            Uuid::parse_str(table_id_str).map_err(|e| PersistenceError::Database(e.to_string()))?;
         let played_at_str = hand_data["played_at"]
             .as_str()
-            .ok_or_else(|| PersistenceError::constraint_violation("missing played_at"))?;
+            .ok_or_else(|| PersistenceError::Database("missing played_at".into()))?;
         let played_at = chrono::DateTime::parse_from_rfc3339(played_at_str)
-            .map_err(|e| PersistenceError::constraint_violation(e.to_string()))?
+            .map_err(|e| PersistenceError::Database(e.to_string()))?
             .with_timezone(&chrono::Utc);
+
         let players_json = hand_data["players"].clone();
         let actions_json = hand_data["actions"].clone();
         let result_json = hand_data["result"].clone();
@@ -48,8 +49,8 @@ impl HandHistoryRepository for HandHistoryRepoImpl {
         };
         self.sender
             .send(cmd)
-            .map_err(|e| PersistenceError::transient(e.to_string()))?;
+            .map_err(|e| PersistenceError::Database(e.to_string()))?;
         rx.await
-            .map_err(|e| PersistenceError::transient(e.to_string()))?
+            .map_err(|e| PersistenceError::Database(e.to_string()))?
     }
 }

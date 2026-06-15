@@ -1,4 +1,4 @@
-use sb_contracts::PersistenceResult;
+use sb_contracts::repo_api::PersistenceResult; // Fixed path
 use sb_shared_types::{RequestContext, UserId};
 use tokio::sync::oneshot;
 use uuid::Uuid;
@@ -11,7 +11,6 @@ pub enum DbCommand {
         telegram_id: i64,
         email: String,
         display_name: String,
-        platform: String,
         respond: ResponseSender<UserId>,
     },
     GetUser {
@@ -39,7 +38,6 @@ pub enum DbCommand {
         sql: String,
         respond: ResponseSender<()>,
     },
-
     FindOrCreateByTelegram {
         ctx: RequestContext,
         tg_id: i64,
@@ -47,6 +45,7 @@ pub enum DbCommand {
     },
     CreateEmailUser {
         ctx: RequestContext,
+        username: String, // Changed from email to username for display name
         email: String,
         password_hash: String,
         respond: ResponseSender<UserId>,

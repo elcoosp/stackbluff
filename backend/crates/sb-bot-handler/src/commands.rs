@@ -306,7 +306,7 @@ pub async fn handle_callback_query(
     }
     let _ = state
         .notification_service
-        .answer_callback_query(callback.id.clone(), None)
+        .answer_callback_query(callback.id.to_string(), None)
         .await;
     info!(request_id = %ctx_with_user.request_id, user_id = %user_id, table_id = %table_id, "Callback handled");
 }

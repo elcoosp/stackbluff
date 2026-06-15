@@ -9,8 +9,12 @@ impl MigrationTrait for Migration {
         manager
             .alter_table(
                 Table::alter()
-                    .table(User::Table)
-                    .add_column(ColumnDef::new(User::RegistrationOrder).big_integer().null())
+                    .table(Alias::new("users")) // Fixed: use "users" explicitly
+                    .add_column(
+                        ColumnDef::new(Alias::new("registration_order"))
+                            .big_integer()
+                            .null(),
+                    )
                     .to_owned(),
             )
             .await?;
@@ -21,17 +25,11 @@ impl MigrationTrait for Migration {
         manager
             .alter_table(
                 Table::alter()
-                    .table(User::Table)
-                    .drop_column(User::RegistrationOrder)
+                    .table(Alias::new("users")) // Fixed: use "users" explicitly
+                    .drop_column(Alias::new("registration_order"))
                     .to_owned(),
             )
             .await?;
         Ok(())
     }
-}
-
-#[derive(DeriveIden)]
-enum User {
-    Table,
-    RegistrationOrder,
 }

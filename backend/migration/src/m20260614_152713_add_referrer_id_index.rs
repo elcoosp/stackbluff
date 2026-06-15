@@ -19,7 +19,12 @@ impl MigrationTrait for Migration {
     }
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .drop_index(Index::drop().name("idx_referrals_referrer_id").table(Referral::Table))
+            .drop_index(
+                Index::drop()
+                    .name("idx_referrals_referrer_id")
+                    .table(Referral::Table)
+                    .to_owned(),
+            )
             .await?;
         Ok(())
     }

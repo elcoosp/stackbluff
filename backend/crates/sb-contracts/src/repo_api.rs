@@ -40,8 +40,9 @@ pub trait UserRepository: Send + Sync {
     async fn create_email_user(
         &self,
         ctx: RequestContext,
+        username: &str,
         email: &str,
-        password_hash: &str,
+        password_hash: &str, // Add this argument
     ) -> PersistenceResult<UserId>;
 
     async fn find_by_email(

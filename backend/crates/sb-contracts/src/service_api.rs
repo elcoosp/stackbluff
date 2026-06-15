@@ -227,10 +227,11 @@ pub trait AuthService: Send + Sync {
     ) -> Result<AuthResult, sb_shared_types::AppError>;
     async fn register(
         &self,
-        ctx: &sb_shared_types::RequestContext,
+        ctx: &RequestContext,
+        username: &str, // Added
         email: &str,
         password: &str,
-    ) -> Result<AuthResult, sb_shared_types::AppError>;
+    ) -> Result<AuthResult, AppError>;
     async fn login(
         &self,
         ctx: &sb_shared_types::RequestContext,

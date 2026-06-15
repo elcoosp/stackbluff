@@ -1,12 +1,10 @@
+use sb_db_entities::enums::{Platform, RankTier, SubscriptionEventType, TableStatus};
 use sb_db_entities::{
-    Platform, RankTier, SubscriptionEventType, TableStatus, club_memberships, clubs, hand_history,
-    leaderboard_global_mv, mission_completion, player_rank, referral, season, session,
-    subscription_event, table, user,
+    club_memberships, clubs, hand_history, leaderboard_global_mv, mission_completion, player_rank,
+    referral, season, session, subscription_event, table, user,
 };
-use sea_orm_migration::{
-    prelude::*,
-    sea_orm::{ActiveEnum, Iterable},
-};
+use sea_orm_migration::prelude::*;
+use sea_orm_migration::sea_orm::{ActiveEnum, Iterable};
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -69,7 +67,9 @@ impl MigrationTrait for Migration {
                         ColumnDef::new(user::Column::Platform)
                             .enumeration(
                                 Platform::name(),
-                                Platform::iter().map(|v| v.to_value()).collect::<Vec<_>>(),
+                                Platform::iter()
+                                    .map(|v: Platform| v.to_value())
+                                    .collect::<Vec<_>>(),
                             )
                             .not_null()
                             .default(Platform::Pwa.to_value()),
@@ -160,7 +160,9 @@ impl MigrationTrait for Migration {
                         ColumnDef::new(player_rank::Column::RankTier)
                             .enumeration(
                                 RankTier::name(),
-                                RankTier::iter().map(|v| v.to_value()).collect::<Vec<_>>(),
+                                RankTier::iter()
+                                    .map(|v: RankTier| v.to_value())
+                                    .collect::<Vec<_>>(),
                             )
                             .not_null(),
                     )
@@ -299,7 +301,7 @@ impl MigrationTrait for Migration {
                             .enumeration(
                                 TableStatus::name(),
                                 TableStatus::iter()
-                                    .map(|v| v.to_value())
+                                    .map(|v: TableStatus| v.to_value())
                                     .collect::<Vec<_>>(),
                             )
                             .not_null(),
@@ -405,7 +407,7 @@ impl MigrationTrait for Migration {
                             .enumeration(
                                 SubscriptionEventType::name(),
                                 SubscriptionEventType::iter()
-                                    .map(|v| v.to_value())
+                                    .map(|v: SubscriptionEventType| v.to_value())
                                     .collect::<Vec<_>>(),
                             )
                             .not_null(),
@@ -485,9 +487,9 @@ impl MigrationTrait for Migration {
                             .uuid()
                             .not_null(),
                     )
-                    .col(ColumnDef::new(referral::Column::CompletedAt).date_time())
+                    .col(ColumnDef::new(referral::Column::CreatedAt).date_time())
                     .col(
-                        ColumnDef::new(referral::Column::BonusCredited)
+                        ColumnDef::new(referral::Column::BonusAwarded)
                             .boolean()
                             .not_null()
                             .default(false),

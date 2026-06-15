@@ -1,4 +1,4 @@
-use super::SubscriptionEventType;
+use crate::enums::SubscriptionEventType;
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
