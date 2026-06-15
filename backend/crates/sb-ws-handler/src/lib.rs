@@ -1,11 +1,12 @@
 use axum::body::Bytes;
-use axum::http::{Request, StatusCode, header};
+use axum::http::StatusCode;
 use axum::{
     Router,
     extract::{State, WebSocketUpgrade},
     response::{IntoResponse, Response},
     routing::get,
 };
+use axum_extra::extract::CookieJar;
 use futures::{SinkExt, StreamExt};
 use sb_auth::Authenticator;
 use std::sync::Arc;
@@ -35,21 +36,19 @@ pub fn ws_route(auth: Arc<dyn Authenticator>) -> Router {
 
 #[axum::debug_handler]
 async fn ws_handler(
+    jar: CookieJar,
     ws: WebSocketUpgrade,
     State(state): State<Arc<AppState>>,
-    req: Request<axum::body::Body>,
 ) -> Response {
-    let token = req
-        .headers()
-        .get(header::AUTHORIZATION)
-        .and_then(|v| v.to_str().ok())
-        .and_then(|h| h.strip_prefix("Bearer "))
-        .ok_or((StatusCode::UNAUTHORIZED, "Missing or invalid token"));
+    let token = jar.get("token").map(|c| c.value().to_string());
     let token = match token {
-        Ok(t) => t,
-        Err(r) => return r.into_response(),
+        Some(t) => t,
+        None => {
+            warn!("WebSocket missing token cookie");
+            return (StatusCode::UNAUTHORIZED, "Missing token").into_response();
+        }
     };
-    let user_id = match state.auth.validate_token(token).await {
+    let user_id = match state.auth.validate_token(&token).await {
         Ok(uid) => uid,
         Err(e) => {
             warn!(error = %e, "JWT validation failed");

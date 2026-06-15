@@ -6,6 +6,7 @@ use axum::Router;
 use sea_orm::Database;
 use sea_orm_migration::MigratorTrait;
 use std::sync::Arc;
+use tower_cookies::CookieManagerLayer;
 use tower_http::cors::{Any, CorsLayer};
 
 // Import the necessary types from your crates
@@ -61,7 +62,8 @@ async fn main() {
         .merge(sb_bot_handler::attach(bot_state))
         .merge(sb_rest_router::oracle_routes::oracle_router(oracle_service))
         .merge(auth_router(auth_service)) // Use the sb-auth router!
-        .layer(cors);
+        .layer(cors)
+        .layer(CookieManagerLayer::new());
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
         .await

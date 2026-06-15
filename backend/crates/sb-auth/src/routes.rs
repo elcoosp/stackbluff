@@ -1,5 +1,6 @@
 use axum::{Json, Router, extract::State, http::StatusCode, response::IntoResponse, routing::post};
 use serde::{Deserialize, Serialize};
+use tower_cookies::{Cookie, Cookies};
 use uuid::Uuid;
 
 use crate::SharedAuthService;
@@ -106,21 +107,31 @@ async fn register(
 }
 
 async fn login(
+    cookies: Cookies,
     State(svc): State<SharedAuthService>,
     Json(req): Json<EmailPasswordRequest>,
 ) -> impl IntoResponse {
     let ctx = dummy_ctx();
     match svc.login(&ctx, &req.email, &req.password).await {
-        Ok(r) => (
-            StatusCode::OK,
-            Json(AuthResponse {
-                token: r.jwt,
-                user: AuthUser {
-                    id: r.user_id.to_string(),
-                },
-            }),
-        )
-            .into_response(),
+        Ok(r) => {
+            let cookie = Cookie::build(("token", r.jwt.clone()))
+                .path("/")
+                .http_only(true)
+                .secure(false) // set to true in production with HTTPS
+                .same_site(tower_cookies::cookie::SameSite::Lax)
+                .build();
+            cookies.add(cookie);
+            (
+                StatusCode::OK,
+                Json(AuthResponse {
+                    token: r.jwt,
+                    user: AuthUser {
+                        id: r.user_id.to_string(),
+                    },
+                }),
+            )
+                .into_response()
+        }
         Err(e) => (
             app_error_to_status(&e),
             Json(serde_json::json!({"error": e.to_string()})),

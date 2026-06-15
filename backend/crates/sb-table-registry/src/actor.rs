@@ -276,7 +276,7 @@ impl TableActor {
             return;
         }
 
-        let state = match GameState::new_hand(players_for_engine, dealer_index, (sb, bb)) {
+        let state = match GameState::new_hand(self.table_id, players_for_engine, dealer_index, (sb, bb)) {
             Ok(s) => s,
             Err(e) => {
                 error!(error = %e, "Failed to create hand");

@@ -5,6 +5,7 @@ edition = { workspace = true }
 rust-version = { workspace = true }
 
 [dependencies]
+async-trait = { workspace = true }
 sb-shared-types = { workspace = true }
 sb-game-engine = { workspace = true }
 sb-ws-messages.workspace = true

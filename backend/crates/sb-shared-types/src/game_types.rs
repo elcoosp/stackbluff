@@ -10,7 +10,7 @@ pub struct TableConfig {
     pub max_buy_in: ChipAmount,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, derive_more::Display)]
 pub enum StakeLevel {
     Micro,
     Low,
@@ -19,14 +19,14 @@ pub enum StakeLevel {
     VeryHigh,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, derive_more::Display)]
 pub enum GameVariant {
     Holdem,
     Omaha,
     OmahaHiLo,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, derive_more::Display)]
 pub enum ActionType {
     Fold,
     Check,
