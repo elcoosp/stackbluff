@@ -102,3 +102,17 @@ body {
     box-shadow: 0 4px 20px rgba(78, 222, 163, .2), inset 0 1px 0 rgba(255, 255, 255, .1);
     transition: all .2s;
 }
+
+@keyframes shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+.animate-shimmer {
+    animation: shimmer 2s infinite linear;
+}

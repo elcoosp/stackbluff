@@ -11,10 +11,10 @@ import {
   TableFelt,
   TableRail,
   PotBadge,
-  TimerBar,
 } from '../components/game';
 import { useGameStore } from '@stackbluff/shared/stores/gameStore';
-import { ErrorBoundary } from 'react-error-boundary'; // Install: pnpm add react-error-boundary
+import { ErrorBoundary } from 'react-error-boundary';
+import { useState, useEffect } from 'react';
 
 function Fallback({ error, resetErrorBoundary }: any) {
   return (
@@ -25,10 +25,25 @@ function Fallback({ error, resetErrorBoundary }: any) {
   );
 }
 
+// ── Media query hook ──
+function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    setMatches(media.matches);
+    const listener = (e: MediaQueryListEvent) => setMatches(e.matches);
+    media.addEventListener('change', listener);
+    return () => media.removeEventListener('change', listener);
+  }, [query]);
+  return matches;
+}
+
 export function TablePage() {
   const { tableId } = useParams({ from: '/table/$tableId' });
   const { sendAction, connectionStatus } = useGameWebSocket(tableId);
-  const isDesktop = useResponsiveLayout();
+  const isDesktop = useResponsiveLayout(); // >= 768px for table layout
+  const showDesktopAnalytics = useMediaQuery('(min-width: 980px)'); // >= 980px for side panels
+  const showMobileAnalytics = useMediaQuery('(max-width: 979px)'); // < 980px for mobile strip
   const game = useGameStore();
 
   const {
@@ -40,9 +55,12 @@ export function TablePage() {
     heroSeat,
     heroHoleCards,
     actionRequired,
+    currentTurnUserId,
+    dealerIndex,
   } = game;
 
-  // Compute action bar props from actionRequired
+  const timerTotalMs = actionRequired ? actionRequired.timeoutSecs * 1000 : null;
+
   const toCall = actionRequired?.toCall ?? 0;
   const minRaise = actionRequired?.minRaise ?? 0;
   const canCheck = actionRequired?.canCheck ?? false;
@@ -57,7 +75,7 @@ export function TablePage() {
             'radial-gradient(ellipse at 50% 40%, #1a1c1b 0%, #111 40%, #0a0a0a 100%)',
         }}
       >
-        {!isDesktop && (
+        {showMobileAnalytics && (
           <MobileAnalyticsStrip winProb={74} potOdds={3.2} bestHand="Two Pair" strength={92} />
         )}
 
@@ -86,28 +104,26 @@ export function TablePage() {
               <div className="absolute top-[6%] md:top-[3%] left-1/2 -translate-x-1/2 z-10">
                 <PotBadge amount={pot} />
               </div>
-
-              {actionRequired && (
-                <div className="absolute bottom-[30%] md:bottom-[35%] left-1/2 -translate-x-1/2 w-48 z-10">
-                  <TimerBar remainingMs={actionRequired.timeoutSecs * 1000} />
-                </div>
-              )}
             </div>
 
             <SeatGrid
               seats={seats}
               heroSeat={heroSeat ?? 0}
+              dealerIndex={dealerIndex}
               isDesktop={isDesktop}
+              currentTurnUserId={currentTurnUserId}
+              timerTotalMs={timerTotalMs}
             />
           </div>
         </div>
 
-        {isDesktop ? (
+        {/* ── Desktop analytics: only shown on screens ≥ 980px ── */}
+        {showDesktopAnalytics && (
           <>
             <TacticalOracle winProb={74} potOdds={3.2} />
             <HandStrength bestHand="Two Pair" strength={92} />
           </>
-        ) : null}
+        )}
 
         <ActionBar
           isDesktop={isDesktop}

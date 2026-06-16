@@ -42,7 +42,7 @@ const DesktopActionBar = ({
   maxRaise,
   pot,
   onAction,
-  canCheck, // optional, but we use toCall > 0 logic anyway
+  canCheck,
 }: {
   actionRequired: boolean;
   toCall: number;
@@ -55,7 +55,6 @@ const DesktopActionBar = ({
   const [raiseOpen, setRaiseOpen] = useState(false);
   useActionKeys(onAction, actionRequired);
 
-  // Determine if we should show "Check" or "Call"
   const isCheck = toCall === 0;
 
   return (
@@ -68,17 +67,22 @@ const DesktopActionBar = ({
       className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[450]"
     >
       <div className="rounded-2xl overflow-hidden" style={glassStyle}>
-        {raiseOpen && actionRequired && (
-          <div className="px-5 pt-4 pb-3 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+        {/* ── Raise panel with AnimatePresence ── */}
+        <AnimatePresence mode="wait">
+          {raiseOpen && actionRequired && (
             <RaiseSlider
+              key="raise-slider"
               min={minRaise || 10}
               max={maxRaise || 1000}
               step={10}
               pot={pot || 0}
               onConfirm={(amt) => { onAction('raise', amt); setRaiseOpen(false); }}
+              onCancel={() => setRaiseOpen(false)}
+              isOpen={raiseOpen}
             />
-          </div>
-        )}
+          )}
+        </AnimatePresence>
+
         <div className="flex items-center gap-2 px-4 py-3">
           <ActionButton variant="fold" onClick={() => onAction('fold')} disabled={!actionRequired} shortcut="F">
             Fold
@@ -148,7 +152,7 @@ const MobileActionBar = ({
         />
       )}
 
-      {/* Raise panel */}
+      {/* Raise panel with AnimatePresence */}
       {raiseOpen && actionRequired && (
         <div className="fixed left-2 right-2 z-[455] pointer-events-auto" style={{ bottom: '100px' }}>
           <div className="rounded-xl p-3" style={{
@@ -159,13 +163,18 @@ const MobileActionBar = ({
             borderTopColor: 'rgba(255,255,255,0.14)',
             boxShadow: '0 -4px 32px rgba(0,0,0,0.9)',
           }}>
-            <RaiseSlider
-              min={minRaise || 10}
-              max={maxRaise || 1000}
-              step={10}
-              pot={pot || 0}
-              onConfirm={(amt) => { onAction('raise', amt); setRaiseOpen(false); }}
-            />
+            <AnimatePresence mode="wait">
+              <RaiseSlider
+                key="mobile-raise-slider"
+                min={minRaise || 10}
+                max={maxRaise || 1000}
+                step={10}
+                pot={pot || 0}
+                onConfirm={(amt) => { onAction('raise', amt); setRaiseOpen(false); }}
+                onCancel={() => setRaiseOpen(false)}
+                isOpen={raiseOpen}
+              />
+            </AnimatePresence>
           </div>
         </div>
       )}
@@ -206,7 +215,7 @@ export const ActionBar = ({
   maxRaise,
   pot,
   onAction,
-  canCheck, // kept for future use, not used explicitly
+  canCheck,
 }: {
   isDesktop: boolean;
   actionRequired: boolean;

@@ -1,28 +1,214 @@
-import { useForm } from '@tanstack/react-form';
-import { Slider } from '@/components/ui/slider';
+import { useState, useCallback, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { X, Minus, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
-export const RaiseSlider = ({ min, max, step, pot, onConfirm }: { min: number; max: number; step: number; pot: number; onConfirm: (amount: number) => void }) => {
-  const form = useForm({ defaultValues: { amount: min }, onSubmit: ({ value }) => onConfirm(value.amount) });
+interface RaiseSliderProps {
+  min: number;
+  max: number;
+  step: number;
+  pot: number;
+  onConfirm: (amount: number) => void;
+  onCancel: () => void;
+  isOpen: boolean;
+}
+
+export const RaiseSlider = ({
+  min,
+  max,
+  step,
+  pot,
+  onConfirm,
+  onCancel,
+  isOpen,
+}: RaiseSliderProps) => {
+  const [amount, setAmount] = useState(min);
+
+  useEffect(() => {
+    if (isOpen) setAmount(min);
+  }, [isOpen, min]);
+
+  const handleAmountChange = useCallback((value: number) => {
+    const clamped = Math.min(Math.max(value, min), max);
+    setAmount(clamped);
+  }, [min, max]);
+
+  const increment = () => handleAmountChange(amount + step);
+  const decrement = () => handleAmountChange(amount - step);
+
+  const presets = [
+    { label: '½ POT', value: Math.floor(pot * 0.5) },
+    { label: '¾ POT', value: Math.floor(pot * 0.75) },
+    { label: 'POT', value: Math.floor(pot) },
+    { label: 'MAX', value: max },
+  ];
+
+  const progress = max > min ? ((amount - min) / (max - min)) * 100 : 0;
+
+  const variants = {
+    hidden: { opacity: 0, y: -15, maxHeight: 0 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      maxHeight: 400,
+      transition: { type: 'spring', damping: 30, stiffness: 350, duration: 0.3 },
+    },
+    exit: {
+      opacity: 0,
+      y: -15,
+      maxHeight: 0,
+      transition: { duration: 0.2, ease: 'easeOut' },
+    },
+  };
+
+  const numberVariants = {
+    initial: { scale: 0.8, opacity: 0 },
+    animate: {
+      scale: 1,
+      opacity: 1,
+      transition: { type: 'spring', damping: 20, stiffness: 400 },
+    },
+  };
+
   return (
-    <form.Field name="amount" validators={{ onChange: ({ value }) => value >= min && value <= max }} children={(field) => (
-      <div className="space-y-4 p-4 bg-surface-container rounded-xl border border-outline-variant/20">
-        <Slider
-          value={[field.state.value]}
-          min={min}
-          max={max}
-          step={step}
-          onValueChange={(vals) => field.handleChange(vals[0])}
-          className="w-full"
-        />
-        <div className="flex gap-2">
-          <Button onClick={() => field.handleChange(Math.floor(pot * 0.5))}>½ POT</Button>
-          <Button onClick={() => field.handleChange(Math.floor(pot * 0.75))}>¾ POT</Button>
-          <Button onClick={() => field.handleChange(pot)}>POT</Button>
-          <Button onClick={() => field.handleChange(max)}>MAX</Button>
+    <motion.div
+      variants={variants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      className="overflow-hidden bg-[rgba(8,8,8,0.95)] backdrop-blur-md px-5 pt-4 pb-3 border-b border-white/5"
+    >
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <motion.span
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.05 }}
+            className="font-label-caps text-[10px] text-tertiary tracking-widest uppercase"
+          >
+            RAISE AMOUNT
+          </motion.span>
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            type="button"
+            onClick={onCancel}
+            className="text-on-surface-variant hover:text-on-surface transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </motion.button>
         </div>
-        <Button className="w-full bg-tertiary text-on-tertiary" onClick={() => form.handleSubmit()}>Confirm Raise</Button>
+
+        {/* Amount with +/- buttons */}
+        <div className="flex items-center gap-3">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.9 }}
+            type="button"
+            onClick={decrement}
+            disabled={amount <= min}
+            className="w-8 h-8 rounded-lg border border-outline-variant/20 flex items-center justify-center hover:bg-white/5 text-on-surface-variant transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <Minus className="w-4 h-4" />
+          </motion.button>
+
+          <div className="flex-1 text-center">
+            <motion.span
+              key={amount}
+              variants={numberVariants}
+              initial="initial"
+              animate="animate"
+              className="font-data-mono text-2xl text-tertiary font-bold tabular-nums"
+            >
+              ${amount.toLocaleString()}
+            </motion.span>
+          </div>
+
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.9 }}
+            type="button"
+            onClick={increment}
+            disabled={amount >= max}
+            className="w-8 h-8 rounded-lg border border-outline-variant/20 flex items-center justify-center hover:bg-white/5 text-on-surface-variant transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <Plus className="w-4 h-4" />
+          </motion.button>
+        </div>
+
+        {/* ── Slider with perfectly centered thumb ── */}
+        <div className="relative w-full h-6 flex items-center">
+          {/* Background track */}
+          <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-1.5 rounded-full bg-outline-variant/20" />
+          {/* Filled track */}
+          <div
+            className="absolute left-0 top-1/2 -translate-y-1/2 h-1.5 rounded-full bg-tertiary transition-all duration-100"
+            style={{ width: `${progress}%` }}
+          />
+
+          {/* Custom thumb – positioned absolutely to center on the track */}
+          <div
+            className="absolute top-1/2 -translate-y-1/2 pointer-events-none"
+            style={{ left: `calc(${progress}% - 11px)` }}
+          >
+            <div className="w-[22px] h-[22px] rounded-full bg-white shadow-[0_2px_10px_rgba(0,0,0,0.6)] flex items-center justify-center">
+              <div className="w-1.5 h-1.5 rounded-full bg-black" />
+            </div>
+          </div>
+
+          {/* Hidden range input – still captures drag events */}
+          <input
+            type="range"
+            min={min}
+            max={max}
+            step={step}
+            value={amount}
+            onChange={(e) => handleAmountChange(Number(e.target.value))}
+            className="absolute inset-0 w-full h-full cursor-pointer opacity-0 z-10"
+          />
+        </div>
+
+        {/* Preset buttons */}
+        <div className="flex gap-1.5">
+          {presets.map((preset, idx) => (
+            <motion.button
+              key={preset.label}
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 + idx * 0.03 }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.95 }}
+              type="button"
+              onClick={() => handleAmountChange(preset.value)}
+              className={cn(
+                'flex-1 py-1.5 rounded-md text-[9px] font-label-caps uppercase tracking-wider transition-all',
+                amount === preset.value
+                  ? 'bg-tertiary text-on-tertiary shadow-[0_0_15px_rgba(78,222,163,0.2)]'
+                  : 'bg-white/5 text-on-surface-variant hover:bg-white/10 border border-white/5'
+              )}
+            >
+              {preset.label}
+            </motion.button>
+          ))}
+        </div>
+
+        {/* Confirm button */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+        >
+          <Button
+            type="button"
+            onClick={() => onConfirm(amount)}
+            className="w-full py-2 rounded-md bg-tertiary text-on-tertiary font-label-caps text-[10px] uppercase tracking-wider hover:bg-tertiary/80 transition-all shadow-[0_0_20px_rgba(78,222,163,0.15)]"
+          >
+            Confirm Raise
+          </Button>
+        </motion.div>
       </div>
-    )} />
+    </motion.div>
   );
 };

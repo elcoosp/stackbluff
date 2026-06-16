@@ -1,8 +1,16 @@
+// frontend/apps/pwa/src/components/game/TimerBar.tsx
 import { useEffect, useState } from 'react';
-import { Progress } from '@/components/ui/progress';
+import { cn } from '@/lib/utils';
 
-export const TimerBar = ({ remainingMs }: { remainingMs: number | null }) => {
+interface TimerBarProps {
+  remainingMs: number | null;
+  isActive?: boolean;
+  className?: string;
+}
+
+export const TimerBar = ({ remainingMs, isActive = false, className }: TimerBarProps) => {
   const [progress, setProgress] = useState(100);
+
   useEffect(() => {
     if (!remainingMs) return;
     const start = Date.now();
@@ -14,5 +22,20 @@ export const TimerBar = ({ remainingMs }: { remainingMs: number | null }) => {
     }, 50);
     return () => clearInterval(interval);
   }, [remainingMs]);
-  return <Progress value={progress} className="h-1 bg-muted" indicatorClassName="bg-accent" />;
+
+  if (!remainingMs) return null;
+
+  return (
+    <div className={cn('w-full h-1 rounded-full bg-white/10 overflow-hidden', className)}>
+      <div
+        className={cn(
+          'h-full transition-all duration-100',
+          isActive
+            ? 'bg-gradient-to-r from-tertiary/40 via-tertiary to-tertiary/40 bg-[length:200%_100%] animate-shimmer'
+            : 'bg-tertiary/40'
+        )}
+        style={{ width: `${progress}%` }}
+      />
+    </div>
+  );
 };
