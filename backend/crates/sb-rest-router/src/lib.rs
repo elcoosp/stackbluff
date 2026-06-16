@@ -65,6 +65,20 @@ pub struct ErrorDetail {
     pub message: String,
 }
 
+// === Public (no auth) table listing types ===
+
+#[derive(Debug, Serialize)]
+pub struct PublicTableInfo {
+    pub table_id: TableId,
+    pub stake_level: StakeLevel,
+    pub max_players: u32,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PublicTableList {
+    pub tables: Vec<PublicTableInfo>,
+}
+
 pub struct AppState {
     table_service: Arc<dyn TableService + Send + Sync>,
     table_repo: Arc<dyn TableRepo + Send + Sync>,
@@ -81,11 +95,36 @@ pub fn create_router(
         table_repo,
         registry,
     });
-    Router::new()
+
+    // Public routes (no auth required)
+    let public_routes = Router::new().route("/api/tables", get(list_tables_public));
+
+    // Protected routes (auth required)
+    let protected_routes = Router::new()
         .route("/lobby", get(lobby_handler))
         .route("/tables", post(create_table_handler))
-        .layer(axum::middleware::from_fn(auth_middleware))
+        .layer(axum::middleware::from_fn(auth_middleware));
+
+    Router::new()
+        .merge(public_routes)
+        .merge(protected_routes)
         .with_state(state)
+}
+
+/// Public endpoint — no auth required.
+/// Returns the list of active in-memory tables so clients can discover table IDs.
+async fn list_tables_public(State(state): State<Arc<AppState>>) -> Json<PublicTableList> {
+    let tables = state.registry.list_active_tables().await;
+    Json(PublicTableList {
+        tables: tables
+            .into_iter()
+            .map(|t| PublicTableInfo {
+                table_id: t.table_id,
+                stake_level: t.stake_level,
+                max_players: t.max_players,
+            })
+            .collect(),
+    })
 }
 
 #[axum::debug_handler]

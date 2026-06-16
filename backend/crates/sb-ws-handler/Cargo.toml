@@ -6,12 +6,14 @@ rust-version = { workspace = true }
 
 [dependencies]
 sb-contracts = { path = "../sb-contracts" }
+sb-table-registry = { path = "../sb-table-registry" }
 axum-extra = { workspace = true }
 sb-auth = { workspace = true }
 sb-shared-types = { workspace = true }
 sb-ws-messages = { workspace = true }
 axum = { workspace = true }
 futures = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }

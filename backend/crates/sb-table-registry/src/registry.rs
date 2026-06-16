@@ -1,10 +1,9 @@
 use crate::actor::{InternalCommand, spawn_table_actor};
 use sb_contracts::{TableCommand, TableError, lobby_api::TableInfo};
 use sb_game_engine::game_state::Action;
-use sb_shared_types::{ChipAmount, TableConfig, TableId, UserId};
-use sb_ws_handler::BroadcastSender;
-use sb_ws_handler::broadcast_channel;
-use sb_ws_messages::ServerMessage;
+use sb_shared_types::{ActionType, ChipAmount, TableConfig, TableId, UserId};
+
+use crate::game_room::{BroadcastSender, broadcast_channel};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{RwLock, mpsc};
@@ -15,7 +14,7 @@ type ActorSender = mpsc::Sender<InternalCommand>;
 #[derive(Clone)]
 struct TableEntry {
     cmd_tx: ActorSender,
-    broadcast_tx: BroadcastSender<ServerMessage>,
+    broadcast_tx: BroadcastSender,
 }
 
 #[derive(Clone)]
@@ -34,9 +33,10 @@ impl Registry {
         }
     }
 
+    /// Create a new table with a generated ID (standalone, no DB).
     pub async fn create_table(&self, config: TableConfig) -> TableId {
         let table_id = TableId::new(Uuid::new_v4());
-        let (broadcast_tx, _) = broadcast_channel(32);
+        let broadcast_tx: BroadcastSender = broadcast_channel(256);
         let (cmd_tx, _) = spawn_table_actor(table_id, config.clone(), broadcast_tx.clone());
         let entry = TableEntry {
             cmd_tx,
@@ -47,10 +47,24 @@ impl Registry {
         table_id
     }
 
-    pub async fn subscribe_to_table(
-        &self,
-        table_id: TableId,
-    ) -> Option<BroadcastSender<ServerMessage>> {
+    /// Register an existing table (from DB) into the in-memory Registry.
+    pub async fn register_existing_table(&self, table_id: TableId, config: TableConfig) {
+        if self.tables.read().await.contains_key(&table_id) {
+            tracing::debug!(%table_id, "Table already registered, skipping");
+            return;
+        }
+        let broadcast_tx: BroadcastSender = broadcast_channel(256);
+        let (cmd_tx, _) = spawn_table_actor(table_id, config.clone(), broadcast_tx.clone());
+        let entry = TableEntry {
+            cmd_tx,
+            broadcast_tx: broadcast_tx.clone(),
+        };
+        self.tables.write().await.insert(table_id, entry);
+        self.configs.write().await.insert(table_id, config);
+        tracing::info!(%table_id, "Registered existing table in Registry");
+    }
+
+    pub async fn subscribe_to_table(&self, table_id: TableId) -> Option<BroadcastSender> {
         self.tables
             .read()
             .await
@@ -64,7 +78,6 @@ impl Registry {
         _user_id: UserId,
         _action: Action,
     ) -> Result<(), TableError> {
-        // TODO: implement properly after game engine integration
         Ok(())
     }
 
@@ -72,7 +85,7 @@ impl Registry {
         &self,
         table_id: TableId,
         user_id: UserId,
-        seat: u8,
+        seat: Option<u8>,
         stack: ChipAmount,
     ) -> Result<(), TableError> {
         let guard = self.tables.read().await;
@@ -100,6 +113,37 @@ impl Registry {
             .map_err(|_| TableError::ActorError("actor dropped".into()))
     }
 
+    pub async fn send_player_action(
+        &self,
+        table_id: TableId,
+        user_id: UserId,
+        action_type: ActionType,
+        amount: Option<ChipAmount>,
+    ) -> Result<(), TableError> {
+        let guard = self.tables.read().await;
+        let entry = guard.get(&table_id).ok_or(TableError::NotFound(table_id))?;
+        let cmd = InternalCommand::Action {
+            user_id,
+            action_type,
+            amount,
+        };
+        entry
+            .cmd_tx
+            .send(cmd)
+            .await
+            .map_err(|_| TableError::ActorError("actor dropped".into()))
+    }
+
+    pub async fn start_hand(&self, table_id: TableId) -> Result<(), TableError> {
+        let guard = self.tables.read().await;
+        let entry = guard.get(&table_id).ok_or(TableError::NotFound(table_id))?;
+        entry
+            .cmd_tx
+            .send(InternalCommand::StartHand)
+            .await
+            .map_err(|_| TableError::ActorError("actor dropped".into()))
+    }
+
     pub async fn list_active_tables(&self) -> Vec<TableInfo> {
         let configs = self.configs.read().await;
         configs
@@ -111,7 +155,8 @@ impl Registry {
                 max_players: cfg.max_players as u32,
                 current_players: 0,
                 status: "active".to_string(),
-            })            .collect()
+            })
+            .collect()
     }
 
     async fn get_sender(&self, id: TableId) -> Option<ActorSender> {
@@ -133,7 +178,7 @@ impl Registry {
                 user_id,
                 reply_to,
             } => {
-                let stack = ChipAmount::new(1000).unwrap(); // fallback – contract lacks stack
+                let stack = ChipAmount::new(1000).unwrap();
                 let seat = {
                     let mut seats = self.next_seat.write().await;
                     let s = seats.entry(table_id).or_insert(0);
@@ -147,7 +192,7 @@ impl Registry {
                     .ok_or(TableError::NotFound(table_id))?;
                 let internal = InternalCommand::Join {
                     user_id,
-                    seat,
+                    seat: Some(seat), // ✅ FIX: wrap in Some
                     stack,
                 };
                 match sender.send(internal).await {

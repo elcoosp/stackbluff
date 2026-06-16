@@ -1,23 +1,167 @@
 import { create } from 'zustand';
-export interface Seat { seat_index: number; display_name: string; stack: number; current_bet: number; is_active: boolean; avatar_url?: string; hole_cards?: any[]; position_badge?: string; }
-export interface Card { rank: string; suit: string; }
-export interface ActionRequired { min_raise: number; max_raise: number; to_call: number; remaining_ms: number; }
-export interface ActionBroadcast { seat: number; bet_amount: number; new_stack: number; new_pot: number; new_side_pots: any[]; }
-export interface TableState { seats: Seat[]; community_cards: Card[]; pot: number; side_pots: any[]; round: string; hero_seat: number; hero_hole_cards?: [Card, Card]; }
-interface GameState {
-  tableId: string | null; seats: Record<number, Seat>; communityCards: Card[]; pot: number; sidePots: any[]; currentRound: string; heroSeat: number | null; heroHoleCards: [Card, Card] | null;
-  actionRequired: boolean; minRaise: number; maxRaise: number; toCall: number; timeRemainingMs: number | null; winners: any[] | null;
-  setSnapshot: (snapshot: TableState) => void; setHeroHoleCards: (cards: [Card, Card]) => void; applyActionBroadcast: (broadcast: ActionBroadcast) => void;
-  setActionRequired: (required: ActionRequired) => void; clearActionRequired: () => void; setHandResult: (result: any) => void; reset: () => void;
+
+export interface Seat {
+  seat: number;
+  user_id: string;
+  display_name: string;
+  stack: number;
+  current_bet: number;
+  is_all_in: boolean;
+  is_folded: boolean;
+  is_active: boolean;
+  avatar_url?: string;
+  hole_cards?: any[];
+  position_badge?: string;
 }
-export const useGameStore = create<GameState>((set) => ({
-  tableId: null, seats: {}, communityCards: [], pot: 0, sidePots: [], currentRound: 'preflop', heroSeat: null, heroHoleCards: null,
-  actionRequired: false, minRaise: 0, maxRaise: 0, toCall: 0, timeRemainingMs: null, winners: null,
-  setSnapshot: (snapshot: TableState) => set({ seats: Object.fromEntries(snapshot.seats.map((s: Seat) => [s.seat_index, s])), communityCards: snapshot.community_cards, pot: snapshot.pot, sidePots: snapshot.side_pots, currentRound: snapshot.round, heroSeat: snapshot.hero_seat, heroHoleCards: snapshot.hero_hole_cards, actionRequired: false, winners: null }),
-  setHeroHoleCards: (cards: [Card, Card]) => set({ heroHoleCards: cards }),
-  applyActionBroadcast: (broadcast: ActionBroadcast) => set((state) => { const newSeats = { ...state.seats }; const seat = newSeats[broadcast.seat]; if (seat) { seat.stack = broadcast.new_stack; seat.current_bet = broadcast.bet_amount; } return { seats: newSeats, pot: broadcast.new_pot, sidePots: broadcast.new_side_pots }; }),
-  setActionRequired: (required: ActionRequired) => set({ actionRequired: true, minRaise: required.min_raise, maxRaise: required.max_raise, toCall: required.to_call, timeRemainingMs: required.remaining_ms }),
-  clearActionRequired: () => set({ actionRequired: false, timeRemainingMs: null }),
-  setHandResult: (result: any) => set({ winners: result.winners, actionRequired: false, timeRemainingMs: null }),
-  reset: () => set({ seats: {}, communityCards: [], pot: 0, sidePots: [], heroHoleCards: null, actionRequired: false, winners: null }),
+
+export interface Card {
+  rank: string;
+  suit: string;
+}
+
+export interface SidePot {
+  amount: number;
+  eligible_players: string[];
+}
+
+export interface ActionRequired {
+  to_call: number;
+  min_raise: number;
+  can_check: boolean;
+  pot: number;
+  timeout_secs: number;
+}
+
+export interface TableState {
+  table_id: string;
+  seats: Seat[];
+  community_cards: Card[];
+  pot: number;
+  side_pots: SidePot[];
+  street: string;
+  current_hand_in_progress: boolean;
+  current_turn_user_id: string | null;
+}
+
+interface GameState {
+  tableId: string | null;
+  seats: Record<number, Seat>;
+  communityCards: Card[];
+  pot: number;
+  sidePots: SidePot[];
+  street: string;
+  currentTurnUserId: string | null;
+  heroSeat: number | null;
+  heroHoleCards: [Card, Card] | null;
+  actionRequired: ActionRequired | null;
+  winners: { name: string; amount: number }[] | null;
+  handInProgress: boolean;
+
+  // --- METHODS ---
+  setTableState: (state: TableState) => void;
+  setHeroSeat: (seat: number) => void;
+  setHeroHoleCards: (cards: Card[]) => void;
+  setActionRequired: (req: ActionRequired) => void;
+  clearActionRequired: () => void;
+  applyActionBroadcast: (broadcast: {
+    player_id: string;
+    action: string;
+    amount: number | null;
+    new_stack: number;
+    new_pot: number;
+  }) => void;
+  setHandResult: (result: { winners: { name: string; amount: number }[]; pot: number }) => void;
+  reset: () => void;
+}
+
+export const useGameStore = create<GameState>((set, get) => ({
+  tableId: null,
+  seats: {},
+  communityCards: [],
+  pot: 0,
+  sidePots: [],
+  street: '',
+  currentTurnUserId: null,
+  heroSeat: null,
+  heroHoleCards: null,
+  actionRequired: null,
+  winners: null,
+  handInProgress: false,
+
+  setTableState: (state) => {
+    const seatsMap: Record<number, Seat> = {};
+    state.seats.forEach((seat) => {
+      seatsMap[seat.seat] = {
+        ...seat,
+        is_active: !seat.is_folded && !seat.is_all_in,
+      };
+    });
+
+    set({
+      tableId: state.table_id,
+      seats: seatsMap,
+      communityCards: state.community_cards || [],
+      pot: state.pot || 0,
+      sidePots: state.side_pots || [],
+      street: state.street || '',
+      currentTurnUserId: state.current_turn_user_id || null,
+      handInProgress: state.current_hand_in_progress || false,
+    });
+  },
+
+  setHeroSeat: (seat) => set({ heroSeat: seat }),
+
+  setHeroHoleCards: (cards) => {
+    if (cards && cards.length === 2) {
+      set({ heroHoleCards: cards as [Card, Card] });
+    }
+  },
+
+  setActionRequired: (req) => set({ actionRequired: req }),
+
+  clearActionRequired: () => set({ actionRequired: null }),
+
+  applyActionBroadcast: (broadcast) => {
+    const { player_id, new_stack, new_pot } = broadcast;
+    set((state) => {
+      const seatNum = Object.keys(state.seats).find(
+        (key) => state.seats[Number(key)].user_id === player_id
+      );
+      if (seatNum === undefined) return state;
+
+      const newSeats = { ...state.seats };
+      const seat = newSeats[Number(seatNum)];
+      if (seat) {
+        seat.stack = new_stack;
+      }
+      return {
+        seats: newSeats,
+        pot: new_pot,
+      };
+    });
+  },
+
+  setHandResult: (result) => {
+    set({
+      winners: result.winners,
+      actionRequired: null,
+    });
+  },
+
+  reset: () => {
+    set({
+      tableId: null,
+      seats: {},
+      communityCards: [],
+      pot: 0,
+      sidePots: [],
+      street: '',
+      currentTurnUserId: null,
+      heroSeat: null,
+      heroHoleCards: null,
+      actionRequired: null,
+      winners: null,
+      handInProgress: false,
+    });
+  },
 }));

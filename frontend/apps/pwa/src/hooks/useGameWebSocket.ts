@@ -6,62 +6,131 @@ function getToken(): string | null {
   return localStorage.getItem('auth_token');
 }
 
+// --- Parse backend messages (RoomMessage) ---
 const parseMessage = (data: any) => {
   switch (data.type) {
-    case 'TableState':
+    case 'Connected': {
+      return {
+        type: 'Connected',
+        user_id: data.user_id,
+        seat_index: data.seat_index,
+      };
+    }
+
+    case 'TableState': {
+      // data matches TableStateUpdate exactly
+      const seats = data.players.map((p: any) => ({
+        seat: p.seat,
+        user_id: p.user_id,
+        display_name: p.user_id, // placeholder; can be resolved later via user cache
+        stack: p.stack,
+        current_bet: p.current_bet,
+        is_all_in: p.is_all_in,
+        is_folded: p.is_folded,
+        is_active: !p.is_folded && !p.is_all_in,
+        avatar_url: undefined,
+        position_badge: undefined,
+      }));
+
+      const communityCards = data.community_cards.map((c: any) => ({
+        rank: c.rank,
+        suit: c.suit,
+      }));
+
       return {
         type: 'TableState',
-        seats: data.players?.map((player: any, idx: number) => ({
-          seat_index: idx,
-          user_id: player[0],
-          stack: player[1],
-          current_bet: player[2],
-          is_all_in: player[3],
-          is_active: true,
-          display_name: `Player ${idx}`,
-          avatar_url: undefined,
-        })),
-        community_cards: data.community_cards || [],
-        pot: 0,
-        side_pots: [],
-        round: data.current_hand_in_progress ? 'preflop' : 'showdown',
-        hero_seat: 0,
-        hero_hole_cards: null,
+        seats,
+        communityCards,
+        pot: data.pot,
+        sidePots: data.side_pots || [],
+        street: data.street,
+        currentHandInProgress: data.current_hand_in_progress,
+        currentTurnUserId: data.current_turn_user_id,
+        tableId: data.table_id,
       };
-    case 'ActionRequired':
+    }
+
+    case 'ActionRequired': {
       return {
         type: 'ActionRequired',
-        to_call: data.to_call,
-        min_raise: data.min_raise,
-        max_raise: data.min_raise * 2,
-        remaining_ms: data.remaining_ms,
+        playerId: data.player_id,
+        timeoutSecs: data.timeout_secs,
+        toCall: data.to_call,
+        minRaise: data.min_raise,
+        canCheck: data.can_check,
+        pot: data.pot,
       };
-    case 'ActionBroadcast':
-      return { type: 'ActionBroadcast', ...data };
-    case 'HandResult':
+    }
+
+    case 'ActionBroadcast': {
+      return {
+        type: 'ActionBroadcast',
+        playerId: data.player_id,
+        action: data.action,
+        amount: data.amount,
+        newStack: data.new_stack,
+        newPot: data.new_pot,
+      };
+    }
+
+    case 'HandResult': {
       return {
         type: 'HandResult',
-        winners: data.winners?.map((w: any) => ({ seat: 0, amount: w[1], cards: undefined })),
-        pot: data.pot,
-        community_cards: data.community_cards,
+        winners: data.winners || [],
+        pot: data.pot || 0,
       };
+    }
+
+    case 'PrivateMessage': {
+      if (data.payload?.type === 'your_hole_cards') {
+        const holeCards = (data.payload.hole_cards || []).map((c: any) => ({
+          rank: c.rank,
+          suit: c.suit,
+        }));
+        return {
+          type: 'YourHoleCards',
+          holeCards,
+        };
+      }
+      return null;
+    }
+
+    case 'Error': {
+      toast.error(data.message || 'Game error');
+      return null;
+    }
+
     default:
+      console.warn('Unknown message type', data);
       return null;
   }
 };
 
 export function useGameWebSocket(tableId: string) {
+  // ── Stable store action selectors ──
+  const setHeroSeat = useGameStore((s) => s.setHeroSeat);
+  const setHeroHoleCards = useGameStore((s) => s.setHeroHoleCards);
+  const setTableState = useGameStore((s) => s.setTableState);
+  const setActionRequired = useGameStore((s) => s.setActionRequired);
+  const applyActionBroadcast = useGameStore((s) => s.applyActionBroadcast);
+  const setHandResult = useGameStore((s) => s.setHandResult);
+  const clearActionRequired = useGameStore((s) => s.clearActionRequired);
+
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const mountedRef = useRef(true);
+  const reconnectAttempts = useRef(0);
+
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'reconnecting' | 'disconnected'>('disconnected');
-  const gameStore = useGameStore();
+
+  // Store our own user ID and seat from Connected
+  const myUserIdRef = useRef<string | null>(null);
+  const mySeatRef = useRef<number | null>(null);
 
   const connect = useCallback(() => {
     if (!mountedRef.current) return;
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
-    // Build URL: same-origin (via Vite proxy) by default, or direct with token fallback
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
     const baseWs = import.meta.env.VITE_WS_URL || `${proto}://${window.location.host}`;
     const token = getToken();
@@ -75,7 +144,16 @@ export function useGameWebSocket(tableId: string) {
     ws.onopen = () => {
       if (!mountedRef.current) return;
       setConnectionStatus('connected');
-      ws.send(JSON.stringify({ type: 'join_table', table_id: tableId }));
+      // Reset reconnect attempts on successful connection
+      reconnectAttempts.current = 0;
+
+      // Send join_table with buy_in (default 1000)
+      ws.send(JSON.stringify({
+        type: 'join_table',
+        table_id: tableId,
+        buy_in: 1000,   // TODO: make configurable
+      }));
+
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = undefined;
@@ -88,28 +166,77 @@ export function useGameWebSocket(tableId: string) {
         const data = JSON.parse(event.data);
         const message = parseMessage(data);
         if (!message) return;
-        if (message.type === 'TableState') gameStore.setSnapshot(message);
-        else if (message.type === 'ActionRequired') gameStore.setActionRequired(message);
-        else if (message.type === 'ActionBroadcast') gameStore.applyActionBroadcast(message);
-        else if (message.type === 'HandResult') gameStore.setHandResult(message);
+
+        switch (message.type) {
+          case 'Connected': {
+            myUserIdRef.current = message.user_id;
+            mySeatRef.current = message.seat_index;
+            setHeroSeat(message.seat_index);
+            break;
+          }
+          case 'YourHoleCards': {
+            setHeroHoleCards(message.holeCards);
+            break;
+          }
+          case 'TableState': {
+            // Ensure hero seat is set if we know it
+            if (mySeatRef.current !== null) {
+              const ourSeat = message.seats.find((s: any) => s.seat === mySeatRef.current);
+              if (ourSeat && ourSeat.user_id === myUserIdRef.current) {
+                // Hero is already identified, no extra action needed.
+              }
+            }
+            setTableState(message);
+            break;
+          }
+          case 'ActionRequired': {
+            // Only if it's our turn
+            if (myUserIdRef.current && message.playerId === myUserIdRef.current) {
+              setActionRequired({
+                toCall: message.toCall,
+                minRaise: message.minRaise,
+                canCheck: message.canCheck,
+                pot: message.pot,
+                timeoutSecs: message.timeoutSecs,
+              });
+            }
+            break;
+          }
+          case 'ActionBroadcast': {
+            applyActionBroadcast(message);
+            break;
+          }
+          case 'HandResult': {
+            setHandResult(message);
+            break;
+          }
+        }
       } catch (e) {
         console.error('Failed to parse WS message', e);
       }
     };
 
-    ws.onclose = () => {
+    ws.onclose = (event) => {
+      console.warn(
+        `WebSocket closed: code=${event.code}, reason=${event.reason || 'no reason'}, wasClean=${event.wasClean}`
+      );
       if (!mountedRef.current) return;
       wsRef.current = null;
       setConnectionStatus('reconnecting');
+
+      // Exponential backoff: 3s, 4.5s, 6.75s, ... capped at 30s
+      const delay = Math.min(3000 * Math.pow(1.5, reconnectAttempts.current), 30000);
+      reconnectAttempts.current += 1;
+
       reconnectTimeoutRef.current = setTimeout(() => {
         if (mountedRef.current) connect();
-      }, 3000);
+      }, delay);
     };
 
     ws.onerror = () => {
       // onclose fires immediately after onerror, nothing extra needed
     };
-  }, [tableId, gameStore]);
+  }, [tableId]); // ✅ only tableId – store actions are stable
 
   useEffect(() => {
     mountedRef.current = true;
@@ -122,10 +249,7 @@ export function useGameWebSocket(tableId: string) {
         reconnectTimeoutRef.current = undefined;
       }
       if (wsRef.current) {
-        // ★ KEY FIX: Nullify onclose BEFORE closing to prevent the stale
-        // callback from overriding state after the component unmounts.
-        // This fixes the React StrictMode race condition.
-        wsRef.current.onclose = null;
+        wsRef.current.onclose = null; // prevent reconnect on manual close
         wsRef.current.close();
         wsRef.current = null;
       }
@@ -134,10 +258,24 @@ export function useGameWebSocket(tableId: string) {
 
   const sendAction = useCallback((action: string, amount?: number) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: 'player_action', action, amount }));
-      gameStore.clearActionRequired();
+      // Map frontend action names to backend expected names
+      const actionMap: Record<string, string> = {
+        fold: 'fold',
+        check: 'check',
+        call: 'call',
+        raise: 'raise',
+        'all-in': 'allin',
+        bet: 'bet',
+      };
+      const mapped = actionMap[action] || action;
+      wsRef.current.send(JSON.stringify({
+        type: 'player_action',
+        action: mapped,
+        amount: amount,
+      }));
+      clearActionRequired();
     }
-  }, [gameStore]);
+  }, [clearActionRequired]);
 
   return { sendAction, connectionStatus };
 }

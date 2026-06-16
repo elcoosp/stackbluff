@@ -36,13 +36,27 @@ function useActionKeys(onAction: (action: string, amount?: number) => void, acti
 
 /* ── Desktop ── */
 const DesktopActionBar = ({
-  actionRequired, toCall, minRaise, maxRaise, pot, onAction,
+  actionRequired,
+  toCall,
+  minRaise,
+  maxRaise,
+  pot,
+  onAction,
+  canCheck, // optional, but we use toCall > 0 logic anyway
 }: {
-  actionRequired: boolean; toCall: number; minRaise: number; maxRaise: number; pot: number;
+  actionRequired: boolean;
+  toCall: number;
+  minRaise: number;
+  maxRaise: number;
+  pot: number;
   onAction: (action: string, amount?: number) => void;
+  canCheck?: boolean;
 }) => {
   const [raiseOpen, setRaiseOpen] = useState(false);
   useActionKeys(onAction, actionRequired);
+
+  // Determine if we should show "Check" or "Call"
+  const isCheck = toCall === 0;
 
   return (
     <motion.div
@@ -57,21 +71,41 @@ const DesktopActionBar = ({
         {raiseOpen && actionRequired && (
           <div className="px-5 pt-4 pb-3 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
             <RaiseSlider
-              min={minRaise || 10} max={maxRaise || 1000} step={10} pot={pot || 0}
+              min={minRaise || 10}
+              max={maxRaise || 1000}
+              step={10}
+              pot={pot || 0}
               onConfirm={(amt) => { onAction('raise', amt); setRaiseOpen(false); }}
             />
           </div>
         )}
         <div className="flex items-center gap-2 px-4 py-3">
-          <ActionButton variant="fold" onClick={() => onAction('fold')} disabled={!actionRequired} shortcut="F">Fold</ActionButton>
-          <ActionButton variant="call" onClick={() => onAction('call')} disabled={!actionRequired} shortcut="C">
-            {actionRequired && toCall > 0 ? `Call $${toCall}` : 'Check'}
+          <ActionButton variant="fold" onClick={() => onAction('fold')} disabled={!actionRequired} shortcut="F">
+            Fold
           </ActionButton>
-          <ActionButton variant="raise" onClick={() => setRaiseOpen(!raiseOpen)} disabled={!actionRequired} shortcut="R">
-            {raiseOpen ? <span className="flex items-center gap-1">Raise <ChevronUp className="w-3 h-3" /></span>
-              : <span className="flex items-center gap-1">Raise <ChevronDown className="w-3 h-3" /></span>}
+          <ActionButton
+            variant="call"
+            onClick={() => onAction(isCheck ? 'check' : 'call')}
+            disabled={!actionRequired}
+            shortcut="C"
+          >
+            {isCheck ? 'Check' : `Call $${toCall}`}
           </ActionButton>
-          <ActionButton variant="all-in" onClick={() => onAction('all-in')} disabled={!actionRequired} shortcut="A">All-in</ActionButton>
+          <ActionButton
+            variant="raise"
+            onClick={() => setRaiseOpen(!raiseOpen)}
+            disabled={!actionRequired}
+            shortcut="R"
+          >
+            {raiseOpen ? (
+              <span className="flex items-center gap-1">Raise <ChevronUp className="w-3 h-3" /></span>
+            ) : (
+              <span className="flex items-center gap-1">Raise <ChevronDown className="w-3 h-3" /></span>
+            )}
+          </ActionButton>
+          <ActionButton variant="all-in" onClick={() => onAction('all-in')} disabled={!actionRequired} shortcut="A">
+            All-in
+          </ActionButton>
         </div>
       </div>
     </motion.div>
@@ -80,12 +114,22 @@ const DesktopActionBar = ({
 
 /* ── Mobile ── */
 const MobileActionBar = ({
-  actionRequired, toCall, minRaise, maxRaise, pot, onAction,
+  actionRequired,
+  toCall,
+  minRaise,
+  maxRaise,
+  pot,
+  onAction,
 }: {
-  actionRequired: boolean; toCall: number; minRaise: number; maxRaise: number; pot: number;
+  actionRequired: boolean;
+  toCall: number;
+  minRaise: number;
+  maxRaise: number;
+  pot: number;
   onAction: (action: string, amount?: number) => void;
 }) => {
   const [raiseOpen, setRaiseOpen] = useState(false);
+  const isCheck = toCall === 0;
 
   return (
     <motion.div
@@ -116,7 +160,10 @@ const MobileActionBar = ({
             boxShadow: '0 -4px 32px rgba(0,0,0,0.9)',
           }}>
             <RaiseSlider
-              min={minRaise || 10} max={maxRaise || 1000} step={10} pot={pot || 0}
+              min={minRaise || 10}
+              max={maxRaise || 1000}
+              step={10}
+              pot={pot || 0}
               onConfirm={(amt) => { onAction('raise', amt); setRaiseOpen(false); }}
             />
           </div>
@@ -131,8 +178,8 @@ const MobileActionBar = ({
               <ActionButton isMobile variant="fold" onClick={() => { onAction('fold'); setRaiseOpen(false); }} disabled={!actionRequired}>
                 Fold
               </ActionButton>
-              <ActionButton isMobile variant="call" onClick={() => { onAction('call'); setRaiseOpen(false); }} disabled={!actionRequired}>
-                {actionRequired && toCall > 0 ? `Call $${toCall}` : 'Check'}
+              <ActionButton isMobile variant="call" onClick={() => { onAction(isCheck ? 'check' : 'call'); setRaiseOpen(false); }} disabled={!actionRequired}>
+                {isCheck ? 'Check' : `Call $${toCall}`}
               </ActionButton>
             </div>
             <div className="grid grid-cols-2 gap-1.5">
@@ -150,14 +197,27 @@ const MobileActionBar = ({
   );
 };
 
-/* ── Export with AnimatePresence ── */
+/* ── Export ── */
 export const ActionBar = ({
-  isDesktop, actionRequired, toCall, minRaise, maxRaise, pot, onAction,
+  isDesktop,
+  actionRequired,
+  toCall,
+  minRaise,
+  maxRaise,
+  pot,
+  onAction,
+  canCheck, // kept for future use, not used explicitly
 }: {
-  isDesktop: boolean; actionRequired: boolean; toCall: number; minRaise: number; maxRaise: number; pot: number;
+  isDesktop: boolean;
+  actionRequired: boolean;
+  toCall: number;
+  minRaise: number;
+  maxRaise: number;
+  pot: number;
   onAction: (action: string, amount?: number) => void;
+  canCheck?: boolean;
 }) => {
-  const props = { actionRequired, toCall, minRaise, maxRaise, pot, onAction };
+  const props = { actionRequired, toCall, minRaise, maxRaise, pot, onAction, canCheck };
 
   return (
     <AnimatePresence mode="wait">
