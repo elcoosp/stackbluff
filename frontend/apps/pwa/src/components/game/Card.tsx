@@ -7,6 +7,7 @@ interface CardProps {
   faceDown?: boolean;
   className?: string;
   rounded?: string;
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 }
 
 export const Card = ({
@@ -14,9 +15,44 @@ export const Card = ({
   suit,
   faceDown,
   className,
-  rounded = 'rounded-[2px]', // minimal radius
+  rounded = 'rounded-sm', // less radius
+  size = 'md',
 }: CardProps) => {
-  // Front of card (face up)
+  const rankSize = {
+    xs: 'text-[6px]',
+    sm: 'text-[8px]',
+    md: 'text-[11px]',
+    lg: 'text-[14px]',
+    xl: 'text-[18px]',
+  }[size];
+
+  const pipSize = {
+    xs: 'text-[5px]',
+    sm: 'text-[6px]',
+    md: 'text-[8px]',
+    lg: 'text-[10px]',
+    xl: 'text-[13px]',
+  }[size];
+
+  const suitSize = {
+    xs: 'text-[14px]',
+    sm: 'text-[20px]',
+    md: 'text-[34px]',
+    lg: 'text-[44px]',
+    xl: 'text-[56px]',
+  }[size];
+
+  const cornerPadding = {
+    xs: 'p-0.5',
+    sm: 'p-1',
+    md: 'p-1.5',
+    lg: 'p-2',
+    xl: 'p-3',
+  }[size];
+
+  const isRed = suit === '♥' || suit === '♦';
+  const suitColor = isRed ? '#e11d48' : '#1e293b';
+
   const renderFront = () => (
     <div
       className={cn(
@@ -24,19 +60,32 @@ export const Card = ({
         rounded,
         className
       )}
+      style={{ aspectRatio: '5/7' }}
     >
-      <span className="absolute top-2 left-2 text-2xl font-bold text-error-container">{rank}</span>
-      <span className="absolute bottom-2 right-2 text-2xl font-bold text-error-container rotate-180">{rank}</span>
-      <span
-        className="absolute inset-0 flex items-center justify-center text-6xl"
-        style={{ color: suit === '♥' || suit === '♦' ? '#e11d48' : '#1e293b' }}
+      {/* Top-left corner: rank + pip */}
+      <div
+        className={cn(
+          'absolute top-0 left-0 flex flex-col items-center leading-none',
+          cornerPadding
+        )}
       >
-        {suit === '♥' ? '♥' : suit === '♦' ? '♦' : suit === '♣' ? '♣' : '♠'}
-      </span>
+        <span className={`font-bold ${rankSize}`} style={{ color: suitColor }}>
+          {rank}
+        </span>
+        <span className={`font-bold ${pipSize}`} style={{ color: suitColor }}>
+          {suit}
+        </span>
+      </div>
+
+      {/* Center suit – positioned at the bottom */}
+      <div className="absolute inset-x-0 bottom-[10%] flex items-center justify-center pointer-events-none">
+        <span className={`${suitSize} leading-none`} style={{ color: suitColor }}>
+          {suit}
+        </span>
+      </div>
     </div>
   );
 
-  // Back of card – with slim white border and minimal radius
   const renderBack = () => (
     <div
       className={cn(
@@ -46,6 +95,7 @@ export const Card = ({
       )}
       style={{
         background: 'linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%)',
+        aspectRatio: '5/7',
       }}
     >
       <div className="absolute inset-[3px] border border-white/10 rounded-[inherit]" />
@@ -67,10 +117,7 @@ export const Card = ({
   );
 
   return (
-    <motion.div
-      whileHover={{ y: -6, transition: { type: 'spring', stiffness: 300 } }}
-      className="shadow-[0_12px_35px_rgba(0,0,0,0.9)]"
-    >
+    <motion.div className="shadow-[0_12px_35px_rgba(0,0,0,0.9)]">
       {faceDown ? renderBack() : renderFront()}
     </motion.div>
   );
@@ -78,8 +125,10 @@ export const Card = ({
 
 export const CardBack = ({
   className,
-  rounded = 'rounded-[2px]',
+  rounded = 'rounded-sm',
+  size = 'md',
 }: {
   className?: string;
   rounded?: string;
-}) => <Card faceDown className={className} rounded={rounded} />;
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+}) => <Card faceDown className={className} rounded={rounded} size={size} />;

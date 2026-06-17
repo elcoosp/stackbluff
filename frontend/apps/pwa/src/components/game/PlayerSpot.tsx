@@ -53,7 +53,7 @@ export const PlayerSpot = ({
   const isActive = is_active && !is_folded && !is_all_in;
   const isFolded = is_folded || is_all_in;
 
-  // ── Badge placement (opposite edge based on hub position) ──
+  // ── Badge placement ──
   const getBadgePlacement = (): React.CSSProperties => {
     if (!seatPosition) return { left: '50%', top: '-8px', transform: 'translateX(-50%)' };
     const topPercent = parseFloat(seatPosition.top);
@@ -68,10 +68,31 @@ export const PlayerSpot = ({
   const badgePlacement = getBadgePlacement();
   const isBadgeAbove = badgePlacement.top !== undefined;
 
-  // ── Glass hub – less radius, compact width ──
+  // ── Hub & card sizes ──
+  const oppHubWidth = isMobile ? 'w-[90px]' : 'w-[140px]';
+  const oppHubPadding = isMobile ? 'p-1' : 'p-2';
+  const oppCardSize = isMobile ? 'w-5 h-8' : 'w-9 h-13';
+  const oppSizeProp = isMobile ? 'xs' : 'sm';
+
+  const heroHubWidth = isMobile ? 'w-[110px]' : 'w-[180px]';
+  const heroHubPadding = isMobile ? 'p-1.5' : 'p-3';
+  const heroCardSize = isMobile ? 'w-9 h-13' : 'w-16 h-22';
+  const heroSizeProp = isMobile ? 'sm' : 'md';
+
+  const hubWidth = isHero ? heroHubWidth : oppHubWidth;
+  const hubPadding = isHero ? heroHubPadding : oppHubPadding;
+  const cardSize = isHero ? heroCardSize : oppCardSize;
+  const sizeProp = isHero ? heroSizeProp : oppSizeProp;
+
+  const cardTop = isHero ? (isMobile ? '-top-7' : '-top-9') : (isMobile ? '-top-3' : '-top-3');
+  const cardRight = isHero ? (isMobile ? '-right-10' : '-right-16') : (isMobile ? '-right-3' : '-right-3');
+  const infoPr = isHero ? (isMobile ? 'pr-14' : 'pr-24') : (isMobile ? 'pr-6' : 'pr-10');
+
+  // ── Glass hub ──
   const glassClasses = cn(
-    'relative rounded transition-all duration-200',
-    isMobile ? 'p-1 w-[90px]' : 'p-2 w-[140px]',
+    'relative rounded-sm transition-all duration-200',
+    hubPadding,
+    hubWidth,
     {
       'bg-black/70 backdrop-blur-md border border-white/10': true,
       'border-tertiary/40 shadow-[0_0_20px_rgba(78,222,163,0.15)]': isActive && !isHero,
@@ -93,7 +114,7 @@ export const PlayerSpot = ({
     }
   );
 
-  // ── Dealer button (top-left) ──
+  // ── Dealer button ──
   const dealerButton = isDealer && !isHero && (
     <div className="absolute -top-2 -left-2 z-10 w-5 h-5 rounded-full bg-white text-black flex items-center justify-center font-bold text-[9px] shadow-lg border border-white/30">
       D
@@ -107,7 +128,7 @@ export const PlayerSpot = ({
     </span>
   );
 
-  // ── Action pill (inside hub) ──
+  // ── Action pill ──
   const actionPill = action && (
     <div className="mt-1 flex justify-center">
       <span className={actionPillClasses}>
@@ -119,28 +140,61 @@ export const PlayerSpot = ({
     </div>
   );
 
-  // ── Card size ──
-  const cardSize = isMobile ? 'w-5 h-8' : 'w-9 h-13';
+  // ── Fanning variants ──
+  const containerVariants = {
+    collapsed: { gap: -16 },
+    fan: { gap: 4, transition: { duration: 0.25, ease: 'easeOut' as const } },
+  };
 
-  // ── Cards (fanned over top‑right corner) ──
+  const leftCardVariants = {
+    collapsed: { rotate: -3, x: 0 },
+    fan: { rotate: -8, x: -4 },
+  };
+
+  const rightCardVariants = {
+    collapsed: { rotate: 3, x: 0 },
+    fan: { rotate: 8, x: 4 },
+  };
+
+  // ── Cards ──
   const renderCards = () => {
     if (isHero && hole_cards && hole_cards.length === 2) {
       return (
-        <div className="flex -space-x-3">
-          <Card rank={hole_cards[0].rank} suit={hole_cards[0].suit} className={cn(cardSize, '-rotate-[6deg]')} />
-          <Card rank={hole_cards[1].rank} suit={hole_cards[1].suit} className={cn(cardSize, 'rotate-[6deg]')} />
-        </div>
+        <motion.div
+          className="flex items-center pointer-events-auto"
+          variants={containerVariants}
+          initial="collapsed"
+          whileHover="fan"
+          whileTap="fan"
+        >
+          <motion.div variants={leftCardVariants}>
+            <Card
+              rank={hole_cards[0].rank}
+              suit={hole_cards[0].suit}
+              className={cn(cardSize, 'shadow-xl')}
+              size={sizeProp}
+            />
+          </motion.div>
+          <motion.div variants={rightCardVariants}>
+            <Card
+              rank={hole_cards[1].rank}
+              suit={hole_cards[1].suit}
+              className={cn(cardSize, 'shadow-xl')}
+              size={sizeProp}
+            />
+          </motion.div>
+        </motion.div>
       );
     }
     return (
       <div className="flex -space-x-3">
-        <CardBack className={cn(cardSize, '-rotate-[6deg]')} />
-        <CardBack className={cn(cardSize, 'rotate-[6deg]')} />
+        <CardBack className={cn(cardSize, '-rotate-[6deg]')} size={sizeProp} />
+        <CardBack className={cn(cardSize, 'rotate-[6deg]')} size={sizeProp} />
       </div>
     );
   };
 
-  // ── Avatar (hidden on mobile with animation) ──
+  // ── Avatar ──
   const avatarElement = (
     <motion.div
       initial={false}
@@ -161,7 +215,7 @@ export const PlayerSpot = ({
     </motion.div>
   );
 
-  // ── Bankroll – plain amount ──
+  // ── Bankroll ──
   const bankrollElement = (
     <span className={cn(
       'font-mono text-tertiary whitespace-nowrap',
@@ -189,15 +243,17 @@ export const PlayerSpot = ({
 
         {/* Cards */}
         <div className={cn(
-          'absolute -top-3 -right-3 z-20 pointer-events-none',
-          isMobile && '-top-2 -right-2'
+          'absolute z-20',
+          cardTop,
+          cardRight
         )}>
           {renderCards()}
         </div>
 
         {/* Avatar + info */}
         <div className={cn(
-          'flex items-center gap-2 pr-10',
+          'flex items-center gap-2',
+          infoPr,
           isMobile && isBadgeAbove && 'mt-1'
         )}>
           {avatarElement}
@@ -214,7 +270,7 @@ export const PlayerSpot = ({
           </div>
         </div>
 
-        {/* Timer – only when this player is active and timer is set */}
+        {/* Timer */}
         {timerRemainingMs !== null && timerRemainingMs !== undefined && (
           <div className="mt-1.5 w-full px-0.5">
             <TimerBar remainingMs={timerRemainingMs} isActive={true} />

@@ -4,7 +4,6 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { motion } from 'motion/react';
 import {
-  BookOpen,
   LayoutGrid,
   Trophy,
   History,
@@ -99,18 +98,18 @@ function LobbyPage() {
             <LayoutGrid className="w-5 h-5" />
             <span className="font-label-caps text-label-caps">Lobby</span>
           </Link>
-          <Link to="/tournaments" className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors">
+          <button className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
             <Trophy className="w-5 h-5" />
             <span className="font-label-caps text-label-caps">Tournaments</span>
-          </Link>
-          <Link to="/history" className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors">
+          </button>
+          <button className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
             <History className="w-5 h-5" />
             <span className="font-label-caps text-label-caps">History</span>
-          </Link>
-          <Link to="/strategy" className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors">
+          </button>
+          <button className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
             <BarChart3 className="w-5 h-5" />
             <span className="font-label-caps text-label-caps">Strategy</span>
-          </Link>
+          </button>
         </nav>
 
         <div className="px-4 pt-6 border-t border-outline-variant">
@@ -128,7 +127,6 @@ function LobbyPage() {
         </div>
       </aside>
 
-      {/* Content Area */}
       <section className="flex-1 relative overflow-hidden">
         <div className="absolute inset-0 carbon-bg pointer-events-none" />
 
@@ -161,9 +159,7 @@ function LobbyPage() {
             </button>
           </div>
 
-          {/* Table List */}
           <div className="space-y-3 gap-4">
-            {/* Desktop Header */}
             <div className="hidden lg:grid grid-cols-12 px-6 py-2 text-outline font-label-caps text-[10px] uppercase">
               <div className="col-span-4">Room Name</div>
               <div
@@ -192,9 +188,8 @@ function LobbyPage() {
               >
                 <div className="w-full lg:col-span-4 flex items-start lg:items-center gap-3 lg:gap-4">
                   <div
-                    className={`mt-1.5 lg:mt-0 w-1.5 h-1.5 rounded-full shrink-0 ${
-                      table.status === 'active' ? 'bg-tertiary status-led animate-pulse' : 'bg-outline-variant'
-                    }`}
+                    className={`mt-1.5 lg:mt-0 w-1.5 h-1.5 rounded-full shrink-0 ${table.status === 'active' ? 'bg-tertiary status-led animate-pulse' : 'bg-outline-variant'
+                      }`}
                   />
                   <div className="flex-1 min-w-0">
                     <h4 className="font-headline-md text-base text-on-surface truncate">{table.name}</h4>
@@ -220,9 +215,8 @@ function LobbyPage() {
                     {Array.from({ length: table.max_players }).map((_, idx) => (
                       <span
                         key={idx}
-                        className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                          idx < table.current_players ? 'bg-tertiary/70' : 'bg-outline-variant/30'
-                        }`}
+                        className={`w-1.5 h-1.5 rounded-full transition-colors ${idx < table.current_players ? 'bg-tertiary/70' : 'bg-outline-variant/30'
+                          }`}
                       />
                     ))}
                   </div>

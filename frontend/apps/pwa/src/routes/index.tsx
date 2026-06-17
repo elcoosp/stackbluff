@@ -3,35 +3,30 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from '@tanstack/react-router';
 import { Swords, Trophy, BookOpen } from 'lucide-react';
-import { motion } from 'motion/react'; // Updated import!
+import { motion } from 'motion/react';
 
 export const Route = createFileRoute('/')({
   component: IndexPage,
 });
 
-// Animation variants for the grid container
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.15, // Time between each card appearing
-      delayChildren: 0.3,   // Delay before the first card appears
+      staggerChildren: 0.15,
+      delayChildren: 0.3,
     },
   },
 };
 
-// Animation variants for each individual card
 const cardVariants = {
-  hidden: { opacity: 0, y: 40, scale: 0.95 }, // Start invisible, slightly down and scaled
+  hidden: { opacity: 0, y: 40, scale: 0.95 },
   visible: {
     opacity: 1,
     y: 0,
     scale: 1,
-    transition: {
-      duration: 0.6,
-      ease: 'easeOut', // Premium cubic-bezier ease out
-    },
+    transition: { duration: 0.6, ease: 'easeOut' as const },
   },
 };
 

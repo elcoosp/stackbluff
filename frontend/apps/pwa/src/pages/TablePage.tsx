@@ -25,7 +25,6 @@ function Fallback({ error, resetErrorBoundary }: any) {
   );
 }
 
-// ── Media query hook ──
 function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState(false);
   useEffect(() => {
@@ -41,9 +40,8 @@ function useMediaQuery(query: string): boolean {
 export function TablePage() {
   const { tableId } = useParams({ from: '/table/$tableId' });
   const { sendAction, connectionStatus } = useGameWebSocket(tableId);
-  const isDesktop = useResponsiveLayout(); // >= 768px for table layout
-  const showDesktopAnalytics = useMediaQuery('(min-width: 980px)'); // >= 980px for side panels
-  const showMobileAnalytics = useMediaQuery('(max-width: 979px)'); // < 980px for mobile strip
+  const isDesktop = useResponsiveLayout();
+  const showAnalytics = useMediaQuery('(min-width: 980px)');
   const game = useGameStore();
 
   const {
@@ -59,11 +57,36 @@ export function TablePage() {
     dealerIndex,
   } = game;
 
-  const timerTotalMs = actionRequired ? actionRequired.timeoutSecs * 1000 : null;
+  // ── Merge hero hole cards into the hero's seat ──
+  const seatsWithHeroCards = { ...seats };
+  if (heroSeat !== null && heroSeat !== undefined && heroHoleCards && heroHoleCards.length === 2) {
+    if (seatsWithHeroCards[heroSeat]) {
+      seatsWithHeroCards[heroSeat] = {
+        ...seatsWithHeroCards[heroSeat],
+        hole_cards: heroHoleCards,
+      };
+    } else {
+      seatsWithHeroCards[heroSeat] = {
+        seat: heroSeat,
+        user_id: 'hero',
+        stack: 0,
+        current_bet: 0,
+        is_all_in: false,
+        is_folded: false,
+        is_active: false,
+        display_name: 'You',
+        avatar_url: undefined,
+        hole_cards: heroHoleCards,
+        position_badge: undefined,
+        // action prop removed – not needed
+      };
+    }
+  }
 
-  const toCall = actionRequired?.toCall ?? 0;
-  const minRaise = actionRequired?.minRaise ?? 0;
-  const canCheck = actionRequired?.canCheck ?? false;
+  const timerTotalMs = actionRequired ? actionRequired.timeout_secs * 1000 : null;
+  const toCall = actionRequired?.to_call ?? 0;
+  const minRaise = actionRequired?.min_raise ?? 0;
+  // const canCheck = actionRequired?.can_check ?? false; // not used
   const potForAction = actionRequired?.pot ?? pot;
 
   return (
@@ -75,7 +98,7 @@ export function TablePage() {
             'radial-gradient(ellipse at 50% 40%, #1a1c1b 0%, #111 40%, #0a0a0a 100%)',
         }}
       >
-        {showMobileAnalytics && (
+        {!isDesktop && (
           <MobileAnalyticsStrip winProb={74} potOdds={3.2} bestHand="Two Pair" strength={92} />
         )}
 
@@ -107,7 +130,7 @@ export function TablePage() {
             </div>
 
             <SeatGrid
-              seats={seats}
+              seats={seatsWithHeroCards}
               heroSeat={heroSeat ?? 0}
               dealerIndex={dealerIndex}
               isDesktop={isDesktop}
@@ -117,8 +140,7 @@ export function TablePage() {
           </div>
         </div>
 
-        {/* ── Desktop analytics: only shown on screens ≥ 980px ── */}
-        {showDesktopAnalytics && (
+        {showAnalytics && (
           <>
             <TacticalOracle winProb={74} potOdds={3.2} />
             <HandStrength bestHand="Two Pair" strength={92} />
@@ -130,10 +152,9 @@ export function TablePage() {
           actionRequired={!!actionRequired}
           toCall={toCall}
           minRaise={minRaise}
-          maxRaise={minRaise * 2}
+          maxRaise={Math.max(minRaise * 2, 1000)}
           pot={potForAction}
           onAction={sendAction}
-          canCheck={canCheck}
         />
 
         {connectionStatus !== 'connected' && (

@@ -1,12 +1,44 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { useGameStore } from '@stackbluff/shared/stores/gameStore';
+import { useGameStore, TableState, ActionRequired } from '@stackbluff/shared/stores/gameStore';
 import { toast } from 'sonner';
 
 function getToken(): string | null {
   return localStorage.getItem('auth_token');
 }
 
-// --- Parse backend messages (RoomMessage) ---
+// ── Rank & suit mapping ──
+const rankDisplayMap: Record<string, string> = {
+  Two: '2',
+  Three: '3',
+  Four: '4',
+  Five: '5',
+  Six: '6',
+  Seven: '7',
+  Eight: '8',
+  Nine: '9',
+  Ten: '10',
+  Jack: 'J',
+  Queen: 'Q',
+  King: 'K',
+  Ace: 'A',
+};
+
+const suitDisplayMap: Record<string, string> = {
+  hearts: '♥',
+  diamonds: '♦',
+  clubs: '♣',
+  spades: '♠',
+};
+
+function convertCard(card: any) {
+  if (!card) return { rank: '?', suit: '?' };
+  return {
+    rank: rankDisplayMap[card.rank] ?? card.rank,
+    suit: suitDisplayMap[card.suit] ?? card.suit,
+  };
+}
+
+// ── Parse backend messages ──
 const parseMessage = (data: any) => {
   switch (data.type) {
     case 'Connected': {
@@ -18,11 +50,10 @@ const parseMessage = (data: any) => {
     }
 
     case 'TableState': {
-      // data matches TableStateUpdate exactly
       const seats = data.players.map((p: any) => ({
         seat: p.seat,
         user_id: p.user_id,
-        display_name: p.user_id, // placeholder; can be resolved later via user cache
+        display_name: p.user_id,
         stack: p.stack,
         current_bet: p.current_bet,
         is_all_in: p.is_all_in,
@@ -31,33 +62,29 @@ const parseMessage = (data: any) => {
         avatar_url: undefined,
         position_badge: undefined,
       }));
-
-      const communityCards = data.community_cards.map((c: any) => ({
-        rank: c.rank,
-        suit: c.suit,
-      }));
-
+      const communityCards = (data.community_cards || []).map(convertCard);
       return {
         type: 'TableState',
+        table_id: data.table_id,
         seats,
-        communityCards,
+        community_cards: communityCards,
         pot: data.pot,
-        sidePots: data.side_pots || [],
+        side_pots: data.side_pots || [],
         street: data.street,
-        currentHandInProgress: data.current_hand_in_progress,
-        currentTurnUserId: data.current_turn_user_id,
-        tableId: data.table_id,
+        current_hand_in_progress: data.current_hand_in_progress,
+        current_turn_user_id: data.current_turn_user_id,
+        dealer_index: data.dealer_index,
       };
     }
 
     case 'ActionRequired': {
       return {
         type: 'ActionRequired',
-        playerId: data.player_id,
-        timeoutSecs: data.timeout_secs,
-        toCall: data.to_call,
-        minRaise: data.min_raise,
-        canCheck: data.can_check,
+        player_id: data.player_id,
+        timeout_secs: data.timeout_secs,
+        to_call: data.to_call,
+        min_raise: data.min_raise,
+        can_check: data.can_check,
         pot: data.pot,
       };
     }
@@ -65,11 +92,11 @@ const parseMessage = (data: any) => {
     case 'ActionBroadcast': {
       return {
         type: 'ActionBroadcast',
-        playerId: data.player_id,
+        player_id: data.player_id,
         action: data.action,
         amount: data.amount,
-        newStack: data.new_stack,
-        newPot: data.new_pot,
+        new_stack: data.new_stack,
+        new_pot: data.new_pot,
       };
     }
 
@@ -83,10 +110,7 @@ const parseMessage = (data: any) => {
 
     case 'PrivateMessage': {
       if (data.payload?.type === 'your_hole_cards') {
-        const holeCards = (data.payload.hole_cards || []).map((c: any) => ({
-          rank: c.rank,
-          suit: c.suit,
-        }));
+        const holeCards = (data.payload.hole_cards || []).map(convertCard);
         return {
           type: 'YourHoleCards',
           holeCards,
@@ -117,13 +141,12 @@ export function useGameWebSocket(tableId: string) {
   const clearActionRequired = useGameStore((s) => s.clearActionRequired);
 
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const mountedRef = useRef(true);
   const reconnectAttempts = useRef(0);
 
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'reconnecting' | 'disconnected'>('disconnected');
 
-  // Store our own user ID and seat from Connected
   const myUserIdRef = useRef<string | null>(null);
   const mySeatRef = useRef<number | null>(null);
 
@@ -144,16 +167,14 @@ export function useGameWebSocket(tableId: string) {
     ws.onopen = () => {
       if (!mountedRef.current) return;
       setConnectionStatus('connected');
-      // Reset reconnect attempts on successful connection
       reconnectAttempts.current = 0;
-
-      // Send join_table with buy_in (default 1000)
-      ws.send(JSON.stringify({
-        type: 'join_table',
-        table_id: tableId,
-        buy_in: 1000,   // TODO: make configurable
-      }));
-
+      ws.send(
+        JSON.stringify({
+          type: 'join_table',
+          table_id: tableId,
+          buy_in: 1000,
+        })
+      );
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = undefined;
@@ -179,35 +200,30 @@ export function useGameWebSocket(tableId: string) {
             break;
           }
           case 'TableState': {
-            // Ensure hero seat is set if we know it
-            if (mySeatRef.current !== null) {
-              const ourSeat = message.seats.find((s: any) => s.seat === mySeatRef.current);
-              if (ourSeat && ourSeat.user_id === myUserIdRef.current) {
-                // Hero is already identified, no extra action needed.
-              }
-            }
-            setTableState(message);
+            setTableState(message as TableState);
             break;
           }
           case 'ActionRequired': {
-            // Only if it's our turn
-            if (myUserIdRef.current && message.playerId === myUserIdRef.current) {
-              setActionRequired({
-                toCall: message.toCall,
-                minRaise: message.minRaise,
-                canCheck: message.canCheck,
-                pot: message.pot,
-                timeoutSecs: message.timeoutSecs,
-              });
+            if (myUserIdRef.current && message.player_id === myUserIdRef.current) {
+              setActionRequired(message as ActionRequired);
             }
             break;
           }
           case 'ActionBroadcast': {
-            applyActionBroadcast(message);
+            applyActionBroadcast({
+              player_id: message.player_id,
+              action: message.action,
+              amount: message.amount,
+              new_stack: message.new_stack,
+              new_pot: message.new_pot,
+            });
             break;
           }
           case 'HandResult': {
-            setHandResult(message);
+            setHandResult({
+              winners: message.winners,
+              pot: message.pot,
+            });
             break;
           }
         }
@@ -223,25 +239,21 @@ export function useGameWebSocket(tableId: string) {
       if (!mountedRef.current) return;
       wsRef.current = null;
       setConnectionStatus('reconnecting');
-
-      // Exponential backoff: 3s, 4.5s, 6.75s, ... capped at 30s
       const delay = Math.min(3000 * Math.pow(1.5, reconnectAttempts.current), 30000);
       reconnectAttempts.current += 1;
-
       reconnectTimeoutRef.current = setTimeout(() => {
         if (mountedRef.current) connect();
       }, delay);
     };
 
     ws.onerror = () => {
-      // onclose fires immediately after onerror, nothing extra needed
+      // onclose fires immediately after onerror
     };
-  }, [tableId]); // ✅ only tableId – store actions are stable
+  }, [tableId]);
 
   useEffect(() => {
     mountedRef.current = true;
     connect();
-
     return () => {
       mountedRef.current = false;
       if (reconnectTimeoutRef.current) {
@@ -249,33 +261,37 @@ export function useGameWebSocket(tableId: string) {
         reconnectTimeoutRef.current = undefined;
       }
       if (wsRef.current) {
-        wsRef.current.onclose = null; // prevent reconnect on manual close
+        wsRef.current.onclose = null;
         wsRef.current.close();
         wsRef.current = null;
       }
     };
   }, [connect]);
 
-  const sendAction = useCallback((action: string, amount?: number) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      // Map frontend action names to backend expected names
-      const actionMap: Record<string, string> = {
-        fold: 'fold',
-        check: 'check',
-        call: 'call',
-        raise: 'raise',
-        'all-in': 'allin',
-        bet: 'bet',
-      };
-      const mapped = actionMap[action] || action;
-      wsRef.current.send(JSON.stringify({
-        type: 'player_action',
-        action: mapped,
-        amount: amount,
-      }));
-      clearActionRequired();
-    }
-  }, [clearActionRequired]);
+  const sendAction = useCallback(
+    (action: string, amount?: number) => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        const actionMap: Record<string, string> = {
+          fold: 'fold',
+          check: 'check',
+          call: 'call',
+          raise: 'raise',
+          'all-in': 'allin',
+          bet: 'bet',
+        };
+        const mapped = actionMap[action] || action;
+        wsRef.current.send(
+          JSON.stringify({
+            type: 'player_action',
+            action: mapped,
+            amount: amount,
+          })
+        );
+        clearActionRequired();
+      }
+    },
+    [clearActionRequired]
+  );
 
   return { sendAction, connectionStatus };
 }

@@ -17,7 +17,6 @@ export function Header() {
     navigate({ to: '/login' });
   };
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -40,7 +39,6 @@ export function Header() {
       <div className="flex items-center gap-4">
         {user ? (
           <>
-            {/* Bankroll Glass Badge */}
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full glass-hub border border-tertiary/30">
               <Coins className="w-4 h-4 text-tertiary" />
               <span className="font-data-mono text-sm text-tertiary font-bold">
@@ -48,7 +46,6 @@ export function Header() {
               </span>
             </div>
 
-            {/* Avatar with Dropdown */}
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -66,14 +63,13 @@ export function Header() {
                     <p className="font-data-mono text-sm text-on-surface">{user.username}</p>
                     <p className="font-label-caps text-[10px] text-on-surface-variant">{user.email}</p>
                   </div>
-                  <Link
-                    to="/settings"
-                    className="flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:bg-white/5 transition-colors"
-                    onClick={() => setDropdownOpen(false)}
+                  <button
+                    onClick={() => { setDropdownOpen(false); navigate({ to: '/lobby' }); }}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:bg-white/5 transition-colors"
                   >
                     <Settings className="w-4 h-4" />
                     <span className="font-label-caps text-xs">Settings</span>
-                  </Link>
+                  </button>
                   <button
                     onClick={() => { handleLogout(); setDropdownOpen(false); }}
                     className="w-full flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:bg-white/5 transition-colors"

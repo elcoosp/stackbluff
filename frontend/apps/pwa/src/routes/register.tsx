@@ -10,7 +10,7 @@ import { GlassPanel } from '@stackbluff/shared/ui/GlassPanel';
 import { LiquidMetalButton } from '@stackbluff/shared/ui/LiquidMetalButton';
 import { Link } from '@tanstack/react-router';
 import { User, Mail, Lock } from 'lucide-react';
-import { toast } from 'sonner'; // Added Sonner import
+import { toast } from 'sonner';
 
 const step1Schema = z.object({ username: z.string().min(3, 'Username must be at least 3 characters') });
 const step2Schema = z.object({ email: z.string().email('Invalid email address') });
@@ -27,11 +27,8 @@ function RegisterPage() {
   const [step, setStep] = useState(1);
   const mutation = useMutation({
     mutationFn: authApi.register,
-    onSuccess: (data) => { setToken(data.token); setAuth(data.user, data.token); navigate({ to: '/' }); },
-    onError: (error) => {
-      // Trigger toast with fallback message (e.g., "Email already exists")
-      toast.error(error.message || 'Registration failed');
-    },
+    onSuccess: (data) => { setToken(data.token); setAuth(data.user, data.token, 0); navigate({ to: '/' }); },
+    onError: (error) => { toast.error(error.message || 'Registration failed'); },
   });
   const form = useForm({
     defaultValues: { username: '', email: '', password: '' },
@@ -132,7 +129,6 @@ function RegisterPage() {
                 );
               }}
             </form.Subscribe>
-            {/* REMOVED the inline mutation error div here */}
             <div className="text-center pt-4">
               <Link to="/login" className="font-label-caps text-[10px] text-on-surface-variant hover:text-on-surface transition-all tracking-widest uppercase">
                 ALREADY HAVE AN ACCOUNT? <span className="text-tertiary">SIGN IN</span>

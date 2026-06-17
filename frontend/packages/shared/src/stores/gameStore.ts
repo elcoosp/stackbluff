@@ -41,6 +41,7 @@ export interface TableState {
   street: string;
   current_hand_in_progress: boolean;
   current_turn_user_id: string | null;
+  dealer_index?: number | null; // added
 }
 
 interface GameState {
@@ -56,6 +57,7 @@ interface GameState {
   actionRequired: ActionRequired | null;
   winners: { name: string; amount: number }[] | null;
   handInProgress: boolean;
+  dealerIndex: number | null; // added
 
   // --- METHODS ---
   setTableState: (state: TableState) => void;
@@ -87,6 +89,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   actionRequired: null,
   winners: null,
   handInProgress: false,
+  dealerIndex: null, // added
 
   setTableState: (state) => {
     const seatsMap: Record<number, Seat> = {};
@@ -106,6 +109,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       street: state.street || '',
       currentTurnUserId: state.current_turn_user_id || null,
       handInProgress: state.current_hand_in_progress || false,
+      dealerIndex: state.dealer_index ?? null,
     });
   },
 
@@ -162,6 +166,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       actionRequired: null,
       winners: null,
       handInProgress: false,
+      dealerIndex: null,
     });
   },
 }));

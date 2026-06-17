@@ -42,7 +42,6 @@ const DesktopActionBar = ({
   maxRaise,
   pot,
   onAction,
-  canCheck,
 }: {
   actionRequired: boolean;
   toCall: number;
@@ -50,11 +49,9 @@ const DesktopActionBar = ({
   maxRaise: number;
   pot: number;
   onAction: (action: string, amount?: number) => void;
-  canCheck?: boolean;
 }) => {
   const [raiseOpen, setRaiseOpen] = useState(false);
   useActionKeys(onAction, actionRequired);
-
   const isCheck = toCall === 0;
 
   return (
@@ -67,11 +64,10 @@ const DesktopActionBar = ({
       className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[450]"
     >
       <div className="rounded-2xl overflow-hidden" style={glassStyle}>
-        {/* ── Raise panel with AnimatePresence ── */}
         <AnimatePresence mode="wait">
           {raiseOpen && actionRequired && (
             <RaiseSlider
-              key="raise-slider"
+              key="desktop-raise-slider"
               min={minRaise || 10}
               max={maxRaise || 1000}
               step={10}
@@ -135,6 +131,20 @@ const MobileActionBar = ({
   const [raiseOpen, setRaiseOpen] = useState(false);
   const isCheck = toCall === 0;
 
+  const buttonVariants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.2, ease: 'easeOut' as const },
+    },
+    exit: {
+      opacity: 0,
+      y: 10,
+      transition: { duration: 0.15, ease: 'easeOut' as const },
+    },
+  };
+
   return (
     <motion.div
       key="mobile-bar"
@@ -142,65 +152,49 @@ const MobileActionBar = ({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
       transition={transition}
-      className="fixed inset-0 z-[450] pointer-events-none"
+      className="fixed bottom-0 left-0 right-0 z-[450] pointer-events-auto"
     >
-      {/* Backdrop */}
-      {raiseOpen && (
-        <div
-          className="fixed inset-0 z-[449] pointer-events-auto"
-          onClick={() => setRaiseOpen(false)}
-        />
-      )}
-
-      {/* Raise panel with AnimatePresence */}
-      {raiseOpen && actionRequired && (
-        <div className="fixed left-2 right-2 z-[455] pointer-events-auto" style={{ bottom: '100px' }}>
-          <div className="rounded-xl p-3" style={{
-            background: 'rgba(8, 8, 8, 0.92)',
-            backdropFilter: 'blur(32px)',
-            WebkitBackdropFilter: 'blur(32px)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            borderTopColor: 'rgba(255,255,255,0.14)',
-            boxShadow: '0 -4px 32px rgba(0,0,0,0.9)',
-          }}>
-            <AnimatePresence mode="wait">
-              <RaiseSlider
-                key="mobile-raise-slider"
-                min={minRaise || 10}
-                max={maxRaise || 1000}
-                step={10}
-                pot={pot || 0}
-                onConfirm={(amt) => { onAction('raise', amt); setRaiseOpen(false); }}
-                onCancel={() => setRaiseOpen(false)}
-                isOpen={raiseOpen}
-              />
-            </AnimatePresence>
-          </div>
-        </div>
-      )}
-
-      {/* Action bar */}
-      <div className="fixed bottom-0 left-0 right-0 pointer-events-auto">
-        <div style={glassStyle} className="border-x-0 border-b-0 rounded-none">
-          <div className="px-2 py-2 space-y-1.5">
-            <div className="grid grid-cols-[1fr_2.5fr] gap-1.5">
-              <ActionButton isMobile variant="fold" onClick={() => { onAction('fold'); setRaiseOpen(false); }} disabled={!actionRequired}>
-                Fold
-              </ActionButton>
-              <ActionButton isMobile variant="call" onClick={() => { onAction(isCheck ? 'check' : 'call'); setRaiseOpen(false); }} disabled={!actionRequired}>
-                {isCheck ? 'Check' : `Call $${toCall}`}
-              </ActionButton>
-            </div>
-            <div className="grid grid-cols-2 gap-1.5">
-              <ActionButton isMobile variant="raise" onClick={() => setRaiseOpen(!raiseOpen)} disabled={!actionRequired}>
-                {raiseOpen ? 'Cancel' : 'Raise'}
-              </ActionButton>
-              <ActionButton isMobile variant="all-in" onClick={() => { onAction('all-in'); setRaiseOpen(false); }} disabled={!actionRequired}>
-                All-in
-              </ActionButton>
-            </div>
-          </div>
-        </div>
+      <div style={glassStyle} className="border-x-0 border-b-0 rounded-none">
+        <AnimatePresence mode="wait">
+          {raiseOpen && actionRequired ? (
+            <RaiseSlider
+              key="mobile-raise-slider"
+              min={minRaise || 10}
+              max={maxRaise || 1000}
+              step={10}
+              pot={pot || 0}
+              onConfirm={(amt) => { onAction('raise', amt); setRaiseOpen(false); }}
+              onCancel={() => setRaiseOpen(false)}
+              isOpen={raiseOpen}
+            />
+          ) : (
+            <motion.div
+              key="mobile-buttons"
+              variants={buttonVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="px-2 py-2 space-y-1.5"
+            >
+              <div className="grid grid-cols-[1fr_2.5fr] gap-1.5">
+                <ActionButton isMobile variant="fold" onClick={() => { onAction('fold'); }} disabled={!actionRequired}>
+                  Fold
+                </ActionButton>
+                <ActionButton isMobile variant="call" onClick={() => { onAction(isCheck ? 'check' : 'call'); }} disabled={!actionRequired}>
+                  {isCheck ? 'Check' : `Call $${toCall}`}
+                </ActionButton>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                <ActionButton isMobile variant="raise" onClick={() => setRaiseOpen(!raiseOpen)} disabled={!actionRequired}>
+                  Raise
+                </ActionButton>
+                <ActionButton isMobile variant="all-in" onClick={() => { onAction('all-in'); }} disabled={!actionRequired}>
+                  All-in
+                </ActionButton>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
   );
@@ -215,7 +209,6 @@ export const ActionBar = ({
   maxRaise,
   pot,
   onAction,
-  canCheck,
 }: {
   isDesktop: boolean;
   actionRequired: boolean;
@@ -224,9 +217,8 @@ export const ActionBar = ({
   maxRaise: number;
   pot: number;
   onAction: (action: string, amount?: number) => void;
-  canCheck?: boolean;
 }) => {
-  const props = { actionRequired, toCall, minRaise, maxRaise, pot, onAction, canCheck };
+  const props = { actionRequired, toCall, minRaise, maxRaise, pot, onAction };
 
   return (
     <AnimatePresence mode="wait">
