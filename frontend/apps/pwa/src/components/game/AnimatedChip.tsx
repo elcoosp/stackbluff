@@ -1,19 +1,19 @@
 import { motion } from 'framer-motion';
 
-// Force all chips to use the premium Black / Silver design
+// Keep the color scheme for compatibility, though the CSS handles the premium contrast
 export const getChipColor = (_amount?: number) => {
   return {
-    bg: '#1f1f1f',
-    border: '#46464b',
-    highlight: '#c6c6cf',
-    text: '#c6c6cf'
+    bg: '#1a1a1a',
+    edge: '#333333',
+    highlight: '#ffffff',
+    text: '#cfcfcf'
   };
 };
 
 interface AnimatedChipProps {
   from: { x: number; y: number };
   to: { x: number; y: number };
-  color: ReturnType<typeof getChipColor>;
+  color?: ReturnType<typeof getChipColor>;
   delay: number;
   duration: number;
   arcHeight: number;
@@ -27,7 +27,6 @@ interface AnimatedChipProps {
 export const AnimatedChip = ({
   from,
   to,
-  color,
   delay,
   duration,
   arcHeight,
@@ -43,70 +42,102 @@ export const AnimatedChip = ({
   return (
     <motion.div
       className="absolute top-0 left-0 pointer-events-none"
-      style={{ width: size, height: size, zIndex }}
+      style={{
+        width: size,
+        height: size,
+        zIndex,
+        willChange: 'transform, opacity'
+      }}
       initial={{
         x: from.x + xOffset - size / 2,
         y: from.y + yOffset - size / 2,
         scale: 0.8,
-        opacity: 1,
+        opacity: 0,
       }}
       animate={{
-        // 4 keyframes: Start -> Peak -> Seat -> Rest at Seat
         x: [from.x + xOffset - size / 2, midX - size / 2, to.x + xOffset - size / 2, to.x + xOffset - size / 2],
         y: [from.y + yOffset - size / 2, midY - size / 2, to.y + yOffset - size / 2, to.y + yOffset - size / 2],
-        scale: [0.8, 1.2, 0.6, 0.6],
-        opacity: [1, 1, 1, 0], // Stay fully visible until the very end
+        scale: [0.8, 1.1, 0.7, 0.7],
+        opacity: [0, 1, 1, 0],
       }}
       transition={{
         delay,
         duration,
-        ease: 'easeInOut',
-        times: [0, 0.5, 0.9, 1], // Fade out only occurs in the final 10% (on arrival)
+        ease: [0.25, 0.46, 0.45, 0.94],
+        times: [0, 0.15, 0.85, 1],
       }}
     >
-      {/* Refined Premium Chip Design */}
+      {/*
+        PREMIUM CHIP BODY LAYERS
+        Layer 1: Machined steel rim (No zebra stripes)
+        Layer 2: Recessed black center face
+        Layer 3: Subtle inner detail ring
+        Layer 4: Sharp top gloss reflection
+      */}
       <div
         style={{
-          width: size,
-          height: size,
+          width: '100%',
+          height: '100%',
           borderRadius: '50%',
-          background: `radial-gradient(circle at 35% 35%, ${color.highlight}aa, ${color.bg} 60%)`,
-          border: `2px solid ${color.border}`,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.9), inset 0 1px 3px rgba(255,255,255,0.4), inset 0 -1px 3px rgba(0,0,0,0.4)',
           position: 'relative',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          // Diagonal brushed metal gradient for a smooth, machined rim
+          background: `linear-gradient(135deg, #4a4a4a 0%, #1a1a1a 40%, #2a2a2a 60%, #0a0a0a 100%)`,
+          // Heavy drop shadow for physical weight, inset bevels for a 3D metal edge
+          boxShadow: `
+            0 15px 25px rgba(0,0,0,0.9),
+            0 5px 10px rgba(0,0,0,0.6),
+            inset 0 4px 6px rgba(255,255,255,0.25),
+            inset 0 -6px 10px rgba(0,0,0,0.9)
+          `,
         }}
       >
-        {/* Inner dashed ring for texture */}
+        {/* CENTER FACE: Recessed inlay */}
         <div
           style={{
             position: 'absolute',
-            inset: 3,
+            inset: '15%', // Defines the width of the metallic rim
             borderRadius: '50%',
-            border: `1px dashed ${color.highlight}55`,
-          }}
-        />
-        {/* Center face */}
-        <div
-          style={{
-            width: size * 0.6,
-            height: size * 0.6,
-            borderRadius: '50%',
-            background: `linear-gradient(135deg, ${color.bg}, ${color.border})`,
-            border: '1px solid rgba(0,0,0,0.3)',
-            boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.2)',
-            color: color.text,
-            fontSize: size * 0.4,
-            fontFamily: 'JetBrains Mono, monospace',
-            fontWeight: 'bold',
+            // Pitch black glossy center
+            background: `radial-gradient(circle at 35% 30%, #222222, #000000 80%)`,
+            // Stacked box shadows create a deep, multi-layered metallic decal ring
+            boxShadow: `
+              0 0 0 2px #0a0a0a,
+              0 0 0 4px #cfcfcf,
+              0 0 0 5px #333333,
+              inset 0 5px 10px rgba(0,0,0,1)
+            `,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          $         </div>
+          {/* SUBTLE INNER DETAIL RING */}
+          <div
+            style={{
+              width: '60%',
+              height: '60%',
+              borderRadius: '50%',
+              border: '1px solid rgba(255,255,255,0.1)',
+              boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.8)',
+            }}
+          />
+        </div>
+
+        {/* SHARP TOP GLOSS: Enameled reflection */}
+        <div
+          style={{
+            position: 'absolute',
+            top: '8%',
+            left: '15%',
+            width: '70%',
+            height: '35%',
+            borderRadius: '50%',
+            background: 'linear-gradient(to bottom, rgba(255,255,255,0.35), transparent 80%)',
+            filter: 'blur(2px)',
+            transform: 'rotate(-15deg)',
+            pointerEvents: 'none',
+          }}
+        />
       </div>
     </motion.div>
   );

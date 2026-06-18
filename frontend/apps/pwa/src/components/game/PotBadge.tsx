@@ -4,7 +4,6 @@ import { Coins, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useEffect, useRef } from 'react';
 
-// ── Hook to animate number increments/decrements ──
 function useAnimatedCounter(target: number, duration = 500) {
   const [value, setValue] = useState(target);
   const valueRef = useRef(target);
@@ -13,19 +12,16 @@ function useAnimatedCounter(target: number, duration = 500) {
   useEffect(() => {
     const from = valueRef.current;
     const to = target;
-
     if (from === to) return;
 
     const start = performance.now();
     const step = (now: number) => {
       const elapsed = now - start;
       const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
       const current = from + (to - from) * eased;
-
       setValue(current);
       valueRef.current = current;
-
       if (progress < 1) {
         rafRef.current = requestAnimationFrame(step);
       } else {
@@ -35,9 +31,7 @@ function useAnimatedCounter(target: number, duration = 500) {
     };
 
     rafRef.current = requestAnimationFrame(step);
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
   }, [target, duration]);
 
   return value;
@@ -55,83 +49,143 @@ export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, pot
   const winners = showdownReveal?.players.filter((p: any) => p.is_winner) ?? [];
   const isShowdown = !!showdownReveal;
 
-  // Animate the pot and toCall amounts
   const animatedAmount = useAnimatedCounter(amount);
   const animatedToCall = useAnimatedCounter(toCall || 0);
 
   const formatAmount = (n: number) =>
     n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k` : n.toString();
 
+  // ── PREMIUM timing: Slower morph (0.4s) to see the shape change,
+  // Content delayed (0.45s) to wait for resize to finish.
+  const MORPH_DURATION = 0.4;
+  const CONTENT_DELAY = 0.45;
+
   return (
     <motion.div
       ref={potRef}
       layout
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="relative z-30 font-mono flex items-center justify-center transition-all duration-500"
+      className="relative z-30 font-mono flex items-center justify-center"
     >
       <AnimatePresence mode="wait">
         {isShowdown ? (
           <motion.div
             key="showdown"
-            initial={{ opacity: 0, scale: 0.8, y: -20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: -20 }}
-            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="flex flex-col items-center justify-center text-center px-8 py-5 rounded-xl border border-tertiary/30 bg-[rgba(8,8,8,0.92)] backdrop-blur-xl shadow-[0_0_40px_rgba(0,0,0,0.8),0_0_20px_rgba(78,222,163,0.1)] min-w-[260px]"
+            layout
+            initial={{ opacity: 0, scale: 0.95, filter: "blur(4px)" }}
+            animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+            exit={{ opacity: 0, scale: 0.95, filter: "blur(4px)" }}
+            transition={{ duration: MORPH_DURATION, ease: [0.22, 1, 0.36, 1] }}
+            className={cn(
+              "flex flex-col items-center justify-center text-center rounded-xl",
+              "border border-tertiary/30 bg-[rgba(8,8,8,0.92)] backdrop-blur-xl",
+              "shadow-[0_0_40px_rgba(0,0,0,0.8),0_0_20px_rgba(78,222,163,0.1)]",
+              // ---- Mobile sizing: bigger padding & min-width ----
+              isMobile ? "px-5 py-3 min-w-[240px]" : "px-6 py-3 min-w-[260px]",
+            )}
           >
-            <span className="text-[9px] font-label-caps tracking-[0.3em] text-tertiary uppercase mb-4">
+            <motion.span
+              className={cn(
+                "font-label-caps tracking-[0.3em] text-tertiary uppercase",
+                // ---- Mobile: slightly bigger label ----
+                isMobile ? "text-[8px] mb-1" : "text-[9px] mb-1.5",
+              )}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: CONTENT_DELAY, duration: 0.2 }}
+            >
               Winner
-            </span>
+            </motion.span>
 
             {winners.map((w: any) => (
-              <div key={w.user_id} className="flex flex-col items-center justify-center gap-3 w-full">
-                <div className="flex gap-3 mb-2 perspective-1000 justify-center">
-                  {w.hole_cards.map((c: any, i: number) => (
-                    <motion.div
-                      key={i}
-                      initial={{ rotateY: 90, opacity: 0, y: -10 }}
-                      animate={{ rotateY: 0, opacity: 1, y: 0 }}
-                      transition={{ delay: 0.3 + i * 0.15, duration: 0.4 }}
-                      style={{ transformStyle: 'preserve-3d' }}
-                    >
-                      <Card rank={c.rank} suit={c.suit} size="sm" hoverable={false} />
-                    </motion.div>
-                  ))}
-                </div>
+              <div key={w.user_id} className="flex flex-col items-center gap-1 w-full">
+                <div className={cn("flex items-center gap-3 w-full justify-center", isMobile && "gap-3")}>
+                  <div className="flex gap-1.5 perspective-1000">
+                    {w.hole_cards.map((c: any, i: number) => (
+                      <motion.div
+                        key={i}
+                        initial={{ rotateY: 90, opacity: 0 }}
+                        animate={{ rotateY: 0, opacity: 1 }}
+                        transition={{ delay: CONTENT_DELAY + 0.1 + i * 0.06, duration: 0.25 }}
+                        style={{ transformStyle: 'preserve-3d' }}
+                      >
+                        {/* ---- Mobile: use 'sm' for bigger cards in showdown ---- */}
+                        <Card rank={c.rank} suit={c.suit} size={isMobile ? 'sm' : 'sm'} hoverable={false} />
+                      </motion.div>
+                    ))}
+                  </div>
 
-                <div className="flex flex-col items-center justify-center gap-1 w-full">
-                  <span className="text-[12px] font-bold text-on-surface tracking-wider uppercase text-center">
-                    {w.display_name}
-                  </span>
-                  <span className="text-[10px] font-label-caps tracking-widest text-on-surface-variant uppercase text-center max-w-[180px] whitespace-normal">
-                    {w.hand_description}
-                  </span>
+                  <motion.div
+                    className="flex flex-col items-start gap-0.5"
+                    initial={{ opacity: 0, x: 4 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: CONTENT_DELAY + 0.2, duration: 0.15 }}
+                  >
+                    <span className={cn(
+                      "font-bold text-on-surface tracking-wider uppercase text-left",
+                      // ---- Mobile: bigger name ----
+                      isMobile ? "text-[11px]" : "text-[11px]",
+                    )}>
+                      {w.display_name}
+                    </span>
+                    <span className={cn(
+                      "font-label-caps tracking-widest text-on-surface-variant uppercase text-left max-w-[140px] whitespace-normal leading-tight",
+                      // ---- Mobile: bigger hand description ----
+                      isMobile ? "text-[8px]" : "text-[8px]",
+                    )}>
+                      {w.hand_description}
+                    </span>
+                  </motion.div>
                 </div>
               </div>
             ))}
 
-            <div className="h-px w-24 bg-gradient-to-r from-transparent via-tertiary/40 to-transparent my-4" />
+            <motion.div
+              className={cn(
+                "w-full bg-gradient-to-r from-transparent via-tertiary/30 to-transparent",
+                isMobile ? "h-px my-1" : "h-px my-1.5",
+              )}
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              transition={{ delay: CONTENT_DELAY + 0.3, duration: 0.15 }}
+            />
 
-            <span className="text-2xl text-tertiary font-bold tabular-nums tracking-wider drop-shadow-[0_0_15px_rgba(78,222,163,0.4)] text-center">
-              ${formatAmount(Math.round(animatedAmount))}
-            </span>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: CONTENT_DELAY + 0.35, duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <span className={cn(
+                "text-tertiary font-bold tabular-nums tracking-wider drop-shadow-[0_0_12px_rgba(78,222,163,0.35)]",
+                // ---- Mobile: bigger pot amount ----
+                isMobile ? "text-xl" : "text-xl",
+              )}>
+                ${formatAmount(Math.round(animatedAmount))}
+              </span>
+            </motion.div>
           </motion.div>
         ) : (
           <motion.div
             key="pot"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            transition={{ duration: 0.3 }}
+            layout
+            initial={{ opacity: 0, scale: 0.95, filter: "blur(4px)" }}
+            animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+            exit={{ opacity: 0, scale: 0.95, filter: "blur(4px)" }}
+            transition={{ duration: MORPH_DURATION, ease: [0.22, 1, 0.36, 1] }}
             className={cn(
-              'flex items-center justify-center gap-2 rounded-full bg-black/60 backdrop-blur-md border border-white/10 font-data-mono px-3 py-1.5 text-center',
-              isMobile ? 'text-[8px]' : 'text-[10px]',
+              'flex items-center justify-center gap-2 rounded-full bg-black/60 backdrop-blur-md border border-white/10 font-data-mono text-center',
+              // ---- Mobile: bigger padding and font ----
+              isMobile ? 'px-4 py-2 text-[10px]' : 'px-3 py-1.5 text-[10px]',
               toCall && toCall > 0 && 'border-tertiary/20'
             )}
           >
-            <motion.div className="flex items-center justify-center gap-1 text-center" layout>
-              <Coins className={cn('text-tertiary/70', isMobile ? 'w-2.5 h-2.5' : 'w-3 h-3')} />
+            <motion.div
+              className="flex items-center justify-center gap-1 text-center"
+              initial={{ opacity: 0, scale: 0.9, y: 4 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ delay: CONTENT_DELAY, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            >
+              {/* ---- Mobile: bigger coins icon ---- */}
+              <Coins className={cn('text-tertiary/70', isMobile ? 'w-3.5 h-3.5' : 'w-3 h-3')} />
               <span
                 className="bg-clip-text text-transparent text-center tabular-nums"
                 style={{
@@ -148,14 +202,15 @@ export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, pot
             {toCall !== undefined && toCall > 0 && (
               <motion.div
                 className="flex items-center justify-center gap-1 text-center"
-                initial={{ width: 0, opacity: 0 }}
-                animate={{ width: 'auto', opacity: 1 }}
-                exit={{ width: 0, opacity: 0 }}
-                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                initial={{ width: 0, opacity: 0, x: -5 }}
+                animate={{ width: 'auto', opacity: 1, x: 0 }}
+                exit={{ width: 0, opacity: 0, x: -5 }}
+                transition={{ delay: CONTENT_DELAY + 0.05, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                 style={{ overflow: 'hidden', whiteSpace: 'nowrap' }}
               >
                 <span className="text-white/15">|</span>
-                <Target className={cn('text-tertiary/50', isMobile ? 'w-2 h-2' : 'w-2.5 h-2.5')} />
+                {/* ---- Mobile: bigger target icon ---- */}
+                <Target className={cn('text-tertiary/50', isMobile ? 'w-3 h-3' : 'w-2.5 h-2.5')} />
                 <span className="text-white/50 text-center tabular-nums">
                   {isMobile ? '' : 'CALL '}
                   <span className="text-tertiary">${formatAmount(Math.round(animatedToCall))}</span>

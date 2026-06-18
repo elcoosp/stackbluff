@@ -1,9 +1,10 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Minus, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TimerBar } from './TimerBar';
 import { cn } from '@/lib/utils';
+import { useFeedback } from '@stackbluff/shared/hooks/useFeedback';
 
 interface RaiseSliderProps {
   min: number;
@@ -29,6 +30,8 @@ export const RaiseSlider = ({
   timerTotalMs,
 }: RaiseSliderProps) => {
   const [amount, setAmount] = useState(min);
+  const { trigger } = useFeedback();
+  const lastSliderTickRef = useRef(0);
 
   useEffect(() => {
     if (isOpen) setAmount(min);
@@ -39,8 +42,15 @@ export const RaiseSlider = ({
     setAmount(clamped);
   }, [min, max]);
 
-  const increment = () => handleAmountChange(amount + step);
-  const decrement = () => handleAmountChange(amount - step);
+  const increment = () => {
+    handleAmountChange(amount + step);
+    trigger('sliderTick');
+  };
+
+  const decrement = () => {
+    handleAmountChange(amount - step);
+    trigger('sliderTick');
+  };
 
   // Clamp presets so they never fall below the min raise amount
   const presets = [
@@ -129,7 +139,10 @@ export const RaiseSlider = ({
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 type="button"
-                onClick={onCancel}
+                onClick={() => {
+                  onCancel();
+                  trigger('buttonClick');
+                }}
                 className="text-on-surface-variant hover:text-on-surface transition-colors"
               >
                 <X className="w-4 h-4" />
@@ -181,7 +194,11 @@ export const RaiseSlider = ({
                 max={max}
                 step={step}
                 value={amount}
-                onChange={(e) => handleAmountChange(Number(e.target.value))}
+                onChange={(e) => {
+                  handleAmountChange(Number(e.target.value));
+                  // Throttled tick via useFeedback's built-in throttle
+                  trigger('sliderTick');
+                }}
                 className="relative w-full h-6 cursor-pointer appearance-none bg-transparent z-10 raise-slider-input"
                 style={
                   {
@@ -249,7 +266,10 @@ export const RaiseSlider = ({
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.95 }}
                   type="button"
-                  onClick={() => handleAmountChange(preset.value)}
+                  onClick={() => {
+                    handleAmountChange(preset.value);
+                    trigger('sliderConfirm');
+                  }}
                   className={cn(
                     'flex-1 py-1.5 rounded-md text-[9px] font-label-caps uppercase tracking-wider transition-all',
                     amount === preset.value
@@ -270,7 +290,12 @@ export const RaiseSlider = ({
             >
               <Button
                 type="button"
-                onClick={() => onConfirm(amount)}
+                onClick={() => {
+                  onConfirm(amount);
+                  // Intensity scales with raise size — bigger raise = louder haptic
+                  const intensityScale = max > min ? amount / max : 0.5;
+                  trigger('raise', { volume: 0.5 + intensityScale * 0.5 });
+                }}
                 className="w-full py-2 rounded-md bg-tertiary text-on-tertiary font-label-caps text-[10px] uppercase tracking-wider hover:bg-tertiary/80 transition-all shadow-[0_0_20px_rgba(78,222,163,0.15)]"
               >
                 Confirm Raise

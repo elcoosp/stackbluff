@@ -224,7 +224,7 @@ export const MobileAnalyticsStrip = ({
       className="absolute top-0 left-0 right-0 z-30 pointer-events-none"
     >
       <div
-        className="flex items-center justify-between px-3 py-1.5 mx-2 mt-1 rounded-b-xl"
+        className="flex items-center justify-between px-3 py-2 mx-2 mt-1 rounded-b-xl"
         style={{
           background: 'rgba(8, 8, 8, 0.65)',
           backdropFilter: 'blur(20px)',
@@ -240,38 +240,38 @@ export const MobileAnalyticsStrip = ({
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.25, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
         >
-          <div className="text-[7px] font-mono tracking-[0.15em] text-on-surface-variant uppercase">Win%</div>
-          <div className="text-xs font-mono font-bold text-tertiary tabular-nums">{displayWinProb}%</div>
+          <div className="text-[9px] font-mono tracking-[0.15em] text-on-surface-variant uppercase">Win%</div>
+          <div className="text-sm font-mono font-bold text-tertiary tabular-nums">{displayWinProb}%</div>
         </motion.div>
-        <div className="h-4 w-px bg-white/10" />
+        <div className="h-5 w-px bg-white/10" />
         <motion.div
           className="text-center"
           initial={{ y: -8, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.3, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
         >
-          <div className="text-[7px] font-mono tracking-[0.15em] text-on-surface-variant uppercase">Odds</div>
-          <div className="text-xs font-mono font-bold text-on-surface tabular-nums">{displayPotOdds}:1</div>
+          <div className="text-[9px] font-mono tracking-[0.15em] text-on-surface-variant uppercase">Odds</div>
+          <div className="text-sm font-mono font-bold text-on-surface tabular-nums">{displayPotOdds}:1</div>
         </motion.div>
-        <div className="h-4 w-px bg-white/10" />
+        <div className="h-5 w-px bg-white/10" />
         <motion.div
           className="text-center"
           initial={{ y: -8, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.35, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
         >
-          <div className="text-[7px] font-mono tracking-[0.15em] text-on-surface-variant uppercase">Hand</div>
-          <div className="text-[9px] font-mono font-bold text-on-surface uppercase">{bestHand}</div>
+          <div className="text-[9px] font-mono tracking-[0.15em] text-on-surface-variant uppercase">Hand</div>
+          <div className="text-[11px] font-mono font-bold text-on-surface uppercase">{bestHand}</div>
         </motion.div>
-        <div className="h-4 w-px bg-white/10" />
+        <div className="h-5 w-px bg-white/10" />
         <motion.div
           className="text-center"
           initial={{ y: -8, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.4, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
         >
-          <div className="text-[7px] font-mono tracking-[0.15em] text-on-surface-variant uppercase">Str</div>
-          <div className={`text-xs font-mono font-bold tabular-nums ${strengthColor}`}>{displayStrength}</div>
+          <div className="text-[9px] font-mono tracking-[0.15em] text-on-surface-variant uppercase">Str</div>
+          <div className={`text-sm font-mono font-bold tabular-nums ${strengthColor}`}>{displayStrength}</div>
         </motion.div>
       </div>
     </motion.div>

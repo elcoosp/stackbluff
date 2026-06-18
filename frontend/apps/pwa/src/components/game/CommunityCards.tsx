@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardBack } from './Card';
 import { cn } from '@/lib/utils';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface CommunityCardsProps {
   cards: any[];
@@ -9,7 +9,6 @@ interface CommunityCardsProps {
   revealedCount?: number;
 }
 
-// ── Hook to get window width ──
 function useWindowWidth() {
   const [width, setWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 0);
   useEffect(() => {
@@ -20,6 +19,38 @@ function useWindowWidth() {
   return width;
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   EmptySlot — dashed placeholder with optional "next street" pulse
+   ═══════════════════════════════════════════════════════════════════ */
+function EmptySlot({
+  isNextStreet,
+}: {
+  isNextStreet: boolean;
+}) {
+  return (
+    <motion.div
+      className={cn(
+        'w-full h-full rounded-sm relative overflow-hidden',
+        isNextStreet
+          ? 'border border-dashed border-tertiary/25 bg-tertiary/[0.02]'
+          : 'border border-dashed border-white/[0.05] bg-white/[0.008]',
+      )}
+      exit={{ scale: 0.85, opacity: 0, transition: { duration: 0.15, ease: 'easeIn' } }}
+    >
+      {isNextStreet && (
+        <motion.div
+          className="absolute inset-0 rounded-sm bg-tertiary/[0.04]"
+          animate={{ opacity: [0.15, 0.45, 0.15] }}
+          transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+        />
+      )}
+    </motion.div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   CommunityCards
+   ═══════════════════════════════════════════════════════════════════ */
 export const CommunityCards = ({
   cards,
   isMobile = false,
@@ -27,10 +58,8 @@ export const CommunityCards = ({
 }: CommunityCardsProps) => {
   const totalSlots = 5;
   const slots = Array.from({ length: totalSlots }, (_, i) => i);
-
   const windowWidth = useWindowWidth();
 
-  // Determine card size based on window width
   let cardWidth = 'w-28';
   let cardHeight = 'h-40';
   let gap = 'gap-5';
@@ -65,66 +94,106 @@ export const CommunityCards = ({
 
   const sizeProp = windowWidth < 768 ? 'lg' : 'xl';
   const roundedClass = 'rounded-sm';
+  const realCardClass = `${cardWidth} ${cardHeight} ${roundedClass} border-b-4 border-gray-200 shadow-[0_4px_12px_rgba(0,0,0,0.3)]`;
 
-  const realCardClass = `${cardWidth} ${cardHeight} ${roundedClass} border-b-4 border-gray-200 shadow-[0_4px_12px_rgba(0,0,0,0.3)] transition-all duration-300`;
+  const prevRevealedCount = useRef(revealedCount);
+  useEffect(() => {
+    prevRevealedCount.current = revealedCount;
+  }, [revealedCount]);
 
-  const getBackCardClass = (index: number) => {
-    // Highlight all 3 flop cards if pre-flop
-    const isFlopPhase = revealedCount === 0;
-    const isTurnPhase = revealedCount === 3;
-    const isRiverPhase = revealedCount === 4;
-
-    const isNextStreet = (isFlopPhase && index < 3) ||
-      (isTurnPhase && index === 3) ||
-      (isRiverPhase && index === 4);
-
-    const opacity = isNextStreet ? 'opacity-100' : 'opacity-50';
-    const border = isNextStreet ? 'border-2 border-tertiary/40' : 'border-0';
-    const shadow = isNextStreet ? 'shadow-[0_0_20px_rgba(78,222,163,0.15)]' : 'shadow-none';
-    return `${cardWidth} ${cardHeight} ${roundedClass} ${opacity} ${border} ${shadow} transition-all duration-300`;
+  // ── Which placeholders are "next street" ──
+  // Pre-flop: all 3 flop slots glow
+  // Post-flop: turn slot glows
+  // Post-turn: river slot glows
+  const isNextStreet = (idx: number): boolean => {
+    if (revealedCount === 0 && idx < 3) return true;
+    if (revealedCount === 3 && idx === 3) return true;
+    if (revealedCount === 4 && idx === 4) return true;
+    return false;
   };
 
   const flopSlots = slots.slice(0, 3);
   const turnRiverSlots = slots.slice(3, 5);
 
-  const cardVariants = {
-    hidden: { rotateY: 90, opacity: 0 },
-    visible: {
-      rotateY: 0,
-      opacity: 1,
-      transition: {
-        type: 'spring',
-        stiffness: 300,
-        damping: 25,
-        delay: 0.05,
-      },
-    },
-  };
+  const SLIDE_DURATION = 0.28;
+  const PAUSE = 0.12;
+  const FLIP_DURATION = 0.32;
+  const FLOP_STAGGER = 0.1;
 
   const renderSlot = (slotIndex: number) => {
-    const isFaceUp = slotIndex < revealedCount && slotIndex < cards.length;
-    const card = isFaceUp ? cards[slotIndex] : null;
+    const isDealt = slotIndex < revealedCount && slotIndex < cards.length;
+    const card = isDealt ? cards[slotIndex] : null;
+
+    const prevCount = prevRevealedCount.current;
+    const numNewCards = Math.max(0, revealedCount - prevCount);
+    const batchStart = Math.min(prevCount, revealedCount);
+    const isInCurrentBatch = slotIndex >= batchStart && slotIndex < revealedCount;
+    const dealDelay = isInCurrentBatch && numNewCards > 1
+      ? (slotIndex - batchStart) * FLOP_STAGGER
+      : 0;
+
+    const flipDelay = dealDelay + SLIDE_DURATION + PAUSE;
 
     return (
-      <motion.div
+      // ── Wrapper: explicit dimensions so children can use absolute ──
+      <div
         key={slotIndex}
-        className="flex justify-center perspective-500"
-        style={{ perspective: '500px' }}
+        className={cn('relative', cardWidth, cardHeight)}
+        style={{ perspective: '700px' }}
       >
-        <motion.div
-          className="relative w-full h-full"
-          style={{ transformStyle: 'preserve-3d' }}
-        >
-          <AnimatePresence mode="wait">
-            {isFaceUp ? (
-              <motion.div
-                key="front"
-                variants={cardVariants}
-                initial="hidden"
-                animate="visible"
-                exit={{ rotateY: -90, opacity: 0, transition: { duration: 0.15 } }}
-                className="relative"
-                style={{ backfaceVisibility: 'hidden' }}
+        {/* ── Placeholder (exits when card arrives) ── */}
+        <AnimatePresence>
+          {!isDealt && (
+            <EmptySlot isNextStreet={isNextStreet(slotIndex)} />
+          )}
+        </AnimatePresence>
+
+        {/* ── Dealt card (slides in + flips) ── */}
+        {isDealt && (
+          <motion.div
+            className="absolute inset-0"
+            style={{ transformStyle: 'preserve-3d' }}
+            initial={{
+              y: windowWidth < 768 ? -80 : -120,
+              scale: 0.92,
+              opacity: 0,
+            }}
+            animate={{
+              y: 0,
+              scale: 1,
+              opacity: 1,
+            }}
+            transition={{
+              delay: dealDelay,
+              duration: SLIDE_DURATION,
+              ease: [0.25, 0.1, 0.25, 1],
+            }}
+          >
+            <motion.div
+              style={{ transformStyle: 'preserve-3d' }}
+              animate={{ rotateY: -180 }}
+              transition={{
+                rotateY: {
+                  delay: flipDelay,
+                  duration: FLIP_DURATION,
+                  ease: [0.4, 0, 0.2, 1],
+                },
+              }}
+            >
+              {/* Front: Card Back */}
+              <div style={{ backfaceVisibility: 'hidden' }}>
+                <CardBack
+                  className={`${cardWidth} ${cardHeight} ${roundedClass}`}
+                  size={sizeProp}
+                  rounded={roundedClass}
+                  hoverable={false}
+                />
+              </div>
+
+              {/* Back: Card Front */}
+              <div
+                className="absolute inset-0"
+                style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
               >
                 <Card
                   rank={card.rank}
@@ -133,32 +202,14 @@ export const CommunityCards = ({
                   size={sizeProp}
                   hoverable={false}
                 />
-              </motion.div>
-            ) : (
-              <motion.div
-                key="back"
-                variants={cardVariants}
-                initial="hidden"
-                animate="visible"
-                exit={{ rotateY: -90, opacity: 0, transition: { duration: 0.15 } }}
-                className="relative"
-                style={{ backfaceVisibility: 'hidden' }}
-              >
-                <CardBack
-                  className={getBackCardClass(slotIndex)}
-                  size={sizeProp}
-                  rounded={roundedClass}
-                  hoverable={false}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-      </motion.div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </div>
     );
   };
 
-  // ── Layout ──
   const containerClasses = `flex flex-col items-center ${gap} w-full ${containerMaxWidth} mx-auto transition-all duration-300`;
 
   if (windowWidth < 768) {

@@ -836,8 +836,6 @@ impl TableActor {
         }
 
         // ── Hand is complete ──
-
-        // Count active (non-folded) players to determine showdown vs walkover
         let active_count = hand
             .player_by_user_id
             .keys()
@@ -846,13 +844,9 @@ impl TableActor {
 
         let is_showdown = active_count > 1;
 
-        // Build the showdown reveal data
-        let reveal = self.build_showdown_reveal(&hand);
-
-        // Send ShowdownReveal message to all clients
+        let reveal = self.build_showdown_reveal(&hand, is_showdown);
         let _ = self.broadcast_tx.send(RoomMessage::ShowdownReveal(reveal));
 
-        // Keep the hand alive during the reveal animation
         self.current_hand = Some(hand);
 
         let cmd_tx = self.cmd_tx.clone();
@@ -860,8 +854,8 @@ impl TableActor {
             info!("Showdown reached — revealing cards with 3s delay");
             Duration::from_secs(3)
         } else {
-            info!("Walkover — single player wins with 1.5s delay");
-            Duration::from_millis(1_500)
+            info!("Walkover — single player wins with 2.5s delay");
+            Duration::from_millis(2_500)
         };
 
         // Schedule finalization after the animation delay
@@ -885,9 +879,14 @@ impl TableActor {
 
     /// Process winners, send HandResult, and auto-start next hand.
     async fn finalize_hand(&mut self, hand: ActiveHand) {
+        self.process_winners(&hand).await;
+        self.clear_board_and_start_next(hand).await;
+    }
+
+    // Extracted winner processing logic
+    async fn process_winners(&mut self, hand: &ActiveHand) {
         let winners = hand.state.calculate_pot_winners();
 
-        // Award chips to winners
         for winner in &winners {
             if let Some(user) = hand.user_by_player_id.get(&winner.player_id)
                 && let Some(player) = self.players.get_mut(user)
@@ -899,7 +898,6 @@ impl TableActor {
             }
         }
 
-        // Build rich HandResult with winner details
         let winner_results: Vec<WinnerResult> = winners
             .iter()
             .filter_map(|w| {
@@ -924,7 +922,10 @@ impl TableActor {
             winners: winner_results,
             pot: total_pot,
         }));
+    }
 
+    // Extracted board cleanup logic
+    async fn clear_board_and_start_next(&mut self, hand: ActiveHand) {
         self.last_dealer_index = Some(hand.dealer_index);
         self.current_hand = None;
         self.broadcast_table_state().await;
@@ -936,7 +937,7 @@ impl TableActor {
     }
 
     /// Build the ShowdownReveal payload from the current hand state.
-    fn build_showdown_reveal(&self, hand: &ActiveHand) -> ShowdownReveal {
+    fn build_showdown_reveal(&self, hand: &ActiveHand, is_showdown: bool) -> ShowdownReveal {
         let community: Vec<WsCard> = hand
             .state
             .community_cards()
@@ -957,7 +958,25 @@ impl TableActor {
                 let user_id = *user_id;
                 let pid = hand.player_by_user_id.get(&user_id)?;
 
-                let hole_cards = hand.state.player_hole_cards(*pid)?;
+                // CRITICAL FIX: On a walkover (is_showdown = false), do NOT fetch hole cards.
+                // This prevents any chance of revealing cards on a fold-out.
+                let hole_cards_opt = if is_showdown {
+                    hand.state.player_hole_cards(*pid)
+                } else {
+                    None
+                };
+
+                let hole_cards: Vec<WsCard> = match hole_cards_opt {
+                    Some(cards) => cards
+                        .iter()
+                        .map(|c| WsCard {
+                            suit: format!("{:?}", c.suit).to_lowercase(),
+                            rank: format!("{:?}", c.rank),
+                        })
+                        .collect(),
+                    None => vec![], // Empty array sent to frontend on walkover
+                };
+
                 let is_winner = winners.iter().any(|w| w.player_id == *pid);
                 let win_amount = winners
                     .iter()
@@ -967,12 +986,20 @@ impl TableActor {
 
                 let seat = self.players.get(&user_id).map(|p| p.seat).unwrap_or(0);
 
-                // Evaluate hand description using the new helper
-                let hand_description = if community.len() >= 5 {
-                    let comm: [sb_shared_types::Card; 5] = community_cards_to_array(hand)?;
-                    let strength =
-                        sb_game_engine::evaluate::evaluate_hand_strength(&hole_cards, &comm);
-                    Some(get_hand_description(&strength))
+                // Evaluate hand description ONLY if it's a showdown with 5 community cards
+                let hand_description = if is_showdown && community.len() >= 5 {
+                    if let Some(cards) = hole_cards_opt {
+                        if cards.len() == 2 {
+                            let comm: [sb_shared_types::Card; 5] = community_cards_to_array(hand)?;
+                            let strength =
+                                sb_game_engine::evaluate::evaluate_hand_strength(&cards, &comm);
+                            Some(get_hand_description(&strength))
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
                 } else {
                     None
                 }
@@ -981,13 +1008,7 @@ impl TableActor {
                 Some(ShowdownPlayer {
                     user_id,
                     seat,
-                    hole_cards: hole_cards
-                        .iter()
-                        .map(|c| WsCard {
-                            suit: format!("{:?}", c.suit).to_lowercase(),
-                            rank: format!("{:?}", c.rank),
-                        })
-                        .collect(),
+                    hole_cards,
                     hand_description,
                     is_winner,
                     win_amount,
@@ -1092,7 +1113,7 @@ impl TableActor {
                         current_bet: bet,
                         is_all_in: all_in,
                         is_folded: folded,
-                        position_badge: positions_map.get(&player.seat).cloned(), // <-- ASSIGN BADGE
+                        position_badge: positions_map.get(&player.seat).cloned(),
                     }
                 })
                 .collect()
@@ -1106,7 +1127,7 @@ impl TableActor {
                     current_bet: zero(),
                     is_all_in: false,
                     is_folded: false,
-                    position_badge: None, // <-- NO BADGE IF NO HAND
+                    position_badge: None,
                 })
                 .collect()
         };
