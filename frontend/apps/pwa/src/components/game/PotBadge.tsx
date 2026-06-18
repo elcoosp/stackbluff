@@ -3,6 +3,7 @@ import { Card } from './Card';
 import { Coins, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useEffect, useRef } from 'react';
+import { useGameStore } from '@stackbluff/shared/stores/gameStore';
 
 function useAnimatedCounter(target: number, duration = 500) {
   const [value, setValue] = useState(target);
@@ -55,10 +56,20 @@ export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, pot
   const formatAmount = (n: number) =>
     n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k` : n.toString();
 
-  // ── PREMIUM timing: Slower morph (0.4s) to see the shape change,
-  // Content delayed (0.45s) to wait for resize to finish.
   const MORPH_DURATION = 0.4;
   const CONTENT_DELAY = 0.45;
+
+  // ── Glow pulse on bet reception ──
+  const lastAction = useGameStore((s) => s.lastAction);
+  const [glow, setGlow] = useState(false);
+
+  useEffect(() => {
+    if (lastAction && ['bet', 'raise', 'call', 'all-in'].includes(lastAction.action)) {
+      setGlow(true);
+      const timer = setTimeout(() => setGlow(false), 600);
+      return () => clearTimeout(timer);
+    }
+  }, [lastAction]);
 
   return (
     <motion.div
@@ -79,14 +90,12 @@ export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, pot
               "flex flex-col items-center justify-center text-center rounded-xl",
               "border border-tertiary/30 bg-[rgba(8,8,8,0.92)] backdrop-blur-xl",
               "shadow-[0_0_40px_rgba(0,0,0,0.8),0_0_20px_rgba(78,222,163,0.1)]",
-              // ---- Mobile sizing: bigger padding & min-width ----
               isMobile ? "px-5 py-3 min-w-[240px]" : "px-6 py-3 min-w-[260px]",
             )}
           >
             <motion.span
               className={cn(
                 "font-label-caps tracking-[0.3em] text-tertiary uppercase",
-                // ---- Mobile: slightly bigger label ----
                 isMobile ? "text-[8px] mb-1" : "text-[9px] mb-1.5",
               )}
               initial={{ opacity: 0 }}
@@ -108,7 +117,6 @@ export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, pot
                         transition={{ delay: CONTENT_DELAY + 0.1 + i * 0.06, duration: 0.25 }}
                         style={{ transformStyle: 'preserve-3d' }}
                       >
-                        {/* ---- Mobile: use 'sm' for bigger cards in showdown ---- */}
                         <Card rank={c.rank} suit={c.suit} size={isMobile ? 'sm' : 'sm'} hoverable={false} />
                       </motion.div>
                     ))}
@@ -122,14 +130,12 @@ export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, pot
                   >
                     <span className={cn(
                       "font-bold text-on-surface tracking-wider uppercase text-left",
-                      // ---- Mobile: bigger name ----
                       isMobile ? "text-[11px]" : "text-[11px]",
                     )}>
                       {w.display_name}
                     </span>
                     <span className={cn(
                       "font-label-caps tracking-widest text-on-surface-variant uppercase text-left max-w-[140px] whitespace-normal leading-tight",
-                      // ---- Mobile: bigger hand description ----
                       isMobile ? "text-[8px]" : "text-[8px]",
                     )}>
                       {w.hand_description}
@@ -156,7 +162,6 @@ export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, pot
             >
               <span className={cn(
                 "text-tertiary font-bold tabular-nums tracking-wider drop-shadow-[0_0_12px_rgba(78,222,163,0.35)]",
-                // ---- Mobile: bigger pot amount ----
                 isMobile ? "text-xl" : "text-xl",
               )}>
                 ${formatAmount(Math.round(animatedAmount))}
@@ -168,12 +173,22 @@ export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, pot
             key="pot"
             layout
             initial={{ opacity: 0, scale: 0.95, filter: "blur(4px)" }}
-            animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+            animate={{
+              opacity: 1,
+              scale: 1,
+              filter: "blur(0px)",
+              boxShadow: glow
+                ? '0 0 30px rgba(78,222,163,0.5), 0 0 60px rgba(78,222,163,0.2)'
+                : 'none',
+            }}
             exit={{ opacity: 0, scale: 0.95, filter: "blur(4px)" }}
-            transition={{ duration: MORPH_DURATION, ease: [0.22, 1, 0.36, 1] }}
+            transition={{
+              duration: MORPH_DURATION,
+              ease: [0.22, 1, 0.36, 1],
+              boxShadow: { duration: 0.3, ease: 'easeOut' },
+            }}
             className={cn(
               'flex items-center justify-center gap-2 rounded-full bg-black/60 backdrop-blur-md border border-white/10 font-data-mono text-center',
-              // ---- Mobile: bigger padding and font ----
               isMobile ? 'px-4 py-2 text-[10px]' : 'px-3 py-1.5 text-[10px]',
               toCall && toCall > 0 && 'border-tertiary/20'
             )}
@@ -184,7 +199,6 @@ export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, pot
               animate={{ opacity: 1, scale: 1, y: 0 }}
               transition={{ delay: CONTENT_DELAY, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
             >
-              {/* ---- Mobile: bigger coins icon ---- */}
               <Coins className={cn('text-tertiary/70', isMobile ? 'w-3.5 h-3.5' : 'w-3 h-3')} />
               <span
                 className="bg-clip-text text-transparent text-center tabular-nums"
@@ -209,7 +223,6 @@ export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, pot
                 style={{ overflow: 'hidden', whiteSpace: 'nowrap' }}
               >
                 <span className="text-white/15">|</span>
-                {/* ---- Mobile: bigger target icon ---- */}
                 <Target className={cn('text-tertiary/50', isMobile ? 'w-3 h-3' : 'w-2.5 h-2.5')} />
                 <span className="text-white/50 text-center tabular-nums">
                   {isMobile ? '' : 'CALL '}

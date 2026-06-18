@@ -19,14 +19,8 @@ function useWindowWidth() {
   return width;
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   EmptySlot — dashed placeholder with optional "next street" pulse
-   ═══════════════════════════════════════════════════════════════════ */
-function EmptySlot({
-  isNextStreet,
-}: {
-  isNextStreet: boolean;
-}) {
+/* ── EmptySlot ── */
+function EmptySlot({ isNextStreet }: { isNextStreet: boolean }) {
   return (
     <motion.div
       className={cn(
@@ -48,9 +42,7 @@ function EmptySlot({
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   CommunityCards
-   ═══════════════════════════════════════════════════════════════════ */
+/* ── CommunityCards ── */
 export const CommunityCards = ({
   cards,
   isMobile = false,
@@ -101,10 +93,6 @@ export const CommunityCards = ({
     prevRevealedCount.current = revealedCount;
   }, [revealedCount]);
 
-  // ── Which placeholders are "next street" ──
-  // Pre-flop: all 3 flop slots glow
-  // Post-flop: turn slot glows
-  // Post-turn: river slot glows
   const isNextStreet = (idx: number): boolean => {
     if (revealedCount === 0 && idx < 3) return true;
     if (revealedCount === 3 && idx === 3) return true;
@@ -135,38 +123,37 @@ export const CommunityCards = ({
     const flipDelay = dealDelay + SLIDE_DURATION + PAUSE;
 
     return (
-      // ── Wrapper: explicit dimensions so children can use absolute ──
       <div
         key={slotIndex}
         className={cn('relative', cardWidth, cardHeight)}
         style={{ perspective: '700px' }}
       >
-        {/* ── Placeholder (exits when card arrives) ── */}
         <AnimatePresence>
-          {!isDealt && (
-            <EmptySlot isNextStreet={isNextStreet(slotIndex)} />
-          )}
+          {!isDealt && <EmptySlot isNextStreet={isNextStreet(slotIndex)} />}
         </AnimatePresence>
 
-        {/* ── Dealt card (slides in + flips) ── */}
         {isDealt && (
           <motion.div
             className="absolute inset-0"
             style={{ transformStyle: 'preserve-3d' }}
             initial={{
               y: windowWidth < 768 ? -80 : -120,
-              scale: 0.92,
+              scale: 0.88,
               opacity: 0,
+              boxShadow: '0 30px 60px rgba(0,0,0,0.9)',
             }}
             animate={{
               y: 0,
               scale: 1,
               opacity: 1,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
             }}
             transition={{
               delay: dealDelay,
-              duration: SLIDE_DURATION,
-              ease: [0.25, 0.1, 0.25, 1],
+              type: 'spring',
+              damping: 18,
+              stiffness: 380,
+              mass: 0.8,
             }}
           >
             <motion.div
