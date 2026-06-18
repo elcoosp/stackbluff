@@ -334,8 +334,8 @@ const PreActionPanel = ({
               type="button"
               onClick={() => handleClick(opt.key)}
               className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[9px] font-label-caps uppercase tracking-wider border cursor-pointer select-none transition-colors duration-200 ${isSelected
-                  ? 'border-tertiary bg-tertiary/15 text-tertiary'
-                  : 'border-white/8 bg-white/[0.03] text-white/30 hover:text-white/50 hover:border-white/12'
+                ? 'border-tertiary bg-tertiary/15 text-tertiary'
+                : 'border-white/8 bg-white/[0.03] text-white/30 hover:text-white/50 hover:border-white/12'
                 }`}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.95 }}
@@ -381,8 +381,8 @@ const PreActionPanel = ({
                 else setCallUpToEditing(true);
               }}
               className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[9px] font-label-caps uppercase tracking-wider border cursor-pointer select-none transition-colors duration-200 ${preAction?.type === 'call_up_to'
-                  ? 'border-tertiary bg-tertiary/15 text-tertiary'
-                  : 'border-white/8 bg-white/[0.03] text-white/30 hover:text-white/50 hover:border-white/12'
+                ? 'border-tertiary bg-tertiary/15 text-tertiary'
+                : 'border-white/8 bg-white/[0.03] text-white/30 hover:text-white/50 hover:border-white/12'
                 }`}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.95 }}
@@ -459,7 +459,8 @@ const DesktopActionBar = ({
       ? `All-in ${formatCurrency(heroStack)}`
       : `Call ${formatCurrency(toCall)}`;
 
-  const allInDisabled = !actionRequired || heroStack === 0 || (!canRaise && heroStack >= toCall);
+  // ✅ FIX: All-in is always available when it's your turn and you have chips
+  const allInDisabled = !actionRequired || heroStack === 0;
 
   const toggleRaise = useCallback(() => setRaiseOpen((p) => !p), []);
   const visibleAction = useVisibleAction(executingAction, toCall);
@@ -534,8 +535,8 @@ const DesktopActionBar = ({
               type="button"
               onClick={() => setPreActionOpen(!preActionOpen)}
               className={`flex items-center gap-1.5 px-3 py-2.5 rounded-lg border cursor-pointer select-none transition-colors duration-200 ${preAction
-                  ? 'border-tertiary/30 bg-tertiary/10 text-tertiary'
-                  : 'border-white/8 bg-white/[0.03] text-white/25 hover:text-white/40 hover:border-white/12'
+                ? 'border-tertiary/30 bg-tertiary/10 text-tertiary'
+                : 'border-white/8 bg-white/[0.03] text-white/25 hover:text-white/40 hover:border-white/12'
                 }`}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.95 }}
@@ -635,7 +636,8 @@ const MobileActionBar = ({
       ? `All-in ${formatCurrency(heroStack)}`
       : `Call ${formatCurrency(toCall)}`;
 
-  const allInDisabled = !actionRequired || heroStack === 0 || (!canRaise && heroStack >= toCall);
+  // ✅ FIX: All-in is always available when it's your turn and you have chips
+  const allInDisabled = !actionRequired || heroStack === 0;
 
   const vw = useViewportWidth();
   const isNarrow = vw < MOBILE_BREAK;
@@ -768,8 +770,8 @@ const MobileActionBar = ({
                   type="button"
                   onClick={() => setDrawerOpen(!drawerOpen)}
                   className={`w-full py-1.5 rounded-lg border text-[8px] font-label-caps uppercase tracking-widest text-center cursor-pointer transition-colors duration-200 flex items-center justify-center gap-1.5 ${preAction
-                      ? 'border-tertiary/30 bg-tertiary/10 text-tertiary'
-                      : 'border-white/6 bg-white/[0.02] text-white/20 hover:text-white/35 hover:border-white/10'
+                    ? 'border-tertiary/30 bg-tertiary/10 text-tertiary'
+                    : 'border-white/6 bg-white/[0.02] text-white/20 hover:text-white/35 hover:border-white/10'
                     }`}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
