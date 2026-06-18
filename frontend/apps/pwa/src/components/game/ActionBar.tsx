@@ -10,7 +10,7 @@ import {
   DollarSign,
   TrendingUp,
   Swords,
-  Check, // <-- added for check action
+  Check,
 } from 'lucide-react';
 import type { PreAction } from '../../hooks/usePreAction';
 
@@ -181,7 +181,7 @@ const variantConfig: Record<
   },
 };
 
-// ── Subtle hover hook ──
+// ── Subtle hover hook (now with motion) ──
 function useSubtleHover(cfg: typeof variantConfig[string], disabled: boolean) {
   const [hovered, setHovered] = useState(false);
   const isDisabled = disabled;
@@ -205,7 +205,7 @@ function useSubtleHover(cfg: typeof variantConfig[string], disabled: boolean) {
   return { style, handlers, hovered };
 }
 
-// ── Action button with optional icon override ──
+// ── Action button with motion ──
 const ActionBtn = ({
   variant,
   onClick,
@@ -214,7 +214,7 @@ const ActionBtn = ({
   children,
   className = '',
   isMobile = false,
-  IconOverride, // <-- new prop
+  IconOverride,
 }: {
   variant: 'fold' | 'call' | 'raise' | 'all-in';
   onClick: () => void;
@@ -223,21 +223,23 @@ const ActionBtn = ({
   children: React.ReactNode;
   className?: string;
   isMobile?: boolean;
-  IconOverride?: React.ComponentType<{ className?: string }>; // <-- optional override
+  IconOverride?: React.ComponentType<{ className?: string }>;
 }) => {
   const cfg = variantConfig[variant];
   const { Icon: DefaultIcon } = cfg;
-  const Icon = IconOverride || DefaultIcon; // <-- use override if provided
+  const Icon = IconOverride || DefaultIcon;
   const { style, handlers } = useSubtleHover(cfg, disabled);
 
   return (
-    <button
+    <motion.button
       type="button"
       onClick={onClick}
       disabled={disabled}
       className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg cursor-pointer select-none whitespace-nowrap w-full h-full ${className}`}
       style={style}
       {...handlers}
+      whileHover={!disabled ? { scale: 1.04, transition: { duration: 0.15 } } : {}}
+      whileTap={!disabled ? { scale: 0.94, transition: { duration: 0.1 } } : {}}
     >
       <Icon className="w-3.5 h-3.5 shrink-0" />
       <span className="text-[11px] font-label-caps uppercase tracking-wider">{children}</span>
@@ -254,11 +256,11 @@ const ActionBtn = ({
           {shortcut}
         </kbd>
       )}
-    </button>
+    </motion.button>
   );
 };
 
-// ── Execution Banner (Top level so it stays mounted) ──
+// ── Execution Banner ──
 const ExecutionBanner = ({
   visibleAction,
 }: {
@@ -290,7 +292,7 @@ const ExecutionBanner = ({
   );
 };
 
-// ── Pre-action panel ──
+// ── Pre-action panel (with motion buttons) ──
 const PreActionPanel = ({
   preAction,
   onSetPreAction,
@@ -317,7 +319,7 @@ const PreActionPanel = ({
           const isSelected = preAction?.type === opt.key;
           const { Icon } = opt;
           return (
-            <button
+            <motion.button
               key={opt.key}
               type="button"
               onClick={() => handleClick(opt.key)}
@@ -325,10 +327,12 @@ const PreActionPanel = ({
                   ? 'border-tertiary bg-tertiary/15 text-tertiary'
                   : 'border-white/8 bg-white/[0.03] text-white/30 hover:text-white/50 hover:border-white/12'
                 }`}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.95 }}
             >
               <Icon className="w-3 h-3 shrink-0" />
               <span className="truncate">{compact ? opt.shortLabel : opt.label}</span>
-            </button>
+            </motion.button>
           );
         })}
       </div>
@@ -360,7 +364,7 @@ const PreActionPanel = ({
               />
             </div>
           ) : (
-            <button
+            <motion.button
               type="button"
               onClick={() => {
                 if (preAction?.type === 'call_up_to') onSetPreAction(null);
@@ -370,11 +374,13 @@ const PreActionPanel = ({
                   ? 'border-tertiary bg-tertiary/15 text-tertiary'
                   : 'border-white/8 bg-white/[0.03] text-white/30 hover:text-white/50 hover:border-white/12'
                 }`}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.95 }}
             >
               {preAction?.type === 'call_up_to'
                 ? `Call ≤ $${(preAction as { type: 'call_up_to'; amount: number }).amount}`
                 : 'Call ≤ $…'}
-            </button>
+            </motion.button>
           )}
         </div>
       )}
@@ -440,8 +446,6 @@ const DesktopActionBar = ({
   const isAllInCall = heroStack > 0 && heroStack < toCall;
   const callLabel = isCheck ? 'Check' : isAllInCall ? `All-in $${heroStack}` : `Call $${toCall}`;
 
-  // Disable All-in button if it's not a valid raise and they have enough to call
-  // (If they don't have enough to call, the Call button will act as the All-in)
   const allInDisabled = !actionRequired || heroStack === 0 || (!canRaise && heroStack >= toCall);
 
   const toggleRaise = useCallback(() => setRaiseOpen((p) => !p), []);
@@ -507,7 +511,7 @@ const DesktopActionBar = ({
 
         <div className="flex items-center gap-2 px-3 py-3">
           {!actionRequired && (
-            <button
+            <motion.button
               type="button"
               onClick={() => setPreActionOpen(!preActionOpen)}
               onMouseEnter={() => setSettingsHovered(true)}
@@ -525,9 +529,11 @@ const DesktopActionBar = ({
                 transition:
                   'background 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease',
               }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.92 }}
             >
               <Settings2 className="w-3.5 h-3.5" />
-            </button>
+            </motion.button>
           )}
 
           <ActionBtn
@@ -546,7 +552,7 @@ const DesktopActionBar = ({
             disabled={!actionRequired}
             shortcut="C"
             isMobile={false}
-            IconOverride={isCheck ? Check : undefined} // <-- check icon for check action
+            IconOverride={isCheck ? Check : undefined}
           >
             {callLabel}
           </ActionBtn>
@@ -638,7 +644,7 @@ const MobileActionBar = ({
       onClick={() => onAction(isCheck ? 'check' : 'call')}
       disabled={!actionRequired}
       isMobile
-      IconOverride={isCheck ? Check : undefined} // <-- check icon for check action
+      IconOverride={isCheck ? Check : undefined}
     >
       {callLabel}
     </ActionBtn>
@@ -718,7 +724,6 @@ const MobileActionBar = ({
           ) : (
             <div className="px-2 py-2 space-y-1.5">
               {isNarrow ? (
-                /* ── Narrow (<362px): 2 rows ── */
                 <>
                   <div className="grid grid-cols-[1fr_2.5fr] gap-1.5">
                     {foldBtn}
@@ -730,7 +735,6 @@ const MobileActionBar = ({
                   </div>
                 </>
               ) : (
-                /* ── Wide (≥362px): 1 row — balanced proportions ── */
                 <div className="flex items-stretch gap-1.5">
                   <div className="flex-[0.8]">{foldBtn}</div>
                   <div className="flex-[1.4] min-w-0">{callBtn}</div>
@@ -750,6 +754,8 @@ const MobileActionBar = ({
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.1 }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.95 }}
                 >
                   <Settings2 className="w-2.5 h-2.5" />
                   {preAction

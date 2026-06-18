@@ -52,7 +52,6 @@ export const RaiseSlider = ({
     trigger('sliderTick');
   };
 
-  // Clamp presets so they never fall below the min raise amount
   const presets = [
     { label: '½ POT', value: Math.max(min, Math.floor(pot * 0.5)) },
     { label: '¾ POT', value: Math.max(min, Math.floor(pot * 0.75)) },
@@ -62,7 +61,6 @@ export const RaiseSlider = ({
 
   const progress = max > min ? ((amount - min) / (max - min)) * 100 : 0;
 
-  // ── Animation variants ──
   const variants = {
     hidden: {
       opacity: 0,
@@ -113,7 +111,6 @@ export const RaiseSlider = ({
           exit="exit"
           className="overflow-hidden bg-[rgba(8,8,8,0.95)] backdrop-blur-md px-5 pt-4 pb-3 border-b border-white/5"
         >
-          {/* Hero Timer Bar */}
           {timerRemainingMs !== null && timerRemainingMs !== undefined && (
             <div className="w-full px-0.5 mb-3">
               <TimerBar
@@ -125,7 +122,6 @@ export const RaiseSlider = ({
           )}
 
           <div className="space-y-4">
-            {/* Header */}
             <div className="flex items-center justify-between">
               <motion.span
                 initial={{ opacity: 0, x: -10 }}
@@ -149,11 +145,10 @@ export const RaiseSlider = ({
               </motion.button>
             </div>
 
-            {/* Amount with +/- buttons */}
             <div className="flex items-center gap-3">
               <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.9 }}
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.92 }}
                 type="button"
                 onClick={decrement}
                 disabled={amount <= min}
@@ -175,8 +170,8 @@ export const RaiseSlider = ({
               </div>
 
               <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.9 }}
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.92 }}
                 type="button"
                 onClick={increment}
                 disabled={amount >= max}
@@ -186,7 +181,6 @@ export const RaiseSlider = ({
               </motion.button>
             </div>
 
-            {/* Slider */}
             <div className="relative w-full py-2">
               <input
                 type="range"
@@ -196,7 +190,6 @@ export const RaiseSlider = ({
                 value={amount}
                 onChange={(e) => {
                   handleAmountChange(Number(e.target.value));
-                  // Throttled tick via useFeedback's built-in throttle
                   trigger('sliderTick');
                 }}
                 className="relative w-full h-6 cursor-pointer appearance-none bg-transparent z-10 raise-slider-input"
@@ -213,7 +206,6 @@ export const RaiseSlider = ({
                 .raise-slider-input {
                   background: transparent;
                 }
-                /* Webkit (Chrome, Safari, Edge) */
                 .raise-slider-input::-webkit-slider-runnable-track {
                   height: 6px;
                   border-radius: 9999px;
@@ -229,10 +221,12 @@ export const RaiseSlider = ({
                   box-shadow: 0 2px 10px rgba(0,0,0,0.6);
                   cursor: pointer;
                   border: none;
-                  margin-top: -8px; /* (22px thumb - 6px track) / 2 */
+                  margin-top: -8px;
+                  transition: box-shadow 0.2s;
                 }
-
-                /* Firefox */
+                .raise-slider-input::-webkit-slider-thumb:hover {
+                  box-shadow: 0 2px 16px rgba(78,222,163,0.3), 0 2px 10px rgba(0,0,0,0.6);
+                }
                 .raise-slider-input::-moz-range-track {
                   height: 6px;
                   border-radius: 9999px;
@@ -252,10 +246,12 @@ export const RaiseSlider = ({
                   cursor: pointer;
                   border: none;
                 }
+                .raise-slider-input::-moz-range-thumb:hover {
+                  box-shadow: 0 2px 16px rgba(78,222,163,0.3), 0 2px 10px rgba(0,0,0,0.6);
+                }
               `}</style>
             </div>
 
-            {/* Preset buttons */}
             <div className="flex gap-1.5">
               {presets.map((preset, idx) => (
                 <motion.button
@@ -263,8 +259,8 @@ export const RaiseSlider = ({
                   initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.05 + idx * 0.03 }}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.95 }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.93 }}
                   type="button"
                   onClick={() => {
                     handleAmountChange(preset.value);
@@ -282,24 +278,24 @@ export const RaiseSlider = ({
               ))}
             </div>
 
-            {/* Confirm button */}
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
             >
-              <Button
+              <motion.button
                 type="button"
                 onClick={() => {
                   onConfirm(amount);
-                  // Intensity scales with raise size — bigger raise = louder haptic
                   const intensityScale = max > min ? amount / max : 0.5;
                   trigger('raise', { volume: 0.5 + intensityScale * 0.5 });
                 }}
                 className="w-full py-2 rounded-md bg-tertiary text-on-tertiary font-label-caps text-[10px] uppercase tracking-wider hover:bg-tertiary/80 transition-all shadow-[0_0_20px_rgba(78,222,163,0.15)]"
+                whileHover={{ scale: 1.02, boxShadow: '0 0 30px rgba(78,222,163,0.25)' }}
+                whileTap={{ scale: 0.95 }}
               >
                 Confirm Raise
-              </Button>
+              </motion.button>
             </motion.div>
           </div>
         </motion.div>
