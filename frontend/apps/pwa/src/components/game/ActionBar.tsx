@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RaiseSlider } from './RaiseSlider';
 import {
-  Settings2,
+  Bot,
   Zap,
   RotateCcw,
   Infinity,
@@ -181,7 +181,7 @@ const variantConfig: Record<
   },
 };
 
-// ── Subtle hover hook (now with motion) ──
+// ── Subtle hover hook ──
 function useSubtleHover(cfg: typeof variantConfig[string], disabled: boolean) {
   const [hovered, setHovered] = useState(false);
   const isDisabled = disabled;
@@ -292,7 +292,7 @@ const ExecutionBanner = ({
   );
 };
 
-// ── Pre-action panel (with motion buttons) ──
+// ── Pre-action panel ──
 const PreActionPanel = ({
   preAction,
   onSetPreAction,
@@ -441,7 +441,6 @@ const DesktopActionBar = ({
 }) => {
   const [raiseOpen, setRaiseOpen] = useState(false);
   const [preActionOpen, setPreActionOpen] = useState(false);
-  const [settingsHovered, setSettingsHovered] = useState(false);
   const isCheck = toCall === 0;
   const isAllInCall = heroStack > 0 && heroStack < toCall;
   const callLabel = isCheck ? 'Check' : isAllInCall ? `All-in $${heroStack}` : `Call $${toCall}`;
@@ -455,6 +454,13 @@ const DesktopActionBar = ({
   useEffect(() => {
     if (!actionRequired) setPreActionOpen(true);
   }, [actionRequired]);
+
+  // Format pre-action label for display
+  const getPreActionLabel = () => {
+    if (!preAction) return 'Auto';
+    const label = preAction.type.replace(/_/g, ' ');
+    return `Auto: ${label}`;
+  };
 
   return (
     <motion.div
@@ -514,25 +520,17 @@ const DesktopActionBar = ({
             <motion.button
               type="button"
               onClick={() => setPreActionOpen(!preActionOpen)}
-              onMouseEnter={() => setSettingsHovered(true)}
-              onMouseLeave={() => setSettingsHovered(false)}
-              className={`p-2.5 rounded-lg border cursor-pointer transition-colors duration-200 ${preAction
+              className={`flex items-center gap-1.5 px-2.5 py-2.5 rounded-lg border cursor-pointer select-none transition-colors duration-200 ${preAction
                   ? 'border-tertiary/30 bg-tertiary/10 text-tertiary'
-                  : 'border-white/8 bg-white/[0.03] text-white/25 hover:text-white/40'
+                  : 'border-white/8 bg-white/[0.03] text-white/25 hover:text-white/40 hover:border-white/12'
                 }`}
-              style={{
-                boxShadow: settingsHovered && !preAction
-                  ? '0 0 10px rgba(255,255,255,0.04)'
-                  : preAction
-                    ? '0 0 10px rgba(78,222,163,0.08)'
-                    : 'none',
-                transition:
-                  'background 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease',
-              }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.92 }}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.95 }}
             >
-              <Settings2 className="w-3.5 h-3.5" />
+              <Bot className="w-3.5 h-3.5 shrink-0" />
+              <span className="text-[9px] font-label-caps uppercase tracking-wider whitespace-nowrap">
+                {getPreActionLabel()}
+              </span>
             </motion.button>
           )}
 
@@ -583,7 +581,7 @@ const DesktopActionBar = ({
 };
 
 /* ═══════════════════════════════════════════
-   MOBILE — responsive 1-row / 2-row at 362px
+   MOBILE
    ═══════════════════════════════════════════ */
 const MobileActionBar = ({
   actionRequired,
@@ -632,6 +630,13 @@ const MobileActionBar = ({
   useEffect(() => {
     if (actionRequired) setDrawerOpen(false);
   }, [actionRequired]);
+
+  // Format pre-action label for mobile display
+  const getPreActionLabel = () => {
+    if (!preAction) return 'Pre-actions';
+    const label = preAction.type.replace(/_/g, ' ');
+    return label;
+  };
 
   const foldBtn = (
     <ActionBtn variant="fold" onClick={() => onAction('fold')} disabled={!actionRequired} isMobile>
@@ -757,10 +762,8 @@ const MobileActionBar = ({
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <Settings2 className="w-2.5 h-2.5" />
-                  {preAction
-                    ? preAction.type.replace(/_/g, ' ').toUpperCase()
-                    : 'Pre-actions'}
+                  <Bot className="w-2.5 h-2.5 shrink-0" />
+                  {preAction ? `Auto: ${getPreActionLabel()}` : 'Pre-actions'}
                 </motion.button>
               )}
             </div>

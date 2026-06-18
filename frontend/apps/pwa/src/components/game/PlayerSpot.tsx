@@ -433,7 +433,10 @@ export const PlayerSpot = ({
       const right = isMobile ? -20 : -10;
       return { top, right };
     } else {
-      const topOffset = isMobile ? -20 : -28;
+      // For opponents: if cards are face up (showdown), position higher
+      const topOffset = showCardsFaceUp
+        ? (isMobile ? -44 : -40)   // lifted for revealed cards
+        : (isMobile ? -20 : -28);  // normal position for small cards
       return {
         top: topOffset,
         left: '50%',
