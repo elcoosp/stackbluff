@@ -9,7 +9,10 @@ import { GlassPanel } from '@stackbluff/shared/ui/GlassPanel';
 import { LiquidMetalButton } from '@stackbluff/shared/ui/LiquidMetalButton';
 import { Link } from '@tanstack/react-router';
 import { Mail, Lock } from 'lucide-react';
-import { toast } from 'sonner'; // Added Sonner import
+import { toast } from 'sonner';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { motion, AnimatePresence } from 'framer-motion'; // ✅ added
 
 const loginSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Invalid email address'),
@@ -28,22 +31,20 @@ function LoginPage() {
     mutationFn: authApi.login,
     onSuccess: async (data) => {
       setToken(data.token);
-      // Fetch user balance from /auth/me
       try {
-        const res = await fetch('/auth/me', { credentials: 'include', headers: { 'Authorization': `Bearer ${data.token}` } });
+        const res = await fetch('/auth/me', { credentials: 'include', headers: { Authorization: `Bearer ${data.token}` } });
         if (res.ok) {
           const userData = await res.json();
           setAuth(data.user, data.token, userData.chip_balance || 0);
         } else {
           setAuth(data.user, data.token, 0);
         }
-      } catch (e) {
+      } catch {
         setAuth(data.user, data.token, 0);
       }
       navigate({ to: '/' });
     },
     onError: (error) => {
-      // Trigger toast with fallback message
       toast.error(error.message || 'Invalid credentials');
     },
   });
@@ -66,39 +67,82 @@ function LoginPage() {
             <form.Field name="email">
               {(field) => (
                 <div className="space-y-2">
-                  <label className="block font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">Email Address</label>
-                  <div className="input-field">
-                    <span className="input-icon"><Mail size={16} /></span>
-                    <input type="email" value={field.state.value} onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} className="text-on-surface placeholder:text-outline-variant/50" placeholder="user@stackbluff.com" />
+                  <Label htmlFor="email" className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+                    Email Address
+                  </Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="email"
+                      type="email"
+                      value={field.state.value}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      placeholder="user@stackbluff.com"
+                      className="pl-9 bg-background/50 border-white/10 text-on-surface placeholder:text-muted-foreground/50 focus-visible:ring-tertiary"
+                    />
                   </div>
-                  <div className={`min-h-[1.25rem] mt-1 transition-all duration-300 ${field.state.meta.errors.length > 0 ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1'}`}>
-                    <p className="field-error">
-                      {field.state.meta.errors.map((e: any) => e?.message || String(e)).join(', ') || '\u00A0'}
-                    </p>
+                  {/* Error container – fixed height, no layout shift */}
+                  <div className="min-h-[1.5rem] overflow-hidden">
+                    <AnimatePresence mode="wait">
+                      {field.state.meta.errors.length > 0 && (
+                        <motion.p
+                          initial={{ opacity: 0, y: -4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -4 }}
+                          transition={{ duration: 0.2 }}
+                          className="text-xs font-data-mono text-red-400 mt-1"
+                        >
+                          {field.state.meta.errors.map((e: any) => e?.message || String(e)).join(', ')}
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
                   </div>
                 </div>
               )}
             </form.Field>
+
             <form.Field name="password">
               {(field) => (
                 <div className="space-y-2">
-                  <label className="block font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">Password</label>
-                  <div className="input-field">
-                    <span className="input-icon"><Lock size={16} /></span>
-                    <input type="password" value={field.state.value} onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} className="text-on-surface placeholder:text-outline-variant/50" placeholder="••••••••" />
+                  <Label htmlFor="password" className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+                    Password
+                  </Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="password"
+                      type="password"
+                      value={field.state.value}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      placeholder="••••••••"
+                      className="pl-9 bg-background/50 border-white/10 text-on-surface placeholder:text-muted-foreground/50 focus-visible:ring-tertiary"
+                    />
                   </div>
-                  <div className={`min-h-[1.25rem] mt-1 transition-all duration-300 ${field.state.meta.errors.length > 0 ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1'}`}>
-                    <p className="field-error">
-                      {field.state.meta.errors.map((e: any) => e?.message || String(e)).join(', ') || '\u00A0'}
-                    </p>
+                  <div className="min-h-[1.5rem] overflow-hidden">
+                    <AnimatePresence mode="wait">
+                      {field.state.meta.errors.length > 0 && (
+                        <motion.p
+                          initial={{ opacity: 0, y: -4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -4 }}
+                          transition={{ duration: 0.2 }}
+                          className="text-xs font-data-mono text-red-400 mt-1"
+                        >
+                          {field.state.meta.errors.map((e: any) => e?.message || String(e)).join(', ')}
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
                   </div>
                 </div>
               )}
             </form.Field>
+
             <LiquidMetalButton type="submit" disabled={mutation.isPending} variant="silver" className="w-full">
               {mutation.isPending ? 'AUTHENTICATING...' : 'SIGN IN'}
             </LiquidMetalButton>
-            {/* REMOVED the inline mutation error div here */}
+
             <div className="text-center pt-4">
               <Link to="/register" className="font-label-caps text-[10px] text-on-surface-variant hover:text-on-surface transition-all tracking-widest uppercase">
                 NEW TO STACKBLUFF? <span className="text-tertiary">CREATE ACCOUNT</span>

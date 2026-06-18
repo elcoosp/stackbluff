@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion'; // ✅ changed
 import {
   LayoutGrid,
   Trophy,
@@ -84,7 +84,6 @@ function LobbyPage() {
 
   return (
     <div className="flex min-h-[calc(100vh-64px)] relative">
-      {/* SideNavBar (Desktop) */}
       <aside className="hidden md:flex flex-col w-64 bg-surface-container-low border-r border-outline-variant py-gutter space-y-4 sticky top-16 h-[calc(100vh-64px)]">
         <div className="px-6 pt-6 mb-8">
           <div className="p-4 rounded-lg bg-surface-container-highest razor-highlight border border-outline-variant">
@@ -143,7 +142,6 @@ function LobbyPage() {
             </div>
           </div>
 
-          {/* Mobile Sort Controls */}
           <div className="flex lg:hidden justify-end mb-2 gap-2">
             <button
               className={`flex items-center gap-1.5 text-[10px] ${sortConfig.key === 'stakes' ? 'text-tertiary border-tertiary/50' : 'text-outline'} font-label-caps uppercase border border-outline-variant px-3 py-1.5 rounded-lg hover:text-on-surface transition-colors`}
@@ -194,7 +192,6 @@ function LobbyPage() {
                   <div className="flex-1 min-w-0">
                     <h4 className="font-headline-md text-base text-on-surface truncate">{table.name}</h4>
                     <p className="text-[10px] text-outline font-label-caps mt-0.5">NO LIMIT HOLD'EM</p>
-
                     <div className="flex items-center gap-3 mt-2.5 lg:hidden">
                       <span className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-md px-2 py-0.5 text-[10px] font-data-mono text-tertiary tracking-wide">
                         {STAKE_CONFIG[table.stake_level]?.text || table.stake_level}

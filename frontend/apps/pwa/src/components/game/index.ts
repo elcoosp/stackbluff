@@ -14,3 +14,6 @@ export * from './SeatGrid';
 export * from './ActionBar';
 export * from './AnalyticsPanel';
 export * from './TableFelt';
+export * from './ChipAnimationLayer';
+export * from './BetAnimationLayer';
+export * from './AnimatedChip';

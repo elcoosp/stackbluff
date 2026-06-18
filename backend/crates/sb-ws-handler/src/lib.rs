@@ -133,6 +133,7 @@ async fn handle_websocket(
                                     RoomMessage::ActionRequired(_) => "ActionRequired",
                                     RoomMessage::ActionBroadcast(_) => "ActionBroadcast",
                                     RoomMessage::HandResult(_) => "HandResult",
+                                    RoomMessage::ShowdownReveal(_) => "ShowdownReveal",
                                     RoomMessage::Error { .. } => "Error",
                                     RoomMessage::Connected { .. } => "Connected",
                                     RoomMessage::PrivateMessage { .. } => "PrivateMessage",

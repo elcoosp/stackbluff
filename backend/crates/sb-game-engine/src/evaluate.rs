@@ -370,3 +370,70 @@ mod tests {
         );
     }
 }
+/// Evaluates the best 5-card hand from a slice of 2 to 7 cards.
+pub fn evaluate_best_hand(cards: &[Card]) -> HandStrength {
+    if cards.is_empty() {
+        return HandStrength {
+            rank: HandRank::HighCard,
+            kickers: vec![],
+        };
+    }
+
+    if cards.len() < 5 {
+        let ranks: Vec<u8> = cards.iter().map(|c| rank_value(&c.rank)).collect();
+        let mut rank_counts = HashMap::new();
+        for &r in &ranks {
+            *rank_counts.entry(r).or_insert(0) += 1;
+        }
+        let mut count_rank_pairs: Vec<(u8, u8)> = rank_counts.into_iter().collect();
+        count_rank_pairs.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| b.0.cmp(&a.0)));
+
+        let rank = if count_rank_pairs[0].1 == 4 {
+            HandRank::FourOfAKind
+        } else if count_rank_pairs[0].1 == 3 {
+            if count_rank_pairs.len() > 1 && count_rank_pairs[1].1 == 2 {
+                HandRank::FullHouse
+            } else {
+                HandRank::ThreeOfAKind
+            }
+        } else if count_rank_pairs[0].1 == 2 {
+            if count_rank_pairs.len() > 1 && count_rank_pairs[1].1 == 2 {
+                HandRank::TwoPair
+            } else {
+                HandRank::OnePair
+            }
+        } else {
+            HandRank::HighCard
+        };
+
+        // ── FIX: Build the kickers correctly so strength score works ──
+        let mut kickers: Vec<u8> = count_rank_pairs
+            .iter()
+            .flat_map(|&(r, c)| vec![r; c as usize])
+            .collect();
+        let mut remaining: Vec<u8> = ranks
+            .iter()
+            .filter(|&&r| !count_rank_pairs.iter().any(|&(cr, _)| cr == r))
+            .copied()
+            .collect();
+        remaining.sort_by(|a, b| b.cmp(a));
+        kickers.extend(remaining);
+
+        return HandStrength { rank, kickers };
+    }
+
+    // For 5, 6, or 7 cards, evaluate all 5-card combinations
+    let indices: Vec<usize> = (0..cards.len()).collect();
+    let mut best_strength = HandStrength {
+        rank: HandRank::HighCard,
+        kickers: vec![],
+    };
+    for comb in combinations(&indices, 5) {
+        let hand: Vec<Card> = comb.iter().map(|&i| cards[i]).collect();
+        let strength = evaluate_5_card_strength(&hand);
+        if strength > best_strength {
+            best_strength = strength;
+        }
+    }
+    best_strength
+}

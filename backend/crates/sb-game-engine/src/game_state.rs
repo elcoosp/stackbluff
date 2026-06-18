@@ -539,19 +539,58 @@ impl GameState {
             return None;
         }
         let current = self.current_player_id()?;
-        let to_call = self.smallest_bet - self.players[self.current_player_index].bet_this_round;
+        let current_idx = self.current_player_index;
+        let to_call = self.smallest_bet - self.players[current_idx].bet_this_round;
         let min_raise = self.min_raise;
         let can_check = to_call == ChipAmount::new(0).unwrap();
         let remaining_ms = 30_000;
+
+        // Calculate Analytics
+        let analytics = if let Some(hole_cards) = &self.players[current_idx].hole_cards {
+            let pot_odds = if to_call.as_i64() > 0 {
+                (self.pot.as_i64() as f32 / to_call.as_i64() as f32) / 10.0
+            } else {
+                0.0
+            };
+
+            let (best_hand_name, base_strength) = if self.community_cards.len() >= 5 {
+                let comm_5: [Card; 5] = self.community_cards[..5].try_into().unwrap();
+                let strength = crate::evaluate::evaluate_hand_strength(hole_cards, &comm_5);
+                (
+                    strength.rank.name().to_string(),
+                    crate::analytics::get_strength_score(strength.rank),
+                )
+            } else {
+                // Pre-flop or partial flop logic
+                if hole_cards[0].rank == hole_cards[1].rank {
+                    ("One Pair".to_string(), 25)
+                } else {
+                    ("High Card".to_string(), 10)
+                }
+            };
+
+            let win_prob =
+                crate::analytics::run_monte_carlo(hole_cards, &self.community_cards, 500);
+
+            Some(sb_ws_messages::AnalyticsPayload {
+                win_prob,
+                pot_odds,
+                best_hand: best_hand_name,
+                strength: base_strength,
+            })
+        } else {
+            None
+        };
+
         Some(WsActionRequired {
             user_id: UserId(current.0),
             to_call,
             min_raise,
             can_check,
             remaining_ms,
+            analytics,
         })
     }
-
     pub fn public_snapshot_for_player(
         &self,
         _viewer_id: PlayerId,

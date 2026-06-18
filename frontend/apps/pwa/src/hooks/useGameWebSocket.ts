@@ -8,26 +8,13 @@ function getToken(): string | null {
 
 // ── Rank & suit mapping ──
 const rankDisplayMap: Record<string, string> = {
-  Two: '2',
-  Three: '3',
-  Four: '4',
-  Five: '5',
-  Six: '6',
-  Seven: '7',
-  Eight: '8',
-  Nine: '9',
-  Ten: '10',
-  Jack: 'J',
-  Queen: 'Q',
-  King: 'K',
-  Ace: 'A',
+  Two: '2', Three: '3', Four: '4', Five: '5', Six: '6',
+  Seven: '7', Eight: '8', Nine: '9', Ten: '10',
+  Jack: 'J', Queen: 'Q', King: 'K', Ace: 'A',
 };
 
 const suitDisplayMap: Record<string, string> = {
-  hearts: '♥',
-  diamonds: '♦',
-  clubs: '♣',
-  spades: '♠',
+  hearts: '♥', diamonds: '♦', clubs: '♣', spades: '♠',
 };
 
 function convertCard(card: any) {
@@ -53,14 +40,15 @@ const parseMessage = (data: any) => {
       const seats = data.players.map((p: any) => ({
         seat: p.seat,
         user_id: p.user_id,
-        display_name: p.user_id,
+        display_name: p.display_name || p.username || p.name ||
+          (p.user_id ? p.user_id.slice(0, 8) : 'Player'),
         stack: p.stack,
         current_bet: p.current_bet,
         is_all_in: p.is_all_in,
         is_folded: p.is_folded,
         is_active: !p.is_folded && !p.is_all_in,
-        avatar_url: undefined,
-        position_badge: undefined,
+        avatar_url: p.avatar_url || undefined,
+        position_badge: p.position_badge || undefined,
       }));
       const communityCards = (data.community_cards || []).map(convertCard);
       return {
@@ -100,10 +88,40 @@ const parseMessage = (data: any) => {
       };
     }
 
+    case 'ShowdownReveal': {
+      const players = (data.players || []).map((p: any) => ({
+        user_id: p.user_id,
+        seat: p.seat,
+        hole_cards: (p.hole_cards || []).map(convertCard),
+        hand_description: p.hand_description || '',
+        is_winner: p.is_winner || false,
+        win_amount: p.win_amount || 0,
+      }));
+      const communityCards = (data.community_cards || []).map(convertCard);
+      return {
+        type: 'ShowdownReveal',
+        players,
+        community_cards: communityCards,
+        pot: data.pot || 0,
+      };
+    }
+
     case 'HandResult': {
+      // Support both old format (winners: string[]) and new format (winners: WinnerResult[])
+      const winners = (data.winners || []).map((w: any) => {
+        if (typeof w === 'string') {
+          return { user_id: '', display_name: w, amount: 0, hand_rank: '' };
+        }
+        return {
+          user_id: w.user_id || '',
+          display_name: w.display_name || w.user_id?.slice(0, 8) || 'Player',
+          amount: w.amount || 0,
+          hand_rank: w.hand_rank || '',
+        };
+      });
       return {
         type: 'HandResult',
-        winners: data.winners || [],
+        winners,
         pot: data.pot || 0,
       };
     }
@@ -111,9 +129,18 @@ const parseMessage = (data: any) => {
     case 'PrivateMessage': {
       if (data.payload?.type === 'your_hole_cards') {
         const holeCards = (data.payload.hole_cards || []).map(convertCard);
+        return { type: 'YourHoleCards', holeCards };
+      }
+      if (data.payload?.type === 'analytics') {
+        const analyticsData = data.payload.analytics;
         return {
-          type: 'YourHoleCards',
-          holeCards,
+          type: 'Analytics',
+          analytics: {
+            winProb: analyticsData.win_prob,
+            potOdds: analyticsData.pot_odds,
+            bestHand: analyticsData.best_hand,
+            strength: analyticsData.strength,
+          }
         };
       }
       return null;
@@ -131,14 +158,15 @@ const parseMessage = (data: any) => {
 };
 
 export function useGameWebSocket(tableId: string) {
-  // ── Stable store action selectors ──
   const setHeroSeat = useGameStore((s) => s.setHeroSeat);
   const setHeroHoleCards = useGameStore((s) => s.setHeroHoleCards);
   const setTableState = useGameStore((s) => s.setTableState);
   const setActionRequired = useGameStore((s) => s.setActionRequired);
+  const clearActionRequired = useGameStore((s) => s.clearActionRequired);
   const applyActionBroadcast = useGameStore((s) => s.applyActionBroadcast);
   const setHandResult = useGameStore((s) => s.setHandResult);
-  const clearActionRequired = useGameStore((s) => s.clearActionRequired);
+  const setAnalytics = useGameStore((s) => s.setAnalytics);
+  const setShowdownReveal = useGameStore((s) => s.setShowdownReveal);
 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -146,6 +174,7 @@ export function useGameWebSocket(tableId: string) {
   const reconnectAttempts = useRef(0);
 
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'reconnecting' | 'disconnected'>('disconnected');
+  const [myUserId, setMyUserId] = useState<string | null>(null);
 
   const myUserIdRef = useRef<string | null>(null);
   const mySeatRef = useRef<number | null>(null);
@@ -153,6 +182,9 @@ export function useGameWebSocket(tableId: string) {
   const connect = useCallback(() => {
     if (!mountedRef.current) return;
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
+
+    myUserIdRef.current = null;
+    mySeatRef.current = null;
 
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
     const baseWs = import.meta.env.VITE_WS_URL || `${proto}://${window.location.host}`;
@@ -168,13 +200,7 @@ export function useGameWebSocket(tableId: string) {
       if (!mountedRef.current) return;
       setConnectionStatus('connected');
       reconnectAttempts.current = 0;
-      ws.send(
-        JSON.stringify({
-          type: 'join_table',
-          table_id: tableId,
-          buy_in: 1000,
-        })
-      );
+      ws.send(JSON.stringify({ type: 'join_table', table_id: tableId, buy_in: 1000 }));
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = undefined;
@@ -190,9 +216,12 @@ export function useGameWebSocket(tableId: string) {
 
         switch (message.type) {
           case 'Connected': {
-            myUserIdRef.current = message.user_id;
-            mySeatRef.current = message.seat_index;
-            setHeroSeat(message.seat_index);
+            if (myUserIdRef.current === null) {
+              myUserIdRef.current = message.user_id;
+              mySeatRef.current = message.seat_index;
+              setMyUserId(message.user_id);
+              setHeroSeat(message.seat_index);
+            }
             break;
           }
           case 'YourHoleCards': {
@@ -206,6 +235,8 @@ export function useGameWebSocket(tableId: string) {
           case 'ActionRequired': {
             if (myUserIdRef.current && message.player_id === myUserIdRef.current) {
               setActionRequired(message as ActionRequired);
+            } else {
+              clearActionRequired();
             }
             break;
           }
@@ -219,11 +250,24 @@ export function useGameWebSocket(tableId: string) {
             });
             break;
           }
-          case 'HandResult': {
-            setHandResult({
-              winners: message.winners,
+          case 'ShowdownReveal': {
+            setAnalytics(null);
+            setShowdownReveal({
+              players: message.players,
+              community_cards: message.community_cards,
               pot: message.pot,
             });
+            break;
+          }
+          case 'Analytics': {
+            setAnalytics(message.analytics);
+            break;
+          }
+          case 'HandResult': {
+            clearActionRequired();
+            setAnalytics(null);
+            // Clear showdown reveal — setHandResult does this via the store
+            setHandResult({ winners: message.winners, pot: message.pot });
             break;
           }
         }
@@ -233,9 +277,6 @@ export function useGameWebSocket(tableId: string) {
     };
 
     ws.onclose = (event) => {
-      console.warn(
-        `WebSocket closed: code=${event.code}, reason=${event.reason || 'no reason'}, wasClean=${event.wasClean}`
-      );
       if (!mountedRef.current) return;
       wsRef.current = null;
       setConnectionStatus('reconnecting');
@@ -246,9 +287,7 @@ export function useGameWebSocket(tableId: string) {
       }, delay);
     };
 
-    ws.onerror = () => {
-      // onclose fires immediately after onerror
-    };
+    ws.onerror = () => { };
   }, [tableId]);
 
   useEffect(() => {
@@ -272,26 +311,16 @@ export function useGameWebSocket(tableId: string) {
     (action: string, amount?: number) => {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         const actionMap: Record<string, string> = {
-          fold: 'fold',
-          check: 'check',
-          call: 'call',
-          raise: 'raise',
-          'all-in': 'allin',
-          bet: 'bet',
+          fold: 'fold', check: 'check', call: 'call',
+          raise: 'raise', 'all-in': 'allin', bet: 'bet',
         };
         const mapped = actionMap[action] || action;
-        wsRef.current.send(
-          JSON.stringify({
-            type: 'player_action',
-            action: mapped,
-            amount: amount,
-          })
-        );
+        wsRef.current.send(JSON.stringify({ type: 'player_action', action: mapped, amount }));
         clearActionRequired();
       }
     },
     [clearActionRequired]
   );
 
-  return { sendAction, connectionStatus };
+  return { sendAction, connectionStatus, myUserId };
 }

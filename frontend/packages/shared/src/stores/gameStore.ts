@@ -12,6 +12,10 @@ export interface Seat {
   avatar_url?: string;
   hole_cards?: any[];
   position_badge?: string;
+  is_winner?: boolean;
+  win_amount?: number;
+  hand_description?: string;
+  is_showdown_revealed?: boolean;
 }
 
 export interface Card {
@@ -22,6 +26,13 @@ export interface Card {
 export interface SidePot {
   amount: number;
   eligible_players: string[];
+}
+
+export interface Analytics {
+  winProb: number;
+  potOdds: number;
+  bestHand: string;
+  strength: number;
 }
 
 export interface ActionRequired {
@@ -41,7 +52,21 @@ export interface TableState {
   street: string;
   current_hand_in_progress: boolean;
   current_turn_user_id: string | null;
-  dealer_index?: number | null; // added
+}
+
+export interface ShowdownPlayer {
+  user_id: string;
+  seat: number;
+  hole_cards: Card[];
+  hand_description: string;
+  is_winner: boolean;
+  win_amount: number;
+}
+
+export interface ShowdownRevealData {
+  players: ShowdownPlayer[];
+  community_cards: Card[];
+  pot: number;
 }
 
 interface GameState {
@@ -55,9 +80,11 @@ interface GameState {
   heroSeat: number | null;
   heroHoleCards: [Card, Card] | null;
   actionRequired: ActionRequired | null;
+  analytics: Analytics | null;
+  showdownReveal: ShowdownRevealData | null;
   winners: { name: string; amount: number }[] | null;
   handInProgress: boolean;
-  dealerIndex: number | null; // added
+  lastAction: { player_id: string; action: string; amount: number | null } | null;
 
   // --- METHODS ---
   setTableState: (state: TableState) => void;
@@ -65,6 +92,8 @@ interface GameState {
   setHeroHoleCards: (cards: Card[]) => void;
   setActionRequired: (req: ActionRequired) => void;
   clearActionRequired: () => void;
+  setAnalytics: (analytics: Analytics | null) => void;
+  setShowdownReveal: (data: ShowdownRevealData | null) => void;
   applyActionBroadcast: (broadcast: {
     player_id: string;
     action: string;
@@ -87,9 +116,11 @@ export const useGameStore = create<GameState>((set, get) => ({
   heroSeat: null,
   heroHoleCards: null,
   actionRequired: null,
+  analytics: null,
+  showdownReveal: null,
   winners: null,
   handInProgress: false,
-  dealerIndex: null, // added
+  lastAction: null,
 
   setTableState: (state) => {
     const seatsMap: Record<number, Seat> = {};
@@ -109,7 +140,6 @@ export const useGameStore = create<GameState>((set, get) => ({
       street: state.street || '',
       currentTurnUserId: state.current_turn_user_id || null,
       handInProgress: state.current_hand_in_progress || false,
-      dealerIndex: state.dealer_index ?? null,
     });
   },
 
@@ -122,11 +152,14 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   setActionRequired: (req) => set({ actionRequired: req }),
-
   clearActionRequired: () => set({ actionRequired: null }),
 
+  setAnalytics: (analytics) => set({ analytics }),
+
+  setShowdownReveal: (data) => set({ showdownReveal: data }),
+
   applyActionBroadcast: (broadcast) => {
-    const { player_id, new_stack, new_pot } = broadcast;
+    const { player_id, action, amount, new_stack, new_pot } = broadcast;
     set((state) => {
       const seatNum = Object.keys(state.seats).find(
         (key) => state.seats[Number(key)].user_id === player_id
@@ -141,6 +174,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       return {
         seats: newSeats,
         pot: new_pot,
+        lastAction: { player_id, action, amount },
       };
     });
   },
@@ -149,6 +183,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     set({
       winners: result.winners,
       actionRequired: null,
+      showdownReveal: null,
     });
   },
 
@@ -164,9 +199,11 @@ export const useGameStore = create<GameState>((set, get) => ({
       heroSeat: null,
       heroHoleCards: null,
       actionRequired: null,
+      analytics: null,
+      showdownReveal: null,
       winners: null,
       handInProgress: false,
-      dealerIndex: null,
+      lastAction: null,
     });
   },
 }));

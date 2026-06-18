@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Minus, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { TimerBar } from './TimerBar';
 import { cn } from '@/lib/utils';
 
 interface RaiseSliderProps {
@@ -12,6 +13,8 @@ interface RaiseSliderProps {
   onConfirm: (amount: number) => void;
   onCancel: () => void;
   isOpen: boolean;
+  timerRemainingMs?: number | null;
+  timerTotalMs?: number | null;
 }
 
 export const RaiseSlider = ({
@@ -22,6 +25,8 @@ export const RaiseSlider = ({
   onConfirm,
   onCancel,
   isOpen,
+  timerRemainingMs,
+  timerTotalMs,
 }: RaiseSliderProps) => {
   const [amount, setAmount] = useState(min);
 
@@ -37,10 +42,11 @@ export const RaiseSlider = ({
   const increment = () => handleAmountChange(amount + step);
   const decrement = () => handleAmountChange(amount - step);
 
+  // Clamp presets so they never fall below the min raise amount
   const presets = [
-    { label: '½ POT', value: Math.floor(pot * 0.5) },
-    { label: '¾ POT', value: Math.floor(pot * 0.75) },
-    { label: 'POT', value: Math.floor(pot) },
+    { label: '½ POT', value: Math.max(min, Math.floor(pot * 0.5)) },
+    { label: '¾ POT', value: Math.max(min, Math.floor(pot * 0.75)) },
+    { label: 'POT', value: Math.max(min, pot) },
     { label: 'MAX', value: max },
   ];
 
@@ -57,7 +63,7 @@ export const RaiseSlider = ({
     visible: {
       opacity: 1,
       y: 0,
-      maxHeight: 400,
+      maxHeight: 500,
       transition: {
         type: 'spring' as const,
         damping: 30,
@@ -97,6 +103,17 @@ export const RaiseSlider = ({
           exit="exit"
           className="overflow-hidden bg-[rgba(8,8,8,0.95)] backdrop-blur-md px-5 pt-4 pb-3 border-b border-white/5"
         >
+          {/* Hero Timer Bar */}
+          {timerRemainingMs !== null && timerRemainingMs !== undefined && (
+            <div className="w-full px-0.5 mb-3">
+              <TimerBar
+                remainingMs={timerRemainingMs}
+                totalMs={timerTotalMs ?? null}
+                isActive={true}
+              />
+            </div>
+          )}
+
           <div className="space-y-4">
             {/* Header */}
             <div className="flex items-center justify-between">
@@ -158,14 +175,6 @@ export const RaiseSlider = ({
 
             {/* Slider */}
             <div className="relative w-full py-2">
-              {/* Background track */}
-              <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-1.5 rounded-full bg-outline-variant/20" />
-              {/* Filled track */}
-              <div
-                className="absolute left-0 top-1/2 -translate-y-1/2 h-1.5 rounded-full bg-tertiary transition-all duration-100"
-                style={{ width: `${progress}%` }}
-              />
-
               <input
                 type="range"
                 min={min}
@@ -173,15 +182,27 @@ export const RaiseSlider = ({
                 step={step}
                 value={amount}
                 onChange={(e) => handleAmountChange(Number(e.target.value))}
-                className="relative w-full h-6 cursor-pointer appearance-none bg-transparent z-10"
-                style={{
-                  WebkitAppearance: 'none',
-                  appearance: 'none',
-                }}
+                className="relative w-full h-6 cursor-pointer appearance-none bg-transparent z-10 raise-slider-input"
+                style={
+                  {
+                    '--progress': `${progress}%`,
+                    WebkitAppearance: 'none',
+                    appearance: 'none',
+                  } as React.CSSProperties
+                }
               />
 
               <style>{`
-                input[type=range]::-webkit-slider-thumb {
+                .raise-slider-input {
+                  background: transparent;
+                }
+                /* Webkit (Chrome, Safari, Edge) */
+                .raise-slider-input::-webkit-slider-runnable-track {
+                  height: 6px;
+                  border-radius: 9999px;
+                  background: linear-gradient(to right, #4edea3 0%, #4edea3 var(--progress), rgba(255,255,255,0.1) var(--progress), rgba(255,255,255,0.1) 100%);
+                }
+                .raise-slider-input::-webkit-slider-thumb {
                   -webkit-appearance: none;
                   appearance: none;
                   width: 22px;
@@ -191,9 +212,21 @@ export const RaiseSlider = ({
                   box-shadow: 0 2px 10px rgba(0,0,0,0.6);
                   cursor: pointer;
                   border: none;
-                  margin-top: -8px;
+                  margin-top: -8px; /* (22px thumb - 6px track) / 2 */
                 }
-                input[type=range]::-moz-range-thumb {
+
+                /* Firefox */
+                .raise-slider-input::-moz-range-track {
+                  height: 6px;
+                  border-radius: 9999px;
+                  background: rgba(255,255,255,0.1);
+                }
+                .raise-slider-input::-moz-range-progress {
+                  height: 6px;
+                  border-radius: 9999px;
+                  background-color: #4edea3;
+                }
+                .raise-slider-input::-moz-range-thumb {
                   width: 22px;
                   height: 22px;
                   border-radius: 50%;
@@ -201,16 +234,6 @@ export const RaiseSlider = ({
                   box-shadow: 0 2px 10px rgba(0,0,0,0.6);
                   cursor: pointer;
                   border: none;
-                }
-                input[type=range]::-webkit-slider-runnable-track {
-                  height: 6px;
-                  background: transparent;
-                  border-radius: 9999px;
-                }
-                input[type=range]::-moz-range-track {
-                  height: 6px;
-                  background: transparent;
-                  border-radius: 9999px;
                 }
               `}</style>
             </div>

@@ -12,8 +12,9 @@ use sb_shared_types::AppError;
 use sb_shared_types::{ActionType, ChipAmount, PlayerId, StakeLevel, TableConfig, TableId, UserId};
 
 use crate::game_room::{
-    ActionBroadcast, ActionRequired, BroadcastSender, HandResult, PlayerStateInfo, PrivatePayload,
-    RoomMessage, SidePotMessage, TableStateUpdate, WsCard,
+    ActionBroadcast, ActionRequired, AnalyticsPayload, BroadcastSender, HandResult,
+    PlayerStateInfo, PrivatePayload, RoomMessage, ShowdownPlayer, ShowdownReveal, SidePotMessage,
+    TableStateUpdate, WinnerResult, WsCard,
 };
 use std::pin::Pin;
 use tokio::time::{Duration, Sleep, sleep};
@@ -44,6 +45,96 @@ fn street_name(state: &GameState) -> String {
     }
 }
 
+// === NEW: Compact hand description generator ===
+fn get_hand_description(strength: &sb_game_engine::evaluate::HandStrength) -> String {
+    use sb_game_engine::hand_rank::HandRank;
+
+    let rank_short = |val: u8| -> String {
+        match val {
+            14 => "A".to_string(),
+            13 => "K".to_string(),
+            12 => "Q".to_string(),
+            11 => "J".to_string(),
+            10 => "10".to_string(),
+            _ => val.to_string(),
+        }
+    };
+
+    match strength.rank {
+        HandRank::HighCard => {
+            if let Some(&kicker) = strength.kickers.first() {
+                format!("{} High", rank_short(kicker))
+            } else {
+                "High Card".to_string()
+            }
+        }
+        HandRank::OnePair => {
+            if let Some(&kicker) = strength.kickers.first() {
+                format!("Pair of {}s", rank_short(kicker))
+            } else {
+                "One Pair".to_string()
+            }
+        }
+        HandRank::TwoPair => {
+            if strength.kickers.len() >= 3 {
+                let high = strength.kickers[0];
+                let low = strength.kickers[2];
+                format!("Two Pair {}s & {}s", rank_short(high), rank_short(low))
+            } else {
+                "Two Pair".to_string()
+            }
+        }
+        HandRank::ThreeOfAKind => {
+            if let Some(&kicker) = strength.kickers.first() {
+                format!("Trips {}s", rank_short(kicker))
+            } else {
+                "Three of a Kind".to_string()
+            }
+        }
+        HandRank::Straight => {
+            if let Some(&kicker) = strength.kickers.first() {
+                format!("Straight to {}", rank_short(kicker))
+            } else {
+                "Straight".to_string()
+            }
+        }
+        HandRank::Flush => {
+            if let Some(&kicker) = strength.kickers.first() {
+                format!("{} High Flush", rank_short(kicker))
+            } else {
+                "Flush".to_string()
+            }
+        }
+        HandRank::FullHouse => {
+            if strength.kickers.len() >= 4 {
+                let three = strength.kickers[0];
+                let two = strength.kickers[3];
+                format!(
+                    "Full House {}s over {}s",
+                    rank_short(three),
+                    rank_short(two)
+                )
+            } else {
+                "Full House".to_string()
+            }
+        }
+        HandRank::FourOfAKind => {
+            if let Some(&kicker) = strength.kickers.first() {
+                format!("Quads {}s", rank_short(kicker))
+            } else {
+                "Four of a Kind".to_string()
+            }
+        }
+        HandRank::StraightFlush => {
+            if let Some(&kicker) = strength.kickers.first() {
+                format!("Straight Flush to {}", rank_short(kicker))
+            } else {
+                "Straight Flush".to_string()
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum InternalCommand {
     Join {
@@ -63,6 +154,7 @@ pub enum InternalCommand {
     Timeout {
         user_id: UserId,
     },
+    ShowdownComplete,
 }
 
 #[derive(Debug, Clone)]
@@ -165,6 +257,7 @@ fn build_action_required(hand: &ActiveHand, user_id: UserId) -> ActionRequired {
     let min_raise = hand.state.min_raise_amount();
     let can_check = to_call == ChipAmount::new(0).unwrap();
     let pot = hand.state.current_pot();
+
     ActionRequired {
         player_id: user_id,
         timeout_secs: 30,
@@ -173,6 +266,141 @@ fn build_action_required(hand: &ActiveHand, user_id: UserId) -> ActionRequired {
         can_check,
         pot: pot.as_i64() as u64,
     }
+}
+
+// === New function to calculate analytics for a specific player ===
+fn build_analytics(hand: &ActiveHand, user_id: UserId) -> Option<AnalyticsPayload> {
+    let pid = hand.player_by_user_id.get(&user_id)?;
+    let hole_cards = hand.state.player_hole_cards(*pid)?;
+    let comm_cards = hand.state.community_cards();
+    let to_call = hand.state.current_call_amount();
+    let pot = hand.state.current_pot();
+
+    let pot_odds = if to_call.as_i64() > 0 {
+        let odds = pot.as_i64() as f32 / to_call.as_i64() as f32;
+        (odds * 10.0).round() / 10.0
+    } else {
+        0.0
+    };
+
+    let mut all_cards = hole_cards.to_vec();
+    all_cards.extend_from_slice(comm_cards);
+
+    let strength = sb_game_engine::evaluate::evaluate_best_hand(&all_cards);
+
+    info!(
+        user_id = %user_id,
+        hole_cards = ?hole_cards,
+        comm_cards = ?comm_cards,
+        evaluated_rank = ?strength.rank,
+        evaluated_kickers = ?strength.kickers,
+        "Calculating Analytics"
+    );
+
+    // Replaced inline match with the helper function
+    let best_hand_name = get_hand_description(&strength);
+
+    let base_strength = get_strength_score(&strength);
+
+    let win_prob = run_monte_carlo(&hole_cards, comm_cards, 300);
+
+    Some(AnalyticsPayload {
+        win_prob,
+        pot_odds,
+        best_hand: best_hand_name,
+        strength: base_strength,
+    })
+}
+
+fn get_strength_score(strength: &sb_game_engine::evaluate::HandStrength) -> u8 {
+    use sb_game_engine::hand_rank::HandRank;
+
+    let base = match strength.rank {
+        HandRank::HighCard => 0,
+        HandRank::OnePair => 25,
+        HandRank::TwoPair => 45,
+        HandRank::ThreeOfAKind => 60,
+        HandRank::Straight => 70,
+        HandRank::Flush => 80,
+        HandRank::FullHouse => 88,
+        HandRank::FourOfAKind => 95,
+        HandRank::StraightFlush => 99,
+    };
+
+    if let Some(&kicker) = strength.kickers.first() {
+        let bonus = (kicker as u8 - 2) / 4;
+        let total = base + bonus;
+        if total > 100 { 100 } else { total }
+    } else {
+        base
+    }
+}
+
+fn run_monte_carlo(
+    hero_cards: &[sb_shared_types::Card; 2],
+    community_cards: &[sb_shared_types::Card],
+    iterations: u32,
+) -> u8 {
+    use rand::seq::SliceRandom;
+    use sb_shared_types::{Card, Rank, Suit};
+
+    let mut wins = 0;
+    let mut ties = 0;
+
+    let mut remaining_deck: Vec<Card> = Vec::new();
+    for suit in [Suit::Clubs, Suit::Diamonds, Suit::Hearts, Suit::Spades] {
+        for rank in [
+            Rank::Two,
+            Rank::Three,
+            Rank::Four,
+            Rank::Five,
+            Rank::Six,
+            Rank::Seven,
+            Rank::Eight,
+            Rank::Nine,
+            Rank::Ten,
+            Rank::Jack,
+            Rank::Queen,
+            Rank::King,
+            Rank::Ace,
+        ] {
+            let c = Card { suit, rank };
+            if !hero_cards.contains(&c) && !community_cards.contains(&c) {
+                remaining_deck.push(c);
+            }
+        }
+    }
+
+    let mut rng = rand::rng();
+
+    for _ in 0..iterations {
+        remaining_deck.shuffle(&mut rng);
+
+        let opp_cards: [Card; 2] = [remaining_deck[0], remaining_deck[1]];
+        let fill_count = 5 - community_cards.len();
+        let fill_comm: Vec<Card> = remaining_deck[2..2 + fill_count].to_vec();
+
+        let mut hero_comm = community_cards.to_vec();
+        hero_comm.extend_from_slice(&fill_comm);
+        let hero_comm_5: [Card; 5] = hero_comm[..5].try_into().unwrap();
+
+        let mut opp_comm = community_cards.to_vec();
+        opp_comm.extend_from_slice(&fill_comm);
+        let opp_comm_5: [Card; 5] = opp_comm[..5].try_into().unwrap();
+
+        let hero_strength =
+            sb_game_engine::evaluate::evaluate_hand_strength(hero_cards, &hero_comm_5);
+        let opp_strength =
+            sb_game_engine::evaluate::evaluate_hand_strength(&opp_cards, &opp_comm_5);
+
+        match hero_strength.cmp(&opp_strength) {
+            std::cmp::Ordering::Greater => wins += 1,
+            std::cmp::Ordering::Equal => ties += 1,
+            _ => {}
+        }
+    }
+
+    (((wins as f32) + (ties as f32) * 0.5) / iterations as f32 * 100.0) as u8
 }
 
 pub struct TableActor {
@@ -240,6 +468,7 @@ impl TableActor {
             } => self.process_action(user_id, action_type, amount).await,
             InternalCommand::StartHand => self.start_new_hand().await,
             InternalCommand::Timeout { user_id } => self.handle_timeout(user_id).await,
+            InternalCommand::ShowdownComplete => self.finalize_hand_after_reveal().await,
         }
     }
 
@@ -249,11 +478,9 @@ impl TableActor {
             return;
         }
 
-        // Determine seat
         let seat = match seat {
             Some(s) => s,
             None => {
-                // Find the smallest free seat
                 let occupied: std::collections::HashSet<u8> =
                     self.players.values().map(|p| p.seat).collect();
                 let mut free = None;
@@ -287,7 +514,6 @@ impl TableActor {
         }
         let player = Player::new(user_id, seat, stack);
         self.players.insert(player.user_id, player);
-        // Send Connected message with seat
         let _ = self.broadcast_tx.send(RoomMessage::Connected {
             user_id,
             seat_index: seat,
@@ -398,6 +624,12 @@ impl TableActor {
 
         self.last_dealer_index = Some(dealer_index);
         self.current_hand = Some(active);
+
+        // Broadcast analytics to all players for the new hand
+        if let Some(hand) = &self.current_hand {
+            self.broadcast_analytics(hand).await;
+        }
+
         self.broadcast_table_state().await;
         info!(dealer_index, "Hand started");
     }
@@ -469,6 +701,9 @@ impl TableActor {
 
         info!(%user_id, action = ?action_type, ?amount, "Processing action");
 
+        // Track community cards length before action to detect new street
+        let prev_comm_cards_len = hand.state.community_cards().len();
+
         match hand.state.apply_action(player_id, engine_action) {
             Ok(()) => {
                 hand.cancel_timeout();
@@ -507,6 +742,19 @@ impl TableActor {
                     let _ = self
                         .broadcast_tx
                         .send(RoomMessage::ActionRequired(action_req));
+
+                    // If the community cards grew, a new street was dealt — recompute analytics
+                    if hand.state.community_cards().len() > prev_comm_cards_len {
+                        for player in self.players.values() {
+                            if let Some(analytics) = build_analytics(hand, player.user_id) {
+                                let _ = self.broadcast_tx.send(RoomMessage::PrivateMessage {
+                                    target_user_id: player.user_id,
+                                    payload: PrivatePayload::Analytics { analytics },
+                                });
+                            }
+                        }
+                    }
+
                     self.broadcast_table_state().await;
                 } else {
                     self.check_hand_completion().await;
@@ -580,13 +828,66 @@ impl TableActor {
             } else {
                 warn!("Hand not complete but no current player — engine issue");
             }
+
+            self.broadcast_analytics(&hand).await;
             self.current_hand = Some(hand);
             self.broadcast_table_state().await;
             return;
         }
 
-        // Hand complete — process winners
+        // ── Hand is complete ──
+
+        // Count active (non-folded) players to determine showdown vs walkover
+        let active_count = hand
+            .player_by_user_id
+            .keys()
+            .filter(|uid| !hand.player_is_folded(**uid))
+            .count();
+
+        let is_showdown = active_count > 1;
+
+        // Build the showdown reveal data
+        let reveal = self.build_showdown_reveal(&hand);
+
+        // Send ShowdownReveal message to all clients
+        let _ = self.broadcast_tx.send(RoomMessage::ShowdownReveal(reveal));
+
+        // Keep the hand alive during the reveal animation
+        self.current_hand = Some(hand);
+
+        let cmd_tx = self.cmd_tx.clone();
+        let delay = if is_showdown {
+            info!("Showdown reached — revealing cards with 3s delay");
+            Duration::from_secs(3)
+        } else {
+            info!("Walkover — single player wins with 1.5s delay");
+            Duration::from_millis(1_500)
+        };
+
+        // Schedule finalization after the animation delay
+        tokio::spawn(async move {
+            tokio::time::sleep(delay).await;
+            let _ = cmd_tx.send(InternalCommand::ShowdownComplete).await;
+        });
+    }
+
+    /// Called after the showdown/walkover animation delay completes.
+    async fn finalize_hand_after_reveal(&mut self) {
+        let hand = match self.current_hand.take() {
+            Some(h) => h,
+            None => {
+                warn!("ShowdownComplete fired but no active hand — ignoring");
+                return;
+            }
+        };
+        self.finalize_hand(hand).await;
+    }
+
+    /// Process winners, send HandResult, and auto-start next hand.
+    async fn finalize_hand(&mut self, hand: ActiveHand) {
         let winners = hand.state.calculate_pot_winners();
+
+        // Award chips to winners
         for winner in &winners {
             if let Some(user) = hand.user_by_player_id.get(&winner.player_id)
                 && let Some(player) = self.players.get_mut(user)
@@ -598,18 +899,29 @@ impl TableActor {
             }
         }
 
-        let winner_names: Vec<String> = winners
+        // Build rich HandResult with winner details
+        let winner_results: Vec<WinnerResult> = winners
             .iter()
-            .map(|w| {
-                hand.user_by_player_id
-                    .get(&w.player_id)
-                    .map(|u| u.to_string())
-                    .unwrap_or_default()
+            .filter_map(|w| {
+                let user_id = hand.user_by_player_id.get(&w.player_id)?;
+                let display_name = self
+                    .players
+                    .get(user_id)
+                    .map(|p| p.user_id.to_string())
+                    .unwrap_or_else(|| user_id.to_string());
+                Some(WinnerResult {
+                    user_id: *user_id,
+                    display_name,
+                    amount: w.amount.as_i64() as u64,
+                    hand_rank: w.hand_rank.name().to_string(),
+                })
             })
             .collect();
+
         let total_pot = hand.state.current_pot().as_i64() as u64;
+
         let _ = self.broadcast_tx.send(RoomMessage::HandResult(HandResult {
-            winners: winner_names,
+            winners: winner_results,
             pot: total_pot,
         }));
 
@@ -623,6 +935,85 @@ impl TableActor {
         }
     }
 
+    /// Build the ShowdownReveal payload from the current hand state.
+    fn build_showdown_reveal(&self, hand: &ActiveHand) -> ShowdownReveal {
+        let community: Vec<WsCard> = hand
+            .state
+            .community_cards()
+            .iter()
+            .map(|c| WsCard {
+                suit: format!("{:?}", c.suit).to_lowercase(),
+                rank: format!("{:?}", c.rank),
+            })
+            .collect();
+
+        let winners = hand.state.calculate_pot_winners();
+
+        let players: Vec<ShowdownPlayer> = hand
+            .player_by_user_id
+            .keys()
+            .filter(|uid| !hand.player_is_folded(**uid))
+            .filter_map(|user_id| {
+                let user_id = *user_id;
+                let pid = hand.player_by_user_id.get(&user_id)?;
+
+                let hole_cards = hand.state.player_hole_cards(*pid)?;
+                let is_winner = winners.iter().any(|w| w.player_id == *pid);
+                let win_amount = winners
+                    .iter()
+                    .find(|w| w.player_id == *pid)
+                    .map(|w| w.amount.as_i64() as u64)
+                    .unwrap_or(0);
+
+                let seat = self.players.get(&user_id).map(|p| p.seat).unwrap_or(0);
+
+                // Evaluate hand description using the new helper
+                let hand_description = if community.len() >= 5 {
+                    let comm: [sb_shared_types::Card; 5] = community_cards_to_array(hand)?;
+                    let strength =
+                        sb_game_engine::evaluate::evaluate_hand_strength(&hole_cards, &comm);
+                    Some(get_hand_description(&strength))
+                } else {
+                    None
+                }
+                .unwrap_or_default();
+
+                Some(ShowdownPlayer {
+                    user_id,
+                    seat,
+                    hole_cards: hole_cards
+                        .iter()
+                        .map(|c| WsCard {
+                            suit: format!("{:?}", c.suit).to_lowercase(),
+                            rank: format!("{:?}", c.rank),
+                        })
+                        .collect(),
+                    hand_description,
+                    is_winner,
+                    win_amount,
+                })
+            })
+            .collect();
+
+        ShowdownReveal {
+            players,
+            community_cards: community,
+            pot: hand.state.current_pot().as_i64() as u64,
+        }
+    }
+
+    // ── Securely sends analytics to all players privately ──
+    async fn broadcast_analytics(&self, hand: &ActiveHand) {
+        for player in self.players.values() {
+            if let Some(analytics) = build_analytics(hand, player.user_id) {
+                let _ = self.broadcast_tx.send(RoomMessage::PrivateMessage {
+                    target_user_id: player.user_id,
+                    payload: PrivatePayload::Analytics { analytics },
+                });
+            }
+        }
+    }
+
     async fn broadcast_table_state(&self) {
         let current_turn_user_id = self
             .current_hand
@@ -633,6 +1024,57 @@ impl TableActor {
             .as_ref()
             .map(|h| street_name(&h.state))
             .unwrap_or_default();
+
+        // ── Calculate Position Badges ──
+        let positions_map: HashMap<u8, String> = if let Some(hand) = &self.current_hand {
+            let mut active_players: Vec<&Player> = self
+                .players
+                .values()
+                .filter(|p| !hand.player_is_folded(p.user_id) && !hand.player_is_all_in(p.user_id))
+                .collect();
+
+            if active_players.len() <= 1 {
+                HashMap::new()
+            } else {
+                active_players.sort_by_key(|p| p.seat);
+                let num_players = active_players.len() as i32;
+
+                // Find the dealer's index in the active_players array
+                let dealer_idx_in_active = active_players
+                    .iter()
+                    .position(|p| p.seat as usize == hand.dealer_index)
+                    .map(|i| i as i32)
+                    .unwrap_or(0);
+
+                let mut map = HashMap::new();
+                for (i, player) in active_players.iter().enumerate() {
+                    let pos_idx = (i as i32 - dealer_idx_in_active + num_players) % num_players;
+                    let badge = match num_players {
+                        2 => match pos_idx {
+                            0 => "BTN",
+                            1 => "BB",
+                            _ => "",
+                        },
+                        _ => match pos_idx {
+                            0 => "BTN",
+                            1 => "SB",
+                            2 => "BB",
+                            3 => "UTG",
+                            n if n == num_players - 1 => "CO",
+                            n if n == num_players - 2 => "HJ",
+                            n if n == num_players - 3 => "MP",
+                            _ => "",
+                        },
+                    };
+                    if !badge.is_empty() {
+                        map.insert(player.seat, badge.to_string());
+                    }
+                }
+                map
+            }
+        } else {
+            HashMap::new()
+        };
 
         let players_state: Vec<PlayerStateInfo> = if let Some(hand) = &self.current_hand {
             self.players
@@ -650,6 +1092,7 @@ impl TableActor {
                         current_bet: bet,
                         is_all_in: all_in,
                         is_folded: folded,
+                        position_badge: positions_map.get(&player.seat).cloned(), // <-- ASSIGN BADGE
                     }
                 })
                 .collect()
@@ -663,6 +1106,7 @@ impl TableActor {
                     current_bet: zero(),
                     is_all_in: false,
                     is_folded: false,
+                    position_badge: None, // <-- NO BADGE IF NO HAND
                 })
                 .collect()
         };
@@ -684,7 +1128,6 @@ impl TableActor {
 
         let (pot, side_pots) = if let Some(hand) = &self.current_hand {
             let pot = hand.state.current_pot();
-            // Convert side pots from engine's PlayerId to UserId
             let side_pots_vec: Vec<SidePotMessage> = hand
                 .state
                 .side_pots()
@@ -776,6 +1219,16 @@ impl TableActor {
             self.player_user_map.remove(&player_id);
             self.players.remove(user_id);
         }
+    }
+}
+
+/// Helper to convert community cards Vec to [Card; 5] for hand evaluation.
+fn community_cards_to_array(hand: &ActiveHand) -> Option<[sb_shared_types::Card; 5]> {
+    let cc = hand.state.community_cards();
+    if cc.len() >= 5 {
+        Some(cc[..5].try_into().ok()?)
+    } else {
+        None
     }
 }
 

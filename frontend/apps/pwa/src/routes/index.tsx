@@ -55,7 +55,9 @@ function IndexPage() {
             <CardContent className="flex-1 flex flex-col">
               <p className="text-on-surface-variant text-sm mb-4">Join a table and test your skills against other players.</p>
               <Link to="/lobby" className="mt-auto">
-                <Button variant="default" className="w-full">JOIN TABLE</Button>
+                <Button variant="default" className="w-full font-data-mono text-black">
+                  JOIN TABLE
+                </Button>
               </Link>
             </CardContent>
           </Card>
@@ -72,7 +74,9 @@ function IndexPage() {
             <CardContent className="flex-1 flex flex-col">
               <p className="text-on-surface-variant text-sm mb-4">See who's on top. Rankings update in real-time.</p>
               <Link to="/leaderboard" className="mt-auto">
-                <Button variant="outline" className="w-full">VIEW RANKS</Button>
+                <Button variant="outline" className="w-full font-data-mono text-black">
+                  VIEW RANKS
+                </Button>
               </Link>
             </CardContent>
           </Card>
@@ -89,7 +93,9 @@ function IndexPage() {
             <CardContent className="flex-1 flex flex-col">
               <p className="text-on-surface-variant text-sm mb-4">New to poker? Start with the basics.</p>
               <Link to="/guide" className="mt-auto">
-                <Button variant="outline" className="w-full">GUIDE</Button>
+                <Button variant="outline" className="w-full font-data-mono text-black">
+                  GUIDE
+                </Button>
               </Link>
             </CardContent>
           </Card>

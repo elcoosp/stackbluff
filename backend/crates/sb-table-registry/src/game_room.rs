@@ -33,6 +33,8 @@ pub struct PlayerStateInfo {
     pub current_bet: ChipAmount,
     pub is_all_in: bool,
     pub is_folded: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub position_badge: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -45,6 +47,14 @@ pub struct TableStateUpdate {
     pub street: String,
     pub pot: u64,
     pub side_pots: Vec<SidePotMessage>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct AnalyticsPayload {
+    pub win_prob: u8,
+    pub pot_odds: f32,
+    pub best_hand: String,
+    pub strength: u8,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -66,11 +76,42 @@ pub struct ActionBroadcast {
     pub new_pot: u64,
 }
 
+// ── Showdown types ──
+
 #[derive(Debug, Clone, Serialize)]
-pub struct HandResult {
-    pub winners: Vec<String>,
+pub struct ShowdownPlayer {
+    pub user_id: UserId,
+    pub seat: u8,
+    pub hole_cards: Vec<WsCard>,
+    pub hand_description: String,
+    pub is_winner: bool,
+    pub win_amount: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ShowdownReveal {
+    pub players: Vec<ShowdownPlayer>,
+    pub community_cards: Vec<WsCard>,
     pub pot: u64,
 }
+
+// ── Hand result types ──
+
+#[derive(Debug, Clone, Serialize)]
+pub struct WinnerResult {
+    pub user_id: UserId,
+    pub display_name: String,
+    pub amount: u64,
+    pub hand_rank: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct HandResult {
+    pub winners: Vec<WinnerResult>,
+    pub pot: u64,
+}
+
+// ── Room message enum ──
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type")]
@@ -81,6 +122,8 @@ pub enum RoomMessage {
     ActionRequired(ActionRequired),
     #[serde(rename = "ActionBroadcast")]
     ActionBroadcast(ActionBroadcast),
+    #[serde(rename = "ShowdownReveal")]
+    ShowdownReveal(ShowdownReveal),
     #[serde(rename = "HandResult")]
     HandResult(HandResult),
     #[serde(rename = "Error")]
@@ -101,6 +144,7 @@ pub enum RoomMessage {
 #[serde(rename_all = "snake_case", tag = "type")]
 pub enum PrivatePayload {
     YourHoleCards { hole_cards: Vec<WsCard> },
+    Analytics { analytics: AnalyticsPayload },
 }
 
 // === Connection / GameRoom (kept for reference, but actual logic is in actor.rs) ===
@@ -208,7 +252,7 @@ impl GameRoom {
                 player_id: user_id,
                 action: action.to_string(),
                 amount,
-                new_stack: 0, // placeholder; updated later
+                new_stack: 0,
                 new_pot: 0,
             }));
 
