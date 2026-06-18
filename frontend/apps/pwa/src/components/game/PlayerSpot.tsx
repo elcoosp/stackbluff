@@ -208,7 +208,8 @@ export const PlayerSpot = ({
   } = seat;
 
   const isActive = is_active && !is_folded && !is_all_in;
-  const isFolded = is_folded || is_all_in;
+  // ✅ FIX: isFolded should NOT include all-in; all-in is a separate state
+  const isFolded = is_folded; // only actual fold
 
   const showCardsFaceUp = isHero || seat.is_showdown_revealed;
   const isLargeCards = isHero || showCardsFaceUp;
@@ -281,6 +282,7 @@ export const PlayerSpot = ({
       'border-tertiary/40 shadow-[0_0_20px_rgba(78,222,163,0.15)]': isActive && !isHero,
       'border-tertiary shadow-[0_0_30px_rgba(78,222,163,0.25)]': isActive && isHero,
       'border-tertiary/60 shadow-[0_0_25px_rgba(78,222,163,0.3)]': seat.is_winner,
+      // Only apply dimming for actual folds, not all-in
       'opacity-30 grayscale': isFolded,
       'opacity-50 grayscale': seat.is_showdown_revealed && !seat.is_winner,
     }
@@ -397,6 +399,7 @@ export const PlayerSpot = ({
 
   const hasTimer = timerRemainingMs !== null && timerRemainingMs !== undefined;
 
+  // ── Winner glow: uniform scaling (both width and height) ──
   const winnerGlow = seat.is_winner ? (
     <motion.div
       initial={{ opacity: 0, scale: 0.8 }}
@@ -408,6 +411,7 @@ export const PlayerSpot = ({
       className="absolute inset-0 rounded-sm pointer-events-none"
       style={{
         boxShadow: '0 0 20px rgba(78,222,163,0.4), 0 0 40px rgba(78,222,163,0.2)',
+        transformOrigin: 'center',
       }}
     />
   ) : null;
@@ -429,7 +433,7 @@ export const PlayerSpot = ({
   // ── Card positioning ──
   const cardPositionStyle: CSSProperties = (() => {
     if (isHero) {
-      const top = isMobile ? -56 : -14;
+      const top = -56;   // lifted higher on desktop
       const right = isMobile ? -20 : -10;
       return { top, right };
     } else {
@@ -510,7 +514,7 @@ export const PlayerSpot = ({
         style={cardPositionStyle}
       >
         <AnimatePresence mode="wait">
-          {!isFolded && (
+          {!isFolded && ( // All-in players are NOT folded, so their cards remain visible
             <CardGroup
               key={`hole-${seat.seat}`}
               showCardsFaceUp={showCardsFaceUp}

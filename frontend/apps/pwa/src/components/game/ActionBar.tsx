@@ -14,6 +14,15 @@ import {
 } from 'lucide-react';
 import type { PreAction } from '../../hooks/usePreAction';
 
+// ── Helper: format currency with "k" shorthand ──
+function formatCurrency(amount: number): string {
+  if (amount >= 1000) {
+    const k = (amount / 1000).toFixed(1);
+    return `$${k}k`;
+  }
+  return `$${amount}`;
+}
+
 const glassStyle: React.CSSProperties = {
   background: 'rgba(8, 8, 8, 0.85)',
   backdropFilter: 'blur(32px)',
@@ -26,7 +35,8 @@ const glassStyle: React.CSSProperties = {
 
 const transition = { duration: 0.25, ease: [0.22, 1, 0.36, 1] as const };
 
-const MOBILE_BREAK = 362;
+// ── Increased breakpoint from 362 to 390 ──
+const MOBILE_BREAK = 390;
 
 // ── Hook to keep banner visible for a minimum duration ──
 function useVisibleAction(action: string | null, amount: number, delay = 2500) {
@@ -443,7 +453,11 @@ const DesktopActionBar = ({
   const [preActionOpen, setPreActionOpen] = useState(false);
   const isCheck = toCall === 0;
   const isAllInCall = heroStack > 0 && heroStack < toCall;
-  const callLabel = isCheck ? 'Check' : isAllInCall ? `All-in $${heroStack}` : `Call $${toCall}`;
+  const callLabel = isCheck
+    ? 'Check'
+    : isAllInCall
+      ? `All-in ${formatCurrency(heroStack)}`
+      : `Call ${formatCurrency(toCall)}`;
 
   const allInDisabled = !actionRequired || heroStack === 0 || (!canRaise && heroStack >= toCall);
 
@@ -455,7 +469,6 @@ const DesktopActionBar = ({
     if (!actionRequired) setPreActionOpen(true);
   }, [actionRequired]);
 
-  // Format pre-action label for display
   const getPreActionLabel = () => {
     if (!preAction) return 'Auto';
     const label = preAction.type.replace(/_/g, ' ');
@@ -520,7 +533,7 @@ const DesktopActionBar = ({
             <motion.button
               type="button"
               onClick={() => setPreActionOpen(!preActionOpen)}
-              className={`flex items-center gap-1.5 px-2.5 py-2.5 rounded-lg border cursor-pointer select-none transition-colors duration-200 ${preAction
+              className={`flex items-center gap-1.5 px-3 py-2.5 rounded-lg border cursor-pointer select-none transition-colors duration-200 ${preAction
                   ? 'border-tertiary/30 bg-tertiary/10 text-tertiary'
                   : 'border-white/8 bg-white/[0.03] text-white/25 hover:text-white/40 hover:border-white/12'
                 }`}
@@ -616,7 +629,11 @@ const MobileActionBar = ({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const isCheck = toCall === 0;
   const isAllInCall = heroStack > 0 && heroStack < toCall;
-  const callLabel = isCheck ? 'Check' : isAllInCall ? `All-in $${heroStack}` : `Call $${toCall}`;
+  const callLabel = isCheck
+    ? 'Check'
+    : isAllInCall
+      ? `All-in ${formatCurrency(heroStack)}`
+      : `Call ${formatCurrency(toCall)}`;
 
   const allInDisabled = !actionRequired || heroStack === 0 || (!canRaise && heroStack >= toCall);
 
@@ -631,11 +648,9 @@ const MobileActionBar = ({
     if (actionRequired) setDrawerOpen(false);
   }, [actionRequired]);
 
-  // Format pre-action label for mobile display
-  const getPreActionLabel = () => {
-    if (!preAction) return 'Pre-actions';
-    const label = preAction.type.replace(/_/g, ' ');
-    return label;
+  const getPreActionText = () => {
+    if (!preAction) return '';
+    return preAction.type.replace(/_/g, ' ');
   };
 
   const foldBtn = (
@@ -696,7 +711,7 @@ const MobileActionBar = ({
               transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
               className="overflow-hidden"
             >
-              <div className="px-3 pt-3 pb-1">
+              <div className="px-3 py-2">
                 <PreActionPanel
                   preAction={preAction}
                   onSetPreAction={onSetPreAction}
@@ -763,7 +778,7 @@ const MobileActionBar = ({
                   whileTap={{ scale: 0.95 }}
                 >
                   <Bot className="w-2.5 h-2.5 shrink-0" />
-                  {preAction ? `Auto: ${getPreActionLabel()}` : 'Pre-actions'}
+                  {preAction ? `Auto: ${getPreActionText()}` : 'Auto'}
                 </motion.button>
               )}
             </div>

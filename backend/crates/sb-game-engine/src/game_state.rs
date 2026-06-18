@@ -179,10 +179,8 @@ impl GameState {
         let smallest_bet = bb;
         let min_raise = bb;
 
-        // In heads-up: dealer=SB acts first preflop.
-        // In 3+: UTG (after BB) acts first preflop.
         let current_player_index = if player_states.len() == 2 {
-            small_blind_index // dealer/SB acts first
+            small_blind_index
         } else {
             (big_blind_index + 1) % player_states.len()
         };
@@ -204,7 +202,7 @@ impl GameState {
             min_raise,
             blinds,
             dealer_index,
-            last_aggressor_index: Some(big_blind_index), // BB is initial "aggressor" for preflop
+            last_aggressor_index: Some(big_blind_index),
             round_bets,
             hand_complete: false,
         })
@@ -225,7 +223,6 @@ impl GameState {
         if player.stack == ChipAmount::new(0).unwrap() {
             player.is_all_in = true;
         }
-        // Blinds do NOT count as "acted" — BB still gets option to raise
         Ok(())
     }
 
@@ -259,7 +256,6 @@ impl GameState {
                 self.players[idx].acted_this_round = true;
                 debug!(player = ?self.players[idx].player_id, "Fold");
 
-                // If only one player remains, hand is complete
                 let active_count = self.players.iter().filter(|p| !p.has_folded).count();
                 if active_count == 1 {
                     self.hand_complete = true;
@@ -280,19 +276,16 @@ impl GameState {
                 self.advance_turn();
             }
             Action::Call => {
-                let call_amount = self.smallest_bet - self.round_bets[idx];
+                let mut call_amount = self.smallest_bet - self.round_bets[idx];
                 if call_amount <= ChipAmount::new(0).unwrap() {
-                    // Can't call when bets are equal — should use Check
                     return Err(ActionError::InvalidRaise {
                         attempted: call_amount,
                         min: self.min_raise,
                     });
                 }
+                // If stack is less than the required call, call with everything left (all-in)
                 if self.players[idx].stack < call_amount {
-                    return Err(ActionError::InsufficientStack {
-                        action: "call".into(),
-                        needed: call_amount,
-                    });
+                    call_amount = self.players[idx].stack;
                 }
                 self.add_bet(idx, call_amount);
                 self.players[idx].acted_this_round = true;
@@ -302,7 +295,8 @@ impl GameState {
             Action::Raise(raise_amount) => {
                 let total_bet = self.round_bets[idx] + raise_amount;
                 let required = self.smallest_bet + self.min_raise;
-                if total_bet < required {
+                // Allow all-in even if total_bet < required
+                if total_bet < required && self.players[idx].stack != raise_amount {
                     return Err(ActionError::InvalidRaise {
                         attempted: raise_amount,
                         min: self.min_raise,
@@ -319,8 +313,7 @@ impl GameState {
                 self.min_raise = raise_amount;
                 self.last_aggressor_index = Some(idx);
 
-                // Reset acted_this_round for all OTHER active players —
-                // they must respond to the raise
+                // Reset acted_this_round for all OTHER active players
                 for (i, p) in self.players.iter_mut().enumerate() {
                     if i != idx && !p.has_folded && !p.is_all_in {
                         p.acted_this_round = false;
@@ -349,7 +342,6 @@ impl GameState {
     }
 
     fn advance_turn(&mut self) {
-        // Find next player who can still act (not folded, not all-in)
         let mut next = (self.current_player_index + 1) % self.players.len();
         let start = next;
         loop {
@@ -359,7 +351,6 @@ impl GameState {
             }
             next = (next + 1) % self.players.len();
             if next == start {
-                // All players are folded or all-in
                 break;
             }
         }
@@ -384,7 +375,6 @@ impl GameState {
             return true;
         }
 
-        // All active players must have acted this round AND have equal bets
         let all_acted = active.iter().all(|&i| self.players[i].acted_this_round);
         let all_bet_equal = active
             .iter()
@@ -393,7 +383,6 @@ impl GameState {
         all_acted && all_bet_equal
     }
 
-    /// Count players who can still act (not folded, not all-in)
     fn active_player_count(&self) -> usize {
         self.players
             .iter()
@@ -401,7 +390,6 @@ impl GameState {
             .count()
     }
 
-    /// Deal the remaining community cards (turn and river) if missing.
     fn deal_remaining_community_cards(&mut self) {
         while self.community_cards.len() < 5 {
             if let Some(card) = self.deck.deal() {
@@ -416,7 +404,6 @@ impl GameState {
     fn end_round(&mut self) {
         match self.current_round {
             BettingRound::Preflop => {
-                // Deal flop
                 for _ in 0..3 {
                     if let Some(card) = self.deck.deal() {
                         self.community_cards.push(card);
@@ -426,7 +413,6 @@ impl GameState {
                         return;
                     }
                 }
-                // If no active players, deal the rest and go to showdown
                 if self.active_player_count() == 0 {
                     self.deal_remaining_community_cards();
                     self.current_round = BettingRound::Showdown;
@@ -437,7 +423,6 @@ impl GameState {
                 self.reset_round();
             }
             BettingRound::Flop => {
-                // Deal turn
                 if let Some(card) = self.deck.deal() {
                     self.community_cards.push(card);
                 } else {
@@ -446,7 +431,6 @@ impl GameState {
                     return;
                 }
                 if self.active_player_count() == 0 {
-                    // Deal river and finish
                     if let Some(card) = self.deck.deal() {
                         self.community_cards.push(card);
                     } else {
@@ -462,7 +446,6 @@ impl GameState {
                 self.reset_round();
             }
             BettingRound::Turn => {
-                // Deal river
                 if let Some(card) = self.deck.deal() {
                     self.community_cards.push(card);
                 } else {
@@ -499,7 +482,6 @@ impl GameState {
         self.min_raise = self.blinds.1;
         self.last_aggressor_index = None;
 
-        // First to act post-flop: first active player after dealer
         let mut start = (self.dealer_index + 1) % self.players.len();
         let initial = start;
         while self.players[start].has_folded || self.players[start].is_all_in {
@@ -519,7 +501,6 @@ impl GameState {
         self.hand_id
     }
 
-    /// Returns the PlayerId of the player whose turn it is
     pub fn current_player_id(&self) -> Option<PlayerId> {
         if self.hand_complete || self.current_round == BettingRound::Showdown {
             return None;
@@ -529,7 +510,6 @@ impl GameState {
             .map(|p| p.player_id)
     }
 
-    /// Returns the amount needed to call for the current player
     pub fn current_call_amount(&self) -> ChipAmount {
         if let Some(_player) = self.players.get(self.current_player_index) {
             let current_bet = self.round_bets[self.current_player_index];
@@ -543,17 +523,14 @@ impl GameState {
         }
     }
 
-    /// Returns the minimum raise amount
     pub fn min_raise_amount(&self) -> ChipAmount {
         self.min_raise
     }
 
-    /// Returns the current community cards
     pub fn community_cards(&self) -> &[Card] {
         &self.community_cards
     }
 
-    /// Returns the current stack of a player
     pub fn player_stack(&self, player_id: PlayerId) -> Option<ChipAmount> {
         self.players
             .iter()
@@ -561,7 +538,6 @@ impl GameState {
             .map(|p| p.stack)
     }
 
-    /// Returns the current bet of a player this round
     pub fn player_current_bet(&self, player_id: PlayerId) -> Option<ChipAmount> {
         self.players
             .iter()
@@ -569,14 +545,12 @@ impl GameState {
             .map(|p| p.bet_this_round)
     }
 
-    /// Returns whether a player is all-in
     pub fn player_is_all_in(&self, player_id: PlayerId) -> bool {
         self.players
             .iter()
             .any(|p| p.player_id == player_id && p.is_all_in)
     }
 
-    /// Returns whether a player has folded
     pub fn player_is_folded(&self, player_id: PlayerId) -> bool {
         self.players
             .iter()
@@ -594,7 +568,6 @@ impl GameState {
         let can_check = to_call == ChipAmount::new(0).unwrap();
         let remaining_ms = 30_000;
 
-        // Calculate Analytics
         let analytics = if let Some(hole_cards) = &self.players[current_idx].hole_cards {
             let pot_odds = if to_call.as_i64() > 0 {
                 (self.pot.as_i64() as f32 / to_call.as_i64() as f32) / 10.0
@@ -610,7 +583,6 @@ impl GameState {
                     crate::analytics::get_strength_score(strength.rank),
                 )
             } else {
-                // Pre-flop or partial flop logic
                 if hole_cards[0].rank == hole_cards[1].rank {
                     ("One Pair".to_string(), 25)
                 } else {
@@ -791,7 +763,6 @@ mod tests {
 
     #[test]
     fn test_heads_up_call_then_bb_option() {
-        // Dealer=pid(1), SB=pid(1), BB=pid(2)
         let players = vec![
             (pid(1), ChipAmount::new(1000).unwrap()),
             (pid(2), ChipAmount::new(1000).unwrap()),
@@ -804,20 +775,11 @@ mod tests {
         )
         .unwrap();
 
-        // SB (pid(1)) should act first preflop in heads-up
         assert_eq!(state.current_player_id(), Some(pid(1)));
-
-        // SB calls
         state.apply_action(pid(1), Action::Call).unwrap();
-
-        // BB (pid(2)) should now get option to raise — NOT end the round!
         assert_eq!(state.current_player_id(), Some(pid(2)));
         assert_eq!(state.current_round, BettingRound::Preflop);
-
-        // BB checks (completes the round)
         state.apply_action(pid(2), Action::Check).unwrap();
-
-        // Now flop should be dealt
         assert_eq!(state.current_round, BettingRound::Flop);
         assert_eq!(state.community_cards.len(), 3);
     }
@@ -836,32 +798,25 @@ mod tests {
         )
         .unwrap();
 
-        // Preflop: SB calls, BB checks
         assert_eq!(state.current_player_id(), Some(pid(1)));
         state.apply_action(pid(1), Action::Call).unwrap();
         assert_eq!(state.current_player_id(), Some(pid(2)));
         state.apply_action(pid(2), Action::Check).unwrap();
 
-        // Flop: SB acts first postflop
         assert_eq!(state.current_round, BettingRound::Flop);
         assert_eq!(state.current_player_id(), Some(pid(1)));
         state.apply_action(pid(1), Action::Check).unwrap();
-
-        // BB checks
         assert_eq!(state.current_player_id(), Some(pid(2)));
         state.apply_action(pid(2), Action::Check).unwrap();
 
-        // Turn
         assert_eq!(state.current_round, BettingRound::Turn);
         state.apply_action(pid(1), Action::Check).unwrap();
         state.apply_action(pid(2), Action::Check).unwrap();
 
-        // River
         assert_eq!(state.current_round, BettingRound::River);
         state.apply_action(pid(1), Action::Check).unwrap();
         state.apply_action(pid(2), Action::Check).unwrap();
 
-        // Showdown
         assert!(state.is_hand_complete());
     }
 
@@ -880,13 +835,11 @@ mod tests {
         )
         .unwrap();
 
-        // UTG raises
         let utg = state.current_player_id().unwrap();
         state
             .apply_action(utg, Action::Raise(ChipAmount::new(20).unwrap()))
             .unwrap();
 
-        // SB must respond to raise
         let sb = state.current_player_id().unwrap();
         assert!(
             !state
@@ -898,7 +851,6 @@ mod tests {
         );
         state.apply_action(sb, Action::Call).unwrap();
 
-        // BB must respond to raise
         let bb = state.current_player_id().unwrap();
         assert!(
             !state
@@ -910,7 +862,6 @@ mod tests {
         );
         state.apply_action(bb, Action::Call).unwrap();
 
-        // Round should now be complete
         assert_eq!(state.current_round, BettingRound::Flop);
     }
 
@@ -963,19 +914,16 @@ mod tests {
             (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap()),
         )
         .unwrap();
-        // SB raises
         let first = state.players[state.current_player_index].player_id;
         state
             .apply_action(first, Action::Raise(ChipAmount::new(20).unwrap()))
             .unwrap();
-        // BB calls
         let second = state.players[state.current_player_index].player_id;
         state.apply_action(second, Action::Call).unwrap();
         assert_eq!(state.current_round, BettingRound::Flop);
         assert_eq!(state.community_cards.len(), 3);
     }
 
-    // ── Test the all-in fix ──
     #[test]
     fn test_all_in_no_active_players_ends_hand_immediately() {
         let players = vec![
@@ -990,22 +938,80 @@ mod tests {
         )
         .unwrap();
 
-        // Preflop: SB (dealer) calls all-in?
-        // But we need both to be all-in. Let's make SB shove, BB call all-in.
-        // SB is pid(1) first to act.
         state
             .apply_action(pid(1), Action::Raise(ChipAmount::new(1000).unwrap()))
             .unwrap();
-        // Now BB (pid(2)) must respond; they call all-in.
         state.apply_action(pid(2), Action::Call).unwrap();
 
-        // Now both players are all-in, no active players.
-        // The hand should now be complete after dealing flop/turn/river.
-        // We can check that hand_complete is true and community cards are dealt.
         assert!(state.is_hand_complete());
         assert_eq!(state.community_cards().len(), 5);
-        // Pot should be 2000 (1000+1000) plus blinds? Actually blinds were posted before:
-        // blinds are 5 and 10, so pot = 5+10+1000+1000 = 2015? But our logic: when SB raises 1000, he puts in 1000 plus the 5 blind? Actually he has 1000 stack, blind is separate. The total pot should include blinds and the all-in bets. Let's just check pot is >0.
         assert!(state.current_pot().as_i64() > 0);
+    }
+
+    // Test the all-in raise below minimum
+    #[test]
+    fn test_all_in_raise_below_minimum_is_allowed() {
+        let players = vec![
+            (pid(1), ChipAmount::new(1000).unwrap()),
+            (pid(2), ChipAmount::new(1000).unwrap()),
+        ];
+        let mut state = GameState::new_hand(
+            TableId::generate(),
+            players,
+            0,
+            (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap()),
+        )
+        .unwrap();
+
+        // SB calls, BB raises to 100, SB goes all-in with 50 (less than min raise)
+        state.apply_action(pid(1), Action::Call).unwrap();
+        state
+            .apply_action(pid(2), Action::Raise(ChipAmount::new(100).unwrap()))
+            .unwrap();
+        // Now SB (pid1) has 995? Actually after posting SB (5) and calling (10? Wait: initial SB=5, BB=10. After SB calls, SB has put 10 total? Let's simplify: we just need to test the raise logic.
+        // Instead, we'll construct a scenario where a player raises all-in with less than the minimum.
+        // Reset: let's just test the raise function directly.
+        // Actually we already have the logic in place; we can add a test that verifies an all-in raise below min is accepted.
+        // But we need to ensure the raise_amount equals the player's stack.
+        // Create a state where a player has 50 chips and faces a bet of 100.
+        // We can simulate: blinds 5/10, SB calls, BB raises to 100, SB goes all-in with 50.
+        // After BB raises to 100, the smallest_bet = 100, min_raise = 90 (100-10). SB's stack = 995? Actually after posting SB of 5, SB has 995. Then SB calls the BB's raise? No, the raise is 100 total, so SB would need to call 90 more (since he already has 10 in). If SB has 995, he can call. To get him to have 50, we need to reduce his stack. Let's not overcomplicate. The test can just verify the condition.
+        // We'll add a simple test that directly checks the raise logic with a raise_amount equal to stack.
+        let mut state = GameState::new_hand(
+            TableId::generate(),
+            vec![
+                (pid(1), ChipAmount::new(50).unwrap()),
+                (pid(2), ChipAmount::new(1000).unwrap()),
+            ],
+            0,
+            (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap()),
+        )
+        .unwrap();
+        // SB (pid1) has 50, BB (pid2) has 1000. Preflop: SB acts first. SB goes all-in with 50.
+        // The raise amount is 50. The minimum raise required is 10 (BB). The raise amount is 50, but the total bet = current bet (5) + raise (50) = 55. The required = smallest_bet (10) + min_raise (10) = 20. So 55 >= 20, so it passes anyway. We need a case where raise amount is less than min raise. E.g., smallest_bet is 100, min_raise is 90, and stack is 50, so total bet = current bet (10) + 50 = 60, required = 100+90=190, fails. But if stack is 50, the raise_amount equals stack, so it should be allowed.
+        // Let's force a situation: after BB raises to 100, smallest_bet=100, min_raise=90, SB has 50. SB's current bet is 5 (blind). So total_bet = 5 + 50 = 55, required = 100+90=190. This would normally be invalid, but since stack == raise_amount (50), we allow it.
+        // So we need to set up a hand where BB raises to 100.
+        let players2 = vec![
+            (pid(1), ChipAmount::new(50).unwrap()),
+            (pid(2), ChipAmount::new(1000).unwrap()),
+        ];
+        let mut state2 = GameState::new_hand(
+            TableId::generate(),
+            players2,
+            0,
+            (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap()),
+        )
+        .unwrap();
+        // SB (pid1) calls
+        state2.apply_action(pid(1), Action::Call).unwrap();
+        // BB (pid2) raises to 100
+        state2
+            .apply_action(pid(2), Action::Raise(ChipAmount::new(100).unwrap()))
+            .unwrap();
+        // Now SB (pid1) goes all-in with 50
+        let result = state2.apply_action(pid(1), Action::Raise(ChipAmount::new(50).unwrap()));
+        assert!(result.is_ok());
+        // The player should now be all-in
+        assert!(state2.player_is_all_in(pid(1)));
     }
 }

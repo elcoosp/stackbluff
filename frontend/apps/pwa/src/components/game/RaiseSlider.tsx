@@ -52,12 +52,23 @@ export const RaiseSlider = ({
     trigger('sliderTick');
   };
 
+  // ── Generate presets, only if pot > 0, then deduplicate ──
   const presets = [
-    { label: '½ POT', value: Math.max(min, Math.floor(pot * 0.5)) },
-    { label: '¾ POT', value: Math.max(min, Math.floor(pot * 0.75)) },
-    { label: 'POT', value: Math.max(min, pot) },
+    ...(pot > 0 ? [
+      { label: '½ POT', value: Math.max(min, Math.floor(pot * 0.5)) },
+      { label: '¾ POT', value: Math.max(min, Math.floor(pot * 0.75)) },
+      { label: 'POT', value: Math.max(min, pot) },
+    ] : []),
     { label: 'MAX', value: max },
   ];
+
+  // Remove duplicates by value, keeping the first occurrence
+  const uniquePresets = presets.reduce((acc, preset) => {
+    if (!acc.some(p => p.value === preset.value)) {
+      acc.push(preset);
+    }
+    return acc;
+  }, []);
 
   const progress = max > min ? ((amount - min) / (max - min)) * 100 : 0;
 
@@ -253,7 +264,7 @@ export const RaiseSlider = ({
             </div>
 
             <div className="flex gap-1.5">
-              {presets.map((preset, idx) => (
+              {uniquePresets.map((preset, idx) => (
                 <motion.button
                   key={preset.label}
                   initial={{ opacity: 0, y: 5 }}

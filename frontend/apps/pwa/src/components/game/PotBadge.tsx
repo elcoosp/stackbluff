@@ -59,29 +59,48 @@ export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, pot
   const MORPH_DURATION = 0.4;
   const CONTENT_DELAY = 0.45;
 
-  // ── Glow pulse on bet reception ──
+  // ── Chip arrival effects ──
   const lastAction = useGameStore((s) => s.lastAction);
-  const [glow, setGlow] = useState(false);
+  const [effectKey, setEffectKey] = useState(0);
 
   useEffect(() => {
     if (lastAction && ['bet', 'raise', 'call', 'all-in'].includes(lastAction.action)) {
-      setGlow(true);
-      const timer = setTimeout(() => setGlow(false), 600);
-      return () => clearTimeout(timer);
+      setEffectKey((prev) => prev + 1);
     }
   }, [lastAction]);
 
+  // ── Ripple ring configuration ──
+  const rippleVariants = {
+    initial: { scale: 0.8, opacity: 0.6, borderWidth: '2px' },
+    animate: { scale: 2.2, opacity: 0, borderWidth: '1px' },
+    exit: { opacity: 0 },
+  };
+
+  // ── Badge squash & stretch ──
+  const badgeBounceVariants = {
+    initial: { scaleX: 1, scaleY: 1 },
+    animate: {
+      scaleX: [1, 0.96, 1.02, 1],
+      scaleY: [1, 1.06, 0.98, 1],
+      transition: { duration: 0.35, ease: [0.34, 1.56, 0.64, 1] },
+    },
+  };
+
+  // ── Number pop ──
+  const numberPopVariants = {
+    initial: { scale: 1 },
+    animate: {
+      scale: [1, 1.18, 0.95, 1],
+      transition: { duration: 0.4, ease: [0.34, 1.56, 0.64, 1] },
+    },
+  };
+
   return (
-    <motion.div
-      ref={potRef}
-      layout
-      className="relative z-30 font-mono flex items-center justify-center"
-    >
+    <div ref={potRef} className="relative z-30 font-mono flex items-center justify-center">
       <AnimatePresence mode="wait">
         {isShowdown ? (
           <motion.div
             key="showdown"
-            layout
             initial={{ opacity: 0, scale: 0.95, filter: "blur(4px)" }}
             animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
             exit={{ opacity: 0, scale: 0.95, filter: "blur(4px)" }}
@@ -93,6 +112,7 @@ export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, pot
               isMobile ? "px-5 py-3 min-w-[240px]" : "px-6 py-3 min-w-[260px]",
             )}
           >
+            {/* ... winner content (unchanged) ... */}
             <motion.span
               className={cn(
                 "font-label-caps tracking-[0.3em] text-tertiary uppercase",
@@ -171,28 +191,32 @@ export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, pot
         ) : (
           <motion.div
             key="pot"
-            layout
-            initial={{ opacity: 0, scale: 0.95, filter: "blur(4px)" }}
-            animate={{
-              opacity: 1,
-              scale: 1,
-              filter: "blur(0px)",
-              boxShadow: glow
-                ? '0 0 30px rgba(78,222,163,0.5), 0 0 60px rgba(78,222,163,0.2)'
-                : 'none',
-            }}
-            exit={{ opacity: 0, scale: 0.95, filter: "blur(4px)" }}
-            transition={{
-              duration: MORPH_DURATION,
-              ease: [0.22, 1, 0.36, 1],
-              boxShadow: { duration: 0.3, ease: 'easeOut' },
-            }}
+            // ── Badge bounce on chip arrival ──
+            variants={badgeBounceVariants}
+            initial="initial"
+            animate={effectKey > 0 ? "animate" : "initial"}
             className={cn(
-              'flex items-center justify-center gap-2 rounded-full bg-black/60 backdrop-blur-md border border-white/10 font-data-mono text-center',
+              'relative flex items-center justify-center gap-2 rounded-full bg-black/60 backdrop-blur-md border border-white/10 font-data-mono text-center',
               isMobile ? 'px-4 py-2 text-[10px]' : 'px-3 py-1.5 text-[10px]',
               toCall && toCall > 0 && 'border-tertiary/20'
             )}
           >
+            {/* ── Ripple ring ── */}
+            <AnimatePresence>
+              {effectKey > 0 && (
+                <motion.div
+                  key={effectKey}
+                  variants={rippleVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  className="absolute inset-0 rounded-full pointer-events-none border border-tertiary/60"
+                  style={{ borderColor: 'rgba(78,222,163,0.6)' }}
+                />
+              )}
+            </AnimatePresence>
+
+            {/* ── Pot content ── */}
             <motion.div
               className="flex items-center justify-center gap-1 text-center"
               initial={{ opacity: 0, scale: 0.9, y: 4 }}
@@ -200,7 +224,11 @@ export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, pot
               transition={{ delay: CONTENT_DELAY, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
             >
               <Coins className={cn('text-tertiary/70', isMobile ? 'w-3.5 h-3.5' : 'w-3 h-3')} />
-              <span
+              <motion.span
+                key={animatedAmount} // triggers number pop on amount change
+                variants={numberPopVariants}
+                initial="initial"
+                animate={effectKey > 0 ? "animate" : "initial"}
                 className="bg-clip-text text-transparent text-center tabular-nums"
                 style={{
                   backgroundImage: 'linear-gradient(90deg, #4edea3 0%, #6ffbbe 30%, #0cb880 60%, #4edea3 100%)',
@@ -210,9 +238,10 @@ export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, pot
               >
                 {isMobile ? '' : 'POT '}
                 ${formatAmount(Math.round(animatedAmount))}
-              </span>
+              </motion.span>
             </motion.div>
 
+            {/* Call indicator – unchanged */}
             {toCall !== undefined && toCall > 0 && (
               <motion.div
                 className="flex items-center justify-center gap-1 text-center"
@@ -233,6 +262,6 @@ export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, pot
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 };

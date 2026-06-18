@@ -586,6 +586,13 @@ impl TableActor {
                 }
             };
 
+        // ── FIX: Update actor's player stacks to match engine's stacks after blinds ──
+        for player in self.players.values_mut() {
+            if let Some(engine_stack) = state.player_stack(player.player_id) {
+                player.stack = engine_stack;
+            }
+        }
+
         let mut user_by_player_id = HashMap::new();
         let mut player_by_user_id = HashMap::new();
         for player in self.players.values() {

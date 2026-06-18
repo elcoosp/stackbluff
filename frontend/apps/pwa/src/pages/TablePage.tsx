@@ -398,7 +398,10 @@ export function TablePage() {
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={() => { setShowSettings(true); trigger('buttonClick'); }}
-          className="absolute top-3 right-3 z-[600] p-2 rounded-full bg-black/50 backdrop-blur-md border border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-black/70 transition-all"
+          className={cn(
+            "absolute top-3 right-3 z-[700] p-2 rounded-full bg-black/50 backdrop-blur-md border border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-black/70 transition-all",
+            !isDesktop && "top-16"
+          )}
           aria-label="Feedback settings"
         >
           <Settings className="w-4 h-4" />

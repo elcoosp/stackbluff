@@ -1,6 +1,5 @@
-- Keyboard shortcuts are not disabled like buttons when they are they should
+
 - Sometimes the hero player hub is a little bit too much on top on mobile might overflow community cards, before 2 row action bar
-  - Insufficient stack to call when calling a greater amount than my stack but capped to my stack (eg 2000, i have only 800, the button show call 800 only enabled and i get this error)
 - Missing pseudo player user link evreywhere
 - Missing modal stats player on hub click
-- WHen i try to follow all in with a call of the amount it said insufficient stack call
+- It's unknown turn
