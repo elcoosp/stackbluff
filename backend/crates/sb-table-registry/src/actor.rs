@@ -154,6 +154,7 @@ fn get_hand_description(strength: &sb_game_engine::evaluate::HandStrength) -> St
 pub enum InternalCommand {
     Join {
         user_id: UserId,
+        display_name: String, // <-- ADDED
         seat: Option<u8>,
         stack: ChipAmount,
     },
@@ -180,6 +181,7 @@ pub enum InternalCommand {
 #[derive(Debug, Clone)]
 struct Player {
     user_id: UserId,
+    display_name: String, // <-- ADDED
     seat: u8,
     player_id: PlayerId,
     stack: ChipAmount,
@@ -187,9 +189,11 @@ struct Player {
 }
 
 impl Player {
-    fn new(user_id: UserId, seat: u8, stack: ChipAmount) -> Self {
+    fn new(user_id: UserId, display_name: String, seat: u8, stack: ChipAmount) -> Self {
+        // <-- ADDED display_name
         Self {
             user_id,
+            display_name,
             seat,
             player_id: PlayerId(Uuid::new_v4()),
             stack,
@@ -474,9 +478,10 @@ impl TableActor {
         match cmd {
             InternalCommand::Join {
                 user_id,
+                display_name,
                 seat,
                 stack,
-            } => self.join_player(user_id, seat, stack).await,
+            } => self.join_player(user_id, display_name, seat, stack).await,
             InternalCommand::Leave {
                 user_id,
                 respond_to,
@@ -493,7 +498,13 @@ impl TableActor {
         }
     }
 
-    async fn join_player(&mut self, user_id: UserId, seat: Option<u8>, stack: ChipAmount) {
+    async fn join_player(
+        &mut self,
+        user_id: UserId,
+        display_name: String,
+        seat: Option<u8>,
+        stack: ChipAmount,
+    ) {
         // ── Idempotent Reconnect Logic ──
         // If the player is already at the table (e.g., websocket dropped and reconnected),
         // just resync their state instead of throwing an error.
@@ -593,7 +604,7 @@ impl TableActor {
             self.send_error_to(&user_id, "Seat out of range").await;
             return;
         }
-        let player = Player::new(user_id, seat, stack);
+        let player = Player::new(user_id, display_name, seat, stack);
         self.players.insert(player.user_id, player);
         let _ = self.broadcast_tx.send(RoomMessage::Connected {
             user_id,
@@ -1040,7 +1051,7 @@ impl TableActor {
                 let display_name = self
                     .players
                     .get(user_id)
-                    .map(|p| p.user_id.to_string())
+                    .map(|p| p.display_name.clone()) // <-- CHANGED to use display_name
                     .unwrap_or_else(|| user_id.to_string());
                 Some(WinnerResult {
                     user_id: *user_id,
@@ -1120,6 +1131,11 @@ impl TableActor {
                     .unwrap_or(0);
 
                 let seat = self.players.get(&user_id).map(|p| p.seat).unwrap_or(0);
+                let display_name = self
+                    .players
+                    .get(&user_id)
+                    .map(|p| p.display_name.clone())
+                    .unwrap_or_else(|| "Player".to_string()); // <-- ADDED
 
                 let mut hand_description = String::new();
                 let mut winning_cards_ws: Vec<WsCard> = vec![];
@@ -1146,6 +1162,7 @@ impl TableActor {
 
                 Some(ShowdownPlayer {
                     user_id,
+                    display_name, // <-- ADDED
                     seat,
                     hole_cards,
                     hand_description,
@@ -1162,6 +1179,7 @@ impl TableActor {
             pot: hand.state.current_pot().as_i64() as u64,
         }
     }
+
     // ── Securely sends analytics to all players privately ──
     async fn broadcast_analytics(&self, hand: &ActiveHand) {
         for player in self.players.values() {
@@ -1250,6 +1268,7 @@ impl TableActor {
                     let folded = hand.player_is_folded(uid);
                     PlayerStateInfo {
                         user_id: uid,
+                        display_name: player.display_name.clone(), // <-- ADDED
                         seat: player.seat,
                         stack,
                         current_bet: bet,
@@ -1264,6 +1283,7 @@ impl TableActor {
                 .values()
                 .map(|player| PlayerStateInfo {
                     user_id: player.user_id,
+                    display_name: player.display_name.clone(), // <-- ADDED
                     seat: player.seat,
                     stack: player.stack,
                     current_bet: zero(),

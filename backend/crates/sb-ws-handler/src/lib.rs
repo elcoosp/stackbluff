@@ -84,11 +84,9 @@ async fn handle_websocket(
     info!(%user_id, "WebSocket handler started");
     let (mut ws_sender, mut ws_receiver) = socket.split();
 
-    // Channel for sending messages from the broadcast loop to the WebSocket send task
     let (client_tx, mut client_rx) =
         tokio::sync::mpsc::unbounded_channel::<axum::extract::ws::Message>();
 
-    // Spawn a task to actually send messages over the WebSocket
     let send_task = tokio::spawn(async move {
         while let Some(msg) = client_rx.recv().await {
             if let Err(e) = ws_sender.send(msg).await {
@@ -104,21 +102,17 @@ async fn handle_websocket(
 
     let mut ping_interval = tokio::time::interval(std::time::Duration::from_secs(30));
 
-    // Main loop: handle broadcasts, incoming messages, and pings
     loop {
         tokio::select! {
-            // Broadcast reception
             msg = async {
                 if let Some(rx) = broadcast_rx.as_mut() {
                     rx.recv().await
                 } else {
-                    // If not joined, wait forever (we don't want to spin)
                     std::future::pending().await
                 }
             } => {
                 match msg {
                     Ok(room_msg) => {
-                        // Skip messages not intended for this user
                         let skip = match &room_msg {
                             RoomMessage::Error { target_user_id, .. } => {
                                 if let Some(target) = target_user_id {
@@ -136,7 +130,6 @@ async fn handle_websocket(
                             debug!(%user_id, "Skipping message not for this user");
                             continue;
                         }
-                        // Serialize and send
                         match serde_json::to_string(&room_msg) {
                             Ok(json) => {
                                 let msg_type = match &room_msg {
@@ -157,7 +150,6 @@ async fn handle_websocket(
                             }
                             Err(e) => {
                                 error!(%user_id, error = %e, "Failed to serialize RoomMessage");
-                                // Continue to next message
                             }
                         }
                     }
@@ -171,7 +163,6 @@ async fn handle_websocket(
                 }
             }
 
-            // Incoming WebSocket messages
             msg = ws_receiver.next() => {
                 match msg {
                     Some(Ok(axum::extract::ws::Message::Text(text))) => {
@@ -204,7 +195,6 @@ async fn handle_websocket(
                 }
             }
 
-            // Periodic ping to keep connection alive
             _ = ping_interval.tick() => {
                 debug!(%user_id, "Sending ping");
                 if client_tx.send(axum::extract::ws::Message::Ping(Bytes::new())).is_err() {
@@ -217,7 +207,6 @@ async fn handle_websocket(
 
     info!(%user_id, "WebSocket handler loop exited");
 
-    // Leave table if joined (handles disconnects)
     if let Some(table_id) = current_table_id {
         info!(%user_id, %table_id, "Sending leave to table actor due to disconnect");
         if let Ok(remaining_stack) = state.registry.send_leave(table_id, user_id).await {
@@ -274,7 +263,6 @@ async fn handle_client_message(
 
             let seat_opt = parsed.get("seat").and_then(|s| s.as_u64()).map(|s| s as u8);
 
-            // ── Parse and validate buy_in ──
             let buy_in: i64 = parsed
                 .get("buy_in")
                 .and_then(|b| b.as_i64())
@@ -293,7 +281,6 @@ async fn handle_client_message(
                 }
             };
 
-            // ── Early validation against table limits BEFORE joining ──
             match state.registry.get_table_config(table_id).await {
                 Some(cfg) => {
                     if stack < cfg.min_buy_in || stack > cfg.max_buy_in {
@@ -311,13 +298,21 @@ async fn handle_client_message(
                         return;
                     }
                 }
-                None => {
-                    // Table not found — let join_table_full handle the error
-                }
+                None => {}
             }
 
-            // ── Deduct buy_in from user's global balance ──
+            // Fetch display name from DB
             let ctx = RequestContext::new(Uuid::new_v4(), Some(*user_id));
+            let display_name = match state
+                .user_repo
+                .get_user_profile(ctx.clone(), *user_id)
+                .await
+            {
+                Ok(profile) => profile.display_name,
+                Err(_) => "Player".to_string(),
+            };
+
+            // Deduct buy_in from user's global balance
             match state
                 .user_repo
                 .update_chip_balance(ctx.clone(), *user_id, -buy_in)
@@ -342,7 +337,7 @@ async fn handle_client_message(
             info!(%user_id, %table_id, buy_in = buy_in, "Attempting to join table");
             match state
                 .registry
-                .join_table_full(table_id, *user_id, seat_opt, stack)
+                .join_table_full(table_id, *user_id, display_name, seat_opt, stack) // <-- ADDED display_name
                 .await
             {
                 Ok(()) => {
@@ -366,7 +361,6 @@ async fn handle_client_message(
                             let _ = client_tx
                                 .send(axum::extract::ws::Message::Text(err.to_string().into()));
 
-                            // Refund the buy_in since subscription failed
                             let _ = state
                                 .user_repo
                                 .update_chip_balance(ctx, *user_id, buy_in)
@@ -382,7 +376,6 @@ async fn handle_client_message(
                     let _ =
                         client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
 
-                    // Refund the buy_in since join failed
                     let _ = state
                         .user_repo
                         .update_chip_balance(ctx, *user_id, buy_in)
@@ -417,7 +410,6 @@ async fn handle_client_message(
                 }
             };
 
-            // ── Deduct rebuy amount from user's global balance ──
             let ctx = RequestContext::new(Uuid::new_v4(), Some(*user_id));
             match state
                 .user_repo
@@ -445,7 +437,6 @@ async fn handle_client_message(
                 let err = serde_json::json!({"type": "Error", "message": format!("Rebuy failed: {:?}", e)});
                 let _ = client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
 
-                // Refund the rebuy amount since rebuy failed
                 let _ = state
                     .user_repo
                     .update_chip_balance(ctx, *user_id, amount)

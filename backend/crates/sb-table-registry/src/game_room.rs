@@ -28,6 +28,7 @@ pub struct SidePotMessage {
 #[derive(Debug, Clone, Serialize)]
 pub struct PlayerStateInfo {
     pub user_id: UserId,
+    pub display_name: String, // <-- ADDED
     pub seat: u8,
     pub stack: ChipAmount,
     pub current_bet: ChipAmount,
@@ -81,12 +82,13 @@ pub struct ActionBroadcast {
 #[derive(Debug, Clone, Serialize)]
 pub struct ShowdownPlayer {
     pub user_id: UserId,
+    pub display_name: String, // <-- ADDED
     pub seat: u8,
     pub hole_cards: Vec<WsCard>,
     pub hand_description: String,
     pub is_winner: bool,
     pub win_amount: u64,
-    pub winning_cards: Vec<WsCard>, // <-- ADDED
+    pub winning_cards: Vec<WsCard>,
 }
 
 #[derive(Debug, Clone, Serialize)]

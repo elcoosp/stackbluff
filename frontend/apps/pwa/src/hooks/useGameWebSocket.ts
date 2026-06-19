@@ -40,8 +40,7 @@ const parseMessage = (data: any) => {
       const seats = data.players.map((p: any) => ({
         seat: p.seat,
         user_id: p.user_id,
-        display_name: p.display_name || p.username || p.name ||
-          (p.user_id ? p.user_id.slice(0, 8) : 'Player'),
+        display_name: p.display_name || 'Player',
         stack: p.stack,
         current_bet: p.current_bet,
         is_all_in: p.is_all_in,
@@ -92,11 +91,12 @@ const parseMessage = (data: any) => {
       const players = (data.players || []).map((p: any) => ({
         user_id: p.user_id,
         seat: p.seat,
+        display_name: p.display_name || 'Player',
         hole_cards: (p.hole_cards || []).map(convertCard),
         hand_description: p.hand_description || '',
         is_winner: p.is_winner || false,
         win_amount: p.win_amount || 0,
-        winning_cards: (p.winning_cards || []).map(convertCard), // <-- ADDED
+        winning_cards: (p.winning_cards || []).map(convertCard),
       }));
       const communityCards = (data.community_cards || []).map(convertCard);
       return {
@@ -114,7 +114,7 @@ const parseMessage = (data: any) => {
         }
         return {
           user_id: w.user_id || '',
-          display_name: w.display_name || w.user_id?.slice(0, 8) || 'Player',
+          display_name: w.display_name || 'Player',
           amount: w.amount || 0,
           hand_rank: w.hand_rank || '',
         };

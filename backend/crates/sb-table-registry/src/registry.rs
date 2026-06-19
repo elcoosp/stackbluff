@@ -33,7 +33,6 @@ impl Registry {
         }
     }
 
-    /// Create a new table with a generated ID (standalone, no DB).
     pub async fn create_table(&self, config: TableConfig) -> TableId {
         let table_id = TableId::new(Uuid::new_v4());
         let broadcast_tx: BroadcastSender = broadcast_channel(256);
@@ -47,7 +46,6 @@ impl Registry {
         table_id
     }
 
-    /// Register an existing table (from DB) into the in-memory Registry.
     pub async fn register_existing_table(&self, table_id: TableId, config: TableConfig) {
         if self.tables.read().await.contains_key(&table_id) {
             tracing::debug!(%table_id, "Table already registered, skipping");
@@ -72,7 +70,6 @@ impl Registry {
             .map(|entry| entry.broadcast_tx.clone())
     }
 
-    /// Returns the table configuration (including buy-in limits) for early validation.
     pub async fn get_table_config(&self, table_id: TableId) -> Option<TableConfig> {
         self.configs.read().await.get(&table_id).cloned()
     }
@@ -90,6 +87,7 @@ impl Registry {
         &self,
         table_id: TableId,
         user_id: UserId,
+        display_name: String, // <-- ADDED
         seat: Option<u8>,
         stack: ChipAmount,
     ) -> Result<(), TableError> {
@@ -97,6 +95,7 @@ impl Registry {
         let entry = guard.get(&table_id).ok_or(TableError::NotFound(table_id))?;
         let cmd = InternalCommand::Join {
             user_id,
+            display_name, // <-- ADDED
             seat,
             stack,
         };
@@ -226,6 +225,7 @@ impl Registry {
                     .ok_or(TableError::NotFound(table_id))?;
                 let internal = InternalCommand::Join {
                     user_id,
+                    display_name: "Player".to_string(), // Fallback for legacy command
                     seat: Some(seat),
                     stack,
                 };
