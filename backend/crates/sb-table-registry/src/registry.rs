@@ -72,6 +72,11 @@ impl Registry {
             .map(|entry| entry.broadcast_tx.clone())
     }
 
+    /// Returns the table configuration (including buy-in limits) for early validation.
+    pub async fn get_table_config(&self, table_id: TableId) -> Option<TableConfig> {
+        self.configs.read().await.get(&table_id).cloned()
+    }
+
     pub async fn send_action(
         &self,
         _table_id: TableId,
@@ -106,6 +111,22 @@ impl Registry {
         let guard = self.tables.read().await;
         let entry = guard.get(&table_id).ok_or(TableError::NotFound(table_id))?;
         let cmd = InternalCommand::Leave { user_id };
+        entry
+            .cmd_tx
+            .send(cmd)
+            .await
+            .map_err(|_| TableError::ActorError("actor dropped".into()))
+    }
+
+    pub async fn send_rebuy(
+        &self,
+        table_id: TableId,
+        user_id: UserId,
+        stack: ChipAmount,
+    ) -> Result<(), TableError> {
+        let guard = self.tables.read().await;
+        let entry = guard.get(&table_id).ok_or(TableError::NotFound(table_id))?;
+        let cmd = InternalCommand::Rebuy { user_id, stack };
         entry
             .cmd_tx
             .send(cmd)

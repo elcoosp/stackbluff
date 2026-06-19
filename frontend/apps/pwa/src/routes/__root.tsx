@@ -8,9 +8,9 @@ export const Route = createRootRoute({
 
 function RootLayout() {
   return (
-    <div className="h-full flex flex-col">
-      <Header />  {/* 👈 shared component */}
-      <main className="flex-1 min-h-0 overflow-hidden pt-16">
+    <div className="h-full">
+      <Header />  {/* fixed header, out of flow */}
+      <main className="mt-16 h-[calc(100vh-64px)] overflow-y-auto">
         <Outlet />
       </main>
       <Toaster position="bottom-right" richColors />

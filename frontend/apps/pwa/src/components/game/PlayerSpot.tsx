@@ -33,6 +33,7 @@ interface PlayerSpotProps {
   seatPosition?: { left: string; top: string; transform: string };
   timerRemainingMs?: number | null;
   timerTotalMs?: number | null;
+  isDealing?: boolean;
 }
 
 const CardGroup = ({
@@ -193,6 +194,7 @@ export const PlayerSpot = ({
   seatPosition,
   timerRemainingMs,
   timerTotalMs,
+  isDealing = false,
 }: PlayerSpotProps) => {
   const {
     display_name = 'Player',
@@ -208,8 +210,7 @@ export const PlayerSpot = ({
   } = seat;
 
   const isActive = is_active && !is_folded && !is_all_in;
-  // ✅ FIX: isFolded should NOT include all-in; all-in is a separate state
-  const isFolded = is_folded; // only actual fold
+  const isFolded = is_folded;
 
   const showCardsFaceUp = isHero || seat.is_showdown_revealed;
   const isLargeCards = isHero || showCardsFaceUp;
@@ -282,7 +283,6 @@ export const PlayerSpot = ({
       'border-tertiary/40 shadow-[0_0_20px_rgba(78,222,163,0.15)]': isActive && !isHero,
       'border-tertiary shadow-[0_0_30px_rgba(78,222,163,0.25)]': isActive && isHero,
       'border-tertiary/60 shadow-[0_0_25px_rgba(78,222,163,0.3)]': seat.is_winner,
-      // Only apply dimming for actual folds, not all-in
       'opacity-30 grayscale': isFolded,
       'opacity-50 grayscale': seat.is_showdown_revealed && !seat.is_winner,
     }
@@ -433,14 +433,13 @@ export const PlayerSpot = ({
   // ── Card positioning ──
   const cardPositionStyle: CSSProperties = (() => {
     if (isHero) {
-      const top = -56;   // lifted higher on desktop
+      const top = -56;
       const right = isMobile ? -20 : -10;
       return { top, right };
     } else {
-      // For opponents: if cards are face up (showdown), position higher
       const topOffset = showCardsFaceUp
-        ? (isMobile ? -44 : -40)   // lifted for revealed cards
-        : (isMobile ? -20 : -28);  // normal position for small cards
+        ? (isMobile ? -44 : -40)
+        : (isMobile ? -20 : -28);
       return {
         top: topOffset,
         left: '50%',
@@ -456,7 +455,7 @@ export const PlayerSpot = ({
         isHero ? 'z-50' : 'z-20'
       )}
     >
-      <div className={cn(glassClasses, 'relative z-20')} style={visualStyle}>
+      <div className={cn(glassClasses, 'relative z-20')} style={visualStyle} data-hub>
         {winnerGlow}
         {allInGlow}
 
@@ -508,24 +507,33 @@ export const PlayerSpot = ({
         {actionPill}
       </div>
 
-      {/* ── Cards ── */}
-      <div
-        className="absolute z-40 transition-all duration-300 ease-in-out"
-        style={cardPositionStyle}
-      >
-        <AnimatePresence mode="wait">
-          {!isFolded && ( // All-in players are NOT folded, so their cards remain visible
-            <CardGroup
-              key={`hole-${seat.seat}`}
-              showCardsFaceUp={showCardsFaceUp}
-              hole_cards={hole_cards}
-              cardSize={cardSize}
-              sizeProp={sizeProp}
-              isMobile={isMobile}
-            />
-          )}
-        </AnimatePresence>
-      </div>
+      {/* ── Cards (hidden during deal animation) ── */}
+      <AnimatePresence>
+        {!isDealing && (
+          <motion.div
+            key={`card-area-${seat.seat}`}
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.85 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            className="absolute z-40"
+            style={cardPositionStyle}
+          >
+            <AnimatePresence mode="wait">
+              {!isFolded && (
+                <CardGroup
+                  key={`hole-${seat.seat}`}
+                  showCardsFaceUp={showCardsFaceUp}
+                  hole_cards={hole_cards}
+                  cardSize={cardSize}
+                  sizeProp={sizeProp}
+                  isMobile={isMobile}
+                />
+              )}
+            </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {dealerButton}
 

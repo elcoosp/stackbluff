@@ -254,13 +254,51 @@ async fn handle_client_message(
             };
 
             let seat_opt = parsed.get("seat").and_then(|s| s.as_u64()).map(|s| s as u8);
+
+            // ── Parse and validate buy_in ──
             let buy_in: i64 = parsed
                 .get("buy_in")
                 .and_then(|b| b.as_i64())
                 .unwrap_or(1000);
-            let stack = ChipAmount::new(buy_in).unwrap_or_else(|| ChipAmount::new(1000).unwrap());
 
-            info!(%user_id, %table_id, "Attempting to join table");
+            let stack = match ChipAmount::new(buy_in) {
+                Some(s) => s,
+                None => {
+                    let err = serde_json::json!({
+                        "type": "Error",
+                        "message": format!("Invalid buy_in amount: {}. Must be a non-negative integer.", buy_in)
+                    });
+                    let _ =
+                        client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
+                    return;
+                }
+            };
+
+            // ── Early validation against table limits BEFORE joining ──
+            // This prevents sending a premature "Connected" message when the buy-in is rejected.
+            match state.registry.get_table_config(table_id).await {
+                Some(cfg) => {
+                    if stack < cfg.min_buy_in || stack > cfg.max_buy_in {
+                        let err = serde_json::json!({
+                            "type": "Error",
+                            "message": format!(
+                                "Buy-in of {} is outside the allowed range ({}–{}).",
+                                stack.as_i64(),
+                                cfg.min_buy_in.as_i64(),
+                                cfg.max_buy_in.as_i64()
+                            )
+                        });
+                        let _ = client_tx
+                            .send(axum::extract::ws::Message::Text(err.to_string().into()));
+                        return;
+                    }
+                }
+                None => {
+                    // Table not found — let join_table_full handle the error
+                }
+            }
+
+            info!(%user_id, %table_id, buy_in = buy_in, "Attempting to join table");
             match state
                 .registry
                 .join_table_full(table_id, *user_id, seat_opt, stack)
@@ -299,6 +337,39 @@ async fn handle_client_message(
                     let _ =
                         client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
                 }
+            }
+        }
+
+        "rebuy" => {
+            let table_id = match current_table_id {
+                Some(id) => *id,
+                None => {
+                    let err = serde_json::json!({"type": "Error", "message": "Not at a table"});
+                    let _ =
+                        client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
+                    return;
+                }
+            };
+
+            let amount = parsed
+                .get("amount")
+                .and_then(|a| a.as_i64())
+                .unwrap_or(1000);
+            let stack = match ChipAmount::new(amount) {
+                Some(s) => s,
+                None => {
+                    let err =
+                        serde_json::json!({"type": "Error", "message": "Invalid rebuy amount"});
+                    let _ =
+                        client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
+                    return;
+                }
+            };
+
+            if let Err(e) = state.registry.send_rebuy(table_id, *user_id, stack).await {
+                error!(%user_id, %table_id, error = ?e, "Rebuy failed");
+                let err = serde_json::json!({"type": "Error", "message": format!("Rebuy failed: {:?}", e)});
+                let _ = client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
             }
         }
 

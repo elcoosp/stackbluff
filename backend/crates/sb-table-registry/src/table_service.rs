@@ -1,8 +1,9 @@
 use async_trait::async_trait;
 use sb_contracts::lobby_api::{TableRepo, TableService};
-use sb_shared_types::{AppError, ChipAmount, GameVariant, StakeLevel, TableConfig, TableId};
+use sb_shared_types::{AppError, GameVariant, StakeLevel, TableConfig, TableId};
 use std::sync::Arc;
 
+use crate::actor::buy_in_limits_for_stake; // <--- ADDED
 use crate::registry::Registry;
 
 pub struct TableServiceImpl {
@@ -34,12 +35,13 @@ impl TableService for TableServiceImpl {
             .await?;
 
         // 2. Register in Registry with the DB-assigned ID
+        let (min_buy_in, max_buy_in) = buy_in_limits_for_stake(stake_level); // <--- CHANGED
         let config = TableConfig {
             max_players: max_players as u8,
             stake_level,
             variant: GameVariant::Holdem,
-            min_buy_in: ChipAmount::new(100).unwrap(),
-            max_buy_in: ChipAmount::new(10000).unwrap(),
+            min_buy_in, // <--- was hardcoded 100
+            max_buy_in, // <--- was hardcoded 10000
         };
         self.registry
             .register_existing_table(table_id, config)

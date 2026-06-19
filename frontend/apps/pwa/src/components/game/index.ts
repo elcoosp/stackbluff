@@ -16,4 +16,7 @@ export * from './AnalyticsPanel';
 export * from './TableFelt';
 export * from './ChipAnimationLayer';
 export * from './BetAnimationLayer';
+export * from './DealAnimationLayer';
 export * from './AnimatedChip';
+export * from './BuyInDialog';
+export * from './LeaveTableDialog';

@@ -14,8 +14,11 @@ import {
   PotBadge,
   ChipAnimationLayer,
   BetAnimationLayer,
+  DealAnimationLayer,
+  LeaveTableDialog,
 } from '../components/game';
 import { useGameStore } from '@stackbluff/shared/stores/gameStore';
+import { useDealStore } from '@stackbluff/shared/stores/dealStore';
 import { useFeedback } from '@stackbluff/shared/hooks/useFeedback';
 import { FeedbackSettingsDialog } from '@stackbluff/shared/components/feedback/FeedbackSettingsDialog';
 import { VisualFeedbackOverlay } from '@stackbluff/shared/components/feedback/VisualFeedbackOverlay';
@@ -23,8 +26,9 @@ import type { FeedbackEvent } from '@stackbluff/shared/services/feedback/types';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import { Settings } from 'lucide-react';
+import { Settings, LogOut } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useNavigate } from '@tanstack/react-router';
 
 function Fallback({ error, resetErrorBoundary }: any) {
   return (
@@ -66,7 +70,6 @@ function useGameFeedback(
   const prevPot = useRef(game.pot);
   const prevActionRequired = useRef(!!game.actionRequired);
 
-  // Helper to find seat index for a user ID
   const getSeatByUserId = useCallback(
     (userId: string): number | undefined => {
       for (const [seatIdx, seat] of Object.entries(game.seats)) {
@@ -89,7 +92,6 @@ function useGameFeedback(
   useEffect(() => {
     if (game.showdownReveal && !prevShowdown.current) {
       trigger('showdown');
-      // For winners, we trigger win/lose per seat later
     }
     if (game.showdownReveal) {
       const players = game.showdownReveal.players ?? [];
@@ -98,7 +100,7 @@ function useGameFeedback(
           const event: FeedbackEvent = p.seat === resolvedHeroSeat ? 'win' : 'lose';
           trigger(event, { seatIndex: p.seat });
           setTimeout(() => trigger('potCollect', { seatIndex: p.seat }), 400);
-          break; // only one winner per hand (for now)
+          break;
         }
       }
     }
@@ -197,12 +199,15 @@ function useDelayedBoolean(value: boolean, delayMs: number): boolean {
    ═══════════════════════════════════════════════════════════════════ */
 export function TablePage() {
   const { tableId } = useParams({ from: '/table/$tableId' });
+  const navigate = useNavigate();
   const { sendAction, connectionStatus, myUserId } = useGameWebSocket(tableId);
   const isDesktop = useResponsiveLayout();
   const showAnalytics = useMediaQuery('(min-width: 980px)');
   const game = useGameStore();
   const { trigger } = useFeedback();
   const [showSettings, setShowSettings] = useState(false);
+  const [showLeaveDialog, setShowLeaveDialog] = useState(false);
+  const { isDealing } = useDealStore();
 
   const {
     seats,
@@ -231,7 +236,7 @@ export function TablePage() {
     : heroSeat ?? 0;
 
   const seatsWithHeroCards = { ...seats };
-  if (heroHoleCards && heroHoleCards.length === 2) {
+  if (heroHoleCards && heroHoleCards.length === 2 && !isDealing) {
     if (seatsWithHeroCards[resolvedHeroSeat]) {
       seatsWithHeroCards[resolvedHeroSeat] = {
         ...seatsWithHeroCards[resolvedHeroSeat],
@@ -384,6 +389,11 @@ export function TablePage() {
     [sendAction, trigger, resolvedHeroSeat],
   );
 
+  const handleLeaveTable = useCallback(() => {
+    sendAction('leave');
+    navigate({ to: '/lobby' });
+  }, [sendAction, navigate]);
+
   return (
     <ErrorBoundary FallbackComponent={Fallback}>
       <div
@@ -393,6 +403,8 @@ export function TablePage() {
         }}
       >
         <VisualFeedbackOverlay />
+
+        {/* ── Settings button ── */}
         <motion.button
           type="button"
           whileHover={{ scale: 1.1 }}
@@ -407,7 +419,30 @@ export function TablePage() {
           <Settings className="w-4 h-4" />
         </motion.button>
 
+        {/* ── Leave table button ── */}
+        <motion.button
+          type="button"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => { setShowLeaveDialog(true); trigger('buttonClick'); }}
+          className={cn(
+            "absolute top-3 left-3 z-[700] p-2 rounded-full bg-black/50 backdrop-blur-md border border-white/10 text-on-surface-variant hover:text-red-400 hover:bg-black/70 transition-all",
+            !isDesktop && "top-16"
+          )}
+          aria-label="Leave table"
+        >
+          <LogOut className="w-4 h-4" />
+        </motion.button>
+
         <FeedbackSettingsDialog open={showSettings} onClose={() => setShowSettings(false)} />
+
+        <LeaveTableDialog
+          open={showLeaveDialog}
+          onClose={() => setShowLeaveDialog(false)}
+          onConfirm={handleLeaveTable}
+          stackAmount={heroStack}
+          isHandInProgress={!!game.handInProgress}
+        />
 
         {!showAnalytics && (
           <MobileAnalyticsStrip winProb={winProb} potOdds={potOdds} bestHand={bestHand} strength={strength} />
@@ -457,8 +492,10 @@ export function TablePage() {
               opponentTurnUserId={opponentTurnUserId}
               opponentTimerRemainingMs={opponentTimerRemainingMs}
               opponentTimerTotalMs={opponentTimerTotalMs}
+              isDealing={isDealing}
             />
 
+            <DealAnimationLayer isDesktop={isDesktop} heroSeat={resolvedHeroSeat} />
             <BetAnimationLayer isDesktop={isDesktop} heroSeat={resolvedHeroSeat} />
 
             {showdownMorphComplete && (

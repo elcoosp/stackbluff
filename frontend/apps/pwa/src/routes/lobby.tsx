@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { motion } from 'framer-motion'; // ✅ changed
+import { motion } from 'framer-motion';
 import {
   LayoutGrid,
   Trophy,
@@ -15,7 +15,9 @@ import {
   Wallet,
 } from 'lucide-react';
 import { CreateTableModal } from '../components/CreateTableModal';
+import { BuyInDialog } from '../components/game/BuyInDialog';
 import { apiClient } from '@stackbluff/shared';
+import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 
 const STAKE_CONFIG = {
   Micro: { text: "$0.02/$0.05", bb: 5 },
@@ -41,11 +43,17 @@ export const Route = createFileRoute('/lobby')({
 });
 
 function LobbyPage() {
+  const navigate = useNavigate();
   const [modalOpen, setModalOpen] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: 'none' | 'stakes' | 'players'; direction: 'asc' | 'desc' }>({
     key: 'none',
     direction: 'asc',
   });
+  const [buyInModal, setBuyInModal] = useState<{ open: boolean; table: Table | null }>({
+    open: false,
+    table: null,
+  });
+  const balance = useAuthStore((s) => s.balance);
 
   const { data: tables = [], isLoading, error, refetch } = useQuery<Table[]>({
     queryKey: ['tables'],
@@ -83,8 +91,10 @@ function LobbyPage() {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-64px)] relative">
-      <aside className="hidden md:flex flex-col w-64 bg-surface-container-low border-r border-outline-variant py-gutter space-y-4 sticky top-16 h-[calc(100vh-64px)]">
+    // Outer container: fills the main (h-full), flex to have sidebar + content
+    <div className="flex h-full relative">
+      {/* Sidebar – sticky to the scroll container (the main) */}
+      <aside className="hidden md:flex flex-col w-64 bg-surface-container-low border-r border-outline-variant py-gutter space-y-4 sticky top-0 h-full">
         <div className="px-6 pt-6 mb-8">
           <div className="p-4 rounded-lg bg-surface-container-highest razor-highlight border border-outline-variant">
             <h3 className="font-headline-md text-headline-md text-on-surface mb-1">StackBluff Elite</h3>
@@ -126,10 +136,12 @@ function LobbyPage() {
         </div>
       </aside>
 
-      <section className="flex-1 relative overflow-hidden">
+      {/* Main content – fills remaining space, no overflow handling here (parent does it) */}
+      <section className="flex-1 relative">
         <div className="absolute inset-0 carbon-bg pointer-events-none" />
 
         <div className="max-w-6xl mx-auto p-4 md:p-6 lg:p-8 pb-28 md:pb-8 relative z-10">
+          {/* Header and filters */}
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 mb-8 md:mb-12">
             <div>
               <h1 className="font-display-lg text-3xl md:text-display-lg text-on-surface mb-2">Game Lobby</h1>
@@ -142,6 +154,7 @@ function LobbyPage() {
             </div>
           </div>
 
+          {/* Sorting buttons (mobile) */}
           <div className="flex lg:hidden justify-end mb-2 gap-2">
             <button
               className={`flex items-center gap-1.5 text-[10px] ${sortConfig.key === 'stakes' ? 'text-tertiary border-tertiary/50' : 'text-outline'} font-label-caps uppercase border border-outline-variant px-3 py-1.5 rounded-lg hover:text-on-surface transition-colors`}
@@ -157,6 +170,7 @@ function LobbyPage() {
             </button>
           </div>
 
+          {/* Table list */}
           <div className="space-y-3 gap-4">
             <div className="hidden lg:grid grid-cols-12 px-6 py-2 text-outline font-label-caps text-[10px] uppercase">
               <div className="col-span-4">Room Name</div>
@@ -186,7 +200,9 @@ function LobbyPage() {
               >
                 <div className="w-full lg:col-span-4 flex items-start lg:items-center gap-3 lg:gap-4">
                   <div
-                    className={`mt-1.5 lg:mt-0 w-1.5 h-1.5 rounded-full shrink-0 ${table.status === 'active' ? 'bg-tertiary status-led animate-pulse' : 'bg-outline-variant'
+                    className={`mt-1.5 lg:mt-0 w-1.5 h-1.5 rounded-full shrink-0 ${table.status === 'active'
+                        ? 'bg-tertiary status-led animate-pulse'
+                        : 'bg-outline-variant'
                       }`}
                   />
                   <div className="flex-1 min-w-0">
@@ -226,11 +242,12 @@ function LobbyPage() {
                   <Button variant="outline" className="flex-1 lg:flex-initial px-3 lg:px-4 py-2 border-white/10 font-label-caps text-[10px] text-on-surface-variant hover:border-tertiary/50 hover:text-tertiary uppercase tracking-wider rounded-lg">
                     Observe
                   </Button>
-                  <Link to="/table/$tableId" params={{ tableId: table.table_id }} className="flex-1 lg:flex-initial">
-                    <Button className="w-full px-3 lg:px-4 py-2 bg-tertiary text-on-tertiary font-label-caps text-[10px] hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg shadow-emerald-500/10 rounded-lg">
-                      <Wallet className="w-3.5 h-3.5 mr-1.5" /> Buy In
-                    </Button>
-                  </Link>
+                  <Button
+                    onClick={() => setBuyInModal({ open: true, table })}
+                    className="flex-1 lg:flex-initial px-3 lg:px-4 py-2 bg-tertiary text-on-tertiary font-label-caps text-[10px] hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg shadow-emerald-500/10 rounded-lg"
+                  >
+                    <Wallet className="w-3.5 h-3.5 mr-1.5" /> Buy In
+                  </Button>
                 </div>
               </motion.div>
             ))}
@@ -238,7 +255,29 @@ function LobbyPage() {
         </div>
       </section>
 
+      {/* Modals */}
       <CreateTableModal open={modalOpen} onClose={() => setModalOpen(false)} onTableCreated={() => refetch()} />
+
+      {buyInModal.table && (
+        <BuyInDialog
+          open={buyInModal.open}
+          onClose={() => setBuyInModal({ open: false, table: null })}
+          onConfirm={(amount) => {
+            navigate({
+              to: '/table/$tableId',
+              params: { tableId: buyInModal.table!.table_id },
+              search: { buyIn: amount },
+            });
+            setBuyInModal({ open: false, table: null });
+          }}
+          minBuyIn={getStakeBB(buyInModal.table.stake_level) * 20}
+          maxBuyIn={getStakeBB(buyInModal.table.stake_level) * 200}
+          defaultBuyIn={getStakeBB(buyInModal.table.stake_level) * 100}
+          tableName={buyInModal.table.name}
+          stakeLevel={buyInModal.table.stake_level}
+          currentBalance={balance}
+        />
+      )}
     </div>
   );
 }

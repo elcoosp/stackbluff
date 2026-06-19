@@ -21,6 +21,7 @@ use sb_db_repos::init_writer_loop;
 use sb_db_repos::user_repo::UserRepoImpl;
 use sb_rest_router::create_router;
 use sb_shared_types::{ChipAmount, GameVariant, StakeLevel, TableConfig};
+use sb_table_registry::buy_in_limits_for_stake; // <--- ADDED
 use sb_table_registry::registry::Registry;
 use sb_table_registry::table_service::TableServiceImpl;
 use sb_ws_handler::ws_route;
@@ -74,12 +75,13 @@ async fn main() {
         .await
         .expect("failed to list DB tables");
     for t in &db_tables {
+        let (min_buy_in, max_buy_in) = buy_in_limits_for_stake(t.stake_level); // <--- ADDED
         let config = TableConfig {
             max_players: t.max_players as u8,
             stake_level: t.stake_level,
             variant: GameVariant::Holdem,
-            min_buy_in: ChipAmount::new(100).unwrap(),
-            max_buy_in: ChipAmount::new(10000).unwrap(),
+            min_buy_in, // <--- was ChipAmount::new(100).unwrap()
+            max_buy_in, // <--- was ChipAmount::new(10000).unwrap()
         };
         registry.register_existing_table(t.table_id, config).await;
         tracing::info!(table_id = %t.table_id, "Hydrated table from DB");

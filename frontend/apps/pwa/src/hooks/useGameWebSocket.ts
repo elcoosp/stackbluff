@@ -107,7 +107,6 @@ const parseMessage = (data: any) => {
     }
 
     case 'HandResult': {
-      // Support both old format (winners: string[]) and new format (winners: WinnerResult[])
       const winners = (data.winners || []).map((w: any) => {
         if (typeof w === 'string') {
           return { user_id: '', display_name: w, amount: 0, hand_rank: '' };
@@ -200,7 +199,13 @@ export function useGameWebSocket(tableId: string) {
       if (!mountedRef.current) return;
       setConnectionStatus('connected');
       reconnectAttempts.current = 0;
-      ws.send(JSON.stringify({ type: 'join_table', table_id: tableId, buy_in: 1000 }));
+
+      // Read buy-in amount from URL search params
+      const params = new URLSearchParams(window.location.search);
+      const buyIn = parseInt(params.get('buyIn') || '1000', 10);
+
+      ws.send(JSON.stringify({ type: 'join_table', table_id: tableId, buy_in: buyIn }));
+
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = undefined;
@@ -266,7 +271,6 @@ export function useGameWebSocket(tableId: string) {
           case 'HandResult': {
             clearActionRequired();
             setAnalytics(null);
-            // Clear showdown reveal — setHandResult does this via the store
             setHandResult({ winners: message.winners, pot: message.pot });
             break;
           }
@@ -313,10 +317,13 @@ export function useGameWebSocket(tableId: string) {
         const actionMap: Record<string, string> = {
           fold: 'fold', check: 'check', call: 'call',
           raise: 'raise', 'all-in': 'allin', bet: 'bet',
+          leave: 'leave',
         };
         const mapped = actionMap[action] || action;
         wsRef.current.send(JSON.stringify({ type: 'player_action', action: mapped, amount }));
-        clearActionRequired();
+        if (action !== 'raise') {
+          clearActionRequired();
+        }
       }
     },
     [clearActionRequired]

@@ -19,6 +19,7 @@ export const SeatGrid = ({
   opponentTurnUserId,
   opponentTimerRemainingMs,
   opponentTimerTotalMs,
+  isDealing,                              // ← ADD
 }: {
   seats: Record<number, any>;
   heroSeat: number;
@@ -29,13 +30,13 @@ export const SeatGrid = ({
   opponentTurnUserId?: string | null;
   opponentTimerRemainingMs?: number | null;
   opponentTimerTotalMs?: number | null;
+  isDealing?: boolean;                    // ← ADD
 }) => {
   const vw = useState(typeof window !== 'undefined' ? window.innerWidth : 500)[0];
   const isNarrowMobile = !isDesktop && vw < 362;
 
   const positions = isDesktop ? desktopPositions : getMobilePositions(isNarrowMobile);
 
-  // Find current dealer seat index
   let currentDealerSeat: number | null = null;
   for (const [index, seat] of Object.entries(seats)) {
     if (seat.position_badge === 'BTN') {
@@ -44,7 +45,6 @@ export const SeatGrid = ({
     }
   }
 
-  // Keep the dealer button mounted between hands so it can slide to the next seat
   const [lastDealerSeat, setLastDealerSeat] = useState<number | null>(null);
 
   useEffect(() => {
@@ -64,7 +64,6 @@ export const SeatGrid = ({
         const pos = positions[posIndex];
         if (!pos) return null;
 
-        // Use lastDealerSeat to keep it mounted during hand transitions
         const isDealer = seatIndex === lastDealerSeat;
         const isHero = seatIndex === heroSeat;
 
@@ -103,6 +102,7 @@ export const SeatGrid = ({
               seatPosition={pos}
               timerRemainingMs={timerRemainingMs}
               timerTotalMs={timerTotalMs}
+              isDealing={isDealing}          // ← ADD
             />
           </div>
         );

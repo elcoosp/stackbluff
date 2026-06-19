@@ -26,12 +26,27 @@ fn zero() -> ChipAmount {
 
 fn blinds_for_stake(stake: StakeLevel) -> (ChipAmount, ChipAmount) {
     match stake {
-        StakeLevel::Micro => (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap()),
-        StakeLevel::Low => (ChipAmount::new(10).unwrap(), ChipAmount::new(20).unwrap()),
-        StakeLevel::Medium => (ChipAmount::new(25).unwrap(), ChipAmount::new(50).unwrap()),
-        StakeLevel::High => (ChipAmount::new(50).unwrap(), ChipAmount::new(100).unwrap()),
-        StakeLevel::VeryHigh => (ChipAmount::new(100).unwrap(), ChipAmount::new(200).unwrap()),
+        StakeLevel::Micro => (ChipAmount::new(2).unwrap(), ChipAmount::new(5).unwrap()),
+        StakeLevel::Low => (ChipAmount::new(10).unwrap(), ChipAmount::new(25).unwrap()),
+        StakeLevel::Medium => (ChipAmount::new(50).unwrap(), ChipAmount::new(100).unwrap()),
+        StakeLevel::High => (ChipAmount::new(200).unwrap(), ChipAmount::new(400).unwrap()),
+        StakeLevel::VeryHigh => (
+            ChipAmount::new(500).unwrap(),
+            ChipAmount::new(1000).unwrap(),
+        ),
     }
+}
+
+/// Returns `(min_buy_in, max_buy_in)` derived from the stake level's big blind.
+/// Convention: min = 20 × BB, max = 200 × BB.
+pub fn buy_in_limits_for_stake(stake: StakeLevel) -> (ChipAmount, ChipAmount) {
+    let (_, bb) = blinds_for_stake(stake);
+    let bb_val = bb.as_i64();
+    let min =
+        ChipAmount::new(bb_val.saturating_mul(20)).unwrap_or_else(|| ChipAmount::new(100).unwrap());
+    let max = ChipAmount::new(bb_val.saturating_mul(200))
+        .unwrap_or_else(|| ChipAmount::new(10_000).unwrap());
+    (min, max)
 }
 
 fn street_name(state: &GameState) -> String {
@@ -144,6 +159,10 @@ pub enum InternalCommand {
     },
     Leave {
         user_id: UserId,
+    },
+    Rebuy {
+        user_id: UserId,
+        stack: ChipAmount,
     },
     Action {
         user_id: UserId,
@@ -461,6 +480,7 @@ impl TableActor {
                 stack,
             } => self.join_player(user_id, seat, stack).await,
             InternalCommand::Leave { user_id } => self.leave_player(user_id).await,
+            InternalCommand::Rebuy { user_id, stack } => self.process_rebuy(user_id, stack).await,
             InternalCommand::Action {
                 user_id,
                 action_type,
@@ -475,6 +495,32 @@ impl TableActor {
     async fn join_player(&mut self, user_id: UserId, seat: Option<u8>, stack: ChipAmount) {
         if self.players.contains_key(&user_id) {
             self.send_error_to(&user_id, "Already at table").await;
+            return;
+        }
+
+        // ── Validate buy-in against table limits (fail fast) ──
+        if stack < self.config.min_buy_in {
+            self.send_error_to(
+                &user_id,
+                &format!(
+                    "Buy-in of {} is below the table minimum of {}.",
+                    stack.as_i64(),
+                    self.config.min_buy_in.as_i64()
+                ),
+            )
+            .await;
+            return;
+        }
+        if stack > self.config.max_buy_in {
+            self.send_error_to(
+                &user_id,
+                &format!(
+                    "Buy-in of {} exceeds the table maximum of {}.",
+                    stack.as_i64(),
+                    self.config.max_buy_in.as_i64()
+                ),
+            )
+            .await;
             return;
         }
 
@@ -508,10 +554,6 @@ impl TableActor {
             self.send_error_to(&user_id, "Seat out of range").await;
             return;
         }
-        if stack < self.config.min_buy_in {
-            self.send_error_to(&user_id, "Buy-in too low").await;
-            return;
-        }
         let player = Player::new(user_id, seat, stack);
         self.players.insert(player.user_id, player);
         let _ = self.broadcast_tx.send(RoomMessage::Connected {
@@ -519,11 +561,44 @@ impl TableActor {
             seat_index: seat,
         });
         self.broadcast_table_state().await;
-        info!(%user_id, seat, "Joined");
+        info!(%user_id, seat, stack = stack.as_i64(), "Joined");
 
         if self.players.len() >= 2 && self.current_hand.is_none() {
             info!("2+ players seated and no hand in progress, auto-starting hand");
             self.start_new_hand().await;
+        }
+    }
+
+    async fn process_rebuy(&mut self, user_id: UserId, stack: ChipAmount) {
+        if let Some(player) = self.players.get_mut(&user_id) {
+            if player.stack > zero() {
+                self.send_error_to(&user_id, "You still have chips, cannot rebuy")
+                    .await;
+                return;
+            }
+            if stack < self.config.min_buy_in || stack > self.config.max_buy_in {
+                self.send_error_to(
+                    &user_id,
+                    &format!(
+                        "Rebuy amount {} is outside the allowed range ({}–{}).",
+                        stack.as_i64(),
+                        self.config.min_buy_in.as_i64(),
+                        self.config.max_buy_in.as_i64()
+                    ),
+                )
+                .await;
+                return;
+            }
+            player.stack = stack;
+            self.broadcast_table_state().await;
+            info!(%user_id, stack = stack.as_i64(), "Player rebought");
+
+            if self.players.len() >= 2 && self.current_hand.is_none() {
+                info!("2+ players seated and no hand in progress, auto-starting hand after rebuy");
+                self.start_new_hand().await;
+            }
+        } else {
+            self.send_error_to(&user_id, "Not at table").await;
         }
     }
 
@@ -550,18 +625,22 @@ impl TableActor {
             warn!("Hand already in progress");
             return;
         }
-        if self.players.len() < 2 {
-            warn!("Not enough players");
+
+        // Filter out players with 0 chips
+        let active_players_count = self.players.values().filter(|p| p.stack > zero()).count();
+        if active_players_count < 2 {
+            warn!("Not enough players with chips");
             return;
         }
 
         let dealer_index = match self.last_dealer_index {
-            Some(idx) => (idx + 1) % self.players.len(),
+            Some(idx) => (idx + 1) % active_players_count,
             None => 0,
         };
         let (sb, bb) = blinds_for_stake(self.config.stake_level);
 
-        let mut player_list: Vec<&Player> = self.players.values().collect();
+        let mut player_list: Vec<&Player> =
+            self.players.values().filter(|p| p.stack > zero()).collect();
         player_list.sort_by_key(|p| p.seat);
         let players_for_engine: Vec<(PlayerId, ChipAmount)> =
             player_list.iter().map(|p| (p.player_id, p.stack)).collect();
@@ -604,6 +683,9 @@ impl TableActor {
 
         // Send private hole cards to each player
         for player in self.players.values() {
+            if player.stack == zero() {
+                continue;
+            }
             if let Some(hole_cards) = active.state.player_hole_cards(player.player_id) {
                 let ws_cards: Vec<WsCard> = hole_cards
                     .iter()
@@ -937,7 +1019,7 @@ impl TableActor {
         self.current_hand = None;
         self.broadcast_table_state().await;
 
-        if self.players.len() >= 2 {
+        if self.players.values().filter(|p| p.stack > zero()).count() >= 2 {
             info!("Hand complete, auto-starting next hand");
             self.start_new_hand().await;
         }
@@ -1033,6 +1115,9 @@ impl TableActor {
     // ── Securely sends analytics to all players privately ──
     async fn broadcast_analytics(&self, hand: &ActiveHand) {
         for player in self.players.values() {
+            if player.stack == zero() {
+                continue;
+            }
             if let Some(analytics) = build_analytics(hand, player.user_id) {
                 let _ = self.broadcast_tx.send(RoomMessage::PrivateMessage {
                     target_user_id: player.user_id,
