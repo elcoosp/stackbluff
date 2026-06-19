@@ -16,13 +16,15 @@ use sb_auth::{
     AuthServiceImpl, Authenticator, SharedAuthService, config::AuthConfig, routes::auth_router,
 };
 use sb_contracts::lobby_api::TableRepo;
-use sb_contracts::repo_api::UserRepo;
+use sb_contracts::repo_api::{HandHistoryRepository, UserRepo};
+use sb_db_repos::hand_history_repo::{HandHistoryRepoImpl, spawn_hand_history_cleanup};
 use sb_db_repos::init_writer_loop;
 use sb_db_repos::user_repo::UserRepoImpl;
 use sb_rest_router::create_router;
 use sb_shared_types::{GameVariant, StakeLevel, TableConfig};
-use sb_table_registry::buy_in_limits_for_stake; // <--- ADDED
+use sb_table_registry::buy_in_limits_for_stake;
 use sb_table_registry::registry::Registry;
+use sb_table_registry::spawn_history_recorder;
 use sb_table_registry::table_service::TableServiceImpl;
 use sb_ws_handler::ws_route;
 
@@ -82,7 +84,7 @@ async fn main() {
             variant: GameVariant::Holdem,
             min_buy_in,
             max_buy_in,
-            turn_time_limit_ms: 30_000, // <--- ADDED
+            turn_time_limit_ms: 30_000,
         };
         registry.register_existing_table(t.table_id, config).await;
         tracing::info!(table_id = %t.table_id, "Hydrated table from DB");
@@ -102,8 +104,25 @@ async fn main() {
         tracing::info!(%default_table_id, "Default table created (DB was empty)");
     }
 
-    // ── Rest Router (lobby, tables) ─────────────────────────────
-    let rest_router = create_router(table_service.clone(), table_repo.clone(), registry.clone());
+    // ── Initialize Hand History Repository ───────────────────────
+    let hand_history_repo: Arc<dyn HandHistoryRepository + Send + Sync> = Arc::new(
+        HandHistoryRepoImpl::new(writer_handle.sender.clone(), db.clone()),
+    );
+
+    // ── Spawn History Event Recorder ─────────────────────────────
+    let event_rx = registry.event_sender().subscribe();
+    spawn_history_recorder(event_rx, hand_history_repo.clone());
+
+    // ── Spawn Hand History Cleanup Task ──────────────────────────
+    spawn_hand_history_cleanup(db.clone()).await;
+
+    // ── Rest Router (lobby, tables, history) ─────────────────────
+    let rest_router = create_router(
+        table_service.clone(),
+        table_repo.clone(),
+        registry.clone(),
+        hand_history_repo.clone(),
+    );
 
     // Configure CORS
     let allowed_origins = vec![
@@ -162,5 +181,5 @@ fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
     compile_error!(
         "Production service wiring not yet configured. \
          Build with --features test-stubs for development."
-    );
+    )
 }

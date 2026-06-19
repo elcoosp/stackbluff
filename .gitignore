@@ -13,3 +13,4 @@ Cargo.lock
 *.jpeg
 *.png
 wr.sh
+dump.txt

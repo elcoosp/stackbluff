@@ -231,6 +231,16 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                     serde_json::from_value(result_json.clone()).map_err(|e| {
                         PersistenceError::Database(format!("Invalid result_json: {}", e))
                     })?;
+                // Compute participants from players' user_ids
+                let participants = {
+                    let user_ids: Vec<String> = players
+                        .seats
+                        .iter()
+                        .filter_map(|p| p.user_id.as_ref().map(|u| u.to_string()))
+                        .collect();
+                    format!(",{},", user_ids.join(","))
+                };
+
                 let new_history = hand_history::ActiveModel {
                     id: Set(uuid::Uuid::new_v4()),
                     table_id: Set(*table_id),
@@ -239,6 +249,7 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                     actions_json: Set(actions),
                     result_json: Set(result),
                     is_archived: Set(false),
+                    participants: Set(participants), // NEW
                 };
                 new_history.insert(conn).await.map_err(map_db_error)?;
                 Ok(None)

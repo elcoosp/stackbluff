@@ -17,6 +17,7 @@ import {
   DealAnimationLayer,
   LeaveTableDialog,
   BuyInDialog,
+  HistoryDialog,
 } from '../components/game';
 import { useGameStore } from '@stackbluff/shared/stores/gameStore';
 import { useDealStore } from '@stackbluff/shared/stores/dealStore';
@@ -27,7 +28,7 @@ import type { FeedbackEvent } from '@stackbluff/shared/services/feedback/types';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import { Settings, LogOut } from 'lucide-react';
+import { Settings, LogOut, History } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useNavigate } from '@tanstack/react-router';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
@@ -211,6 +212,7 @@ export function TablePage() {
   const [showSettings, setShowSettings] = useState(false);
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
   const [showRebuyDialog, setShowRebuyDialog] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [hasJoined, setHasJoined] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const { isDealing } = useDealStore();
@@ -477,6 +479,21 @@ export function TablePage() {
           <Settings className="w-4 h-4" />
         </motion.button>
 
+        {/* ── History button ── */}
+        <motion.button
+          type="button"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => { setShowHistory(true); trigger('buttonClick'); }}
+          className={cn(
+            "absolute top-3 right-16 z-[700] p-2 rounded-full bg-black/50 backdrop-blur-md border border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-black/70 transition-all",
+            !isDesktop && "top-16"
+          )}
+          aria-label="Hand history"
+        >
+          <History className="w-4 h-4" />
+        </motion.button>
+
         {/* ── Leave table button ── */}
         <motion.button
           type="button"
@@ -500,6 +517,12 @@ export function TablePage() {
           onConfirm={handleLeaveTable}
           stackAmount={heroStack}
           isHandInProgress={!!game.handInProgress}
+        />
+
+        <HistoryDialog
+          open={showHistory}
+          onClose={() => setShowHistory(false)}
+          tableId={tableId}
         />
 
         <BuyInDialog

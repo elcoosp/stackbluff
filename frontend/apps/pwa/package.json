@@ -16,11 +16,13 @@
     "@radix-ui/react-select": "^2.3.0",
     "@radix-ui/react-slot": "^1.2.5",
     "@stackbluff/shared": "workspace:*",
+    "@tanstack/react-virtual": "^3.14.3",
     "class-variance-authority": "^0.7.1",
     "motion": "^12.40.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-error-boundary": "^6.1.2",
+    "react-timeago-i18n": "^2.4.0",
     "sonner": "^2.0.7",
     "zustand": "^5.0.11"
   },

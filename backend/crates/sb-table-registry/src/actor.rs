@@ -11,10 +11,16 @@ use sb_game_engine::game_state::{Action, ActionError, GameState};
 use sb_shared_types::AppError;
 use sb_shared_types::{ActionType, ChipAmount, PlayerId, StakeLevel, TableConfig, TableId, UserId};
 
+use crate::events::HandCompletedEvent;
+use chrono::Utc;
+use sb_db_entities::hand_history_json::{
+    HandAction, HandActions, HandPlayer, HandPlayers, HandResult, PotSplit, Winner,
+};
+
 use crate::game_room::{
-    ActionBroadcast, ActionRequired, AnalyticsPayload, BroadcastSender, HandResult,
-    PlayerStateInfo, PrivatePayload, RoomMessage, ShowdownPlayer, ShowdownReveal, SidePotMessage,
-    TableStateUpdate, WinnerResult, WsCard,
+    ActionBroadcast, ActionRequired, AnalyticsPayload, BroadcastSender,
+    HandResult as RoomHandResult, PlayerStateInfo, PrivatePayload, RoomMessage, ShowdownPlayer,
+    ShowdownReveal, SidePotMessage, TableStateUpdate, WinnerResult, WsCard,
 };
 use std::pin::Pin;
 use tokio::time::{Duration, Sleep, sleep};
@@ -450,6 +456,10 @@ pub struct TableActor {
     current_main_timer_remaining_ms: Option<u64>,
     player_user_map: HashMap<PlayerId, UserId>,
     last_dealer_index: Option<usize>,
+    event_tx: tokio::sync::broadcast::Sender<HandCompletedEvent>,
+    hand_players: Vec<HandPlayer>,
+    hand_actions: Vec<HandAction>,
+    hand_started_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 impl TableActor {
@@ -458,6 +468,7 @@ impl TableActor {
         config: TableConfig,
         broadcast_tx: BroadcastSender,
         cmd_tx: mpsc::Sender<InternalCommand>,
+        event_tx: tokio::sync::broadcast::Sender<HandCompletedEvent>,
     ) -> Self {
         Self {
             table_id,
@@ -471,6 +482,10 @@ impl TableActor {
             current_main_timer_remaining_ms: None,
             player_user_map: HashMap::new(),
             last_dealer_index: None,
+            event_tx,
+            hand_players: Vec::new(),
+            hand_actions: Vec::new(),
+            hand_started_at: None,
         }
     }
 
@@ -709,11 +724,31 @@ impl TableActor {
         };
         let (sb, bb) = blinds_for_stake(self.config.stake_level);
 
-        let mut player_list: Vec<&Player> =
-            self.players.values().filter(|p| p.stack > zero()).collect();
-        player_list.sort_by_key(|p| p.seat);
-        let players_for_engine: Vec<(PlayerId, ChipAmount)> =
-            player_list.iter().map(|p| (p.player_id, p.stack)).collect();
+        struct PlayerInfo {
+            player_id: PlayerId,
+            user_id: UserId,
+            seat: u8,
+            stack_before: ChipAmount,
+        }
+
+        let mut player_infos: Vec<PlayerInfo> = self
+            .players
+            .values()
+            .filter(|p| p.stack > zero())
+            .map(|p| PlayerInfo {
+                player_id: p.player_id,
+                user_id: p.user_id,
+                seat: p.seat,
+                stack_before: p.stack,
+            })
+            .collect();
+
+        player_infos.sort_by_key(|p| p.seat);
+
+        let players_for_engine: Vec<(PlayerId, ChipAmount)> = player_infos
+            .iter()
+            .map(|p| (p.player_id, p.stack_before))
+            .collect();
 
         let small_idx = (dealer_index + 1) % players_for_engine.len();
         let big_idx = (dealer_index + 2) % players_for_engine.len();
@@ -726,6 +761,7 @@ impl TableActor {
             return;
         }
 
+        let dealer_pid = players_for_engine[dealer_index].0;
         let state =
             match GameState::new_hand(self.table_id, players_for_engine, dealer_index, (sb, bb)) {
                 Ok(s) => s,
@@ -750,6 +786,29 @@ impl TableActor {
 
         let mut active = ActiveHand::new(state, user_by_player_id, player_by_user_id, dealer_index);
         active.timeout_duration_ms = self.config.turn_time_limit_ms;
+
+        // ── Hand History Data Collection ──
+        self.hand_players.clear();
+        self.hand_actions.clear();
+        self.hand_started_at = Some(Utc::now());
+
+        for p in &player_infos {
+            if let Some(hole_cards) = active.state.player_hole_cards(p.player_id) {
+                let hole_strs = [
+                    format!("{:?}{:?}", hole_cards[0].rank, hole_cards[0].suit),
+                    format!("{:?}{:?}", hole_cards[1].rank, hole_cards[1].suit),
+                ];
+                self.hand_players.push(HandPlayer {
+                    player_id: p.player_id,
+                    user_id: Some(p.user_id),
+                    seat: p.seat,
+                    hole_cards: Some(hole_strs),
+                    stack_before: p.stack_before.as_i64(),
+                    stack_after: p.stack_before.as_i64(), // Will be updated in finalize_hand
+                    is_dealer: p.player_id == dealer_pid,
+                });
+            }
+        }
 
         for player in self.players.values() {
             if player.stack == zero() {
@@ -886,6 +945,17 @@ impl TableActor {
                         new_stack: new_stack.as_i64() as u64,
                         new_pot: new_pot.as_i64() as u64,
                     }));
+
+                // ── Record action for history ──
+                if let Some(started_at) = self.hand_started_at {
+                    let elapsed_ms = (Utc::now() - started_at).num_milliseconds().max(0) as u64;
+                    self.hand_actions.push(HandAction {
+                        player_id,
+                        action_type: format!("{:?}", action_type).to_lowercase(),
+                        amount: amount.map(|a| a.as_i64()),
+                        timestamp_ms: elapsed_ms,
+                    });
+                }
 
                 if let Some(next) = hand.current_player_user() {
                     hand.schedule_timeout(
@@ -1028,7 +1098,76 @@ impl TableActor {
 
     async fn finalize_hand(&mut self, hand: ActiveHand) {
         self.process_winners(&hand).await;
+
+        // ── Update stack_after in hand_players ──
+        let final_stacks: HashMap<PlayerId, i64> = self
+            .players
+            .iter()
+            .map(|(_, p)| (p.player_id, p.stack.as_i64()))
+            .collect();
+        for hp in &mut self.hand_players {
+            if let Some(stack) = final_stacks.get(&hp.player_id) {
+                hp.stack_after = *stack;
+            }
+        }
+
+        // ── Build and emit HandCompletedEvent ──
+        let result = self.build_hand_result(&hand);
+        let event = HandCompletedEvent {
+            table_id: self.table_id,
+            played_at: self.hand_started_at.unwrap_or_else(Utc::now),
+            players: HandPlayers {
+                seats: self.hand_players.clone(),
+            },
+            actions: HandActions {
+                actions: self.hand_actions.clone(),
+            },
+            result,
+        };
+
+        if let Err(e) = self.event_tx.send(event) {
+            warn!(
+                table_id = %self.table_id,
+                error = %e,
+                "Failed to send hand completed event"
+            );
+        }
+
         self.clear_board_and_start_next(hand).await;
+    }
+
+    fn build_hand_result(&self, hand: &ActiveHand) -> HandResult {
+        let winners = hand.state.calculate_pot_winners();
+        let pot_splits: Vec<PotSplit> = winners
+            .iter()
+            .map(|w| PotSplit {
+                winner_id: w.player_id,
+                amount: w.amount.as_i64(),
+            })
+            .collect();
+
+        let community: Vec<String> = hand
+            .state
+            .community_cards()
+            .iter()
+            .map(|c| format!("{:?}{:?}", c.rank, c.suit))
+            .collect();
+
+        let winner_models: Vec<Winner> = winners
+            .iter()
+            .map(|w| Winner {
+                player_id: w.player_id,
+                hand_rank: w.hand_rank as u16,
+                hand_description: w.hand_rank.name().to_string(),
+                amount_won: w.amount.as_i64(),
+            })
+            .collect();
+
+        HandResult {
+            winners: winner_models,
+            pot_distribution: pot_splits,
+            community_cards: community,
+        }
     }
 
     async fn process_winners(&mut self, hand: &ActiveHand) {
@@ -1064,10 +1203,12 @@ impl TableActor {
             .collect();
 
         let total_pot = hand.state.current_pot().as_i64() as u64;
-        let _ = self.broadcast_tx.send(RoomMessage::HandResult(HandResult {
-            winners: winner_results,
-            pot: total_pot,
-        }));
+        let _ = self
+            .broadcast_tx
+            .send(RoomMessage::HandResult(RoomHandResult {
+                winners: winner_results,
+                pot: total_pot,
+            }));
     }
 
     async fn clear_board_and_start_next(&mut self, hand: ActiveHand) {
@@ -1417,9 +1558,10 @@ pub fn spawn_table_actor(
     table_id: TableId,
     config: TableConfig,
     broadcast_tx: BroadcastSender,
+    event_tx: tokio::sync::broadcast::Sender<HandCompletedEvent>,
 ) -> (mpsc::Sender<InternalCommand>, tokio::task::JoinHandle<()>) {
     let (tx, rx) = mpsc::channel(32);
-    let actor = TableActor::new(table_id, config, broadcast_tx, tx.clone());
+    let actor = TableActor::new(table_id, config, broadcast_tx, tx.clone(), event_tx);
     let handle = tokio::spawn(actor.run(rx));
     (tx, handle)
 }

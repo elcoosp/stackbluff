@@ -1,8 +1,11 @@
 use crate::service_api::ReferralStats;
-use sb_shared_types::{AppError, UserId};
-
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
+use sb_shared_types::TableId;
+use sb_shared_types::{AppError, UserId};
 use sb_shared_types::{ClubId, RequestContext};
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 pub use crate::club_error::ClubError;
 pub use crate::persistence_error::{PersistenceError, PersistenceResult};
@@ -69,11 +72,36 @@ pub trait UserRepository: Send + Sync {
 
 #[async_trait]
 pub trait HandHistoryRepository: Send + Sync {
+    /// Store a hand. The `participants` column is auto-populated from players JSON.
     async fn store_hand(
         &self,
         ctx: RequestContext,
         hand_data: serde_json::Value,
     ) -> PersistenceResult<()>;
+
+    /// Keyset-based pagination. Returns (page, next_cursor).
+    async fn list_hand_summaries(
+        &self,
+        ctx: RequestContext,
+        table_id: TableId,
+        limit: u64,
+        cursor: Option<(DateTime<Utc>, Uuid)>,
+    ) -> PersistenceResult<(Vec<HandSummary>, Option<(DateTime<Utc>, Uuid)>)>;
+
+    /// Total count of hands for a table.
+    async fn count_hand_histories(
+        &self,
+        ctx: RequestContext,
+        table_id: TableId,
+    ) -> PersistenceResult<u64>;
+
+    /// Count hands a user has played at a table (for authorization).
+    async fn count_user_hands(
+        &self,
+        ctx: RequestContext,
+        table_id: TableId,
+        user_id: UserId,
+    ) -> PersistenceResult<u64>;
 }
 
 // ── Club domain types ────────────────────────────────────────
@@ -111,6 +139,26 @@ pub struct LeaderboardPage {
     pub total_divisions: u32,
     pub total_members: u64,
     pub entries: Vec<LeaderboardEntry>,
+}
+
+// ── Hand Summary (UPDATED) ──
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HandSummary {
+    pub id: Uuid,
+    pub table_id: TableId,
+    pub played_at: DateTime<Utc>,
+    pub pot: i64,
+    pub winners: Vec<WinnerSummary>,
+    // 🆕 New fields
+    pub community_cards: Vec<String>, // e.g. ["As", "Kh", "Qd"]
+    pub winner_hole_cards: Option<Vec<String>>, // only for the top winner
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WinnerSummary {
+    pub user_id: UserId,
+    pub amount: i64,
+    pub hand_rank: String,
 }
 
 /// Division size constant: 500 members per division.

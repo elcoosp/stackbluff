@@ -20,3 +20,4 @@ export * from './DealAnimationLayer';
 export * from './AnimatedChip';
 export * from './BuyInDialog';
 export * from './LeaveTableDialog';
+export * from './HistoryDialog';

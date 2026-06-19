@@ -9,3 +9,5 @@ pub mod writer_loop;
 pub use writer_loop::init_writer_loop;
 
 pub use table_repo::TableRepoImpl;
+
+pub use hand_history_repo::HandHistoryRepoImpl;

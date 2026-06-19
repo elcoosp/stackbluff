@@ -11,8 +11,10 @@ pub use service_api::{
 };
 pub mod club_error;
 pub use async_hooks::{HandCountObserver, ReplayCardObserver};
-pub use club_error::ClubError;
-pub use repo_api::{ClubRepo, DIVISION_SIZE, LeaderboardPage};
+pub use club_error::ClubError; // Add to the existing repo_api re-exports:
+pub use repo_api::{
+    ClubRepo, DIVISION_SIZE, HandHistoryRepository, HandSummary, LeaderboardPage, WinnerSummary,
+};
 
 // ========== Table Registry contracts ==========
 use sb_shared_types::TableId;
