@@ -82,6 +82,7 @@ async fn main() {
             variant: GameVariant::Holdem,
             min_buy_in,
             max_buy_in,
+            turn_time_limit_ms: 30_000, // <--- ADDED
         };
         registry.register_existing_table(t.table_id, config).await;
         tracing::info!(table_id = %t.table_id, "Hydrated table from DB");
@@ -137,6 +138,7 @@ async fn main() {
     tracing::info!("server listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.expect("server error");
 }
+
 #[cfg(feature = "test-stubs")]
 fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
     let table_service: Arc<dyn sb_contracts::service_api::TableService> =

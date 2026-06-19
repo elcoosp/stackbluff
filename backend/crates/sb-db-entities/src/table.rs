@@ -10,6 +10,12 @@ pub struct TableConfig {
     pub max_players: u8,
     pub is_tournament: bool,
     pub tournament_config: Option<TournamentConfig>,
+    #[serde(default = "default_turn_time_ms")]
+    pub turn_time_limit_ms: u64, // <-- ADDED
+}
+
+fn default_turn_time_ms() -> u64 {
+    30000
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
-const DEFAULT_TIMER_MS: u64 = 30_000;
 
 use std::collections::HashMap;
+use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
 use tokio::sync::mpsc;
@@ -37,8 +37,6 @@ fn blinds_for_stake(stake: StakeLevel) -> (ChipAmount, ChipAmount) {
     }
 }
 
-/// Returns `(min_buy_in, max_buy_in)` derived from the stake level's big blind.
-/// Convention: min = 20 × BB, max = 200 × BB.
 pub fn buy_in_limits_for_stake(stake: StakeLevel) -> (ChipAmount, ChipAmount) {
     let (_, bb) = blinds_for_stake(stake);
     let bb_val = bb.as_i64();
@@ -60,7 +58,6 @@ fn street_name(state: &GameState) -> String {
     }
 }
 
-// === NEW: Compact hand description generator ===
 fn get_hand_description(strength: &sb_game_engine::evaluate::HandStrength) -> String {
     use sb_game_engine::hand_rank::HandRank;
 
@@ -154,9 +151,12 @@ fn get_hand_description(strength: &sb_game_engine::evaluate::HandStrength) -> St
 pub enum InternalCommand {
     Join {
         user_id: UserId,
-        display_name: String, // <-- ADDED
+        display_name: String,
         seat: Option<u8>,
         stack: ChipAmount,
+    },
+    Reconnect {
+        user_id: UserId,
     },
     Leave {
         user_id: UserId,
@@ -181,7 +181,7 @@ pub enum InternalCommand {
 #[derive(Debug, Clone)]
 struct Player {
     user_id: UserId,
-    display_name: String, // <-- ADDED
+    display_name: String,
     seat: u8,
     player_id: PlayerId,
     stack: ChipAmount,
@@ -190,7 +190,6 @@ struct Player {
 
 impl Player {
     fn new(user_id: UserId, display_name: String, seat: u8, stack: ChipAmount) -> Self {
-        // <-- ADDED display_name
         Self {
             user_id,
             display_name,
@@ -208,6 +207,8 @@ struct ActiveHand {
     player_by_user_id: HashMap<UserId, PlayerId>,
     dealer_index: usize,
     timeout_handle: Option<tokio::task::JoinHandle<()>>,
+    timeout_expires_at: Option<u64>,
+    timeout_duration_ms: u64,
 }
 
 impl ActiveHand {
@@ -223,6 +224,8 @@ impl ActiveHand {
             player_by_user_id,
             dealer_index,
             timeout_handle: None,
+            timeout_expires_at: None,
+            timeout_duration_ms: 30000,
         }
     }
 
@@ -230,13 +233,26 @@ impl ActiveHand {
         if let Some(handle) = self.timeout_handle.take() {
             handle.abort();
         }
+        self.timeout_expires_at = None;
     }
 
-    fn schedule_timeout(&mut self, user_id: UserId, cmd_tx: mpsc::Sender<InternalCommand>) {
+    fn schedule_timeout(
+        &mut self,
+        user_id: UserId,
+        cmd_tx: mpsc::Sender<InternalCommand>,
+        duration_ms: u64,
+    ) {
         self.cancel_timeout();
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64;
+        self.timeout_expires_at = Some(now + duration_ms);
+        self.timeout_duration_ms = duration_ms;
+
         let tx = cmd_tx.clone();
         let handle = tokio::spawn(async move {
-            sleep(Duration::from_secs(30)).await;
+            sleep(Duration::from_millis(duration_ms)).await;
             let _ = tx.send(InternalCommand::Timeout { user_id }).await;
         });
         self.timeout_handle = Some(handle);
@@ -275,16 +291,24 @@ impl ActiveHand {
     }
 }
 
-// === Free function to build ActionRequired without borrowing self ===
 fn build_action_required(hand: &ActiveHand, user_id: UserId) -> ActionRequired {
     let to_call = hand.state.current_call_amount();
     let min_raise = hand.state.min_raise_amount();
     let can_check = to_call == ChipAmount::new(0).unwrap();
     let pot = hand.state.current_pot();
 
+    let expires_at = hand.timeout_expires_at.unwrap_or_else(|| {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64
+            + hand.timeout_duration_ms
+    });
+
     ActionRequired {
         player_id: user_id,
-        timeout_secs: 30,
+        expires_at,
+        timeout_ms: hand.timeout_duration_ms,
         to_call: to_call.as_i64() as u64,
         min_raise: min_raise.as_i64() as u64,
         can_check,
@@ -292,7 +316,6 @@ fn build_action_required(hand: &ActiveHand, user_id: UserId) -> ActionRequired {
     }
 }
 
-// === New function to calculate analytics for a specific player ===
 fn build_analytics(hand: &ActiveHand, user_id: UserId) -> Option<AnalyticsPayload> {
     let pid = hand.player_by_user_id.get(&user_id)?;
     let hole_cards = hand.state.player_hole_cards(*pid)?;
@@ -311,15 +334,6 @@ fn build_analytics(hand: &ActiveHand, user_id: UserId) -> Option<AnalyticsPayloa
     all_cards.extend_from_slice(comm_cards);
 
     let (strength, _winning_cards) = sb_game_engine::evaluate::evaluate_best_hand(&all_cards);
-
-    info!(
-        user_id = %user_id,
-        hole_cards = ?hole_cards,
-        comm_cards = ?comm_cards,
-        evaluated_rank = ?strength.rank,
-        evaluated_kickers = ?strength.kickers,
-        "Calculating Analytics"
-    );
 
     let best_hand_name = get_hand_description(&strength);
     let base_strength = get_strength_score(&strength);
@@ -482,6 +496,7 @@ impl TableActor {
                 seat,
                 stack,
             } => self.join_player(user_id, display_name, seat, stack).await,
+            InternalCommand::Reconnect { user_id } => self.handle_reconnect(user_id).await,
             InternalCommand::Leave {
                 user_id,
                 respond_to,
@@ -498,29 +513,14 @@ impl TableActor {
         }
     }
 
-    async fn join_player(
-        &mut self,
-        user_id: UserId,
-        display_name: String,
-        seat: Option<u8>,
-        stack: ChipAmount,
-    ) {
-        // ── Idempotent Reconnect Logic ──
-        // If the player is already at the table (e.g., websocket dropped and reconnected),
-        // just resync their state instead of throwing an error.
+    async fn handle_reconnect(&mut self, user_id: UserId) {
         if let Some(player) = self.players.get(&user_id) {
             info!(%user_id, "Player already at table, resyncing state for reconnect");
-
-            // Re-send Connected message to confirm subscription
             let _ = self.broadcast_tx.send(RoomMessage::Connected {
                 user_id,
                 seat_index: player.seat,
             });
-
-            // Resync table state
             self.broadcast_table_state().await;
-
-            // If there's an active hand, resend hole cards and action required
             if let Some(hand) = &self.current_hand {
                 if let Some(hole_cards) = hand.state.player_hole_cards(player.player_id) {
                     let ws_cards: Vec<WsCard> = hole_cards
@@ -537,18 +537,32 @@ impl TableActor {
                         },
                     });
                 }
-
                 if hand.current_player_user() == Some(user_id) {
                     let action_req = build_action_required(hand, user_id);
                     let _ = self
                         .broadcast_tx
                         .send(RoomMessage::ActionRequired(action_req));
                 }
+                if let Some(analytics) = build_analytics(hand, user_id) {
+                    let _ = self.broadcast_tx.send(RoomMessage::PrivateMessage {
+                        target_user_id: user_id,
+                        payload: PrivatePayload::Analytics { analytics },
+                    });
+                }
             }
-            return;
+        } else {
+            self.send_error_to(&user_id, "Not seated at table. Please buy in.")
+                .await;
         }
+    }
 
-        // ── Validate buy-in against table limits (fail fast) ──
+    async fn join_player(
+        &mut self,
+        user_id: UserId,
+        display_name: String,
+        seat: Option<u8>,
+        stack: ChipAmount,
+    ) {
         if stack < self.config.min_buy_in {
             self.send_error_to(
                 &user_id,
@@ -604,6 +618,7 @@ impl TableActor {
             self.send_error_to(&user_id, "Seat out of range").await;
             return;
         }
+
         let player = Player::new(user_id, display_name, seat, stack);
         self.players.insert(player.user_id, player);
         let _ = self.broadcast_tx.send(RoomMessage::Connected {
@@ -642,7 +657,6 @@ impl TableActor {
             player.stack = stack;
             self.broadcast_table_state().await;
             info!(%user_id, stack = stack.as_i64(), "Player rebought");
-
             if self.players.len() >= 2 && self.current_hand.is_none() {
                 info!("2+ players seated and no hand in progress, auto-starting hand after rebuy");
                 self.start_new_hand().await;
@@ -683,7 +697,6 @@ impl TableActor {
             return;
         }
 
-        // Filter out players with 0 chips
         let active_players_count = self.players.values().filter(|p| p.stack > zero()).count();
         if active_players_count < 2 {
             warn!("Not enough players with chips");
@@ -722,7 +735,6 @@ impl TableActor {
                 }
             };
 
-        // ── FIX: Update actor's player stacks to match engine's stacks after blinds ──
         for player in self.players.values_mut() {
             if let Some(engine_stack) = state.player_stack(player.player_id) {
                 player.stack = engine_stack;
@@ -737,8 +749,8 @@ impl TableActor {
         }
 
         let mut active = ActiveHand::new(state, user_by_player_id, player_by_user_id, dealer_index);
+        active.timeout_duration_ms = self.config.turn_time_limit_ms;
 
-        // Send private hole cards to each player
         for player in self.players.values() {
             if player.stack == zero() {
                 continue;
@@ -761,7 +773,7 @@ impl TableActor {
         }
 
         if let Some(user) = active.current_player_user() {
-            active.schedule_timeout(user, self.cmd_tx.clone());
+            active.schedule_timeout(user, self.cmd_tx.clone(), self.config.turn_time_limit_ms);
             let action_req = build_action_required(&active, user);
             let _ = self
                 .broadcast_tx
@@ -771,7 +783,6 @@ impl TableActor {
         self.last_dealer_index = Some(dealer_index);
         self.current_hand = Some(active);
 
-        // Broadcast analytics to all players for the new hand
         if let Some(hand) = &self.current_hand {
             self.broadcast_analytics(hand).await;
         }
@@ -846,25 +857,19 @@ impl TableActor {
         };
 
         info!(%user_id, action = ?action_type, ?amount, "Processing action");
-
-        // Track community cards length before action to detect new street
         let prev_comm_cards_len = hand.state.community_cards().len();
 
         match hand.state.apply_action(player_id, engine_action) {
             Ok(()) => {
                 hand.cancel_timeout();
 
-                // Update player stack from engine state
                 if let Some(new_stack) = hand.player_stack(user_id) {
                     if let Some(player) = self.players.get_mut(&user_id) {
                         player.stack = new_stack;
                     }
                 }
 
-                // Compute new pot
                 let new_pot = hand.state.current_pot();
-
-                // Broadcast action
                 let action_str = format!("{:?}", action_type).to_lowercase();
                 let amount_u64 = amount.map(|a| a.as_i64() as u64);
                 let new_stack = self
@@ -883,13 +888,16 @@ impl TableActor {
                     }));
 
                 if let Some(next) = hand.current_player_user() {
-                    hand.schedule_timeout(next, self.cmd_tx.clone());
+                    hand.schedule_timeout(
+                        next,
+                        self.cmd_tx.clone(),
+                        self.config.turn_time_limit_ms,
+                    );
                     let action_req = build_action_required(hand, next);
                     let _ = self
                         .broadcast_tx
                         .send(RoomMessage::ActionRequired(action_req));
 
-                    // If the community cards grew, a new street was dealt — recompute analytics
                     if hand.state.community_cards().len() > prev_comm_cards_len {
                         for player in self.players.values() {
                             if let Some(analytics) = build_analytics(hand, player.user_id) {
@@ -900,7 +908,6 @@ impl TableActor {
                             }
                         }
                     }
-
                     self.broadcast_table_state().await;
                 } else {
                     self.check_hand_completion().await;
@@ -945,7 +952,7 @@ impl TableActor {
         let _ = hand.state.apply_action(pid, Action::Fold);
         hand.cancel_timeout();
         if let Some(next) = hand.current_player_user() {
-            hand.schedule_timeout(next, self.cmd_tx.clone());
+            hand.schedule_timeout(next, self.cmd_tx.clone(), self.config.turn_time_limit_ms);
             let action_req = build_action_required(hand, next);
             let _ = self
                 .broadcast_tx
@@ -966,7 +973,7 @@ impl TableActor {
         if !hand.state.is_hand_complete() {
             if let Some(next) = hand.current_player_user() {
                 info!(%next, street = %street_name(&hand.state), "New street, notifying next player");
-                hand.schedule_timeout(next, self.cmd_tx.clone());
+                hand.schedule_timeout(next, self.cmd_tx.clone(), self.config.turn_time_limit_ms);
                 let action_req = build_action_required(&hand, next);
                 let _ = self
                     .broadcast_tx
@@ -981,13 +988,11 @@ impl TableActor {
             return;
         }
 
-        // ── Hand is complete ──
         let active_count = hand
             .player_by_user_id
             .keys()
             .filter(|uid| !hand.player_is_folded(**uid))
             .count();
-
         let is_showdown = active_count > 1;
 
         let reveal = self.build_showdown_reveal(&hand, is_showdown);
@@ -1004,14 +1009,12 @@ impl TableActor {
             Duration::from_millis(2_500)
         };
 
-        // Schedule finalization after the animation delay
         tokio::spawn(async move {
             tokio::time::sleep(delay).await;
             let _ = cmd_tx.send(InternalCommand::ShowdownComplete).await;
         });
     }
 
-    /// Called after the showdown/walkover animation delay completes.
     async fn finalize_hand_after_reveal(&mut self) {
         let hand = match self.current_hand.take() {
             Some(h) => h,
@@ -1023,13 +1026,11 @@ impl TableActor {
         self.finalize_hand(hand).await;
     }
 
-    /// Process winners, send HandResult, and auto-start next hand.
     async fn finalize_hand(&mut self, hand: ActiveHand) {
         self.process_winners(&hand).await;
         self.clear_board_and_start_next(hand).await;
     }
 
-    // Extracted winner processing logic
     async fn process_winners(&mut self, hand: &ActiveHand) {
         let winners = hand.state.calculate_pot_winners();
 
@@ -1051,7 +1052,7 @@ impl TableActor {
                 let display_name = self
                     .players
                     .get(user_id)
-                    .map(|p| p.display_name.clone()) // <-- CHANGED to use display_name
+                    .map(|p| p.display_name.clone())
                     .unwrap_or_else(|| user_id.to_string());
                 Some(WinnerResult {
                     user_id: *user_id,
@@ -1063,14 +1064,12 @@ impl TableActor {
             .collect();
 
         let total_pot = hand.state.current_pot().as_i64() as u64;
-
         let _ = self.broadcast_tx.send(RoomMessage::HandResult(HandResult {
             winners: winner_results,
             pot: total_pot,
         }));
     }
 
-    // Extracted board cleanup logic
     async fn clear_board_and_start_next(&mut self, hand: ActiveHand) {
         self.last_dealer_index = Some(hand.dealer_index);
         self.current_hand = None;
@@ -1082,7 +1081,6 @@ impl TableActor {
         }
     }
 
-    /// Build the ShowdownReveal payload from the current hand state.
     fn build_showdown_reveal(&self, hand: &ActiveHand, is_showdown: bool) -> ShowdownReveal {
         let community: Vec<WsCard> = hand
             .state
@@ -1104,8 +1102,6 @@ impl TableActor {
                 let user_id = *user_id;
                 let pid = hand.player_by_user_id.get(&user_id)?;
 
-                // CRITICAL FIX: On a walkover (is_showdown = false), do NOT fetch hole cards.
-                // This prevents any chance of revealing cards on a fold-out.
                 let hole_cards_opt = if is_showdown {
                     hand.state.player_hole_cards(*pid)
                 } else {
@@ -1120,7 +1116,7 @@ impl TableActor {
                             rank: format!("{:?}", c.rank),
                         })
                         .collect(),
-                    None => vec![], // Empty array sent to frontend on walkover
+                    None => vec![],
                 };
 
                 let is_winner = winners.iter().any(|w| w.player_id == *pid);
@@ -1135,12 +1131,11 @@ impl TableActor {
                     .players
                     .get(&user_id)
                     .map(|p| p.display_name.clone())
-                    .unwrap_or_else(|| "Player".to_string()); // <-- ADDED
+                    .unwrap_or_else(|| "Player".to_string());
 
                 let mut hand_description = String::new();
                 let mut winning_cards_ws: Vec<WsCard> = vec![];
 
-                // Only evaluate and send winning cards if it's a showdown AND the player is a winner
                 if is_showdown && community.len() >= 5 && is_winner {
                     if let Some(cards) = hole_cards_opt {
                         if cards.len() == 2 {
@@ -1162,7 +1157,7 @@ impl TableActor {
 
                 Some(ShowdownPlayer {
                     user_id,
-                    display_name, // <-- ADDED
+                    display_name,
                     seat,
                     hole_cards,
                     hand_description,
@@ -1180,7 +1175,6 @@ impl TableActor {
         }
     }
 
-    // ── Securely sends analytics to all players privately ──
     async fn broadcast_analytics(&self, hand: &ActiveHand) {
         for player in self.players.values() {
             if player.stack == zero() {
@@ -1200,13 +1194,17 @@ impl TableActor {
             .current_hand
             .as_ref()
             .and_then(|h| h.current_player_user());
+        let current_turn_expires_at = self
+            .current_hand
+            .as_ref()
+            .and_then(|h| h.timeout_expires_at);
+        let current_turn_timeout_ms = self.current_hand.as_ref().map(|h| h.timeout_duration_ms);
         let street = self
             .current_hand
             .as_ref()
             .map(|h| street_name(&h.state))
             .unwrap_or_default();
 
-        // ── Calculate Position Badges ──
         let positions_map: HashMap<u8, String> = if let Some(hand) = &self.current_hand {
             let mut active_players: Vec<&Player> = self
                 .players
@@ -1220,7 +1218,6 @@ impl TableActor {
                 active_players.sort_by_key(|p| p.seat);
                 let num_players = active_players.len() as i32;
 
-                // Find the dealer's index in the active_players array
                 let dealer_idx_in_active = active_players
                     .iter()
                     .position(|p| p.seat as usize == hand.dealer_index)
@@ -1268,7 +1265,7 @@ impl TableActor {
                     let folded = hand.player_is_folded(uid);
                     PlayerStateInfo {
                         user_id: uid,
-                        display_name: player.display_name.clone(), // <-- ADDED
+                        display_name: player.display_name.clone(),
                         seat: player.seat,
                         stack,
                         current_bet: bet,
@@ -1283,7 +1280,7 @@ impl TableActor {
                 .values()
                 .map(|player| PlayerStateInfo {
                     user_id: player.user_id,
-                    display_name: player.display_name.clone(), // <-- ADDED
+                    display_name: player.display_name.clone(),
                     seat: player.seat,
                     stack: player.stack,
                     current_bet: zero(),
@@ -1338,6 +1335,8 @@ impl TableActor {
             current_hand_in_progress: self.current_hand.is_some(),
             community_cards: community,
             current_turn_user_id,
+            current_turn_expires_at,
+            current_turn_timeout_ms,
             street,
             pot,
             side_pots,
@@ -1386,7 +1385,7 @@ impl TableActor {
 
         if player_state.time_bank_remaining_seconds > 0 {
             player_state.time_bank_remaining_seconds -= 1;
-            self.start_timer(player_id, DEFAULT_TIMER_MS);
+            self.start_timer(player_id, self.config.turn_time_limit_ms);
         } else {
             self.process_action(user_id, ActionType::Fold, None).await;
         }
@@ -1405,7 +1404,6 @@ impl TableActor {
     }
 }
 
-/// Helper to convert community cards Vec to [Card; 5] for hand evaluation.
 fn community_cards_to_array(hand: &ActiveHand) -> Option<[sb_shared_types::Card; 5]> {
     let cc = hand.state.community_cards();
     if cc.len() >= 5 {

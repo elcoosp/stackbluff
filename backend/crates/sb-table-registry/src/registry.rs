@@ -87,7 +87,7 @@ impl Registry {
         &self,
         table_id: TableId,
         user_id: UserId,
-        display_name: String, // <-- ADDED
+        display_name: String,
         seat: Option<u8>,
         stack: ChipAmount,
     ) -> Result<(), TableError> {
@@ -95,10 +95,25 @@ impl Registry {
         let entry = guard.get(&table_id).ok_or(TableError::NotFound(table_id))?;
         let cmd = InternalCommand::Join {
             user_id,
-            display_name, // <-- ADDED
+            display_name,
             seat,
             stack,
         };
+        entry
+            .cmd_tx
+            .send(cmd)
+            .await
+            .map_err(|_| TableError::ActorError("actor dropped".into()))
+    }
+
+    pub async fn send_reconnect(
+        &self,
+        table_id: TableId,
+        user_id: UserId,
+    ) -> Result<(), TableError> {
+        let guard = self.tables.read().await;
+        let entry = guard.get(&table_id).ok_or(TableError::NotFound(table_id))?;
+        let cmd = InternalCommand::Reconnect { user_id };
         entry
             .cmd_tx
             .send(cmd)
@@ -225,7 +240,7 @@ impl Registry {
                     .ok_or(TableError::NotFound(table_id))?;
                 let internal = InternalCommand::Join {
                     user_id,
-                    display_name: "Player".to_string(), // Fallback for legacy command
+                    display_name: "Player".to_string(),
                     seat: Some(seat),
                     stack,
                 };

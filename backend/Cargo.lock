@@ -4229,6 +4229,7 @@ version = "0.1.0"
 dependencies = [
  "axum",
  "axum-extra",
+ "dashmap",
  "futures",
  "sb-auth",
  "sb-contracts",

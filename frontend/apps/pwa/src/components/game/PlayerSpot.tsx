@@ -46,6 +46,8 @@ const CardGroup = ({
   winningCards,
   isWinner,
   isShowdown,
+  isHero,
+  isDealing,
 }: {
   showCardsFaceUp: boolean;
   hole_cards?: Array<{ rank: string; suit: string }>;
@@ -55,6 +57,8 @@ const CardGroup = ({
   winningCards?: Array<{ rank: string; suit: string }>;
   isWinner?: boolean;
   isShowdown?: boolean;
+  isHero?: boolean;
+  isDealing?: boolean;
 }) => {
   const gap = isMobile ? 4 : 4;
   const containerVariants = {
@@ -91,10 +95,19 @@ const CardGroup = ({
   const isCardLosing = (card?: { rank: string; suit: string }) => {
     if (!isShowdown) return false;
     if (isWinner) return !isWinningCard(card);
-    return true; // Not winner = all cards lose
+    return true;
   };
 
+  // If it's the hero and we are dealing, don't render anything here.
+  // The DealAnimationLayer will handle the visual cards.
+  if (isHero && isDealing) {
+    return null;
+  }
+
   if (!hole_cards || hole_cards.length === 0) {
+    // If it's the hero and no cards, don't render backs (they haven't been dealt yet)
+    if (isHero) return null;
+
     return (
       <motion.div
         variants={groupExit}
@@ -240,10 +253,8 @@ export const PlayerSpot = ({
   const showCardsFaceUp = isHero || seat.is_showdown_revealed;
   const isLargeCards = isHero || showCardsFaceUp;
 
-  // If cards are revealed at showdown, but the player didn't win, they are losing player
   const isLosingPlayer = is_showdown_revealed && !is_winner;
 
-  // ── Seat‑aware visual feedback ──
   const effect = useVisualFeedback(500);
   const shouldApplyEffect = effect && effect.seatIndex === seat.seat;
   const visualStyle = shouldApplyEffect
@@ -254,7 +265,6 @@ export const PlayerSpot = ({
     }
     : {};
 
-  // ── Badge placement – mobile offsets increased ──
   const getBadgePlacement = (): CSSProperties => {
     if (!seatPosition) return { left: '50%', top: '-8px', transform: 'translateX(-50%)' };
     if (isHero) {
@@ -284,7 +294,6 @@ export const PlayerSpot = ({
   const badgePlacement = getBadgePlacement();
   const isBadgeAbove = badgePlacement.top !== undefined && !isHero;
 
-  // ── Sizing – mobile values significantly larger ──
   const oppHubWidth = isMobile ? 'w-[100px]' : 'w-[120px]';
   const oppHubPadding = isMobile ? 'p-[6px]' : 'p-1.5';
   const oppCardSize = isMobile ? 'w-[20px] h-[28px]' : 'w-[28px] h-[40px]';
@@ -316,7 +325,6 @@ export const PlayerSpot = ({
     }
   );
 
-  // Action pill – bigger font
   const actionPillClasses = cn(
     'inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full font-mono font-bold uppercase tracking-wider border transition-all',
     isMobile ? 'text-[10px]' : 'text-[9px]',
@@ -331,7 +339,6 @@ export const PlayerSpot = ({
     }
   );
 
-  // ── Determine if player is on the left side of the table ──
   const isLeftSide = seatPosition && parseFloat(seatPosition.left) < 40;
 
   const dealerButton = isDealer && (
@@ -388,7 +395,6 @@ export const PlayerSpot = ({
     </div>
   );
 
-  // Avatar hidden on mobile
   const avatarElement = (
     <motion.div
       initial={false}
@@ -427,7 +433,6 @@ export const PlayerSpot = ({
 
   const hasTimer = timerRemainingMs !== null && timerRemainingMs !== undefined;
 
-  // ── Winner glow: uniform scaling (both width and height) ──
   const winnerGlow = is_winner ? (
     <motion.div
       initial={{ opacity: 0, scale: 0.8 }}
@@ -458,7 +463,6 @@ export const PlayerSpot = ({
     />
   ) : null;
 
-  // ── Card positioning ──
   const cardPositionStyle: CSSProperties = (() => {
     if (isHero) {
       const top = -56;
@@ -508,7 +512,7 @@ export const PlayerSpot = ({
                 isFolded && 'opacity-60'
               )}
             >
-              {isMobile ? display_name.slice(0, 8) : display_name}
+              {isMobile && display_name.length > 8 ? `${display_name.slice(0, 7)}…` : display_name}
             </span>
             <div className="flex items-center gap-1 min-w-0">
               {bankrollElement}
@@ -563,6 +567,8 @@ export const PlayerSpot = ({
                   winningCards={winning_cards}
                   isWinner={is_winner}
                   isShowdown={is_showdown_revealed}
+                  isHero={isHero}
+                  isDealing={isDealing}
                 />
               )}
             </AnimatePresence>

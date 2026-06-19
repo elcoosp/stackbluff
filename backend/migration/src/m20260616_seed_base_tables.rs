@@ -1,8 +1,11 @@
-use sea_orm_migration::prelude::*;
-use sea_orm::{ActiveModelTrait, EntityTrait, Set, ColumnTrait, QueryFilter, PaginatorTrait};
-use uuid::Uuid;
 use chrono::Utc;
-use sb_db_entities::{table, user, enums::{Platform, TableStatus}};
+use sb_db_entities::{
+    enums::{Platform, TableStatus},
+    table, user,
+};
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, Set};
+use sea_orm_migration::prelude::*;
+use uuid::Uuid;
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -51,6 +54,7 @@ impl MigrationTrait for Migration {
                 max_players,
                 is_tournament: false,
                 tournament_config: None,
+                turn_time_limit_ms: 30000, // <-- ADDED
             };
             let now = Utc::now();
             let table_id = Uuid::new_v4();
@@ -62,6 +66,7 @@ impl MigrationTrait for Migration {
                 status: Set(status),
                 club_id: Set(None),
                 created_at: Set(now),
+                ..Default::default() // <-- ADDED to prevent compilation errors
             };
             active.insert(db).await?;
             println!("Inserted table: {}", name);
@@ -77,9 +82,7 @@ impl MigrationTrait for Migration {
             .filter(table::Column::CreatedBy.eq(system_user_id))
             .exec(db)
             .await?;
-        user::Entity::delete_by_id(system_user_id)
-            .exec(db)
-            .await?;
+        user::Entity::delete_by_id(system_user_id).exec(db).await?;
         Ok(())
     }
 }

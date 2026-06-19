@@ -28,7 +28,7 @@ pub struct SidePotMessage {
 #[derive(Debug, Clone, Serialize)]
 pub struct PlayerStateInfo {
     pub user_id: UserId,
-    pub display_name: String, // <-- ADDED
+    pub display_name: String,
     pub seat: u8,
     pub stack: ChipAmount,
     pub current_bet: ChipAmount,
@@ -45,6 +45,8 @@ pub struct TableStateUpdate {
     pub current_hand_in_progress: bool,
     pub community_cards: Vec<WsCard>,
     pub current_turn_user_id: Option<UserId>,
+    pub current_turn_expires_at: Option<u64>,
+    pub current_turn_timeout_ms: Option<u64>,
     pub street: String,
     pub pot: u64,
     pub side_pots: Vec<SidePotMessage>,
@@ -61,7 +63,8 @@ pub struct AnalyticsPayload {
 #[derive(Debug, Clone, Serialize)]
 pub struct ActionRequired {
     pub player_id: UserId,
-    pub timeout_secs: u64,
+    pub expires_at: u64,
+    pub timeout_ms: u64,
     pub to_call: u64,
     pub min_raise: u64,
     pub can_check: bool,
@@ -82,7 +85,7 @@ pub struct ActionBroadcast {
 #[derive(Debug, Clone, Serialize)]
 pub struct ShowdownPlayer {
     pub user_id: UserId,
-    pub display_name: String, // <-- ADDED
+    pub display_name: String,
     pub seat: u8,
     pub hole_cards: Vec<WsCard>,
     pub hand_description: String,
@@ -302,6 +305,8 @@ impl GameRoom {
             current_hand_in_progress: self.game_state.is_some(),
             community_cards: vec![],
             current_turn_user_id: None,
+            current_turn_expires_at: None,
+            current_turn_timeout_ms: None,
             street: String::new(),
             pot: 0,
             side_pots: vec![],

@@ -62,19 +62,29 @@ impl TableRepo for TableRepoImpl {
             max_players: max_players as u8,
             is_tournament: false,
             tournament_config: None,
+            turn_time_limit_ms: 30_000, // <-- ADDED
         };
         let now = chrono::Utc::now();
-        let table_name = name.unwrap_or_else(|| format!("Table {}", id.to_string().chars().take(8).collect::<String>()));
+        let table_name = name.unwrap_or_else(|| {
+            format!(
+                "Table {}",
+                id.to_string().chars().take(8).collect::<String>()
+            )
+        });
         let active = table::ActiveModel {
             id: Set(id),
             name: Set(table_name),
-            created_by: Set(Uuid::nil()), // TODO: get from auth
+            created_by: Set(Uuid::nil()),
             config_json: Set(db_config),
             status: Set(sb_db_entities::enums::TableStatus::Waiting),
             club_id: Set(None),
             created_at: Set(now),
+            ..Default::default() // <-- ADDED to prevent future compilation errors
         };
-        active.insert(&self.db).await.map_err(|e| AppError::Database(e.to_string()))?;
+        active
+            .insert(&self.db)
+            .await
+            .map_err(|e| AppError::Database(e.to_string()))?;
         Ok(TableId::new(id))
     }
 }

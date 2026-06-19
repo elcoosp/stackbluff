@@ -60,7 +60,8 @@ const parseMessage = (data: any) => {
         street: data.street,
         current_hand_in_progress: data.current_hand_in_progress,
         current_turn_user_id: data.current_turn_user_id,
-        dealer_index: data.dealer_index,
+        current_turn_expires_at: data.current_turn_expires_at || null,
+        current_turn_timeout_ms: data.current_turn_timeout_ms || null,
       };
     }
 
@@ -68,7 +69,8 @@ const parseMessage = (data: any) => {
       return {
         type: 'ActionRequired',
         player_id: data.player_id,
-        timeout_secs: data.timeout_secs,
+        expires_at: data.expires_at,
+        timeout_ms: data.timeout_ms,
         to_call: data.to_call,
         min_raise: data.min_raise,
         can_check: data.can_check,
@@ -147,6 +149,10 @@ const parseMessage = (data: any) => {
     }
 
     case 'Error': {
+      // We handle "Not seated" error silently in the component, so we return a specific type
+      if (data.message.includes("Not seated")) {
+        return { type: 'NotSeatedError' };
+      }
       toast.error(data.message || 'Game error');
       return null;
     }
@@ -175,6 +181,7 @@ export function useGameWebSocket(tableId: string) {
 
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'reconnecting' | 'disconnected'>('disconnected');
   const [myUserId, setMyUserId] = useState<string | null>(null);
+  const [notSeated, setNotSeated] = useState(false);
 
   const myUserIdRef = useRef<string | null>(null);
   const mySeatRef = useRef<number | null>(null);
@@ -186,6 +193,7 @@ export function useGameWebSocket(tableId: string) {
 
     myUserIdRef.current = null;
     mySeatRef.current = null;
+    setNotSeated(false);
 
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
     const baseWs = import.meta.env.VITE_WS_URL || `${proto}://${window.location.host}`;
@@ -202,7 +210,10 @@ export function useGameWebSocket(tableId: string) {
       setConnectionStatus('connected');
       reconnectAttempts.current = 0;
 
-      // If we already have a buy-in amount (e.g. from a previous connection), re-join automatically
+      // Always attempt to reconnect first
+      ws.send(JSON.stringify({ type: 'reconnect', table_id: tableId }));
+
+      // If we have a buy-in amount (e.g. from a previous connection in this same tab), re-join automatically
       if (buyInRef.current !== null) {
         ws.send(JSON.stringify({ type: 'join_table', table_id: tableId, buy_in: buyInRef.current }));
       }
@@ -227,7 +238,12 @@ export function useGameWebSocket(tableId: string) {
               mySeatRef.current = message.seat_index;
               setMyUserId(message.user_id);
               setHeroSeat(message.seat_index);
+              setNotSeated(false); // We are seated!
             }
+            break;
+          }
+          case 'NotSeatedError': {
+            setNotSeated(true);
             break;
           }
           case 'YourHoleCards': {
@@ -343,5 +359,5 @@ export function useGameWebSocket(tableId: string) {
     [clearActionRequired]
   );
 
-  return { sendJoin, sendAction, sendRebuy, connectionStatus, myUserId };
+  return { sendJoin, sendAction, sendRebuy, connectionStatus, myUserId, notSeated };
 }

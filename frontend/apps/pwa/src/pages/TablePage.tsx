@@ -44,7 +44,7 @@ function Fallback({ error, resetErrorBoundary }: any) {
 function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState(false);
   useEffect(() => {
-    const media = window.matchMedia(query); // FIXED HERE
+    const media = window.matchMedia(query);
     setMatches(media.matches);
     const listener = (e: MediaQueryListEvent) => setMatches(e.matches);
     media.addEventListener('change', listener);
@@ -203,7 +203,7 @@ export function TablePage() {
   const { tableId } = useParams({ from: '/table/$tableId' });
   const search = useSearch({ from: '/table/$tableId' });
   const navigate = useNavigate();
-  const { sendJoin, sendAction, sendRebuy, connectionStatus, myUserId } = useGameWebSocket(tableId);
+  const { sendJoin, sendAction, sendRebuy, connectionStatus, myUserId, notSeated } = useGameWebSocket(tableId);
   const isDesktop = useResponsiveLayout();
   const showAnalytics = useMediaQuery('(min-width: 980px)');
   const game = useGameStore();
@@ -224,6 +224,8 @@ export function TablePage() {
     heroHoleCards,
     actionRequired,
     currentTurnUserId,
+    currentTurnExpiresAt,
+    currentTurnTimeoutMs,
     analytics,
     showdownReveal,
   } = game;
@@ -278,7 +280,7 @@ export function TablePage() {
           hand_description: player.hand_description,
           is_winner: player.is_winner,
           win_amount: player.win_amount,
-          winning_cards: player.winning_cards, // Pass winning cards to seat
+          winning_cards: player.winning_cards,
           is_showdown_revealed: true,
         };
       }
@@ -290,7 +292,6 @@ export function TablePage() {
       ? showdownReveal.community_cards
       : communityCards;
 
-  // Aggregate all winning cards to highlight community cards
   const allWinningCards = showdownReveal?.players.flatMap(p => p.winning_cards || []) || [];
 
   const isMyTurn = !!actionRequired;
@@ -304,9 +305,18 @@ export function TablePage() {
   const maxRaiseAmount = heroStack > 0 ? heroStack : minRaiseAmount;
   const finalMinRaise = canRaise ? minRaiseAmount : maxRaiseAmount;
 
-  // Initial Join Logic
+  // Initial Join Logic (Fix for multi-tab double deduction)
   useEffect(() => {
-    if (connectionStatus === 'connected' && !hasJoined) {
+    if (connectionStatus !== 'connected' || hasJoined) return;
+
+    // 1. If the reconnect succeeded, we are already seated. Mark as joined and do not deduct chips.
+    if (myUserId) {
+      setHasJoined(true);
+      return;
+    }
+
+    // 2. If the backend explicitly said we are NOT seated, we can safely attempt to buy in.
+    if (notSeated) {
       const urlBuyIn = (search as any)?.buyIn as number | undefined;
       if (urlBuyIn && urlBuyIn > 0) {
         sendJoin(urlBuyIn);
@@ -314,10 +324,11 @@ export function TablePage() {
         setIsJoining(true);
         setShowRebuyDialog(false);
       } else {
+        // No buy-in in URL, show the dialog
         setShowRebuyDialog(true);
       }
     }
-  }, [connectionStatus, hasJoined, search, sendJoin]);
+  }, [connectionStatus, hasJoined, search, sendJoin, notSeated, myUserId]);
 
   // Show Rebuy Dialog if hero runs out of chips AND they have already joined
   useEffect(() => {
@@ -340,7 +351,9 @@ export function TablePage() {
 
   const showdownMorphComplete = useDelayedBoolean(!!showdownReveal, 400);
 
-  const heroTimerTotalMs = actionRequired ? actionRequired.timeout_secs * 1000 : null;
+  // ── Timer Sync Logic ──
+  const heroTimerExpiresAt = actionRequired?.expires_at ?? null;
+  const heroTimerTotalMs = actionRequired?.timeout_ms ?? 30000;
   const [heroTimerRemainingMs, setHeroTimerRemainingMs] = useState<number | null>(null);
   const heroIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -349,32 +362,36 @@ export function TablePage() {
       clearInterval(heroIntervalRef.current);
       heroIntervalRef.current = null;
     }
-    if (!heroTimerTotalMs) {
+
+    if (!heroTimerExpiresAt) {
       setHeroTimerRemainingMs(null);
       return;
     }
-    setHeroTimerRemainingMs(heroTimerTotalMs);
-    const start = Date.now();
-    const total = heroTimerTotalMs;
-    heroIntervalRef.current = setInterval(() => {
-      const elapsed = Date.now() - start;
-      const remaining = Math.max(0, total - elapsed);
+
+    const updateRemaining = () => {
+      const now = Date.now();
+      const remaining = Math.max(0, heroTimerExpiresAt - now);
       setHeroTimerRemainingMs(remaining);
       if (remaining <= 0 && heroIntervalRef.current) {
         clearInterval(heroIntervalRef.current);
         heroIntervalRef.current = null;
       }
-    }, 100);
+    };
+
+    updateRemaining();
+    heroIntervalRef.current = setInterval(updateRemaining, 100);
+
     return () => {
       if (heroIntervalRef.current) {
         clearInterval(heroIntervalRef.current);
         heroIntervalRef.current = null;
       }
     };
-  }, [heroTimerTotalMs]);
+  }, [heroTimerExpiresAt]);
 
   const opponentTurnUserId = !isMyTurn && currentTurnUserId ? currentTurnUserId : null;
-  const opponentTimerTotalMs = opponentTurnUserId ? 30000 : null;
+  const opponentTimerExpiresAt = opponentTurnUserId ? currentTurnExpiresAt : null;
+  const opponentTimerTotalMs = opponentTurnUserId ? (currentTurnTimeoutMs ?? 30000) : null;
   const [opponentTimerRemainingMs, setOpponentTimerRemainingMs] = useState<number | null>(null);
   const opponentIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -383,36 +400,38 @@ export function TablePage() {
       clearInterval(opponentIntervalRef.current);
       opponentIntervalRef.current = null;
     }
-    if (!opponentTurnUserId) {
+    if (!opponentTimerExpiresAt) {
       setOpponentTimerRemainingMs(null);
       return;
     }
-    const total = 30000;
-    setOpponentTimerRemainingMs(total);
-    const start = Date.now();
-    opponentIntervalRef.current = setInterval(() => {
-      const elapsed = Date.now() - start;
-      const remaining = Math.max(0, total - elapsed);
+
+    const updateRemaining = () => {
+      const now = Date.now();
+      const remaining = Math.max(0, opponentTimerExpiresAt - now);
       setOpponentTimerRemainingMs(remaining);
       if (remaining <= 0 && opponentIntervalRef.current) {
         clearInterval(opponentIntervalRef.current);
         opponentIntervalRef.current = null;
       }
-    }, 100);
+    };
+
+    updateRemaining();
+    opponentIntervalRef.current = setInterval(updateRemaining, 100);
+
     return () => {
       if (opponentIntervalRef.current) {
         clearInterval(opponentIntervalRef.current);
         opponentIntervalRef.current = null;
       }
     };
-  }, [opponentTurnUserId]);
+  }, [opponentTimerExpiresAt]);
 
   useGameFeedback(
     game,
     resolvedHeroSeat,
     isMyTurn,
     heroTimerRemainingMs ?? 0,
-    heroTimerTotalMs ?? 0,
+    heroTimerTotalMs,
   );
 
   const sendActionWithFeedback = useCallback(
@@ -528,7 +547,7 @@ export function TablePage() {
                   cards={displayCommunityCards}
                   isMobile={!isDesktop}
                   revealedCount={displayCommunityCards.length}
-                  winningCards={allWinningCards} // Pass winning cards
+                  winningCards={allWinningCards}
                 />
               </div>
 

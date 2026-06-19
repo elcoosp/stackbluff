@@ -40,7 +40,8 @@ export interface ActionRequired {
   min_raise: number;
   can_check: boolean;
   pot: number;
-  timeout_secs: number;
+  expires_at: number;
+  timeout_ms: number;
 }
 
 export interface TableState {
@@ -52,15 +53,19 @@ export interface TableState {
   street: string;
   current_hand_in_progress: boolean;
   current_turn_user_id: string | null;
+  current_turn_expires_at: number | null;
+  current_turn_timeout_ms: number | null;
 }
 
 export interface ShowdownPlayer {
   user_id: string;
+  display_name: string;
   seat: number;
   hole_cards: Card[];
   hand_description: string;
   is_winner: boolean;
   win_amount: number;
+  winning_cards: Card[];
 }
 
 export interface ShowdownRevealData {
@@ -77,6 +82,8 @@ interface GameState {
   sidePots: SidePot[];
   street: string;
   currentTurnUserId: string | null;
+  currentTurnExpiresAt: number | null;
+  currentTurnTimeoutMs: number | null;
   heroSeat: number | null;
   heroHoleCards: [Card, Card] | null;
   actionRequired: ActionRequired | null;
@@ -113,6 +120,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   sidePots: [],
   street: '',
   currentTurnUserId: null,
+  currentTurnExpiresAt: null,
+  currentTurnTimeoutMs: null,
   heroSeat: null,
   heroHoleCards: null,
   actionRequired: null,
@@ -139,6 +148,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       sidePots: state.side_pots || [],
       street: state.street || '',
       currentTurnUserId: state.current_turn_user_id || null,
+      currentTurnExpiresAt: state.current_turn_expires_at || null,
+      currentTurnTimeoutMs: state.current_turn_timeout_ms || null,
       handInProgress: state.current_hand_in_progress || false,
     });
   },
@@ -196,6 +207,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       sidePots: [],
       street: '',
       currentTurnUserId: null,
+      currentTurnExpiresAt: null,
+      currentTurnTimeoutMs: null,
       heroSeat: null,
       heroHoleCards: null,
       actionRequired: null,

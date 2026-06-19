@@ -1,23 +1,4 @@
-We have built a very solid, visually striking foundation. The showdown sequence, analytics, and glass aesthetics are looking great. To elevate this from a "good" poker game to a **best-in-class, premium UX** (comparable to modern apps like ClubGG or PokerStars), here are the exact features and polish items you should implement next, ranked by impact:
 
-### 1. Player-to-Pot Bet Animations (Visual Immersion)
-Right now, when a player bets, their stack number decreases and the pot number increases. 
-* **The Upgrade:** Add a `BetAnimationLayer` (similar to your `ChipAnimationLayer`) that listens to `ActionBroadcast`. When a player bets/calls/raises, spawn 3-4 chips that fly from the player's seat to the center pot, *then* update the pot number upon chip arrival. 
-* **Why it matters:** It creates a tangible, physical connection between the player's stack and the pot, making the game feel incredibly responsive and real.
-
-### 2. Position Badges (BTN, SB, BB, UTG, etc.)
-I see you have a `position_badge` field in your types, and a `D` for the dealer, but standard poker UIs show exact positions. 
-* **The Upgrade:** Have the backend calculate and send standard positions (BTN, SB, BB, UTG, MP, CO) in the `TableState`. Display these as small, subtle badges next to the player's name.
-* **Why it matters:** Serious players rely heavily on positional awareness. Having this visible natively in the UI builds immense trust and playability.
-
-### 3. Audio & Haptic Feedback (The "Feel")
-A silent poker table feels dead. Audio provides immediate subconscious confirmation of actions.
-* **The Upgrade:** Create an `AudioManager` hook. Trigger sounds on specific WebSocket events:
-  * `ActionBroadcast`: Card flick sound for check/call, heavier chip clatter for raises.
-  * `ShowdownReveal`: A subtle suspense sound, followed by a triumphant chime for the winner.
-  * `YourHoleCards`: A soft card deal sound.
-  * *Mobile only:* Haptic vibration (navigator.vibrate) when it becomes your turn or when you win the pot.
-* **Why it matters:** It’s the single biggest difference between a "web demo" and a "product".
 
 ### 4. Non-Blocking "Your Turn" Alerts
 If a user switches tabs or looks away, they will time out.
@@ -39,15 +20,17 @@ Right now, joining a table probably just flashes the UI until the WebSocket sync
 * **The Upgrade:** Create a sleek loading screen overlay with the table name, a spinner, and "Taking your seat..." text. Only unmount the loader once `TableState` and `Connected` messages have been processed. 
 * **Reconnection:** If the WS drops, show a semi-transparent overlay saying "Connection lost, reconnecting..." (you already have the logic, just frame it nicely so they don't panic).
 
-### 7. Time Bank & Auto-Fold Warnings
-Your `TimerBar` is excellent, but users need a buffer.
-* **The Upgrade:** If the timer runs out, instead of instantly folding, give them a 5-second "Time Bank" that glows red, or trigger a very obvious screen pulse at the 5-second remaining mark so they know they are about to lose their hand.
 
-### Recommended Implementation Order:
-1. **Position Badges** (Backend + Frontend - quickest win for usability).
-2. **Tab Title/Alerts** (Frontend only - takes 10 minutes, huge UX win).
-3. **Audio Manager** (Frontend only - takes a few hours, massive sensory upgrade).
-4. **Bet Chip Animations** (Frontend only - takes a few hours, huge visual upgrade).
-5. **Hand History Log** (Backend stream + Frontend panel).
+### 1. All-In Win Probability (Heads-Up Equity)
+**The Concept:** When two players go All-In before the river, the suspense is killed if you just wait for the cards to flip.
+**The Fix:** As soon as the players are all-in, the backend runs the Monte Carlo simulation (which we already have!) for *both* players. We display a sleek `80% vs 20%` badge right above the players' cards (or a thin progress bar under their names) that updates live as the community cards are dealt. No new UI elements unless someone is actually all-in.
 
-Would you like to start with the **Audio Manager** or the **Player-to-Pot Bet Animations**? I can write the code for either right now.
+### 2. The "Time Bank" (Premium Flow)
+**The Concept:** Right now, if you don't act in 30 seconds, you auto-fold. In high-end poker, tough decisions need more time.
+**The Fix:** When the 30s timer hits 0, instead of instantly folding, a glowing "Time Bank" button appears for 10 more seconds. You can click it to get an extra 15 seconds to think. It uses the exact same spot as the current action bar, so it doesn't clutter the UI, but it completely removes the anxiety of timing out on a tough river decision.
+
+### 3. Hand History Replayer (Zero In-Game Clutter)
+**The Concept:** Players want to review how they lost their chips.
+**The Fix:** Add a tiny, minimal icon (like a clock or history arrow) in the top-right corner next to the Settings gear. Clicking it opens a sleek, full-screen modal overlay showing the last 5 hands (who bet what, and what cards were revealed). The backend already saves hand history to the database; we just need to expose an endpoint and build a clean modal for it. 
+
+Which of these sounds the most appealing to you?

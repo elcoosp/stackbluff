@@ -59,7 +59,6 @@ export const DealAnimationLayer = ({ isDesktop, heroSeat }: DealAnimationLayerPr
 
   const containerSizeRef = useRef({ w: 0, h: 0 });
 
-  /* ── ResizeObserver ── */
   useLayoutEffect(() => {
     if (!node) return;
     const updateSize = () => {
@@ -74,14 +73,12 @@ export const DealAnimationLayer = ({ isDesktop, heroSeat }: DealAnimationLayerPr
     return () => ro.disconnect();
   }, [node]);
 
-  /* ── Clean up timers on unmount ── */
   useEffect(() => {
     return () => {
       dealTimersRef.current.forEach(clearTimeout);
     };
   }, []);
 
-  /* ── Layout calculations ── */
   const isNarrow = !isDesktop && vw < 362;
   const positions = isDesktop ? desktopPositions : getMobilePositions(isNarrow);
 
@@ -124,7 +121,6 @@ export const DealAnimationLayer = ({ isDesktop, heroSeat }: DealAnimationLayerPr
     };
   }, [isDesktop]);
 
-  /* ── Detect new hand ── */
   useEffect(() => {
     const currentCards = heroHoleCards || [];
     const currentKey = currentCards
@@ -133,6 +129,8 @@ export const DealAnimationLayer = ({ isDesktop, heroSeat }: DealAnimationLayerPr
 
     if (isFirstRenderRef.current) {
       isFirstRenderRef.current = false;
+      // If cards are already present on the very first render,
+      // it means we joined mid-hand. We should NOT trigger the deal animation.
       prevHoleCardsKey.current = currentKey;
       return;
     }
@@ -148,14 +146,12 @@ export const DealAnimationLayer = ({ isDesktop, heroSeat }: DealAnimationLayerPr
     prevHoleCardsKey.current = currentKey;
   }, [heroHoleCards, communityCards, isDealing]);
 
-  /* ── Reset ref when cards clear ── */
   useEffect(() => {
     if (!heroHoleCards || heroHoleCards.length === 0) {
       prevHoleCardsKey.current = '';
     }
   }, [heroHoleCards]);
 
-  /* ── Core: trigger the deal ── */
   const triggerDeal = useCallback(() => {
     dealTimersRef.current.forEach(clearTimeout);
     dealTimersRef.current = [];
@@ -223,14 +219,12 @@ export const DealAnimationLayer = ({ isDesktop, heroSeat }: DealAnimationLayerPr
 
     const lastDelay = cards.length > 0 ? cards[cards.length - 1].delay : 0;
 
-    // 1. Trigger PlayerSpot cards to fade IN while the flying card is still fading out (seamless crossfade)
     const crossfadeStartMs = (lastDelay + 0.5) * 1000;
     const finishTimer = setTimeout(() => {
       finishDealing();
       setDeckVisible(false);
     }, crossfadeStartMs);
 
-    // 2. Clean up invisible flying cards from DOM after they finish their slow fade
     const cleanupMs = (lastDelay + 1.5) * 1000;
     const cleanupTimer = setTimeout(() => {
       setFlyingCards([]);
@@ -337,10 +331,8 @@ export const DealAnimationLayer = ({ isDesktop, heroSeat }: DealAnimationLayerPr
           const dy = targetPx.y - deckPx.y;
           const distance = Math.sqrt(dx * dx + dy * dy);
 
-          // Reduced, elegant arc height
           const arcHeight = Math.min(70, distance * 0.2) + (card.isHero ? 15 : 0);
           const midX = (deckPx.x + targetPx.x) / 2 + (card.round === 0 ? 8 : -8);
-          // Arc peaks between deck and seat, lifted by arcHeight
           const midY = ((deckPx.y + targetPx.y) / 2) - arcHeight;
 
           const flightRotation = (card.seatPosIdx % 2 === 0 ? 1 : -1) * (6 + card.round * 4);
@@ -383,10 +375,6 @@ export const DealAnimationLayer = ({ isDesktop, heroSeat }: DealAnimationLayerPr
                 delay: card.delay,
                 duration: 0.8,
                 ease: [0.22, 1, 0.36, 1],
-                // Timing breakdown:
-                // 0% -> 30%: Launch to peak
-                // 30% -> 55%: Float down to seat
-                // 55% -> 100%: Sit at seat and slowly fade out for the crossfade
                 times: [0, 0.3, 0.55, 1.0],
               }}
             >

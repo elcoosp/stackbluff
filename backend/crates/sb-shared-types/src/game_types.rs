@@ -8,12 +8,15 @@ pub struct TableConfig {
     pub variant: GameVariant,
     pub min_buy_in: ChipAmount,
     pub max_buy_in: ChipAmount,
+    pub turn_time_limit_ms: u64, // <-- ADDED
 }
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SidePot {
     pub amount: ChipAmount,
     pub eligible_players: Vec<PlayerId>,
 }
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, derive_more::Display)]
 pub enum StakeLevel {
     Micro,
