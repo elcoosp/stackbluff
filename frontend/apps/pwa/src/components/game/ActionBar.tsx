@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RaiseSlider } from './RaiseSlider';
+import { cn } from '@/lib/utils';
 import {
   Bot,
   Zap,
@@ -35,7 +36,6 @@ const glassStyle: React.CSSProperties = {
 
 const transition = { duration: 0.25, ease: [0.22, 1, 0.36, 1] as const };
 
-// ── Increased breakpoint from 362 to 390 ──
 const MOBILE_BREAK = 390;
 
 // ── Hook to keep banner visible for a minimum duration ──
@@ -60,6 +60,41 @@ function useVisibleAction(action: string | null, amount: number, delay = 2500) {
   }, [visible, delay]);
 
   return visible;
+}
+
+// ── Hook for Random Sparkle Effect ──
+function useRandomSparkle(enabled: boolean) {
+  const [sparkIndex, setSparkIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!enabled) {
+      setSparkIndex(null);
+      return;
+    }
+
+    let timeout1: ReturnType<typeof setTimeout>;
+    let timeout2: ReturnType<typeof setTimeout>;
+
+    const run = () => {
+      // Random delay between 2s and 5s
+      timeout1 = setTimeout(() => {
+        setSparkIndex(Math.floor(Math.random() * 4)); // 0 to 3 for the 4 buttons
+        timeout2 = setTimeout(() => {
+          setSparkIndex(null);
+          run();
+        }, 800); // Let the animation play
+      }, 2000 + Math.random() * 3000);
+    };
+
+    run();
+
+    return () => {
+      clearTimeout(timeout1);
+      clearTimeout(timeout2);
+    };
+  }, [enabled]);
+
+  return sparkIndex;
 }
 
 // ── Keyboard handler ──
@@ -225,6 +260,8 @@ const ActionBtn = ({
   className = '',
   isMobile = false,
   IconOverride,
+  sparkId,
+  currentSpark,
 }: {
   variant: 'fold' | 'call' | 'raise' | 'all-in';
   onClick: () => void;
@@ -234,28 +271,45 @@ const ActionBtn = ({
   className?: string;
   isMobile?: boolean;
   IconOverride?: React.ComponentType<{ className?: string }>;
+  sparkId?: number;
+  currentSpark?: number | null;
 }) => {
   const cfg = variantConfig[variant];
   const { Icon: DefaultIcon } = cfg;
   const Icon = IconOverride || DefaultIcon;
   const { style, handlers } = useSubtleHover(cfg, disabled);
+  const isSparking = sparkId !== undefined && currentSpark === sparkId;
 
   return (
     <motion.button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg cursor-pointer select-none whitespace-nowrap w-full h-full ${className}`}
+      className={`relative flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg cursor-pointer select-none whitespace-nowrap w-full h-full overflow-hidden ${className}`}
       style={style}
       {...handlers}
       whileHover={!disabled ? { scale: 1.04, transition: { duration: 0.15 } } : {}}
       whileTap={!disabled ? { scale: 0.94, transition: { duration: 0.1 } } : {}}
     >
-      <Icon className="w-3.5 h-3.5 shrink-0" />
-      <span className="text-[11px] font-label-caps uppercase tracking-wider">{children}</span>
+      {/* Random Light Sweep Effect */}
+      {isSparking && (
+        <motion.div
+          initial={{ x: '-150%', opacity: 0 }}
+          animate={{ x: '250%', opacity: [0, 1, 1, 0] }}
+          transition={{ duration: 0.8, ease: 'easeInOut', times: [0, 0.2, 0.8, 1] }}
+          className="absolute inset-y-0 w-1/3 pointer-events-none z-10"
+          style={{
+            background: `linear-gradient(90deg, transparent, ${cfg.activeText}40, transparent)`,
+            transform: 'skewX(-20deg)',
+          }}
+        />
+      )}
+
+      <Icon className="w-3.5 h-3.5 shrink-0 relative z-20" />
+      <span className="text-[11px] font-label-caps uppercase tracking-wider relative z-20">{children}</span>
       {shortcut && !isMobile && (
         <kbd
-          className="text-[8px] font-mono uppercase tracking-wider px-1 py-px rounded"
+          className="text-[8px] font-mono uppercase tracking-wider px-1 py-px rounded relative z-20"
           style={{
             color: disabled ? cfg.disabledText : cfg.activeText,
             opacity: disabled ? 0.4 : 0.45,
@@ -461,12 +515,14 @@ const DesktopActionBar = ({
       ? `All-in ${formatCurrency(heroStack)}`
       : `Call ${formatCurrency(toCall)}`;
 
-  // ✅ FIX: All-in is always available when it's your turn and you have chips
   const allInDisabled = !actionRequired || heroStack === 0;
 
   const toggleRaise = useCallback(() => setRaiseOpen((p) => !p), []);
   const visibleAction = useVisibleAction(executingAction, toCall);
   useActionKeys(onAction, toggleRaise, actionRequired, toCall);
+
+  // Trigger sparkles only when waiting for user action (not when raise slider is open)
+  const sparkIndex = useRandomSparkle(!actionRequired && !raiseOpen);
 
   useEffect(() => {
     if (!actionRequired) setPreActionOpen(true);
@@ -481,13 +537,19 @@ const DesktopActionBar = ({
   return (
     <motion.div
       key="desktop-bar"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 20, x: '-50%' }}
+      animate={{ opacity: 1, y: 0, x: '-50%' }}
+      exit={{ opacity: 0, y: 20, x: '-50%' }}
       transition={transition}
-      className="fixed bottom-2 left-1/2 -translate-x-1/2 z-[450]"
+      className="fixed bottom-2 left-1/2 z-[450] pointer-events-none"
     >
-      <div className="rounded-2xl overflow-hidden" style={glassStyle}>
+      <div
+        className={cn(
+          "pointer-events-auto rounded-2xl overflow-hidden",
+          actionRequired && "action-bar-breathing"
+        )}
+        style={glassStyle}
+      >
         <ExecutionBanner visibleAction={visibleAction} />
 
         <AnimatePresence mode="wait">
@@ -551,44 +613,16 @@ const DesktopActionBar = ({
             </motion.button>
           )}
 
-          <ActionBtn
-            variant="fold"
-            onClick={() => onAction('fold')}
-            disabled={!actionRequired}
-            shortcut="F"
-            isMobile={false}
-          >
+          <ActionBtn variant="fold" onClick={() => onAction('fold')} disabled={!actionRequired} shortcut="F" isMobile={false} sparkId={0} currentSpark={sparkIndex}>
             Fold
           </ActionBtn>
-
-          <ActionBtn
-            variant="call"
-            onClick={() => onAction(isCheck ? 'check' : 'call')}
-            disabled={!actionRequired}
-            shortcut="C"
-            isMobile={false}
-            IconOverride={isCheck ? Check : undefined}
-          >
+          <ActionBtn variant="call" onClick={() => onAction(isCheck ? 'check' : 'call')} disabled={!actionRequired} shortcut="C" isMobile={false} IconOverride={isCheck ? Check : undefined} sparkId={1} currentSpark={sparkIndex}>
             {callLabel}
           </ActionBtn>
-
-          <ActionBtn
-            variant="raise"
-            onClick={toggleRaise}
-            disabled={!actionRequired || !canRaise}
-            shortcut="R"
-            isMobile={false}
-          >
+          <ActionBtn variant="raise" onClick={toggleRaise} disabled={!actionRequired || !canRaise} shortcut="R" isMobile={false} sparkId={2} currentSpark={sparkIndex}>
             {raiseOpen ? 'Close' : 'Raise'}
           </ActionBtn>
-
-          <ActionBtn
-            variant="all-in"
-            onClick={() => onAction('all-in')}
-            disabled={allInDisabled}
-            shortcut="A"
-            isMobile={false}
-          >
+          <ActionBtn variant="all-in" onClick={() => onAction('all-in')} disabled={allInDisabled} shortcut="A" isMobile={false} sparkId={3} currentSpark={sparkIndex}>
             All-in
           </ActionBtn>
         </div>
@@ -641,7 +675,6 @@ const MobileActionBar = ({
       ? `All-in ${formatCurrency(heroStack)}`
       : `Call ${formatCurrency(toCall)}`;
 
-  // ✅ FIX: All-in is always available when it's your turn and you have chips
   const allInDisabled = !actionRequired || heroStack === 0;
 
   const vw = useViewportWidth();
@@ -650,6 +683,9 @@ const MobileActionBar = ({
   const visibleAction = useVisibleAction(executingAction, toCall);
 
   useActionKeys(onAction, toggleRaise, actionRequired, toCall);
+
+  // Trigger sparkles only when waiting for user action (not when raise slider is open)
+  const sparkIndex = useRandomSparkle(!actionRequired && !raiseOpen);
 
   useEffect(() => {
     if (actionRequired) setDrawerOpen(false);
@@ -661,38 +697,22 @@ const MobileActionBar = ({
   };
 
   const foldBtn = (
-    <ActionBtn variant="fold" onClick={() => onAction('fold')} disabled={!actionRequired} isMobile>
+    <ActionBtn variant="fold" onClick={() => onAction('fold')} disabled={!actionRequired} isMobile sparkId={0} currentSpark={sparkIndex}>
       Fold
     </ActionBtn>
   );
   const callBtn = (
-    <ActionBtn
-      variant="call"
-      onClick={() => onAction(isCheck ? 'check' : 'call')}
-      disabled={!actionRequired}
-      isMobile
-      IconOverride={isCheck ? Check : undefined}
-    >
+    <ActionBtn variant="call" onClick={() => onAction(isCheck ? 'check' : 'call')} disabled={!actionRequired} isMobile IconOverride={isCheck ? Check : undefined} sparkId={1} currentSpark={sparkIndex}>
       {callLabel}
     </ActionBtn>
   );
   const raiseBtn = (
-    <ActionBtn
-      variant="raise"
-      onClick={toggleRaise}
-      disabled={!actionRequired || !canRaise}
-      isMobile
-    >
+    <ActionBtn variant="raise" onClick={toggleRaise} disabled={!actionRequired || !canRaise} isMobile sparkId={2} currentSpark={sparkIndex}>
       {raiseOpen ? 'Close' : 'Raise'}
     </ActionBtn>
   );
   const allInBtn = (
-    <ActionBtn
-      variant="all-in"
-      onClick={() => onAction('all-in')}
-      disabled={allInDisabled}
-      isMobile
-    >
+    <ActionBtn variant="all-in" onClick={() => onAction('all-in')} disabled={allInDisabled} isMobile sparkId={3} currentSpark={sparkIndex}>
       All-in
     </ActionBtn>
   );
@@ -706,7 +726,13 @@ const MobileActionBar = ({
       transition={transition}
       className="fixed bottom-0 left-0 right-0 z-[450] pointer-events-auto"
     >
-      <div style={glassStyle} className="border-x-0 border-b-0 rounded-none">
+      <div
+        className={cn(
+          "border-x-0 border-b-0 rounded-none",
+          actionRequired && "action-bar-breathing"
+        )}
+        style={glassStyle}
+      >
         <ExecutionBanner visibleAction={visibleAction} />
 
         <AnimatePresence>
@@ -848,12 +874,27 @@ export const ActionBar = ({
     heroStack,
   };
   return (
-    <AnimatePresence mode="wait">
-      {isDesktop ? (
-        <DesktopActionBar key="desktop" {...props} />
-      ) : (
-        <MobileActionBar key="mobile" {...props} />
-      )}
-    </AnimatePresence>
+    <>
+      <style>{`
+        @keyframes actionBarBreath {
+          0%, 100% {
+            box-shadow: 0 12px 48px rgba(0,0,0,0.9), 0 0 0 1px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04), 0 0 0px rgba(78,222,163,0);
+          }
+          50% {
+            box-shadow: 0 12px 48px rgba(0,0,0,0.9), 0 0 0 2px rgba(78,222,163,0.6), inset 0 1px 0 rgba(255,255,255,0.04), 0 0 35px rgba(78,222,163,0.5);
+          }
+        }
+        .action-bar-breathing {
+          animation: actionBarBreath 2s infinite ease-in-out;
+        }
+      `}</style>
+      <AnimatePresence mode="wait">
+        {isDesktop ? (
+          <DesktopActionBar key="desktop" {...props} />
+        ) : (
+          <MobileActionBar key="mobile" {...props} />
+        )}
+      </AnimatePresence>
+    </>
   );
 };

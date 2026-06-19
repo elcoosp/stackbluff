@@ -6,38 +6,116 @@ import { TimerBar } from './TimerBar';
 import { cn } from '@/lib/utils';
 import { useVisualFeedback } from '@stackbluff/shared/hooks/useVisualFeedback';
 
-interface PlayerSpotProps {
-  seat: {
-    seat: number;
-    user_id: string;
-    display_name?: string;
-    stack: number;
-    current_bet: number;
-    is_all_in: boolean;
-    is_folded: boolean;
-    is_active: boolean;
-    avatar_url?: string;
-    position_badge?: string;
-    action?: {
-      text: string;
-      amount?: number;
-    };
-    hole_cards?: Array<{ rank: string; suit: string }>;
-    is_winner?: boolean;
-    is_showdown_revealed?: boolean;
-    hand_description?: string;
-    winning_cards?: Array<{ rank: string; suit: string }>;
-  };
-  isHero?: boolean;
-  isMobile?: boolean;
-  isDealer?: boolean;
-  seatPosition?: { left: string; top: string; transform: string };
-  timerRemainingMs?: number | null;
-  timerTotalMs?: number | null;
-  isDealing?: boolean;
-  onShowStats?: (userId: string) => void;
-}
+// ─── 3D Winner Overlay ──────────────────────────────────────────────────────
+const WinnerOverlay = () => {
+  const accent = 'rgba(78, 222, 163, ';
 
+  // 6 sparkles with 3D motion (z-axis via scale)
+  const sparkles = [
+    { x: 15, y: 25, delay: 0.1, dx: 8, dy: -6, scaleZ: 0.8 },
+    { x: 75, y: 20, delay: 0.6, dx: -10, dy: 5, scaleZ: 1.2 },
+    { x: 10, y: 70, delay: 1.1, dx: 6, dy: 8, scaleZ: 0.9 },
+    { x: 82, y: 78, delay: 1.6, dx: -5, dy: -9, scaleZ: 1.1 },
+    { x: 45, y: 12, delay: 0.3, dx: -7, dy: 4, scaleZ: 1.0 },
+    { x: 55, y: 85, delay: 0.9, dx: 9, dy: -3, scaleZ: 0.7 },
+  ];
+
+  return (
+    <div
+      className="absolute inset-0 overflow-hidden rounded-sm pointer-events-none"
+      style={{ perspective: '800px' }}
+    >
+      {/* 1. Breathing aura – 2 cycles */}
+      <motion.div
+        className="absolute inset-0 rounded-sm"
+        style={{
+          background: `radial-gradient(circle at center, ${accent}0.2) 0%, ${accent}0.05) 60%, transparent 100%)`,
+          filter: 'blur(6px)',
+        }}
+        animate={{ opacity: [0.3, 0.7, 0.3] }}
+        transition={{ duration: 2.2, repeat: 2, repeatType: 'reverse', ease: 'easeInOut' }}
+      />
+
+      {/* 2. Shockwave pulse – 3D scale */}
+      <motion.div
+        className="absolute inset-0 rounded-sm border-2"
+        style={{ borderColor: `${accent}0.6)` }}
+        animate={{
+          scale: [1, 1.08, 1.15],
+          opacity: [0.8, 0.3, 0],
+          rotateX: [0, 5, 0],
+          rotateY: [0, -5, 0],
+        }}
+        transition={{ duration: 1.8, repeat: 2, delay: 0.2, ease: 'easeOut' }}
+      />
+
+      {/* 3. 3D Diamond – floating and rotating in 3D */}
+      <motion.div
+        className="absolute"
+        style={{
+          left: '50%',
+          top: '50%',
+          width: 40,
+          height: 40,
+          marginLeft: -20,
+          marginTop: -20,
+          border: `1.5px solid ${accent}0.5)`,
+          transform: 'rotate(45deg)',
+          boxShadow: `0 0 30px ${accent}0.2)`,
+          background: `radial-gradient(circle at 30% 30%, ${accent}0.15) 0%, transparent 70%)`,
+        }}
+        animate={{
+          rotateX: [0, 360],
+          rotateY: [0, 180],
+          rotateZ: [0, 90],
+          scale: [0.8, 1.2, 0.8],
+          opacity: [0, 1, 0],
+        }}
+        transition={{ duration: 4, repeat: 2, ease: 'easeInOut' }}
+      />
+
+      {/* 4. Sparkles with 3D depth (scale simulates Z) */}
+      {sparkles.map((s) => (
+        <motion.div
+          key={s.x}
+          className="absolute w-1.5 h-1.5 rounded-full"
+          style={{
+            left: `${s.x}%`,
+            top: `${s.y}%`,
+            backgroundColor: '#4EDEA3',
+            boxShadow: `0 0 12px ${accent}0.8), 0 0 24px ${accent}0.4)`,
+          }}
+          animate={{
+            x: [0, s.dx, 0],
+            y: [0, s.dy, 0],
+            scale: [0.5, 1.8 * s.scaleZ, 0.5],
+            opacity: [0, 1, 0],
+            rotateX: [0, 180],
+            rotateY: [0, 90],
+          }}
+          transition={{
+            duration: 3.5,
+            repeat: 2,
+            delay: s.delay,
+            ease: 'easeInOut',
+          }}
+        />
+      ))}
+
+      {/* 5. Diagonal shine – one smooth pass */}
+      <motion.div
+        className="absolute inset-0 rounded-sm"
+        style={{
+          background: `linear-gradient(135deg, transparent 35%, ${accent}0.12) 50%, transparent 65%)`,
+        }}
+        animate={{ x: ['-120%', '120%'] }}
+        transition={{ duration: 2.8, repeat: 2, ease: 'easeInOut' }}
+      />
+    </div>
+  );
+};
+
+// ─── CardGroup (unchanged) ────────────────────────────────────────────────────
 const CardGroup = ({
   showCardsFaceUp,
   hole_cards,
@@ -99,14 +177,11 @@ const CardGroup = ({
     return true;
   };
 
-  // If it's the hero and we are dealing, don't render anything here.
-  // The DealAnimationLayer will handle the visual cards.
   if (isHero && isDealing) {
     return null;
   }
 
   if (!hole_cards || hole_cards.length === 0) {
-    // If it's the hero and no cards, don't render backs (they haven't been dealt yet)
     if (isHero) return null;
 
     return (
@@ -222,6 +297,7 @@ const CardGroup = ({
   );
 };
 
+// ─── Main PlayerSpot ─────────────────────────────────────────────────────────
 export const PlayerSpot = ({
   seat,
   isHero = false,
@@ -321,7 +397,7 @@ export const PlayerSpot = ({
       'bg-[rgba(8,8,8,0.85)] backdrop-blur-md border border-white/10': true,
       'border-tertiary/40 shadow-[0_0_20px_rgba(78,222,163,0.15)]': isActive && !isHero,
       'border-tertiary shadow-[0_0_30px_rgba(78,222,163,0.25)]': isActive && isHero,
-      'border-tertiary/60 shadow-[0_0_25px_rgba(78,222,163,0.3)]': is_winner,
+      'border-tertiary/70 shadow-[0_0_30px_rgba(78,222,163,0.35)]': is_winner,
       'opacity-30 grayscale': isFolded,
       'opacity-50 grayscale': isLosingPlayer,
     }
@@ -435,29 +511,27 @@ export const PlayerSpot = ({
 
   const hasTimer = timerRemainingMs !== null && timerRemainingMs !== undefined;
 
-  const winnerGlow = is_winner ? (
+  // ─── Winner overlay with 3D ──────────────────────────────────────────────────
+  const winnerOverlay = is_winner && (
     <motion.div
-      initial={{ opacity: 0, scale: 0.8 }}
-      animate={{
-        opacity: [0, 0.6, 0.3, 0.6, 0.3],
-        scale: [0.8, 1.1, 1.05, 1.1, 1.05],
-      }}
-      transition={{ duration: 1.5, repeat: Infinity, repeatType: 'reverse' }}
-      className="absolute inset-0 rounded-sm pointer-events-none"
-      style={{
-        boxShadow: '0 0 20px rgba(78,222,163,0.4), 0 0 40px rgba(78,222,163,0.2)',
-        transformOrigin: 'center',
-      }}
-    />
-  ) : null;
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      className="absolute inset-0 z-10"
+    >
+      <WinnerOverlay />
+    </motion.div>
+  );
 
+  // All‑in glow (unchanged)
   const allInGlow = is_all_in && !is_folded ? (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{
         opacity: [0.3, 0.7, 0.3],
       }}
-      transition={{ duration: 0.8, repeat: Infinity, repeatType: 'reverse' }}
+      transition={{ duration: 0.8, repeat: 2, repeatType: 'reverse' }}
       className="absolute inset-0 rounded-sm pointer-events-none"
       style={{
         boxShadow: '0 0 15px rgba(239,68,68,0.3), 0 0 30px rgba(239,68,68,0.15)',
@@ -492,9 +566,34 @@ export const PlayerSpot = ({
         'relative inline-flex flex-col items-center',
         isHero ? 'z-50' : 'z-20'
       )}
+      style={{ perspective: '1000px' }}
     >
-      <div className={cn(glassClasses, 'relative z-20')} style={visualStyle} data-hub>
-        {winnerGlow}
+      {/* ─── Hub with 3D tilt and scale ───────────────────────────────────────── */}
+      <motion.div
+        className={cn(glassClasses, 'relative z-20')}
+        style={visualStyle}
+        data-hub
+        animate={
+          is_winner
+            ? {
+              scale: [1, 1.03, 1],
+              rotateX: [0, 2, 0],
+              rotateY: [0, -3, 0],
+              boxShadow: [
+                '0 0 10px rgba(78,222,163,0.2)',
+                '0 0 30px rgba(78,222,163,0.5)',
+                '0 0 10px rgba(78,222,163,0.2)',
+              ],
+            }
+            : {}
+        }
+        transition={{
+          duration: 2.5,
+          repeat: is_winner ? 2 : 0,
+          ease: [0.22, 1, 0.36, 1],
+        }}
+      >
+        {winnerOverlay}
         {allInGlow}
 
         {/* Clickable Overlay for Stats */}
@@ -553,7 +652,7 @@ export const PlayerSpot = ({
         </AnimatePresence>
 
         {actionPill}
-      </div>
+      </motion.div>
 
       {/* ── Cards (hidden during deal animation) ── */}
       <AnimatePresence>

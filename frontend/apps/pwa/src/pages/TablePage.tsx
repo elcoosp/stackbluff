@@ -30,7 +30,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { Settings, LogOut, History } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from '@tanstack/react-router';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 
@@ -456,6 +456,10 @@ export function TablePage() {
     navigate({ to: '/lobby' });
   }, [sendAction, navigate]);
 
+  const isAnyAllIn = Object.values(seatsWithShowdown).some(
+    (s: any) => s.is_all_in && !s.is_folded
+  );
+
   return (
     <ErrorBoundary FallbackComponent={Fallback}>
       <div
@@ -559,18 +563,56 @@ export function TablePage() {
           onOpenChange={(open) => !open && setStatsUserId(null)}
         />
 
-        {!showAnalytics && (
-          <MobileAnalyticsStrip winProb={winProb} potOdds={potOdds} bestHand={bestHand} strength={strength} />
-        )}
+        {/* Wrapped MobileAnalyticsStrip in z-445 to sit above the table/mask, but below PotBadge */}
+        <div className="absolute top-0 left-0 right-0 z-[445] pointer-events-none">
+          {!showAnalytics && (
+            <MobileAnalyticsStrip winProb={winProb} potOdds={potOdds} bestHand={bestHand} strength={strength} />
+          )}
+        </div>
 
         <div className="flex items-center justify-center h-full pt-3 px-3 pb-3 md:pt-4 md:px-4 md:pb-4">
+          {/* Table container is z-1, NO isolate so global z-indices work inside it */}
           <div
-            className="relative w-full h-full"
+            className="relative z-[1] w-full h-full"
             style={{ maxWidth: isDesktop ? '1000px' : '500px', transition: 'max-width 0.4s ease' }}
           >
             <TableRail isMobile={!isDesktop} />
 
+            {/* ═══ DYNAMIC FOCUS MASK ═══ */}
+            <AnimatePresence>
+              {isMyTurn && !showdownReveal && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.4, ease: 'easeInOut' }}
+                  className="absolute inset-0 z-[435] pointer-events-none"
+                  style={{
+                    background: 'radial-gradient(ellipse at 50% 85%, transparent 25%, rgba(0,0,0,0.65) 70%, rgba(0,0,0,0.85) 100%)',
+                    borderRadius: isDesktop ? '140px' : '40px',
+                  }}
+                />
+              )}
+            </AnimatePresence>
+
             <div className="absolute inset-3 md:inset-10" style={{ transition: 'inset 0.4s ease' }}>
+              {/* ═══ ALL-IN TENSION AURA ═══ */}
+              <AnimatePresence>
+                {isAnyAllIn && !showdownReveal && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: [0.3, 0.7, 0.3] }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                    className="absolute inset-0 pointer-events-none z-20"
+                    style={{
+                      borderRadius: isDesktop ? '100px' : '28px',
+                      boxShadow: 'inset 0 0 80px 10px rgba(239, 68, 68, 0.4)'
+                    }}
+                  />
+                )}
+              </AnimatePresence>
+
               <TableFelt isMobile={!isDesktop} />
 
               <div className="absolute top-[40%] md:top-[42%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
@@ -582,8 +624,9 @@ export function TablePage() {
                 />
               </div>
 
+              {/* PotBadge is z-450 to be above the MobileAnalyticsStrip (445) and mask (435) */}
               <div className={cn(
-                "absolute left-1/2 -translate-x-1/2 z-30 transition-all duration-700 ease-in-out",
+                "absolute left-1/2 -translate-x-1/2 z-[450] transition-all duration-700 ease-in-out",
                 showdownReveal
                   ? "top-[4%] md:top-[3%]"
                   : "top-[6%] md:top-[3%]"
