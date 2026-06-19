@@ -577,7 +577,7 @@ impl GameState {
 
             let (best_hand_name, base_strength) = if self.community_cards.len() >= 5 {
                 let comm_5: [Card; 5] = self.community_cards[..5].try_into().unwrap();
-                let strength = crate::evaluate::evaluate_hand_strength(hole_cards, &comm_5);
+                let (strength, _) = evaluate_hand_strength(hole_cards, &comm_5);
                 (
                     strength.rank.name().to_string(),
                     crate::analytics::get_strength_score(strength.rank),
@@ -709,7 +709,7 @@ impl GameState {
             let mut best_indices = Vec::new();
             for &idx in &eligible_indices {
                 let hole = self.players[idx].hole_cards.as_ref().unwrap();
-                let strength = evaluate_hand_strength(hole, &community);
+                let (strength, _) = evaluate_hand_strength(hole, &community);
                 if let Some(ref current) = best_strength {
                     if strength > *current {
                         best_strength = Some(strength);
@@ -948,11 +948,10 @@ mod tests {
         assert!(state.current_pot().as_i64() > 0);
     }
 
-    // Test the all-in raise below minimum
     #[test]
     fn test_all_in_raise_below_minimum_is_allowed() {
         let players = vec![
-            (pid(1), ChipAmount::new(1000).unwrap()),
+            (pid(1), ChipAmount::new(50).unwrap()),
             (pid(2), ChipAmount::new(1000).unwrap()),
         ];
         let mut state = GameState::new_hand(
@@ -963,55 +962,15 @@ mod tests {
         )
         .unwrap();
 
-        // SB calls, BB raises to 100, SB goes all-in with 50 (less than min raise)
+        // SB calls
         state.apply_action(pid(1), Action::Call).unwrap();
+        // BB raises to 100
         state
             .apply_action(pid(2), Action::Raise(ChipAmount::new(100).unwrap()))
             .unwrap();
-        // Now SB (pid1) has 995? Actually after posting SB (5) and calling (10? Wait: initial SB=5, BB=10. After SB calls, SB has put 10 total? Let's simplify: we just need to test the raise logic.
-        // Instead, we'll construct a scenario where a player raises all-in with less than the minimum.
-        // Reset: let's just test the raise function directly.
-        // Actually we already have the logic in place; we can add a test that verifies an all-in raise below min is accepted.
-        // But we need to ensure the raise_amount equals the player's stack.
-        // Create a state where a player has 50 chips and faces a bet of 100.
-        // We can simulate: blinds 5/10, SB calls, BB raises to 100, SB goes all-in with 50.
-        // After BB raises to 100, the smallest_bet = 100, min_raise = 90 (100-10). SB's stack = 995? Actually after posting SB of 5, SB has 995. Then SB calls the BB's raise? No, the raise is 100 total, so SB would need to call 90 more (since he already has 10 in). If SB has 995, he can call. To get him to have 50, we need to reduce his stack. Let's not overcomplicate. The test can just verify the condition.
-        // We'll add a simple test that directly checks the raise logic with a raise_amount equal to stack.
-        let mut state = GameState::new_hand(
-            TableId::generate(),
-            vec![
-                (pid(1), ChipAmount::new(50).unwrap()),
-                (pid(2), ChipAmount::new(1000).unwrap()),
-            ],
-            0,
-            (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap()),
-        )
-        .unwrap();
-        // SB (pid1) has 50, BB (pid2) has 1000. Preflop: SB acts first. SB goes all-in with 50.
-        // The raise amount is 50. The minimum raise required is 10 (BB). The raise amount is 50, but the total bet = current bet (5) + raise (50) = 55. The required = smallest_bet (10) + min_raise (10) = 20. So 55 >= 20, so it passes anyway. We need a case where raise amount is less than min raise. E.g., smallest_bet is 100, min_raise is 90, and stack is 50, so total bet = current bet (10) + 50 = 60, required = 100+90=190, fails. But if stack is 50, the raise_amount equals stack, so it should be allowed.
-        // Let's force a situation: after BB raises to 100, smallest_bet=100, min_raise=90, SB has 50. SB's current bet is 5 (blind). So total_bet = 5 + 50 = 55, required = 100+90=190. This would normally be invalid, but since stack == raise_amount (50), we allow it.
-        // So we need to set up a hand where BB raises to 100.
-        let players2 = vec![
-            (pid(1), ChipAmount::new(50).unwrap()),
-            (pid(2), ChipAmount::new(1000).unwrap()),
-        ];
-        let mut state2 = GameState::new_hand(
-            TableId::generate(),
-            players2,
-            0,
-            (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap()),
-        )
-        .unwrap();
-        // SB (pid1) calls
-        state2.apply_action(pid(1), Action::Call).unwrap();
-        // BB (pid2) raises to 100
-        state2
-            .apply_action(pid(2), Action::Raise(ChipAmount::new(100).unwrap()))
-            .unwrap();
-        // Now SB (pid1) goes all-in with 50
-        let result = state2.apply_action(pid(1), Action::Raise(ChipAmount::new(50).unwrap()));
+        // SB goes all-in with 50
+        let result = state.apply_action(pid(1), Action::Raise(ChipAmount::new(50).unwrap()));
         assert!(result.is_ok());
-        // The player should now be all-in
-        assert!(state2.player_is_all_in(pid(1)));
+        assert!(state.player_is_all_in(pid(1)));
     }
 }

@@ -16,6 +16,14 @@ pub struct UserCreate {
     pub platform: String,
 }
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct UserProfile {
+    pub id: UserId,
+    pub display_name: String,
+    pub email: Option<String>,
+    pub chip_balance: i64,
+}
+
 #[async_trait]
 pub trait UserRepository: Send + Sync {
     async fn create_user(
@@ -24,12 +32,19 @@ pub trait UserRepository: Send + Sync {
         create: UserCreate,
     ) -> PersistenceResult<UserId>;
     async fn get_user(&self, ctx: RequestContext, id: UserId) -> PersistenceResult<String>;
+    async fn get_user_profile(
+        &self,
+        ctx: RequestContext,
+        id: UserId,
+    ) -> PersistenceResult<UserProfile>;
+
+    /// Updates the user's chip balance by `delta`. Returns the new balance.
     async fn update_chip_balance(
         &self,
         ctx: RequestContext,
         user_id: UserId,
         delta: i64,
-    ) -> PersistenceResult<()>;
+    ) -> PersistenceResult<i64>;
 
     async fn find_or_create_by_telegram(
         &self,
@@ -42,7 +57,7 @@ pub trait UserRepository: Send + Sync {
         ctx: RequestContext,
         username: &str,
         email: &str,
-        password_hash: &str, // Add this argument
+        password_hash: &str,
     ) -> PersistenceResult<UserId>;
 
     async fn find_by_email(
@@ -104,13 +119,6 @@ pub const DIVISION_SIZE: u32 = 500;
 /// Result type for club operations.
 pub type ClubResult<T> = Result<T, ClubError>;
 
-/// Repository interface for club persistence.
-///
-/// ## Contracts
-/// - `join_club`: If the user is already a member (UNIQUE constraint),
-///   returns `ClubError::AlreadyMember`. Callers need NOT check `is_member` first.
-/// - `increment_weekly_xp`: Must be atomic (single SQL statement).
-/// - `refresh_leaderboard`: Must run inside a transaction for atomicity.
 #[async_trait]
 pub trait ClubRepo: Send + Sync {
     async fn create_club(
@@ -122,9 +130,6 @@ pub trait ClubRepo: Send + Sync {
 
     async fn find_club_by_id(&self, club_id: ClubId) -> ClubResult<Option<Club>>;
 
-    /// Join a club. Returns `ClubError::AlreadyMember` on duplicate.
-    /// Does NOT require a prior `is_member` check — the UNIQUE constraint
-    /// is the authoritative guard.
     async fn join_club(&self, club_id: ClubId, user_id: UserId) -> ClubResult<()>;
 
     async fn is_member(&self, club_id: ClubId, user_id: UserId) -> ClubResult<bool>;
@@ -137,7 +142,6 @@ pub trait ClubRepo: Send + Sync {
         division: u32,
     ) -> ClubResult<LeaderboardPage>;
 
-    /// Atomically add XP. Must use a single SQL UPDATE statement.
     async fn increment_weekly_xp(
         &self,
         club_id: ClubId,
@@ -145,10 +149,8 @@ pub trait ClubRepo: Send + Sync {
         xp: i64,
     ) -> ClubResult<()>;
 
-    /// Materialise the leaderboard snapshot. Must run in a transaction.
     async fn refresh_leaderboard(&self, club_id: ClubId) -> ClubResult<()>;
 
-    /// Return all club ids for the scheduled refresh job.
     async fn get_all_club_ids(&self) -> ClubResult<Vec<ClubId>>;
 }
 

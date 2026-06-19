@@ -7,6 +7,7 @@ interface CommunityCardsProps {
   cards: any[];
   isMobile?: boolean;
   revealedCount?: number;
+  winningCards?: Array<{ rank: string; suit: string }>;
 }
 
 function useWindowWidth() {
@@ -27,7 +28,7 @@ function EmptySlot({ isNextStreet }: { isNextStreet: boolean }) {
         'w-full h-full rounded-sm relative overflow-hidden',
         isNextStreet
           ? 'border border-dashed border-tertiary/25 bg-tertiary/[0.02]'
-          : 'border border-dashed border-white/[0.05] bg-white/[0.008]',
+          : 'border border-dashed border-white/[0.05] bg-white/[0.008]'
       )}
       exit={{ scale: 0.85, opacity: 0, transition: { duration: 0.15, ease: 'easeIn' } }}
     >
@@ -47,6 +48,7 @@ export const CommunityCards = ({
   cards,
   isMobile = false,
   revealedCount = cards.length,
+  winningCards = [],
 }: CommunityCardsProps) => {
   const totalSlots = 5;
   const slots = Array.from({ length: totalSlots }, (_, i) => i);
@@ -86,7 +88,15 @@ export const CommunityCards = ({
 
   const sizeProp = windowWidth < 768 ? 'lg' : 'xl';
   const roundedClass = 'rounded-sm';
-  const realCardClass = `${cardWidth} ${cardHeight} ${roundedClass} border-b-4 border-gray-200 shadow-[0_4px_12px_rgba(0,0,0,0.3)]`;
+
+  // If we have winning cards passed in, we are at showdown and any non-winning card is a "losing" card
+  const hasShowdownWinner = winningCards.length > 0;
+
+  const isWinningCard = (card: any) => {
+    return winningCards.some((wc) => wc.rank === card.rank && wc.suit === card.suit);
+  };
+
+  const realCardClass = cn(`${cardWidth} ${cardHeight} ${roundedClass} border-b-4 border-gray-200`);
 
   const prevRevealedCount = useRef(revealedCount);
   useEffect(() => {
@@ -188,6 +198,8 @@ export const CommunityCards = ({
                   className={realCardClass}
                   size={sizeProp}
                   hoverable={false}
+                  isWinning={isWinningCard(card)}
+                  isLosing={hasShowdownWinner && !isWinningCard(card)}
                 />
               </div>
             </motion.div>

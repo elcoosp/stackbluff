@@ -881,7 +881,8 @@ use sb_contracts::repo_api::UserRepo;
 use sb_db_repos::init_writer_loop;
 use sb_db_repos::user_repo::UserRepoImpl;
 use sb_rest_router::create_router;
-use sb_shared_types::{ChipAmount, GameVariant, StakeLevel, TableConfig};
+use sb_shared_types::{GameVariant, StakeLevel, TableConfig};
+use sb_table_registry::buy_in_limits_for_stake; // <--- ADDED
 use sb_table_registry::registry::Registry;
 use sb_table_registry::table_service::TableServiceImpl;
 use sb_ws_handler::ws_route;
@@ -915,7 +916,7 @@ async fn main() {
 
     // ‚îÄ‚îÄ Wire up Auth Service ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
     let auth_config = AuthConfig::from_env();
-    let auth_impl = Arc::new(AuthServiceImpl::new(user_repo, auth_config));
+    let auth_impl = Arc::new(AuthServiceImpl::new(user_repo.clone(), auth_config));
     let auth_service: SharedAuthService = auth_impl.clone();
     let auth_authenticator: Arc<dyn Authenticator + Send + Sync> = auth_impl;
 
@@ -935,12 +936,13 @@ async fn main() {
         .await
         .expect("failed to list DB tables");
     for t in &db_tables {
+        let (min_buy_in, max_buy_in) = buy_in_limits_for_stake(t.stake_level);
         let config = TableConfig {
             max_players: t.max_players as u8,
             stake_level: t.stake_level,
             variant: GameVariant::Holdem,
-            min_buy_in: ChipAmount::new(100).unwrap(),
-            max_buy_in: ChipAmount::new(10000).unwrap(),
+            min_buy_in,
+            max_buy_in,
         };
         registry.register_existing_table(t.table_id, config).await;
         tracing::info!(table_id = %t.table_id, "Hydrated table from DB");
@@ -978,7 +980,11 @@ async fn main() {
     // Build the application router
     let app = Router::new()
         .merge(rest_router)
-        .merge(ws_route(auth_authenticator.clone(), registry.clone()))
+        .merge(ws_route(
+            auth_authenticator.clone(),
+            registry.clone(),
+            user_repo.clone(),
+        ))
         .merge(auth_router(auth_service))
         .merge(sb_bot_handler::attach(bot_state))
         .merge(sb_rest_router::oracle_router(oracle_service))
@@ -992,7 +998,6 @@ async fn main() {
     tracing::info!("server listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.expect("server error");
 }
-
 #[cfg(feature = "test-stubs")]
 fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
     let table_service: Arc<dyn sb_contracts::service_api::TableService> =
@@ -1405,7 +1410,7 @@ use argon2::PasswordHasher;
 
 use crate::config::AuthConfig;
 use crate::jwt::{create_jwt, verify_jwt};
-use sb_contracts::repo_api::{PersistenceError, UserRepo};
+use sb_contracts::repo_api::{PersistenceError, UserProfile, UserRepo};
 use sb_contracts::service_api::{AuthResult, AuthService, TokenClaims};
 use sb_shared_types::{AppError, RequestContext, UserId};
 
@@ -1594,11 +1599,24 @@ impl AuthService for AuthServiceImpl {
             platform: claims.platform,
         })
     }
+
+    async fn get_user_profile(
+        &self,
+        ctx: &RequestContext,
+        user_id: UserId,
+    ) -> Result<UserProfile, AppError> {
+        self.user_repo
+            .get_user_profile(ctx.clone(), user_id)
+            .await
+            .map_err(map_persistence_error)
+    }
 }
 
 fn map_persistence_error(e: PersistenceError) -> AppError {
     match e {
-        PersistenceError::UniqueViolation => AppError::Conflict("Resource already exists".to_string()),
+        PersistenceError::UniqueViolation => {
+            AppError::Conflict("Resource already exists".to_string())
+        }
         PersistenceError::NotFound => AppError::NotFound("User not found".to_string()),
         _ => AppError::Internal(e.to_string()),
     }
@@ -1627,7 +1645,7 @@ impl Authenticator for AuthServiceImpl {
 use axum::{
     Json, Router,
     extract::State,
-    http::StatusCode,
+    http::{HeaderMap, StatusCode, header},
     response::IntoResponse,
     routing::{get, post},
 };
@@ -1677,12 +1695,23 @@ struct EmailPasswordRequest {
 #[derive(Serialize)]
 struct AuthUserResponse {
     id: String,
+    username: String,
+    email: Option<String>,
 }
 
 #[derive(Serialize)]
 struct AuthResponse {
     token: String,
     user: AuthUserResponse,
+    balance: i64, // <-- Added balance here
+}
+
+#[derive(Serialize)]
+struct MeResponse {
+    id: String,
+    username: String,
+    email: Option<String>,
+    chip_balance: i64,
 }
 
 /// Helper to set the auth cookie on any successful auth response.
@@ -1694,18 +1723,6 @@ fn set_auth_cookie(cookies: &Cookies, jwt: &str) {
         .same_site(tower_cookies::cookie::SameSite::Lax)
         .build();
     cookies.add(cookie);
-}
-
-fn auth_response(r: sb_contracts::service_api::AuthResult) -> impl IntoResponse {
-    (
-        StatusCode::OK,
-        Json(AuthResponse {
-            token: r.jwt,
-            user: AuthUserResponse {
-                id: r.user_id.to_string(),
-            },
-        }),
-    )
 }
 
 fn error_response(e: AppError) -> axum::response::Response {
@@ -1725,7 +1742,22 @@ async fn telegram_auth(
     match svc.telegram_auth(&ctx, &req.init_data).await {
         Ok(r) => {
             set_auth_cookie(&cookies, &r.jwt);
-            auth_response(r).into_response()
+            match svc.get_user_profile(&ctx, r.user_id).await {
+                Ok(profile) => (
+                    StatusCode::OK,
+                    Json(AuthResponse {
+                        token: r.jwt,
+                        user: AuthUserResponse {
+                            id: profile.id.to_string(),
+                            username: profile.display_name,
+                            email: profile.email,
+                        },
+                        balance: profile.chip_balance, // <-- Return balance
+                    }),
+                )
+                    .into_response(),
+                Err(e) => error_response(e),
+            }
         }
         Err(e) => error_response(e),
     }
@@ -1743,7 +1775,22 @@ async fn register(
     {
         Ok(r) => {
             set_auth_cookie(&cookies, &r.jwt);
-            auth_response(r).into_response()
+            match svc.get_user_profile(&ctx, r.user_id).await {
+                Ok(profile) => (
+                    StatusCode::OK,
+                    Json(AuthResponse {
+                        token: r.jwt,
+                        user: AuthUserResponse {
+                            id: profile.id.to_string(),
+                            username: profile.display_name,
+                            email: profile.email,
+                        },
+                        balance: profile.chip_balance, // <-- Return balance
+                    }),
+                )
+                    .into_response(),
+                Err(e) => error_response(e),
+            }
         }
         Err(e) => error_response(e),
     }
@@ -1758,22 +1805,67 @@ async fn login(
     match svc.login(&ctx, &req.email, &req.password).await {
         Ok(r) => {
             set_auth_cookie(&cookies, &r.jwt);
-            auth_response(r).into_response()
+            match svc.get_user_profile(&ctx, r.user_id).await {
+                Ok(profile) => (
+                    StatusCode::OK,
+                    Json(AuthResponse {
+                        token: r.jwt,
+                        user: AuthUserResponse {
+                            id: profile.id.to_string(),
+                            username: profile.display_name,
+                            email: profile.email,
+                        },
+                        balance: profile.chip_balance, // <-- Return balance
+                    }),
+                )
+                    .into_response(),
+                Err(e) => error_response(e),
+            }
         }
         Err(e) => error_response(e),
     }
 }
 
-async fn me() -> impl IntoResponse {
-    (
-        StatusCode::OK,
-        Json(serde_json::json!({
-            "id": "demo",
-            "username": "Demo User",
-            "email": "demo@stackbluff.com",
-            "chip_balance": 100000
-        })),
-    )
+async fn me_handler(
+    cookies: Cookies,
+    headers: HeaderMap,
+    State(svc): State<SharedAuthService>,
+) -> impl IntoResponse {
+    let token = cookies
+        .get("token")
+        .map(|c| c.value().to_string())
+        .or_else(|| {
+            headers
+                .get(header::AUTHORIZATION)
+                .and_then(|h| h.to_str().ok())
+                .and_then(|h| h.strip_prefix("Bearer "))
+                .map(|s| s.to_string())
+        });
+
+    let token = match token {
+        Some(t) => t,
+        None => {
+            return error_response(AppError::Unauthorized("Missing token".to_string()));
+        }
+    };
+
+    let ctx = dummy_ctx();
+    match svc.validate_token(&token).await {
+        Ok(user_id) => match svc.get_user_profile(&ctx, user_id).await {
+            Ok(profile) => (
+                StatusCode::OK,
+                Json(MeResponse {
+                    id: profile.id.to_string(),
+                    username: profile.display_name,
+                    email: profile.email,
+                    chip_balance: profile.chip_balance,
+                }),
+            )
+                .into_response(),
+            Err(e) => error_response(e),
+        },
+        Err(e) => error_response(e),
+    }
 }
 
 pub fn auth_router(svc: SharedAuthService) -> Router {
@@ -1781,7 +1873,7 @@ pub fn auth_router(svc: SharedAuthService) -> Router {
         .route("/auth/telegram", post(telegram_auth))
         .route("/auth/register", post(register))
         .route("/auth/login", post(login))
-        .route("/auth/me", get(me))
+        .route("/auth/me", get(me_handler))
         .with_state(svc)
 }
 
@@ -2804,7 +2896,7 @@ impl GameState {
 
             let (best_hand_name, base_strength) = if self.community_cards.len() >= 5 {
                 let comm_5: [Card; 5] = self.community_cards[..5].try_into().unwrap();
-                let strength = crate::evaluate::evaluate_hand_strength(hole_cards, &comm_5);
+                let (strength, _) = evaluate_hand_strength(hole_cards, &comm_5);
                 (
                     strength.rank.name().to_string(),
                     crate::analytics::get_strength_score(strength.rank),
@@ -2936,7 +3028,7 @@ impl GameState {
             let mut best_indices = Vec::new();
             for &idx in &eligible_indices {
                 let hole = self.players[idx].hole_cards.as_ref().unwrap();
-                let strength = evaluate_hand_strength(hole, &community);
+                let (strength, _) = evaluate_hand_strength(hole, &community);
                 if let Some(ref current) = best_strength {
                     if strength > *current {
                         best_strength = Some(strength);
@@ -3175,11 +3267,10 @@ mod tests {
         assert!(state.current_pot().as_i64() > 0);
     }
 
-    // Test the all-in raise below minimum
     #[test]
     fn test_all_in_raise_below_minimum_is_allowed() {
         let players = vec![
-            (pid(1), ChipAmount::new(1000).unwrap()),
+            (pid(1), ChipAmount::new(50).unwrap()),
             (pid(2), ChipAmount::new(1000).unwrap()),
         ];
         let mut state = GameState::new_hand(
@@ -3190,56 +3281,16 @@ mod tests {
         )
         .unwrap();
 
-        // SB calls, BB raises to 100, SB goes all-in with 50 (less than min raise)
+        // SB calls
         state.apply_action(pid(1), Action::Call).unwrap();
+        // BB raises to 100
         state
             .apply_action(pid(2), Action::Raise(ChipAmount::new(100).unwrap()))
             .unwrap();
-        // Now SB (pid1) has 995? Actually after posting SB (5) and calling (10? Wait: initial SB=5, BB=10. After SB calls, SB has put 10 total? Let's simplify: we just need to test the raise logic.
-        // Instead, we'll construct a scenario where a player raises all-in with less than the minimum.
-        // Reset: let's just test the raise function directly.
-        // Actually we already have the logic in place; we can add a test that verifies an all-in raise below min is accepted.
-        // But we need to ensure the raise_amount equals the player's stack.
-        // Create a state where a player has 50 chips and faces a bet of 100.
-        // We can simulate: blinds 5/10, SB calls, BB raises to 100, SB goes all-in with 50.
-        // After BB raises to 100, the smallest_bet = 100, min_raise = 90 (100-10). SB's stack = 995? Actually after posting SB of 5, SB has 995. Then SB calls the BB's raise? No, the raise is 100 total, so SB would need to call 90 more (since he already has 10 in). If SB has 995, he can call. To get him to have 50, we need to reduce his stack. Let's not overcomplicate. The test can just verify the condition.
-        // We'll add a simple test that directly checks the raise logic with a raise_amount equal to stack.
-        let mut state = GameState::new_hand(
-            TableId::generate(),
-            vec![
-                (pid(1), ChipAmount::new(50).unwrap()),
-                (pid(2), ChipAmount::new(1000).unwrap()),
-            ],
-            0,
-            (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap()),
-        )
-        .unwrap();
-        // SB (pid1) has 50, BB (pid2) has 1000. Preflop: SB acts first. SB goes all-in with 50.
-        // The raise amount is 50. The minimum raise required is 10 (BB). The raise amount is 50, but the total bet = current bet (5) + raise (50) = 55. The required = smallest_bet (10) + min_raise (10) = 20. So 55 >= 20, so it passes anyway. We need a case where raise amount is less than min raise. E.g., smallest_bet is 100, min_raise is 90, and stack is 50, so total bet = current bet (10) + 50 = 60, required = 100+90=190, fails. But if stack is 50, the raise_amount equals stack, so it should be allowed.
-        // Let's force a situation: after BB raises to 100, smallest_bet=100, min_raise=90, SB has 50. SB's current bet is 5 (blind). So total_bet = 5 + 50 = 55, required = 100+90=190. This would normally be invalid, but since stack == raise_amount (50), we allow it.
-        // So we need to set up a hand where BB raises to 100.
-        let players2 = vec![
-            (pid(1), ChipAmount::new(50).unwrap()),
-            (pid(2), ChipAmount::new(1000).unwrap()),
-        ];
-        let mut state2 = GameState::new_hand(
-            TableId::generate(),
-            players2,
-            0,
-            (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap()),
-        )
-        .unwrap();
-        // SB (pid1) calls
-        state2.apply_action(pid(1), Action::Call).unwrap();
-        // BB (pid2) raises to 100
-        state2
-            .apply_action(pid(2), Action::Raise(ChipAmount::new(100).unwrap()))
-            .unwrap();
-        // Now SB (pid1) goes all-in with 50
-        let result = state2.apply_action(pid(1), Action::Raise(ChipAmount::new(50).unwrap()));
+        // SB goes all-in with 50
+        let result = state.apply_action(pid(1), Action::Raise(ChipAmount::new(50).unwrap()));
         assert!(result.is_ok());
-        // The player should now be all-in
-        assert!(state2.player_is_all_in(pid(1)));
+        assert!(state.player_is_all_in(pid(1)));
     }
 }
 
@@ -3364,8 +3415,8 @@ pub fn run_monte_carlo(hero_cards: &[Card; 2], community_cards: &[Card], iterati
         opp_comm.extend_from_slice(&fill_comm);
         let opp_comm_5: [Card; 5] = opp_comm[..5].try_into().unwrap();
 
-        let hero_strength = evaluate_hand_strength(hero_cards, &hero_comm_5);
-        let opp_strength = evaluate_hand_strength(&opp_cards, &opp_comm_5);
+        let (hero_strength, _) = evaluate_hand_strength(hero_cards, &hero_comm_5);
+        let (opp_strength, _) = evaluate_hand_strength(&opp_cards, &opp_comm_5);
 
         match hero_strength.cmp(&opp_strength) {
             std::cmp::Ordering::Greater => wins += 1,
@@ -3462,7 +3513,10 @@ impl Ord for HandStrength {
 // -----------------------------------------------------------------------------
 // Core evaluation functions
 // -----------------------------------------------------------------------------
-pub fn evaluate_hand_strength(hole_cards: &[Card; 2], community: &[Card; 5]) -> HandStrength {
+pub fn evaluate_hand_strength(
+    hole_cards: &[Card; 2],
+    community: &[Card; 5],
+) -> (HandStrength, Vec<Card>) {
     let mut all_cards = Vec::with_capacity(7);
     all_cards.extend_from_slice(hole_cards);
     all_cards.extend_from_slice(community);
@@ -3472,18 +3526,21 @@ pub fn evaluate_hand_strength(hole_cards: &[Card; 2], community: &[Card; 5]) -> 
         rank: HandRank::HighCard,
         kickers: vec![],
     };
+    let mut best_cards: Vec<Card> = vec![];
+
     for comb in combinations(&indices, 5) {
         let hand: Vec<Card> = comb.iter().map(|&i| all_cards[i]).collect();
         let strength = evaluate_5_card_strength(&hand);
         if strength > best_strength {
             best_strength = strength;
+            best_cards = hand;
         }
     }
-    best_strength
+    (best_strength, best_cards)
 }
 
 pub fn evaluate_hand(hole_cards: &[Card; 2], community: &[Card; 5]) -> HandRank {
-    evaluate_hand_strength(hole_cards, community).rank
+    evaluate_hand_strength(hole_cards, community).0.rank
 }
 
 /// Evaluate a 5‚Äëcard hand and return its full strength.
@@ -3619,8 +3676,8 @@ pub fn compare_hands(
     hole2: &[Card; 2],
     community2: &[Card; 5],
 ) -> Ordering {
-    let s1 = evaluate_hand_strength(hole1, community1);
-    let s2 = evaluate_hand_strength(hole2, community2);
+    let (s1, _) = evaluate_hand_strength(hole1, community1);
+    let (s2, _) = evaluate_hand_strength(hole2, community2);
     s1.cmp(&s2)
 }
 
@@ -3648,7 +3705,7 @@ mod tests {
             card(Suit::Clubs, Rank::Jack),
             card(Suit::Diamonds, Rank::King),
         ];
-        let strength = evaluate_hand_strength(&hole, &community);
+        let (strength, _winning_cards) = evaluate_hand_strength(&hole, &community);
         assert_eq!(strength.rank, HandRank::HighCard);
         assert_eq!(strength.kickers, vec![13, 11, 9, 7, 5]);
     }
@@ -3666,7 +3723,7 @@ mod tests {
             card(Suit::Clubs, Rank::Eight),
             card(Suit::Diamonds, Rank::King),
         ];
-        let strength = evaluate_hand_strength(&hole, &community);
+        let (strength, _winning_cards) = evaluate_hand_strength(&hole, &community);
         assert_eq!(strength.rank, HandRank::OnePair);
         assert_eq!(strength.kickers, vec![5, 5, 13, 8, 7]);
     }
@@ -3684,7 +3741,7 @@ mod tests {
             card(Suit::Clubs, Rank::Two),
             card(Suit::Diamonds, Rank::Three),
         ];
-        let strength = evaluate_hand_strength(&hole, &community);
+        let (strength, _winning_cards) = evaluate_hand_strength(&hole, &community);
         assert_eq!(strength.rank, HandRank::ThreeOfAKind);
         assert_eq!(strength.kickers, vec![5, 5, 5, 13, 12]);
     }
@@ -3702,9 +3759,10 @@ mod tests {
             card(Suit::Clubs, Rank::Two),
             card(Suit::Diamonds, Rank::Three),
         ];
-        let strength = evaluate_hand_strength(&hole, &community);
+        let (strength, winning_cards) = evaluate_hand_strength(&hole, &community);
         assert_eq!(strength.rank, HandRank::StraightFlush);
         assert_eq!(strength.kickers, vec![13, 12, 11, 10, 9]);
+        assert_eq!(winning_cards.len(), 5);
     }
 
     #[test]
@@ -3717,7 +3775,7 @@ mod tests {
             card(Suit::Clubs, Rank::Nine),
             card(Suit::Diamonds, Rank::King),
         ];
-        let strength = evaluate_hand_strength(&hole, &community);
+        let (strength, _) = evaluate_hand_strength(&hole, &community);
         assert_eq!(strength.rank, HandRank::Straight);
         assert_eq!(strength.kickers, vec![5, 4, 3, 2, 14]);
     }
@@ -3735,7 +3793,7 @@ mod tests {
             card(Suit::Clubs, Rank::Three),
             card(Suit::Diamonds, Rank::Four),
         ];
-        let strength = evaluate_hand_strength(&hole, &community);
+        let (strength, _) = evaluate_hand_strength(&hole, &community);
         assert_eq!(strength.rank, HandRank::Flush);
         assert_eq!(strength.kickers, vec![13, 9, 7, 5, 2]);
     }
@@ -3765,12 +3823,15 @@ mod tests {
     }
 }
 /// Evaluates the best 5-card hand from a slice of 2 to 7 cards.
-pub fn evaluate_best_hand(cards: &[Card]) -> HandStrength {
+pub fn evaluate_best_hand(cards: &[Card]) -> (HandStrength, Vec<Card>) {
     if cards.is_empty() {
-        return HandStrength {
-            rank: HandRank::HighCard,
-            kickers: vec![],
-        };
+        return (
+            HandStrength {
+                rank: HandRank::HighCard,
+                kickers: vec![],
+            },
+            vec![],
+        );
     }
 
     if cards.len() < 5 {
@@ -3800,7 +3861,6 @@ pub fn evaluate_best_hand(cards: &[Card]) -> HandStrength {
             HandRank::HighCard
         };
 
-        // ‚îÄ‚îÄ FIX: Build the kickers correctly so strength score works ‚îÄ‚îÄ
         let mut kickers: Vec<u8> = count_rank_pairs
             .iter()
             .flat_map(|&(r, c)| vec![r; c as usize])
@@ -3813,23 +3873,24 @@ pub fn evaluate_best_hand(cards: &[Card]) -> HandStrength {
         remaining.sort_by(|a, b| b.cmp(a));
         kickers.extend(remaining);
 
-        return HandStrength { rank, kickers };
+        return (HandStrength { rank, kickers }, cards.to_vec());
     }
 
-    // For 5, 6, or 7 cards, evaluate all 5-card combinations
     let indices: Vec<usize> = (0..cards.len()).collect();
     let mut best_strength = HandStrength {
         rank: HandRank::HighCard,
         kickers: vec![],
     };
+    let mut best_cards: Vec<Card> = vec![];
     for comb in combinations(&indices, 5) {
         let hand: Vec<Card> = comb.iter().map(|&i| cards[i]).collect();
         let strength = evaluate_5_card_strength(&hand);
         if strength > best_strength {
             best_strength = strength;
+            best_cards = hand;
         }
     }
-    best_strength
+    (best_strength, best_cards)
 }
 
 === backend/crates/sb-table-registry/Cargo.toml ===
@@ -3956,6 +4017,11 @@ impl Registry {
             .map(|entry| entry.broadcast_tx.clone())
     }
 
+    /// Returns the table configuration (including buy-in limits) for early validation.
+    pub async fn get_table_config(&self, table_id: TableId) -> Option<TableConfig> {
+        self.configs.read().await.get(&table_id).cloned()
+    }
+
     pub async fn send_action(
         &self,
         _table_id: TableId,
@@ -3986,10 +4052,39 @@ impl Registry {
             .map_err(|_| TableError::ActorError("actor dropped".into()))
     }
 
-    pub async fn send_leave(&self, table_id: TableId, user_id: UserId) -> Result<(), TableError> {
+    pub async fn send_leave(
+        &self,
+        table_id: TableId,
+        user_id: UserId,
+    ) -> Result<ChipAmount, TableError> {
         let guard = self.tables.read().await;
         let entry = guard.get(&table_id).ok_or(TableError::NotFound(table_id))?;
-        let cmd = InternalCommand::Leave { user_id };
+
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        let cmd = InternalCommand::Leave {
+            user_id,
+            respond_to: tx,
+        };
+
+        entry
+            .cmd_tx
+            .send(cmd)
+            .await
+            .map_err(|_| TableError::ActorError("actor dropped".into()))?;
+
+        rx.await
+            .map_err(|_| TableError::ActorError("actor dropped".into()))
+    }
+
+    pub async fn send_rebuy(
+        &self,
+        table_id: TableId,
+        user_id: UserId,
+        stack: ChipAmount,
+    ) -> Result<(), TableError> {
+        let guard = self.tables.read().await;
+        let entry = guard.get(&table_id).ok_or(TableError::NotFound(table_id))?;
+        let cmd = InternalCommand::Rebuy { user_id, stack };
         entry
             .cmd_tx
             .send(cmd)
@@ -4076,7 +4171,7 @@ impl Registry {
                     .ok_or(TableError::NotFound(table_id))?;
                 let internal = InternalCommand::Join {
                     user_id,
-                    seat: Some(seat), // ‚úÖ FIX: wrap in Some
+                    seat: Some(seat),
                     stack,
                 };
                 match sender.send(internal).await {
@@ -4115,6 +4210,7 @@ pub mod game_room;
 pub mod registry;
 pub mod table_service;
 
+pub use actor::buy_in_limits_for_stake;
 pub use actor::spawn_table_actor;
 pub use registry::Registry;
 
@@ -4151,12 +4247,27 @@ fn zero() -> ChipAmount {
 
 fn blinds_for_stake(stake: StakeLevel) -> (ChipAmount, ChipAmount) {
     match stake {
-        StakeLevel::Micro => (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap()),
-        StakeLevel::Low => (ChipAmount::new(10).unwrap(), ChipAmount::new(20).unwrap()),
-        StakeLevel::Medium => (ChipAmount::new(25).unwrap(), ChipAmount::new(50).unwrap()),
-        StakeLevel::High => (ChipAmount::new(50).unwrap(), ChipAmount::new(100).unwrap()),
-        StakeLevel::VeryHigh => (ChipAmount::new(100).unwrap(), ChipAmount::new(200).unwrap()),
+        StakeLevel::Micro => (ChipAmount::new(2).unwrap(), ChipAmount::new(5).unwrap()),
+        StakeLevel::Low => (ChipAmount::new(10).unwrap(), ChipAmount::new(25).unwrap()),
+        StakeLevel::Medium => (ChipAmount::new(50).unwrap(), ChipAmount::new(100).unwrap()),
+        StakeLevel::High => (ChipAmount::new(200).unwrap(), ChipAmount::new(400).unwrap()),
+        StakeLevel::VeryHigh => (
+            ChipAmount::new(500).unwrap(),
+            ChipAmount::new(1000).unwrap(),
+        ),
     }
+}
+
+/// Returns `(min_buy_in, max_buy_in)` derived from the stake level's big blind.
+/// Convention: min = 20 √ó BB, max = 200 √ó BB.
+pub fn buy_in_limits_for_stake(stake: StakeLevel) -> (ChipAmount, ChipAmount) {
+    let (_, bb) = blinds_for_stake(stake);
+    let bb_val = bb.as_i64();
+    let min =
+        ChipAmount::new(bb_val.saturating_mul(20)).unwrap_or_else(|| ChipAmount::new(100).unwrap());
+    let max = ChipAmount::new(bb_val.saturating_mul(200))
+        .unwrap_or_else(|| ChipAmount::new(10_000).unwrap());
+    (min, max)
 }
 
 fn street_name(state: &GameState) -> String {
@@ -4260,7 +4371,7 @@ fn get_hand_description(strength: &sb_game_engine::evaluate::HandStrength) -> St
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum InternalCommand {
     Join {
         user_id: UserId,
@@ -4269,6 +4380,11 @@ pub enum InternalCommand {
     },
     Leave {
         user_id: UserId,
+        respond_to: tokio::sync::oneshot::Sender<ChipAmount>,
+    },
+    Rebuy {
+        user_id: UserId,
+        stack: ChipAmount,
     },
     Action {
         user_id: UserId,
@@ -4411,7 +4527,7 @@ fn build_analytics(hand: &ActiveHand, user_id: UserId) -> Option<AnalyticsPayloa
     let mut all_cards = hole_cards.to_vec();
     all_cards.extend_from_slice(comm_cards);
 
-    let strength = sb_game_engine::evaluate::evaluate_best_hand(&all_cards);
+    let (strength, _winning_cards) = sb_game_engine::evaluate::evaluate_best_hand(&all_cards);
 
     info!(
         user_id = %user_id,
@@ -4422,11 +4538,8 @@ fn build_analytics(hand: &ActiveHand, user_id: UserId) -> Option<AnalyticsPayloa
         "Calculating Analytics"
     );
 
-    // Replaced inline match with the helper function
     let best_hand_name = get_hand_description(&strength);
-
     let base_strength = get_strength_score(&strength);
-
     let win_prob = run_monte_carlo(&hole_cards, comm_cards, 300);
 
     Some(AnalyticsPayload {
@@ -4513,9 +4626,9 @@ fn run_monte_carlo(
         opp_comm.extend_from_slice(&fill_comm);
         let opp_comm_5: [Card; 5] = opp_comm[..5].try_into().unwrap();
 
-        let hero_strength =
+        let (hero_strength, _) =
             sb_game_engine::evaluate::evaluate_hand_strength(hero_cards, &hero_comm_5);
-        let opp_strength =
+        let (opp_strength, _) =
             sb_game_engine::evaluate::evaluate_hand_strength(&opp_cards, &opp_comm_5);
 
         match hero_strength.cmp(&opp_strength) {
@@ -4585,7 +4698,11 @@ impl TableActor {
                 seat,
                 stack,
             } => self.join_player(user_id, seat, stack).await,
-            InternalCommand::Leave { user_id } => self.leave_player(user_id).await,
+            InternalCommand::Leave {
+                user_id,
+                respond_to,
+            } => self.leave_player(user_id, respond_to).await,
+            InternalCommand::Rebuy { user_id, stack } => self.process_rebuy(user_id, stack).await,
             InternalCommand::Action {
                 user_id,
                 action_type,
@@ -4598,8 +4715,72 @@ impl TableActor {
     }
 
     async fn join_player(&mut self, user_id: UserId, seat: Option<u8>, stack: ChipAmount) {
-        if self.players.contains_key(&user_id) {
-            self.send_error_to(&user_id, "Already at table").await;
+        // ‚îÄ‚îÄ Idempotent Reconnect Logic ‚îÄ‚îÄ
+        // If the player is already at the table (e.g., websocket dropped and reconnected),
+        // just resync their state instead of throwing an error.
+        if let Some(player) = self.players.get(&user_id) {
+            info!(%user_id, "Player already at table, resyncing state for reconnect");
+
+            // Re-send Connected message to confirm subscription
+            let _ = self.broadcast_tx.send(RoomMessage::Connected {
+                user_id,
+                seat_index: player.seat,
+            });
+
+            // Resync table state
+            self.broadcast_table_state().await;
+
+            // If there's an active hand, resend hole cards and action required
+            if let Some(hand) = &self.current_hand {
+                if let Some(hole_cards) = hand.state.player_hole_cards(player.player_id) {
+                    let ws_cards: Vec<WsCard> = hole_cards
+                        .iter()
+                        .map(|c| WsCard {
+                            suit: format!("{:?}", c.suit).to_lowercase(),
+                            rank: format!("{:?}", c.rank),
+                        })
+                        .collect();
+                    let _ = self.broadcast_tx.send(RoomMessage::PrivateMessage {
+                        target_user_id: user_id,
+                        payload: PrivatePayload::YourHoleCards {
+                            hole_cards: ws_cards,
+                        },
+                    });
+                }
+
+                if hand.current_player_user() == Some(user_id) {
+                    let action_req = build_action_required(hand, user_id);
+                    let _ = self
+                        .broadcast_tx
+                        .send(RoomMessage::ActionRequired(action_req));
+                }
+            }
+            return;
+        }
+
+        // ‚îÄ‚îÄ Validate buy-in against table limits (fail fast) ‚îÄ‚îÄ
+        if stack < self.config.min_buy_in {
+            self.send_error_to(
+                &user_id,
+                &format!(
+                    "Buy-in of {} is below the table minimum of {}.",
+                    stack.as_i64(),
+                    self.config.min_buy_in.as_i64()
+                ),
+            )
+            .await;
+            return;
+        }
+        if stack > self.config.max_buy_in {
+            self.send_error_to(
+                &user_id,
+                &format!(
+                    "Buy-in of {} exceeds the table maximum of {}.",
+                    stack.as_i64(),
+                    self.config.max_buy_in.as_i64()
+                ),
+            )
+            .await;
             return;
         }
 
@@ -4633,10 +4814,6 @@ impl TableActor {
             self.send_error_to(&user_id, "Seat out of range").await;
             return;
         }
-        if stack < self.config.min_buy_in {
-            self.send_error_to(&user_id, "Buy-in too low").await;
-            return;
-        }
         let player = Player::new(user_id, seat, stack);
         self.players.insert(player.user_id, player);
         let _ = self.broadcast_tx.send(RoomMessage::Connected {
@@ -4644,7 +4821,7 @@ impl TableActor {
             seat_index: seat,
         });
         self.broadcast_table_state().await;
-        info!(%user_id, seat, "Joined");
+        info!(%user_id, seat, stack = stack.as_i64(), "Joined");
 
         if self.players.len() >= 2 && self.current_hand.is_none() {
             info!("2+ players seated and no hand in progress, auto-starting hand");
@@ -4652,8 +4829,47 @@ impl TableActor {
         }
     }
 
-    async fn leave_player(&mut self, user_id: UserId) {
-        if let Some(_p) = self.players.remove(&user_id) {
+    async fn process_rebuy(&mut self, user_id: UserId, stack: ChipAmount) {
+        if let Some(player) = self.players.get_mut(&user_id) {
+            if player.stack > zero() {
+                self.send_error_to(&user_id, "You still have chips, cannot rebuy")
+                    .await;
+                return;
+            }
+            if stack < self.config.min_buy_in || stack > self.config.max_buy_in {
+                self.send_error_to(
+                    &user_id,
+                    &format!(
+                        "Rebuy amount {} is outside the allowed range ({}‚Äì{}).",
+                        stack.as_i64(),
+                        self.config.min_buy_in.as_i64(),
+                        self.config.max_buy_in.as_i64()
+                    ),
+                )
+                .await;
+                return;
+            }
+            player.stack = stack;
+            self.broadcast_table_state().await;
+            info!(%user_id, stack = stack.as_i64(), "Player rebought");
+
+            if self.players.len() >= 2 && self.current_hand.is_none() {
+                info!("2+ players seated and no hand in progress, auto-starting hand after rebuy");
+                self.start_new_hand().await;
+            }
+        } else {
+            self.send_error_to(&user_id, "Not at table").await;
+        }
+    }
+
+    async fn leave_player(
+        &mut self,
+        user_id: UserId,
+        respond_to: tokio::sync::oneshot::Sender<ChipAmount>,
+    ) {
+        let mut remaining_stack = zero();
+        if let Some(p) = self.players.remove(&user_id) {
+            remaining_stack = p.stack;
             let mut completion_checked = false;
             if let Some(hand) = &mut self.current_hand
                 && let Some(pid) = hand.player_by_user_id.get(&user_id)
@@ -4668,6 +4884,7 @@ impl TableActor {
             }
             info!(%user_id, "Left");
         }
+        let _ = respond_to.send(remaining_stack);
     }
 
     async fn start_new_hand(&mut self) {
@@ -4675,18 +4892,22 @@ impl TableActor {
             warn!("Hand already in progress");
             return;
         }
-        if self.players.len() < 2 {
-            warn!("Not enough players");
+
+        // Filter out players with 0 chips
+        let active_players_count = self.players.values().filter(|p| p.stack > zero()).count();
+        if active_players_count < 2 {
+            warn!("Not enough players with chips");
             return;
         }
 
         let dealer_index = match self.last_dealer_index {
-            Some(idx) => (idx + 1) % self.players.len(),
+            Some(idx) => (idx + 1) % active_players_count,
             None => 0,
         };
         let (sb, bb) = blinds_for_stake(self.config.stake_level);
 
-        let mut player_list: Vec<&Player> = self.players.values().collect();
+        let mut player_list: Vec<&Player> =
+            self.players.values().filter(|p| p.stack > zero()).collect();
         player_list.sort_by_key(|p| p.seat);
         let players_for_engine: Vec<(PlayerId, ChipAmount)> =
             player_list.iter().map(|p| (p.player_id, p.stack)).collect();
@@ -4729,6 +4950,9 @@ impl TableActor {
 
         // Send private hole cards to each player
         for player in self.players.values() {
+            if player.stack == zero() {
+                continue;
+            }
             if let Some(hole_cards) = active.state.player_hole_cards(player.player_id) {
                 let ws_cards: Vec<WsCard> = hole_cards
                     .iter()
@@ -5062,7 +5286,7 @@ impl TableActor {
         self.current_hand = None;
         self.broadcast_table_state().await;
 
-        if self.players.len() >= 2 {
+        if self.players.values().filter(|p| p.stack > zero()).count() >= 2 {
             info!("Hand complete, auto-starting next hand");
             self.start_new_hand().await;
         }
@@ -5118,24 +5342,28 @@ impl TableActor {
 
                 let seat = self.players.get(&user_id).map(|p| p.seat).unwrap_or(0);
 
-                // Evaluate hand description ONLY if it's a showdown with 5 community cards
-                let hand_description = if is_showdown && community.len() >= 5 {
+                let mut hand_description = String::new();
+                let mut winning_cards_ws: Vec<WsCard> = vec![];
+
+                // Only evaluate and send winning cards if it's a showdown AND the player is a winner
+                if is_showdown && community.len() >= 5 && is_winner {
                     if let Some(cards) = hole_cards_opt {
                         if cards.len() == 2 {
-                            let comm: [sb_shared_types::Card; 5] = community_cards_to_array(hand)?;
-                            let strength =
-                                sb_game_engine::evaluate::evaluate_hand_strength(&cards, &comm);
-                            Some(get_hand_description(&strength))
-                        } else {
-                            None
+                            if let Some(comm) = community_cards_to_array(hand) {
+                                let (strength, winning_cards_raw) =
+                                    sb_game_engine::evaluate::evaluate_hand_strength(&cards, &comm);
+                                hand_description = get_hand_description(&strength);
+                                winning_cards_ws = winning_cards_raw
+                                    .iter()
+                                    .map(|c| WsCard {
+                                        suit: format!("{:?}", c.suit).to_lowercase(),
+                                        rank: format!("{:?}", c.rank),
+                                    })
+                                    .collect();
+                            }
                         }
-                    } else {
-                        None
                     }
-                } else {
-                    None
                 }
-                .unwrap_or_default();
 
                 Some(ShowdownPlayer {
                     user_id,
@@ -5144,6 +5372,7 @@ impl TableActor {
                     hand_description,
                     is_winner,
                     win_amount,
+                    winning_cards: winning_cards_ws,
                 })
             })
             .collect();
@@ -5154,10 +5383,12 @@ impl TableActor {
             pot: hand.state.current_pot().as_i64() as u64,
         }
     }
-
     // ‚îÄ‚îÄ Securely sends analytics to all players privately ‚îÄ‚îÄ
     async fn broadcast_analytics(&self, hand: &ActiveHand) {
         for player in self.players.values() {
+            if player.stack == zero() {
+                continue;
+            }
             if let Some(analytics) = build_analytics(hand, player.user_id) {
                 let _ = self.broadcast_tx.send(RoomMessage::PrivateMessage {
                     target_user_id: player.user_id,
@@ -5399,9 +5630,10 @@ pub fn spawn_table_actor(
 === backend/crates/sb-table-registry/src/table_service.rs ===
 use async_trait::async_trait;
 use sb_contracts::lobby_api::{TableRepo, TableService};
-use sb_shared_types::{AppError, ChipAmount, GameVariant, StakeLevel, TableConfig, TableId};
+use sb_shared_types::{AppError, GameVariant, StakeLevel, TableConfig, TableId};
 use std::sync::Arc;
 
+use crate::actor::buy_in_limits_for_stake; // <--- ADDED
 use crate::registry::Registry;
 
 pub struct TableServiceImpl {
@@ -5433,12 +5665,13 @@ impl TableService for TableServiceImpl {
             .await?;
 
         // 2. Register in Registry with the DB-assigned ID
+        let (min_buy_in, max_buy_in) = buy_in_limits_for_stake(stake_level); // <--- CHANGED
         let config = TableConfig {
             max_players: max_players as u8,
             stake_level,
             variant: GameVariant::Holdem,
-            min_buy_in: ChipAmount::new(100).unwrap(),
-            max_buy_in: ChipAmount::new(10000).unwrap(),
+            min_buy_in, // <--- was hardcoded 100
+            max_buy_in, // <--- was hardcoded 10000
         };
         self.registry
             .register_existing_table(table_id, config)
@@ -5537,6 +5770,7 @@ pub struct ShowdownPlayer {
     pub hand_description: String,
     pub is_winner: bool,
     pub win_amount: u64,
+    pub winning_cards: Vec<WsCard>, // <-- ADDED
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -8409,6 +8643,7 @@ use sb_shared_types::RequestContext;
 use sb_shared_types::{AppError, ChipAmount, HandRank, TableId, UserId};
 use serde::{Deserialize, Serialize};
 
+use crate::repo_api::UserProfile;
 use crate::{ClubError, LeaderboardPage};
 use sb_shared_types::game_types::GameVariant;
 use sb_shared_types::{ClubId, StakeLevel};
@@ -8633,7 +8868,7 @@ pub trait AuthService: Send + Sync {
     async fn register(
         &self,
         ctx: &RequestContext,
-        username: &str, // Added
+        username: &str,
         email: &str,
         password: &str,
     ) -> Result<AuthResult, AppError>;
@@ -8645,7 +8880,16 @@ pub trait AuthService: Send + Sync {
     ) -> Result<AuthResult, sb_shared_types::AppError>;
     async fn verify_token(&self, token: &str) -> Result<TokenClaims, sb_shared_types::AppError>;
 
-    async fn validate_token(&self, token: &str) -> Result<sb_shared_types::UserId, sb_shared_types::AppError>;
+    async fn validate_token(
+        &self,
+        token: &str,
+    ) -> Result<sb_shared_types::UserId, sb_shared_types::AppError>;
+
+    async fn get_user_profile(
+        &self,
+        ctx: &sb_shared_types::RequestContext,
+        user_id: sb_shared_types::UserId,
+    ) -> Result<UserProfile, sb_shared_types::AppError>;
 }
 
 === backend/crates/sb-contracts/src/repo_api.rs ===
@@ -8667,6 +8911,14 @@ pub struct UserCreate {
     pub platform: String,
 }
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct UserProfile {
+    pub id: UserId,
+    pub display_name: String,
+    pub email: Option<String>,
+    pub chip_balance: i64,
+}
+
 #[async_trait]
 pub trait UserRepository: Send + Sync {
     async fn create_user(
@@ -8675,12 +8927,19 @@ pub trait UserRepository: Send + Sync {
         create: UserCreate,
     ) -> PersistenceResult<UserId>;
     async fn get_user(&self, ctx: RequestContext, id: UserId) -> PersistenceResult<String>;
+    async fn get_user_profile(
+        &self,
+        ctx: RequestContext,
+        id: UserId,
+    ) -> PersistenceResult<UserProfile>;
+
+    /// Updates the user's chip balance by `delta`. Returns the new balance.
     async fn update_chip_balance(
         &self,
         ctx: RequestContext,
         user_id: UserId,
         delta: i64,
-    ) -> PersistenceResult<()>;
+    ) -> PersistenceResult<i64>;
 
     async fn find_or_create_by_telegram(
         &self,
@@ -8693,7 +8952,7 @@ pub trait UserRepository: Send + Sync {
         ctx: RequestContext,
         username: &str,
         email: &str,
-        password_hash: &str, // Add this argument
+        password_hash: &str,
     ) -> PersistenceResult<UserId>;
 
     async fn find_by_email(
@@ -8755,13 +9014,6 @@ pub const DIVISION_SIZE: u32 = 500;
 /// Result type for club operations.
 pub type ClubResult<T> = Result<T, ClubError>;
 
-/// Repository interface for club persistence.
-///
-/// ## Contracts
-/// - `join_club`: If the user is already a member (UNIQUE constraint),
-///   returns `ClubError::AlreadyMember`. Callers need NOT check `is_member` first.
-/// - `increment_weekly_xp`: Must be atomic (single SQL statement).
-/// - `refresh_leaderboard`: Must run inside a transaction for atomicity.
 #[async_trait]
 pub trait ClubRepo: Send + Sync {
     async fn create_club(
@@ -8773,9 +9025,6 @@ pub trait ClubRepo: Send + Sync {
 
     async fn find_club_by_id(&self, club_id: ClubId) -> ClubResult<Option<Club>>;
 
-    /// Join a club. Returns `ClubError::AlreadyMember` on duplicate.
-    /// Does NOT require a prior `is_member` check ‚Äî the UNIQUE constraint
-    /// is the authoritative guard.
     async fn join_club(&self, club_id: ClubId, user_id: UserId) -> ClubResult<()>;
 
     async fn is_member(&self, club_id: ClubId, user_id: UserId) -> ClubResult<bool>;
@@ -8788,7 +9037,6 @@ pub trait ClubRepo: Send + Sync {
         division: u32,
     ) -> ClubResult<LeaderboardPage>;
 
-    /// Atomically add XP. Must use a single SQL UPDATE statement.
     async fn increment_weekly_xp(
         &self,
         club_id: ClubId,
@@ -8796,10 +9044,8 @@ pub trait ClubRepo: Send + Sync {
         xp: i64,
     ) -> ClubResult<()>;
 
-    /// Materialise the leaderboard snapshot. Must run in a transaction.
     async fn refresh_leaderboard(&self, club_id: ClubId) -> ClubResult<()>;
 
-    /// Return all club ids for the scheduled refresh job.
     async fn get_all_club_ids(&self) -> ClubResult<Vec<ClubId>>;
 }
 
@@ -9252,6 +9498,7 @@ serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
+uuid = { workspace = true }
 
 === backend/crates/sb-ws-handler/src/lib.rs ===
 use axum::body::Bytes;
@@ -9265,13 +9512,15 @@ use axum::{
 use axum_extra::extract::CookieJar;
 use futures::{SinkExt, StreamExt};
 use sb_auth::Authenticator;
-use sb_shared_types::{ChipAmount, TableId, UserId};
+use sb_contracts::repo_api::UserRepo;
+use sb_shared_types::{ChipAmount, RequestContext, TableId, UserId};
 use sb_table_registry::game_room::RoomMessage;
 use sb_table_registry::registry::Registry;
 use serde::Deserialize;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use tracing::{debug, error, info, warn};
+use uuid::Uuid;
 
 #[derive(Deserialize)]
 struct WsQuery {
@@ -9281,10 +9530,19 @@ struct WsQuery {
 struct AppState {
     auth: Arc<dyn Authenticator + Send + Sync>,
     registry: Arc<Registry>,
+    user_repo: Arc<dyn UserRepo>,
 }
 
-pub fn ws_route(auth: Arc<dyn Authenticator + Send + Sync>, registry: Arc<Registry>) -> Router {
-    let state = Arc::new(AppState { auth, registry });
+pub fn ws_route(
+    auth: Arc<dyn Authenticator + Send + Sync>,
+    registry: Arc<Registry>,
+    user_repo: Arc<dyn UserRepo>,
+) -> Router {
+    let state = Arc::new(AppState {
+        auth,
+        registry,
+        user_repo,
+    });
     Router::new()
         .route("/ws/game", get(ws_handler))
         .with_state(state)
@@ -9462,15 +9720,23 @@ async fn handle_websocket(
 
     info!(%user_id, "WebSocket handler loop exited");
 
-    // Leave table if joined
+    // Leave table if joined (handles disconnects)
     if let Some(table_id) = current_table_id {
-        info!(%user_id, %table_id, "Sending leave to table actor");
-        if let Err(e) = state.registry.send_leave(table_id, user_id).await {
-            warn!(%user_id, %table_id, error = %e, "Failed to send leave");
+        info!(%user_id, %table_id, "Sending leave to table actor due to disconnect");
+        if let Ok(remaining_stack) = state.registry.send_leave(table_id, user_id).await {
+            if remaining_stack > ChipAmount::new(0).unwrap() {
+                let ctx = RequestContext::new(Uuid::new_v4(), Some(user_id));
+                if let Err(e) = state
+                    .user_repo
+                    .update_chip_balance(ctx, user_id, remaining_stack.as_i64())
+                    .await
+                {
+                    error!(%user_id, error = ?e, "Failed to credit remaining stack on disconnect");
+                }
+            }
         }
     }
 
-    // Abort the send task (it should already be finished, but just in case)
     send_task.abort();
     info!(%user_id, "WebSocket handler finished");
 }
@@ -9510,13 +9776,73 @@ async fn handle_client_message(
             };
 
             let seat_opt = parsed.get("seat").and_then(|s| s.as_u64()).map(|s| s as u8);
+
+            // ‚îÄ‚îÄ Parse and validate buy_in ‚îÄ‚îÄ
             let buy_in: i64 = parsed
                 .get("buy_in")
                 .and_then(|b| b.as_i64())
                 .unwrap_or(1000);
-            let stack = ChipAmount::new(buy_in).unwrap_or_else(|| ChipAmount::new(1000).unwrap());
 
-            info!(%user_id, %table_id, "Attempting to join table");
+            let stack = match ChipAmount::new(buy_in) {
+                Some(s) => s,
+                None => {
+                    let err = serde_json::json!({
+                        "type": "Error",
+                        "message": format!("Invalid buy_in amount: {}. Must be a non-negative integer.", buy_in)
+                    });
+                    let _ =
+                        client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
+                    return;
+                }
+            };
+
+            // ‚îÄ‚îÄ Early validation against table limits BEFORE joining ‚îÄ‚îÄ
+            match state.registry.get_table_config(table_id).await {
+                Some(cfg) => {
+                    if stack < cfg.min_buy_in || stack > cfg.max_buy_in {
+                        let err = serde_json::json!({
+                            "type": "Error",
+                            "message": format!(
+                                "Buy-in of {} is outside the allowed range ({}‚Äì{}).",
+                                stack.as_i64(),
+                                cfg.min_buy_in.as_i64(),
+                                cfg.max_buy_in.as_i64()
+                            )
+                        });
+                        let _ = client_tx
+                            .send(axum::extract::ws::Message::Text(err.to_string().into()));
+                        return;
+                    }
+                }
+                None => {
+                    // Table not found ‚Äî let join_table_full handle the error
+                }
+            }
+
+            // ‚îÄ‚îÄ Deduct buy_in from user's global balance ‚îÄ‚îÄ
+            let ctx = RequestContext::new(Uuid::new_v4(), Some(*user_id));
+            match state
+                .user_repo
+                .update_chip_balance(ctx.clone(), *user_id, -buy_in)
+                .await
+            {
+                Ok(new_balance) => {
+                    let balance_msg =
+                        serde_json::json!({"type": "BalanceUpdated", "balance": new_balance});
+                    let _ = client_tx.send(axum::extract::ws::Message::Text(
+                        balance_msg.to_string().into(),
+                    ));
+                }
+                Err(e) => {
+                    error!(%user_id, error = ?e, "Insufficient balance for buy-in");
+                    let err = serde_json::json!({"type": "Error", "message": "Insufficient balance for buy-in"});
+                    let _ =
+                        client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
+                    return;
+                }
+            }
+
+            info!(%user_id, %table_id, buy_in = buy_in, "Attempting to join table");
             match state
                 .registry
                 .join_table_full(table_id, *user_id, seat_opt, stack)
@@ -9524,15 +9850,13 @@ async fn handle_client_message(
             {
                 Ok(()) => {
                     info!(%user_id, %table_id, "Successfully joined table");
-                    // Subscribe to broadcasts from this table
                     match state.registry.subscribe_to_table(table_id).await {
                         Some(bcast_tx) => {
                             *broadcast_rx = Some(bcast_tx.subscribe());
                             info!(%user_id, %table_id, "Subscribed to table broadcast");
-                            // Send a Connected message to the client
                             let connected = RoomMessage::Connected {
                                 user_id: *user_id,
-                                seat_index: seat_opt.unwrap_or(0), // backend may override, but this is a placeholder
+                                seat_index: seat_opt.unwrap_or(0),
                             };
                             if let Ok(json) = serde_json::to_string(&connected) {
                                 let _ =
@@ -9544,6 +9868,12 @@ async fn handle_client_message(
                             let err = serde_json::json!({"type": "Error", "message": "Table broadcast unavailable"});
                             let _ = client_tx
                                 .send(axum::extract::ws::Message::Text(err.to_string().into()));
+
+                            // Refund the buy_in since subscription failed
+                            let _ = state
+                                .user_repo
+                                .update_chip_balance(ctx, *user_id, buy_in)
+                                .await;
                             return;
                         }
                     }
@@ -9552,6 +9882,116 @@ async fn handle_client_message(
                 Err(e) => {
                     error!(%user_id, %table_id, error = ?e, "Failed to join table");
                     let err = serde_json::json!({"type": "Error", "message": format!("Failed to join: {:?}", e)});
+                    let _ =
+                        client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
+
+                    // Refund the buy_in since join failed
+                    let _ = state
+                        .user_repo
+                        .update_chip_balance(ctx, *user_id, buy_in)
+                        .await;
+                }
+            }
+        }
+
+        "rebuy" => {
+            let table_id = match current_table_id {
+                Some(id) => *id,
+                None => {
+                    let err = serde_json::json!({"type": "Error", "message": "Not at a table"});
+                    let _ =
+                        client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
+                    return;
+                }
+            };
+
+            let amount = parsed
+                .get("amount")
+                .and_then(|a| a.as_i64())
+                .unwrap_or(1000);
+            let stack = match ChipAmount::new(amount) {
+                Some(s) => s,
+                None => {
+                    let err =
+                        serde_json::json!({"type": "Error", "message": "Invalid rebuy amount"});
+                    let _ =
+                        client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
+                    return;
+                }
+            };
+
+            // ‚îÄ‚îÄ Deduct rebuy amount from user's global balance ‚îÄ‚îÄ
+            let ctx = RequestContext::new(Uuid::new_v4(), Some(*user_id));
+            match state
+                .user_repo
+                .update_chip_balance(ctx.clone(), *user_id, -amount)
+                .await
+            {
+                Ok(new_balance) => {
+                    let balance_msg =
+                        serde_json::json!({"type": "BalanceUpdated", "balance": new_balance});
+                    let _ = client_tx.send(axum::extract::ws::Message::Text(
+                        balance_msg.to_string().into(),
+                    ));
+                }
+                Err(e) => {
+                    error!(%user_id, error = ?e, "Insufficient balance for rebuy");
+                    let err = serde_json::json!({"type": "Error", "message": "Insufficient balance for rebuy"});
+                    let _ =
+                        client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
+                    return;
+                }
+            }
+
+            if let Err(e) = state.registry.send_rebuy(table_id, *user_id, stack).await {
+                error!(%user_id, %table_id, error = ?e, "Rebuy failed");
+                let err = serde_json::json!({"type": "Error", "message": format!("Rebuy failed: {:?}", e)});
+                let _ = client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
+
+                // Refund the rebuy amount since rebuy failed
+                let _ = state
+                    .user_repo
+                    .update_chip_balance(ctx, *user_id, amount)
+                    .await;
+            }
+        }
+
+        "leave_table" => {
+            let table_id = match current_table_id {
+                Some(id) => *id,
+                None => {
+                    let err = serde_json::json!({"type": "Error", "message": "Not at a table"});
+                    let _ =
+                        client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
+                    return;
+                }
+            };
+
+            let ctx = RequestContext::new(Uuid::new_v4(), Some(*user_id));
+
+            match state.registry.send_leave(table_id, *user_id).await {
+                Ok(remaining_stack) => {
+                    if remaining_stack > ChipAmount::new(0).unwrap() {
+                        match state
+                            .user_repo
+                            .update_chip_balance(ctx.clone(), *user_id, remaining_stack.as_i64())
+                            .await
+                        {
+                            Ok(new_balance) => {
+                                let balance_msg = serde_json::json!({"type": "BalanceUpdated", "balance": new_balance});
+                                let _ = client_tx.send(axum::extract::ws::Message::Text(
+                                    balance_msg.to_string().into(),
+                                ));
+                            }
+                            Err(e) => {
+                                error!(%user_id, error = ?e, "Failed to credit remaining stack");
+                            }
+                        }
+                    }
+                    *current_table_id = None;
+                }
+                Err(e) => {
+                    let err = serde_json::json!({"type": "Error", "message": format!("Failed to leave: {:?}", e)});
                     let _ =
                         client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
                 }
@@ -10434,89 +10874,9 @@ pub use writer_loop::init_writer_loop;
 
 pub use table_repo::TableRepoImpl;
 
-=== backend/crates/sb-db-repos/src/table_repo.rs.bak ===
-use sb_contracts::lobby_api::{TableInfo, TableRepo};
-use sb_db_entities::table;
-use sb_db_entities::table::TableConfig as DbTableConfig;
-use sb_shared_types::{AppError, StakeLevel, TableId};
-use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, QueryOrder, Set};
-use uuid::Uuid;
-
-pub struct TableRepoImpl {
-    db: DatabaseConnection,
-}
-
-impl TableRepoImpl {
-    pub fn new(db: DatabaseConnection) -> Self {
-        Self { db }
-    }
-}
-
-#[async_trait::async_trait]
-impl TableRepo for TableRepoImpl {
-    async fn list_tables(&self) -> Result<Vec<TableInfo>, AppError> {
-        let models = table::Entity::find()
-            .order_by_desc(table::Column::CreatedAt)
-            .all(&self.db)
-            .await
-            .map_err(|e| AppError::Database(e.to_string()))?;
-
-        let tables = models
-            .into_iter()
-            .map(|m| {
-                let stake_level = match m.config_json.stake_level.as_str() {
-                    "Micro" => StakeLevel::Micro,
-                    "Low" => StakeLevel::Low,
-                    "Medium" => StakeLevel::Medium,
-                    "High" => StakeLevel::High,
-                    "VeryHigh" => StakeLevel::VeryHigh,
-                    _ => StakeLevel::Micro,
-                };
-                TableInfo {
-                    table_id: TableId::new(m.id),
-                    stake_level,
-                    current_players: 0,
-                    max_players: m.config_json.max_players as u32,
-                    status: format!("{:?}", m.status).to_lowercase(),
-                }
-            })
-            .collect();
-
-        Ok(tables)
-    }
-
-    async fn create_table(
-        &self,
-        stake_level: StakeLevel,
-        max_players: u32,
-    ) -> Result<TableId, AppError> {
-        let id = Uuid::new_v4();
-        let db_config = DbTableConfig {
-            stake_level: format!("{:?}", stake_level),
-            min_players: 2,
-            max_players: max_players as u8,
-            is_tournament: false,
-            tournament_config: None,
-        };
-        let now = chrono::Utc::now();
-        let active = table::ActiveModel {
-            id: Set(id),
-            created_by: Set(Uuid::nil()), // TODO: get from auth
-            config_json: Set(db_config),
-            status: Set(sb_db_entities::enums::TableStatus::Waiting),
-            club_id: Set(None),
-            created_at: Set(now),
-        };
-        active
-            .insert(&self.db)
-            .await
-            .map_err(|e| AppError::Database(e.to_string()))?;
-        Ok(TableId::new(id))
-    }
-}
-
 === backend/crates/sb-db-repos/src/commands.rs ===
-use sb_contracts::repo_api::PersistenceResult; // Fixed path
+use sb_contracts::repo_api::PersistenceResult;
+use sb_contracts::repo_api::UserProfile;
 use sb_shared_types::{RequestContext, UserId};
 use tokio::sync::oneshot;
 use uuid::Uuid;
@@ -10536,11 +10896,16 @@ pub enum DbCommand {
         id: UserId,
         respond: ResponseSender<String>,
     },
+    GetUserProfile {
+        ctx: RequestContext,
+        id: UserId,
+        respond: ResponseSender<UserProfile>,
+    },
     UpdateChipBalance {
         ctx: RequestContext,
         user_id: UserId,
         delta: i64,
-        respond: ResponseSender<()>,
+        respond: ResponseSender<i64>,
     },
     StoreHandHistory {
         ctx: RequestContext,
@@ -10563,7 +10928,7 @@ pub enum DbCommand {
     },
     CreateEmailUser {
         ctx: RequestContext,
-        username: String, // Changed from email to username for display name
+        username: String,
         email: String,
         password_hash: String,
         respond: ResponseSender<UserId>,
@@ -10658,7 +11023,7 @@ impl TableRepo for TableRepoImpl {
 }
 
 === backend/crates/sb-db-repos/src/writer_loop.rs ===
-use sb_contracts::repo_api::PersistenceError;
+use sb_contracts::repo_api::{PersistenceError, UserProfile};
 use sb_shared_types::UserId;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseConnection, EntityTrait, QueryFilter,
@@ -10672,6 +11037,7 @@ use tracing::{Instrument, error, info, info_span};
 use crate::commands::DbCommand;
 
 const DEFAULT_BATCH_SIZE: usize = 50;
+const INITIAL_CHIP_BALANCE: i64 = 100_000;
 
 pub struct WriterLoopHandle {
     pub sender: mpsc::UnboundedSender<DbCommand>,
@@ -10698,7 +11064,6 @@ async fn writer_loop(
     batch_size: usize,
 ) {
     let mut batch = Vec::with_capacity(batch_size);
-    // Flush interval ensures we don't hang indefinitely waiting for the batch to fill
     let mut flush_interval = interval(Duration::from_millis(100));
 
     loop {
@@ -10720,7 +11085,6 @@ async fn writer_loop(
                 }
             }
             _ = flush_interval.tick() => {
-                // If the batch has items but isn't full, flush it anyway after 100ms
                 if !batch.is_empty() {
                     process_batch(&mut batch, &db).await;
                 }
@@ -10781,6 +11145,7 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
     let ctx = match cmd {
         DbCommand::CreateUser { ctx, .. } => ctx,
         DbCommand::GetUser { ctx, .. } => ctx,
+        DbCommand::GetUserProfile { ctx, .. } => ctx,
         DbCommand::UpdateChipBalance { ctx, .. } => ctx,
         DbCommand::StoreHandHistory { ctx, .. } => ctx,
         DbCommand::ExecuteRaw { ctx, .. } => ctx,
@@ -10812,9 +11177,10 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                     telegram_id: Set(Some(*telegram_id)),
                     email: Set(Some(email.clone())),
                     display_name: Set(display_name.clone()),
+                    chip_balance: Set(INITIAL_CHIP_BALANCE),
                     streak_count: Set(0),
                     created_at: Set(chrono::Utc::now()),
-                    platform: Set(Platform::Telegram), // FIXED: Added missing platform field
+                    platform: Set(Platform::Telegram),
                     ..Default::default()
                 };
                 let model = new_user.insert(conn).await.map_err(map_db_error)?;
@@ -10830,6 +11196,27 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                     .ok_or(PersistenceError::NotFound)?;
                 Ok(Some(model.display_name))
             }
+            DbCommand::GetUserProfile { id, .. } => {
+                use sb_db_entities::user;
+                let user_id = id.as_uuid();
+                let model = user::Entity::find_by_id(user_id)
+                    .one(conn)
+                    .await
+                    .map_err(map_db_error)?
+                    .ok_or(PersistenceError::NotFound)?;
+
+                let profile = UserProfile {
+                    id: UserId::new(model.id),
+                    display_name: model.display_name,
+                    email: model.email,
+                    chip_balance: model.chip_balance,
+                };
+
+                Ok(Some(
+                    serde_json::to_string(&profile)
+                        .map_err(|e| PersistenceError::Database(e.to_string()))?,
+                ))
+            }
             DbCommand::UpdateChipBalance { user_id, delta, .. } => {
                 use sb_db_entities::user;
                 use sea_orm::Set;
@@ -10844,7 +11231,7 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                 let new_balance = current + *delta;
                 active.chip_balance = Set(new_balance);
                 active.update(conn).await.map_err(map_db_error)?;
-                Ok(None)
+                Ok(Some(new_balance.to_string()))
             }
             DbCommand::StoreHandHistory {
                 table_id,
@@ -10902,11 +11289,11 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                         telegram_id: Set(Some(*tg_id)),
                         email: Set(Some(format!("telegram_{}@temp.local", tg_id))),
                         display_name: Set(format!("tg_user_{}", tg_id)),
-                        chip_balance: Set(0),
+                        chip_balance: Set(INITIAL_CHIP_BALANCE),
                         streak_count: Set(0),
                         created_at: Set(chrono::Utc::now()),
                         updated_at: Set(chrono::Utc::now()),
-                        platform: Set(Platform::Telegram), // FIXED: Added missing platform field
+                        platform: Set(Platform::Telegram),
                         ..Default::default()
                     };
                     let model = new_user.insert(conn).await.map_err(map_db_error)?;
@@ -10927,8 +11314,8 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                     id: Set(uuid::Uuid::new_v4()),
                     email: Set(Some(email.clone())),
                     display_name: Set(username.clone()),
-                    password_hash: Set(Some(password_hash.clone())), // SAVE IT HERE
-                    chip_balance: Set(0),
+                    password_hash: Set(Some(password_hash.clone())),
+                    chip_balance: Set(INITIAL_CHIP_BALANCE),
                     streak_count: Set(0),
                     created_at: Set(chrono::Utc::now()),
                     updated_at: Set(chrono::Utc::now()),
@@ -11012,9 +11399,24 @@ fn respond_ok(cmd: DbCommand, value: Option<String>) {
         DbCommand::GetUser { respond, .. } => {
             let _ = respond.send(Ok(value.unwrap_or_default()));
         }
-        DbCommand::UpdateChipBalance { respond, .. }
-        | DbCommand::StoreHandHistory { respond, .. }
-        | DbCommand::ExecuteRaw { respond, .. } => {
+        DbCommand::GetUserProfile { respond, .. } => {
+            let profile = value.and_then(|s| serde_json::from_str(&s).ok());
+            match profile {
+                Some(p) => {
+                    let _ = respond.send(Ok(p));
+                }
+                None => {
+                    let _ = respond.send(Err(PersistenceError::Database(
+                        "Failed to parse profile".to_string(),
+                    )));
+                }
+            }
+        }
+        DbCommand::UpdateChipBalance { respond, .. } => {
+            let balance = value.and_then(|s| s.parse::<i64>().ok()).unwrap_or(0);
+            let _ = respond.send(Ok(balance));
+        }
+        DbCommand::StoreHandHistory { respond, .. } | DbCommand::ExecuteRaw { respond, .. } => {
             let _ = respond.send(Ok(()));
         }
     }
@@ -11026,6 +11428,9 @@ fn respond_err(cmd: DbCommand, err: PersistenceError) {
             let _ = respond.send(Err(err));
         }
         DbCommand::GetUser { respond, .. } => {
+            let _ = respond.send(Err(err));
+        }
+        DbCommand::GetUserProfile { respond, .. } => {
             let _ = respond.send(Err(err));
         }
         DbCommand::UpdateChipBalance { respond, .. } => {
@@ -11051,7 +11456,9 @@ fn respond_err(cmd: DbCommand, err: PersistenceError) {
 
 === backend/crates/sb-db-repos/src/user_repo.rs ===
 use crate::commands::DbCommand;
-use sb_contracts::repo_api::{PersistenceError, PersistenceResult, UserCreate, UserRepository};
+use sb_contracts::repo_api::{
+    PersistenceError, PersistenceResult, UserCreate, UserProfile, UserRepository,
+};
 use sb_shared_types::{RequestContext, UserId};
 use tokio::sync::{mpsc, oneshot};
 
@@ -11117,7 +11524,7 @@ impl UserRepository for UserRepoImpl {
             ctx,
             username: username.to_string(),
             email: email.to_string(),
-            password_hash: password_hash.to_string(), // Pass it here
+            password_hash: password_hash.to_string(),
             respond: tx,
         };
         self.sender
@@ -11145,10 +11552,27 @@ impl UserRepository for UserRepoImpl {
             .map_err(|e| PersistenceError::Database(e.to_string()))?
     }
 
-    // Added missing trait methods
     async fn get_user(&self, ctx: RequestContext, id: UserId) -> PersistenceResult<String> {
         let (tx, rx) = oneshot::channel();
         let cmd = DbCommand::GetUser {
+            ctx,
+            id,
+            respond: tx,
+        };
+        self.sender
+            .send(cmd)
+            .map_err(|e| PersistenceError::Database(e.to_string()))?;
+        rx.await
+            .map_err(|e| PersistenceError::Database(e.to_string()))?
+    }
+
+    async fn get_user_profile(
+        &self,
+        ctx: RequestContext,
+        id: UserId,
+    ) -> PersistenceResult<UserProfile> {
+        let (tx, rx) = oneshot::channel();
+        let cmd = DbCommand::GetUserProfile {
             ctx,
             id,
             respond: tx,
@@ -11165,7 +11589,7 @@ impl UserRepository for UserRepoImpl {
         ctx: RequestContext,
         user_id: UserId,
         delta: i64,
-    ) -> PersistenceResult<()> {
+    ) -> PersistenceResult<i64> {
         let (tx, rx) = oneshot::channel();
         let cmd = DbCommand::UpdateChipBalance {
             ctx,
@@ -11972,6 +12396,44 @@ pub enum ActionType {
     AllIn,
 }
 
+=== backend/stackbluff.db-shm ===
+‚-             6   ƒØdà .ÆœHØP	ù4^ﬂ>ÌXY≤‚-             6   ƒØdà .ÆœHØP	ù4^ﬂ>ÌXY≤           ˇˇˇˇˇˇˇˇˇˇˇˇ                6   5   5   5   5   6   5   6   5   6   5   6   5   6   5   6   5   6   5   6                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      	                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+=== backend/stackbluff.db-wal ===
+7Ç -‚       œHØP	ù4%ñK‚2ê   6   6œHØP	ù4U%rWß<7N   H $H                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            ÅY, 'MM  ÅOõßZ¢ØàB°F§!{—^&fze@fez.fzezefzegregÜd2026-06-19T13:25:09.496775+00:002026-06-19T13:25:09.496778+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$E0aSQb2+huj9XwRMLkb3XQ$Ki5TyZE2Xd0QT8IqSqBGJC0KNWi6sq2iCpbBXvumiGwÅY, )MM  ÅO ˛Fx«M~≥›ÑúÂZ0vfzfez@fez.fzefzefzeÜ†2026-06-19T13:20:50.531178+00:002026-06-19T13:20:50.531181+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$Ikzp+uzphvV4QjsaS0yBrQ$mTsVDGhCfW7SXKGy+FPXEdDUIUAsngbV4S+lDmDH/N8   5   6œHØP	ù4-ê€Óê¬ÿ    Ü òƒÔCm
+ñ	øÌJv†»Ò;b Ü                                                                                        ÅY, )MM  ÅO˛5x‡g@◊Ø≠ÒP^Qgrege5@fze.fezgregeri®2026-06-19T13:05:16.666265+00:002026-06-19T13:05:16.666268+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$accmcKT2u7uQis+dYIboag$kaSMI1tBfv6Jg7WQiTdw3s2qNe8plvB9pdelPJm7Gv8ÅV, #MM  ÅOÄôUT∆”BÉê¥çYßmﬂfze@fze.fzefzegreÜ†2026-06-19T13:01:15.359545+00:002026-06-19T13:01:15.359551+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$91NgUoeMGyk2v8XhQL0ZJw$qf5eg0Ef5p1YGo7nie/WunOXAViS/V6NgCkpigYE7TAÅZ, +MM  ÅOÂpfl´J÷∑øxÇü˜1fez@fefezfz.fezfezfzeÜ†2026-06-19T12:59:05.434608+00:002026-06-19T12:59:05.434611+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$6R5wCWAlB7JTn6OEIJkkNg$G6Mtp61xFH+ajTuubOMxW5lltNJSh0pod8gg8TsYl2sÅV, )MM  ÅO†⁄7¢FRGùNW<êmofze@fzefez.fzefzeà:2026-06-19T12:43:57.744711+00:002026-06-19T12:43:57.744713+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$XNhktHPYPAfDt9l8qm0R2g$hS8o0bxO5t6AY9T43+Z/QN9zt/J3g8oqJJRIrtoNUhwÅT, +MM  ÅOÆ;Æü@0éã§!<åfzefaze@fea.fzefze2026-06-19T10:47:25.696025+00:002026-06-19T10:47:25.696027+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$CarDbl3YASf4CX0J5QiLoA$cBAKh/6urfowJTXTJWPqHpmCPx/KBMc2mNcpTF8Wv9MÅU, 'MM  ÅOó∑Zg
+HÔ£¶ôé–GMfze@fzfze.Fzefzefze2026-06-19T10:46:58.636478+00:002026-06-19T10:46:58.636480+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$EjlF3QEEhW8wrtpCqUvg3A$Zh2VUZ27Y/semlCp/eCMDKVyFt5JAKkizZ/fYmrZQR8ÅS, #MM  ÅOdëcf÷ºBˇúwƒ†Ïü¿5fez@fez.fezfezfze2026-06-18T21:46:54.513935+00:002026-06-18T21:46:54.513937+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$igKSmojoVlpqJaMJnihe7Q$L/mnPdw7jiqFQ7HAiuLeaKJb0VZcYeqCrGuOMTMWkoAÅQ, %MM  ÅOî|êCLÄ_µ±˝s°âfjfk@irie.rtFkf2026-06-18T21:46:00.416076+00:002026-06-18T21:46:00.416081+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$/QcVZfO7bgsq6UU6QOP8tA$LdbNbzd1sHC5uN7Vgg0Udezp3BllA75RaO7+gwUhPfAÅN, MM  ÅO…N˛WK ÑTjl] ~bjk@ji.feHbk2026-06-18T19:46:21.322360+00:002026-06-18T19:46:21.322364+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$5lvgBYt9Tj4kmEav1v8dOQ$mw27V1mB4ZFifx8FeICrzYMB1/4S96kiVzNv26yufDsÅO
+, !MM  ÅO∑oÄBBÔKü¢ÍˆÿæW≤@ger@fz.fzegre2026-06-18T12:22:15.672528+00:002026-06-18T12:22:15.672533+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$+VGspPrDlFKUhKszoTiQUQ$ZeD3AW02AVdbXAcPjnAGM+IOpFRpLmdcTcqXiNc/vjwÅO	, MM  ÅOjüA)M$òì'{¸0:g@ger.fefyhyr2026-06-18T12:15:32.778558+00:002026-06-18T12:15:32.778560+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$BUaPEjWt94Bjv2JtjzDoVA$FzMXYXJqyB7xroAVYj3Cxw1qPnFxb8gN3tyGVag57jgÅT, #MM  ÅO~òLÉ\ˆJt©HıßÑÕfzef@fez.fzgregerg2026-06-17T12:46:09.676916+00:002026-06-17T12:46:09.676919+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$CoXer+j8xicC/kgpKl7tcg$sQWLTAUBwsTPF1YT/LYIen92RPx1tJeSPWHOLiYzYs0ÅT, )MM  ÅOˆﬁ\¬ I	¶ÌÈÿw°çfezfze@fze.fzefezf2026-06-17T12:45:37.084388+00:002026-06-17T12:45:37.084397+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$LSEtaMw99XExLXriaqT0TQ$cyN4+1LDvThV7mj1DBwiF7K07FrB0I6HnmjZzIcECREÅS, #MM  ÅO2·˝‘ƒAé£ëı‘su.Åfze@fez.fzefezfze2026-06-16T12:46:33.397852+00:002026-06-16T12:46:33.397856+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$29fvyGwfsB1qNYzwlrWzJw$MsvgGZsAii9yMmGk6zo3ghWM7DYjejaV7JjfiA8Ks34ÅQ, %MM  ÅOí«¸õòNJJ∫-„s‰'Ç0bob@test.comBob2026-06-15T21:52:49.325535+00:002026-06-15T21:52:49.325538+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$IfKkNTx10BmAhH9+dyG0XQ$JrhitILtXpLxTZnaA9k/zHtnoME5TioYLfV4kC297mYÅU, )MM  ÅORﬁ Ã*A≠Ä”Ç3Oq≈palice@test.comAlice2026-06-15T21:52:48.303035+00:002026-06-15T21:52:48.303096+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$t/00gc+WVqKrBwWzLNylxg$sEHXhiZJvJ6l1DisN1GNtfgLb4uqf2/CKVxdac4UGjgÅR, 'MM  ÅOd⁄§AƒùıL ¶€≠’fezfz@gre.fzegre2026-06-15T18:21:47.911921+00:002026-06-15T18:21:47.911923+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$TUwN2/rxEGZ+/x8R8FGbvA$m7MpnvpjU3fWVgZ9/F8OFSeAnD4Py+nOm03uVgtkBR0ÅQ, %MM  ÅOr\é≤HÖ¢ë¬Ÿ¿á’gzre@fze.fzefez2026-06-15T17:06:40.393091+00:002026-06-15T17:06:40.393093+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$VkArFhpRKh+/YMYlf/+MtQ$7vIGLPMwROtLD2q9YDvfZ0wnT0ZWyLdrK99lxrvG8mEf,  MM                  System2026-06-15T17:06:12.924647+00:002026-06-15T17:06:12.924647+00:00pwa   5   6œHØP	ù4gà/|q∂L    Ü òƒÔCm
+ñ	øÌJv†»Ò;b Ü                                                                                        ÅY, )MM  ÅO˛5x‡g@◊Ø≠ÒP^Qgrege5@fze.fezgregerkï2026-06-19T13:05:16.666265+00:002026-06-19T13:05:16.666268+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$accmcKT2u7uQis+dYIboag$kaSMI1tBfv6Jg7WQiTdw3s2qNe8plvB9pdelPJm7Gv8ÅV, #MM  ÅOÄôUT∆”BÉê¥çYßmﬂfze@fze.fzefzegreÜ†2026-06-19T13:01:15.359545+00:002026-06-19T13:01:15.359551+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$91NgUoeMGyk2v8XhQL0ZJw$qf5eg0Ef5p1YGo7nie/WunOXAViS/V6NgCkpigYE7TAÅZ, +MM  ÅOÂpfl´J÷∑øxÇü˜1fez@fefezfz.fezfezfzeÜ†2026-06-19T12:59:05.434608+00:002026-06-19T12:59:05.434611+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$6R5wCWAlB7JTn6OEIJkkNg$G6Mtp61xFH+ajTuubOMxW5lltNJSh0pod8gg8TsYl2sÅV, )MM  ÅO†⁄7¢FRGùNW<êmofze@fzefez.fzefzeà:2026-06-19T12:43:57.744711+00:002026-06-19T12:43:57.744713+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$XNhktHPYPAfDt9l8qm0R2g$hS8o0bxO5t6AY9T43+Z/QN9zt/J3g8oqJJRIrtoNUhwÅT, +MM  ÅOÆ;Æü@0éã§!<åfzefaze@fea.fzefze2026-06-19T10:47:25.696025+00:002026-06-19T10:47:25.696027+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$CarDbl3YASf4CX0J5QiLoA$cBAKh/6urfowJTXTJWPqHpmCPx/KBMc2mNcpTF8Wv9MÅU, 'MM  ÅOó∑Zg
+HÔ£¶ôé–GMfze@fzfze.Fzefzefze2026-06-19T10:46:58.636478+00:002026-06-19T10:46:58.636480+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$EjlF3QEEhW8wrtpCqUvg3A$Zh2VUZ27Y/semlCp/eCMDKVyFt5JAKkizZ/fYmrZQR8ÅS, #MM  ÅOdëcf÷ºBˇúwƒ†Ïü¿5fez@fez.fezfezfze2026-06-18T21:46:54.513935+00:002026-06-18T21:46:54.513937+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$igKSmojoVlpqJaMJnihe7Q$L/mnPdw7jiqFQ7HAiuLeaKJb0VZcYeqCrGuOMTMWkoAÅQ, %MM  ÅOî|êCLÄ_µ±˝s°âfjfk@irie.rtFkf2026-06-18T21:46:00.416076+00:002026-06-18T21:46:00.416081+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$/QcVZfO7bgsq6UU6QOP8tA$LdbNbzd1sHC5uN7Vgg0Udezp3BllA75RaO7+gwUhPfAÅN, MM  ÅO…N˛WK ÑTjl] ~bjk@ji.feHbk2026-06-18T19:46:21.322360+00:002026-06-18T19:46:21.322364+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$5lvgBYt9Tj4kmEav1v8dOQ$mw27V1mB4ZFifx8FeICrzYMB1/4S96kiVzNv26yufDsÅO
+, !MM  ÅO∑oÄBBÔKü¢ÍˆÿæW≤@ger@fz.fzegre2026-06-18T12:22:15.672528+00:002026-06-18T12:22:15.672533+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$+VGspPrDlFKUhKszoTiQUQ$ZeD3AW02AVdbXAcPjnAGM+IOpFRpLmdcTcqXiNc/vjwÅO	, MM  ÅOjüA)M$òì'{¸0:g@ger.fefyhyr2026-06-18T12:15:32.778558+00:002026-06-18T12:15:32.778560+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$BUaPEjWt94Bjv2JtjzDoVA$FzMXYXJqyB7xroAVYj3Cxw1qPnFxb8gN3tyGVag57jgÅT, #MM  ÅO~òLÉ\ˆJt©HıßÑÕfzef@fez.fzgregerg2026-06-17T12:46:09.676916+00:002026-06-17T12:46:09.676919+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$CoXer+j8xicC/kgpKl7tcg$sQWLTAUBwsTPF1YT/LYIen92RPx1tJeSPWHOLiYzYs0ÅT, )MM  ÅOˆﬁ\¬ I	¶ÌÈÿw°çfezfze@fze.fzefezf2026-06-17T12:45:37.084388+00:002026-06-17T12:45:37.084397+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$LSEtaMw99XExLXriaqT0TQ$cyN4+1LDvThV7mj1DBwiF7K07FrB0I6HnmjZzIcECREÅS, #MM  ÅO2·˝‘ƒAé£ëı‘su.Åfze@fez.fzefezfze2026-06-16T12:46:33.397852+00:002026-06-16T12:46:33.397856+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$29fvyGwfsB1qNYzwlrWzJw$MsvgGZsAii9yMmGk6zo3ghWM7DYjejaV7JjfiA8Ks34ÅQ, %MM  ÅOí«¸õòNJJ∫-„s‰'Ç0bob@test.comBob2026-06-15T21:52:49.325535+00:002026-06-15T21:52:49.325538+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$IfKkNTx10BmAhH9+dyG0XQ$JrhitILtXpLxTZnaA9k/zHtnoME5TioYLfV4kC297mYÅU, )MM  ÅORﬁ Ã*A≠Ä”Ç3Oq≈palice@test.comAlice2026-06-15T21:52:48.303035+00:002026-06-15T21:52:48.303096+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$t/00gc+WVqKrBwWzLNylxg$sEHXhiZJvJ6l1DisN1GNtfgLb4uqf2/CKVxdac4UGjgÅR, 'MM  ÅOd⁄§AƒùıL ¶€≠’fezfz@gre.fzegre2026-06-15T18:21:47.911921+00:002026-06-15T18:21:47.911923+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$TUwN2/rxEGZ+/x8R8FGbvA$m7MpnvpjU3fWVgZ9/F8OFSeAnD4Py+nOm03uVgtkBR0ÅQ, %MM  ÅOr\é≤HÖ¢ë¬Ÿ¿á’gzre@fze.fzefez2026-06-15T17:06:40.393091+00:002026-06-15T17:06:40.393093+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$VkArFhpRKh+/YMYlf/+MtQ$7vIGLPMwROtLD2q9YDvfZ0wnT0ZWyLdrK99lxrvG8mEf,  MM                  System2026-06-15T17:06:12.924647+00:002026-06-15T17:06:12.924647+00:00pwa   5   6œHØP	ù4]£!∂œ`4.    Ü òƒÔCm
+ñ	øÌJv†»Ò;b Ü                                                                                        ÅY, )MM  ÅO˛5x‡g@◊Ø≠ÒP^Qgrege5@fze.fezgregeri°2026-06-19T13:05:16.666265+00:002026-06-19T13:05:16.666268+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$accmcKT2u7uQis+dYIboag$kaSMI1tBfv6Jg7WQiTdw3s2qNe8plvB9pdelPJm7Gv8ÅV, #MM  ÅOÄôUT∆”BÉê¥çYßmﬂfze@fze.fzefzegreÜ†2026-06-19T13:01:15.359545+00:002026-06-19T13:01:15.359551+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$91NgUoeMGyk2v8XhQL0ZJw$qf5eg0Ef5p1YGo7nie/WunOXAViS/V6NgCkpigYE7TAÅZ, +MM  ÅOÂpfl´J÷∑øxÇü˜1fez@fefezfz.fezfezfzeÜ†2026-06-19T12:59:05.434608+00:002026-06-19T12:59:05.434611+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$6R5wCWAlB7JTn6OEIJkkNg$G6Mtp61xFH+ajTuubOMxW5lltNJSh0pod8gg8TsYl2sÅV, )MM  ÅO†⁄7¢FRGùNW<êmofze@fzefez.fzefzeà:2026-06-19T12:43:57.744711+00:002026-06-19T12:43:57.744713+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$XNhktHPYPAfDt9l8qm0R2g$hS8o0bxO5t6AY9T43+Z/QN9zt/J3g8oqJJRIrtoNUhwÅT, +MM  ÅOÆ;Æü@0éã§!<åfzefaze@fea.fzefze2026-06-19T10:47:25.696025+00:002026-06-19T10:47:25.696027+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$CarDbl3YASf4CX0J5QiLoA$cBAKh/6urfowJTXTJWPqHpmCPx/KBMc2mNcpTF8Wv9MÅU, 'MM  ÅOó∑Zg
+HÔ£¶ôé–GMfze@fzfze.Fzefzefze2026-06-19T10:46:58.636478+00:002026-06-19T10:46:58.636480+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$EjlF3QEEhW8wrtpCqUvg3A$Zh2VUZ27Y/semlCp/eCMDKVyFt5JAKkizZ/fYmrZQR8ÅS, #MM  ÅOdëcf÷ºBˇúwƒ†Ïü¿5fez@fez.fezfezfze2026-06-18T21:46:54.513935+00:002026-06-18T21:46:54.513937+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$igKSmojoVlpqJaMJnihe7Q$L/mnPdw7jiqFQ7HAiuLeaKJb0VZcYeqCrGuOMTMWkoAÅQ, %MM  ÅOî|êCLÄ_µ±˝s°âfjfk@irie.rtFkf2026-06-18T21:46:00.416076+00:002026-06-18T21:46:00.416081+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$/QcVZfO7bgsq6UU6QOP8tA$LdbNbzd1sHC5uN7Vgg0Udezp3BllA75RaO7+gwUhPfAÅN, MM  ÅO…N˛WK ÑTjl] ~bjk@ji.feHbk2026-06-18T19:46:21.322360+00:002026-06-18T19:46:21.322364+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$5lvgBYt9Tj4kmEav1v8dOQ$mw27V1mB4ZFifx8FeICrzYMB1/4S96kiVzNv26yufDsÅO
+, !MM  ÅO∑oÄBBÔKü¢ÍˆÿæW≤@ger@fz.fzegre2026-06-18T12:22:15.672528+00:002026-06-18T12:22:15.672533+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$+VGspPrDlFKUhKszoTiQUQ$ZeD3AW02AVdbXAcPjnAGM+IOpFRpLmdcTcqXiNc/vjwÅO	, MM  ÅOjüA)M$òì'{¸0:g@ger.fefyhyr2026-06-18T12:15:32.778558+00:002026-06-18T12:15:32.778560+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$BUaPEjWt94Bjv2JtjzDoVA$FzMXYXJqyB7xroAVYj3Cxw1qPnFxb8gN3tyGVag57jgÅT, #MM  ÅO~òLÉ\ˆJt©HıßÑÕfzef@fez.fzgregerg2026-06-17T12:46:09.676916+00:002026-06-17T12:46:09.676919+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$CoXer+j8xicC/kgpKl7tcg$sQWLTAUBwsTPF1YT/LYIen92RPx1tJeSPWHOLiYzYs0ÅT, )MM  ÅOˆﬁ\¬ I	¶ÌÈÿw°çfezfze@fze.fzefezf2026-06-17T12:45:37.084388+00:002026-06-17T12:45:37.084397+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$LSEtaMw99XExLXriaqT0TQ$cyN4+1LDvThV7mj1DBwiF7K07FrB0I6HnmjZzIcECREÅS, #MM  ÅO2·˝‘ƒAé£ëı‘su.Åfze@fez.fzefezfze2026-06-16T12:46:33.397852+00:002026-06-16T12:46:33.397856+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$29fvyGwfsB1qNYzwlrWzJw$MsvgGZsAii9yMmGk6zo3ghWM7DYjejaV7JjfiA8Ks34ÅQ, %MM  ÅOí«¸õòNJJ∫-„s‰'Ç0bob@test.comBob2026-06-15T21:52:49.325535+00:002026-06-15T21:52:49.325538+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$IfKkNTx10BmAhH9+dyG0XQ$JrhitILtXpLxTZnaA9k/zHtnoME5TioYLfV4kC297mYÅU, )MM  ÅORﬁ Ã*A≠Ä”Ç3Oq≈palice@test.comAlice2026-06-15T21:52:48.303035+00:002026-06-15T21:52:48.303096+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$t/00gc+WVqKrBwWzLNylxg$sEHXhiZJvJ6l1DisN1GNtfgLb4uqf2/CKVxdac4UGjgÅR, 'MM  ÅOd⁄§AƒùıL ¶€≠’fezfz@gre.fzegre2026-06-15T18:21:47.911921+00:002026-06-15T18:21:47.911923+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$TUwN2/rxEGZ+/x8R8FGbvA$m7MpnvpjU3fWVgZ9/F8OFSeAnD4Py+nOm03uVgtkBR0ÅQ, %MM  ÅOr\é≤HÖ¢ë¬Ÿ¿á’gzre@fze.fzefez2026-06-15T17:06:40.393091+00:002026-06-15T17:06:40.393093+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$VkArFhpRKh+/YMYlf/+MtQ$7vIGLPMwROtLD2q9YDvfZ0wnT0ZWyLdrK99lxrvG8mEf,  MM                  System2026-06-15T17:06:12.924647+00:002026-06-15T17:06:12.924647+00:00pwa   5    œHØP	ù4’÷˚gR£Z    Ü òƒÔCm
+ñ	øÌJv†»Ò;b Ü                                                                                        ÅY, )MM  ÅO˛5x‡g@◊Ø≠ÒP^Qgrege5@fze.fezgregerkâ2026-06-19T13:05:16.666265+00:002026-06-19T13:05:16.666268+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$accmcKT2u7uQis+dYIboag$kaSMI1tBfv6Jg7WQiTdw3s2qNe8plvB9pdelPJm7Gv8ÅV, #MM  ÅOÄôUT∆”BÉê¥çYßmﬂfze@fze.fzefzegreÜ†2026-06-19T13:01:15.359545+00:002026-06-19T13:01:15.359551+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$91NgUoeMGyk2v8XhQL0ZJw$qf5eg0Ef5p1YGo7nie/WunOXAViS/V6NgCkpigYE7TAÅZ, +MM  ÅOÂpfl´J÷∑øxÇü˜1fez@fefezfz.fezfezfzeÜ†2026-06-19T12:59:05.434608+00:002026-06-19T12:59:05.434611+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$6R5wCWAlB7JTn6OEIJkkNg$G6Mtp61xFH+ajTuubOMxW5lltNJSh0pod8gg8TsYl2sÅV, )MM  ÅO†⁄7¢FRGùNW<êmofze@fzefez.fzefzeà:2026-06-19T12:43:57.744711+00:002026-06-19T12:43:57.744713+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$XNhktHPYPAfDt9l8qm0R2g$hS8o0bxO5t6AY9T43+Z/QN9zt/J3g8oqJJRIrtoNUhwÅT, +MM  ÅOÆ;Æü@0éã§!<åfzefaze@fea.fzefze2026-06-19T10:47:25.696025+00:002026-06-19T10:47:25.696027+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$CarDbl3YASf4CX0J5QiLoA$cBAKh/6urfowJTXTJWPqHpmCPx/KBMc2mNcpTF8Wv9MÅU, 'MM  ÅOó∑Zg
+HÔ£¶ôé–GMfze@fzfze.Fzefzefze2026-06-19T10:46:58.636478+00:002026-06-19T10:46:58.636480+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$EjlF3QEEhW8wrtpCqUvg3A$Zh2VUZ27Y/semlCp/eCMDKVyFt5JAKkizZ/fYmrZQR8ÅS, #MM  ÅOdëcf÷ºBˇúwƒ†Ïü¿5fez@fez.fezfezfze2026-06-18T21:46:54.513935+00:002026-06-18T21:46:54.513937+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$igKSmojoVlpqJaMJnihe7Q$L/mnPdw7jiqFQ7HAiuLeaKJb0VZcYeqCrGuOMTMWkoAÅQ, %MM  ÅOî|êCLÄ_µ±˝s°âfjfk@irie.rtFkf2026-06-18T21:46:00.416076+00:002026-06-18T21:46:00.416081+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$/QcVZfO7bgsq6UU6QOP8tA$LdbNbzd1sHC5uN7Vgg0Udezp3BllA75RaO7+gwUhPfAÅN, MM  ÅO…N˛WK ÑTjl] ~bjk@ji.feHbk2026-06-18T19:46:21.322360+00:002026-06-18T19:46:21.322364+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$5lvgBYt9Tj4kmEav1v8dOQ$mw27V1mB4ZFifx8FeICrzYMB1/4S96kiVzNv26yufDsÅO
+, !MM  ÅO∑oÄBBÔKü¢ÍˆÿæW≤@ger@fz.fzegre2026-06-18T12:22:15.672528+00:002026-06-18T12:22:15.672533+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$+VGspPrDlFKUhKszoTiQUQ$ZeD3AW02AVdbXAcPjnAGM+IOpFRpLmdcTcqXiNc/vjwÅO	, MM  ÅOjüA)M$òì'{¸0:g@ger.fefyhyr2026-06-18T12:15:32.778558+00:002026-06-18T12:15:32.778560+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$BUaPEjWt94Bjv2JtjzDoVA$FzMXYXJqyB7xroAVYj3Cxw1qPnFxb8gN3tyGVag57jgÅT, #MM  ÅO~òLÉ\ˆJt©HıßÑÕfzef@fez.fzgregerg2026-06-17T12:46:09.676916+00:002026-06-17T12:46:09.676919+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$CoXer+j8xicC/kgpKl7tcg$sQWLTAUBwsTPF1YT/LYIen92RPx1tJeSPWHOLiYzYs0ÅT, )MM  ÅOˆﬁ\¬ I	¶ÌÈÿw°çfezfze@fze.fzefezf2026-06-17T12:45:37.084388+00:002026-06-17T12:45:37.084397+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$LSEtaMw99XExLXriaqT0TQ$cyN4+1LDvThV7mj1DBwiF7K07FrB0I6HnmjZzIcECREÅS, #MM  ÅO2·˝‘ƒAé£ëı‘su.Åfze@fez.fzefezfze2026-06-16T12:46:33.397852+00:002026-06-16T12:46:33.397856+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$29fvyGwfsB1qNYzwlrWzJw$MsvgGZsAii9yMmGk6zo3ghWM7DYjejaV7JjfiA8Ks34ÅQ, %MM  ÅOí«¸õòNJJ∫-„s‰'Ç0bob@test.comBob2026-06-15T21:52:49.325535+00:002026-06-15T21:52:49.325538+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$IfKkNTx10BmAhH9+dyG0XQ$JrhitILtXpLxTZnaA9k/zHtnoME5TioYLfV4kC297mYÅU, )MM  ÅORﬁ Ã*A≠Ä”Ç3Oq≈palice@test.comAlice2026-06-15T21:52:48.303035+00:002026-06-15T21:52:48.303096+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$t/00gc+WVqKrBwWzLNylxg$sEHXhiZJvJ6l1DisN1GNtfgLb4uqf2/CKVxdac4UGjgÅR, 'MM  ÅOd⁄§AƒùıL ¶€≠’fezfz@gre.fzegre2026-06-15T18:21:47.911921+00:002026-06-15T18:21:47.911923+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$TUwN2/rxEGZ+/x8R8FGbvA$m7MpnvpjU3fWVgZ9/F8OFSeAnD4Py+nOm03uVgtkBR0ÅQ, %MM  ÅOr\é≤HÖ¢ë¬Ÿ¿á’gzre@fze.fzefez2026-06-15T17:06:40.393091+00:002026-06-15T17:06:40.393093+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$VkArFhpRKh+/YMYlf/+MtQ$7vIGLPMwROtLD2q9YDvfZ0wnT0ZWyLdrK99lxrvG8mEf,  MM                  System2026-06-15T17:06:12.924647+00:002026-06-15T17:06:12.924647+00:00pwa   6   6œHØP	ù4Æ¨ÿ}8X   H $H                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            ÅY, 'MM  ÅOõßZ¢ØàB°F§!{—^&fze@fez.fzezefzegregà]2026-06-19T13:25:09.496775+00:002026-06-19T13:25:09.496778+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$E0aSQb2+huj9XwRMLkb3XQ$Ki5TyZE2Xd0QT8IqSqBGJC0KNWi6sq2iCpbBXvumiGwÅY, )MM  ÅO ˛Fx«M~≥›ÑúÂZ0vfzfez@fez.fzefzefzeÜ†2026-06-19T13:20:50.531178+00:002026-06-19T13:20:50.531181+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$Ikzp+uzphvV4QjsaS0yBrQ$mTsVDGhCfW7SXKGy+FPXEdDUIUAsngbV4S+lDmDH/N8   5    œHØP	ù4Üe˚ÔC¬    Ü òƒÔCm
+ñ	øÌJv†»Ò;b Ü                                                                                        ÅY, )MM  ÅO˛5x‡g@◊Ø≠ÒP^Qgrege5@fze.fezgregeriï2026-06-19T13:05:16.666265+00:002026-06-19T13:05:16.666268+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$accmcKT2u7uQis+dYIboag$kaSMI1tBfv6Jg7WQiTdw3s2qNe8plvB9pdelPJm7Gv8ÅV, #MM  ÅOÄôUT∆”BÉê¥çYßmﬂfze@fze.fzefzegreÜ†2026-06-19T13:01:15.359545+00:002026-06-19T13:01:15.359551+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$91NgUoeMGyk2v8XhQL0ZJw$qf5eg0Ef5p1YGo7nie/WunOXAViS/V6NgCkpigYE7TAÅZ, +MM  ÅOÂpfl´J÷∑øxÇü˜1fez@fefezfz.fezfezfzeÜ†2026-06-19T12:59:05.434608+00:002026-06-19T12:59:05.434611+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$6R5wCWAlB7JTn6OEIJkkNg$G6Mtp61xFH+ajTuubOMxW5lltNJSh0pod8gg8TsYl2sÅV, )MM  ÅO†⁄7¢FRGùNW<êmofze@fzefez.fzefzeà:2026-06-19T12:43:57.744711+00:002026-06-19T12:43:57.744713+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$XNhktHPYPAfDt9l8qm0R2g$hS8o0bxO5t6AY9T43+Z/QN9zt/J3g8oqJJRIrtoNUhwÅT, +MM  ÅOÆ;Æü@0éã§!<åfzefaze@fea.fzefze2026-06-19T10:47:25.696025+00:002026-06-19T10:47:25.696027+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$CarDbl3YASf4CX0J5QiLoA$cBAKh/6urfowJTXTJWPqHpmCPx/KBMc2mNcpTF8Wv9MÅU, 'MM  ÅOó∑Zg
+HÔ£¶ôé–GMfze@fzfze.Fzefzefze2026-06-19T10:46:58.636478+00:002026-06-19T10:46:58.636480+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$EjlF3QEEhW8wrtpCqUvg3A$Zh2VUZ27Y/semlCp/eCMDKVyFt5JAKkizZ/fYmrZQR8ÅS, #MM  ÅOdëcf÷ºBˇúwƒ†Ïü¿5fez@fez.fezfezfze2026-06-18T21:46:54.513935+00:002026-06-18T21:46:54.513937+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$igKSmojoVlpqJaMJnihe7Q$L/mnPdw7jiqFQ7HAiuLeaKJb0VZcYeqCrGuOMTMWkoAÅQ, %MM  ÅOî|êCLÄ_µ±˝s°âfjfk@irie.rtFkf2026-06-18T21:46:00.416076+00:002026-06-18T21:46:00.416081+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$/QcVZfO7bgsq6UU6QOP8tA$LdbNbzd1sHC5uN7Vgg0Udezp3BllA75RaO7+gwUhPfAÅN, MM  ÅO…N˛WK ÑTjl] ~bjk@ji.feHbk2026-06-18T19:46:21.322360+00:002026-06-18T19:46:21.322364+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$5lvgBYt9Tj4kmEav1v8dOQ$mw27V1mB4ZFifx8FeICrzYMB1/4S96kiVzNv26yufDsÅO
+, !MM  ÅO∑oÄBBÔKü¢ÍˆÿæW≤@ger@fz.fzegre2026-06-18T12:22:15.672528+00:002026-06-18T12:22:15.672533+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$+VGspPrDlFKUhKszoTiQUQ$ZeD3AW02AVdbXAcPjnAGM+IOpFRpLmdcTcqXiNc/vjwÅO	, MM  ÅOjüA)M$òì'{¸0:g@ger.fefyhyr2026-06-18T12:15:32.778558+00:002026-06-18T12:15:32.778560+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$BUaPEjWt94Bjv2JtjzDoVA$FzMXYXJqyB7xroAVYj3Cxw1qPnFxb8gN3tyGVag57jgÅT, #MM  ÅO~òLÉ\ˆJt©HıßÑÕfzef@fez.fzgregerg2026-06-17T12:46:09.676916+00:002026-06-17T12:46:09.676919+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$CoXer+j8xicC/kgpKl7tcg$sQWLTAUBwsTPF1YT/LYIen92RPx1tJeSPWHOLiYzYs0ÅT, )MM  ÅOˆﬁ\¬ I	¶ÌÈÿw°çfezfze@fze.fzefezf2026-06-17T12:45:37.084388+00:002026-06-17T12:45:37.084397+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$LSEtaMw99XExLXriaqT0TQ$cyN4+1LDvThV7mj1DBwiF7K07FrB0I6HnmjZzIcECREÅS, #MM  ÅO2·˝‘ƒAé£ëı‘su.Åfze@fez.fzefezfze2026-06-16T12:46:33.397852+00:002026-06-16T12:46:33.397856+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$29fvyGwfsB1qNYzwlrWzJw$MsvgGZsAii9yMmGk6zo3ghWM7DYjejaV7JjfiA8Ks34ÅQ, %MM  ÅOí«¸õòNJJ∫-„s‰'Ç0bob@test.comBob2026-06-15T21:52:49.325535+00:002026-06-15T21:52:49.325538+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$IfKkNTx10BmAhH9+dyG0XQ$JrhitILtXpLxTZnaA9k/zHtnoME5TioYLfV4kC297mYÅU, )MM  ÅORﬁ Ã*A≠Ä”Ç3Oq≈palice@test.comAlice2026-06-15T21:52:48.303035+00:002026-06-15T21:52:48.303096+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$t/00gc+WVqKrBwWzLNylxg$sEHXhiZJvJ6l1DisN1GNtfgLb4uqf2/CKVxdac4UGjgÅR, 'MM  ÅOd⁄§AƒùıL ¶€≠’fezfz@gre.fzegre2026-06-15T18:21:47.911921+00:002026-06-15T18:21:47.911923+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$TUwN2/rxEGZ+/x8R8FGbvA$m7MpnvpjU3fWVgZ9/F8OFSeAnD4Py+nOm03uVgtkBR0ÅQ, %MM  ÅOr\é≤HÖ¢ë¬Ÿ¿á’gzre@fze.fzefez2026-06-15T17:06:40.393091+00:002026-06-15T17:06:40.393093+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$VkArFhpRKh+/YMYlf/+MtQ$7vIGLPMwROtLD2q9YDvfZ0wnT0ZWyLdrK99lxrvG8mEf,  MM                  System2026-06-15T17:06:12.924647+00:002026-06-15T17:06:12.924647+00:00pwa   6   6œHØP	ù4Àû«\ Ö[¿   H $H                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            ÅY, 'MM  ÅOõßZ¢ØàB°F§!{—^&fze@fez.fzezefzegregÜi2026-06-19T13:25:09.496775+00:002026-06-19T13:25:09.496778+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$E0aSQb2+huj9XwRMLkb3XQ$Ki5TyZE2Xd0QT8IqSqBGJC0KNWi6sq2iCpbBXvumiGwÅY, )MM  ÅO ˛Fx«M~≥›ÑúÂZ0vfzfez@fez.fzefzefzeÜ†2026-06-19T13:20:50.531178+00:002026-06-19T13:20:50.531181+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$Ikzp+uzphvV4QjsaS0yBrQ$mTsVDGhCfW7SXKGy+FPXEdDUIUAsngbV4S+lDmDH/N8   5    œHØP	ù4Ò©e1Û$    Ü òƒÔCm
+ñ	øÌJv†»Ò;b Ü                                                                                        ÅY, )MM  ÅO˛5x‡g@◊Ø≠ÒP^Qgrege5@fze.fezgregerkÑ2026-06-19T13:05:16.666265+00:002026-06-19T13:05:16.666268+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$accmcKT2u7uQis+dYIboag$kaSMI1tBfv6Jg7WQiTdw3s2qNe8plvB9pdelPJm7Gv8ÅV, #MM  ÅOÄôUT∆”BÉê¥çYßmﬂfze@fze.fzefzegreÜ†2026-06-19T13:01:15.359545+00:002026-06-19T13:01:15.359551+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$91NgUoeMGyk2v8XhQL0ZJw$qf5eg0Ef5p1YGo7nie/WunOXAViS/V6NgCkpigYE7TAÅZ, +MM  ÅOÂpfl´J÷∑øxÇü˜1fez@fefezfz.fezfezfzeÜ†2026-06-19T12:59:05.434608+00:002026-06-19T12:59:05.434611+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$6R5wCWAlB7JTn6OEIJkkNg$G6Mtp61xFH+ajTuubOMxW5lltNJSh0pod8gg8TsYl2sÅV, )MM  ÅO†⁄7¢FRGùNW<êmofze@fzefez.fzefzeà:2026-06-19T12:43:57.744711+00:002026-06-19T12:43:57.744713+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$XNhktHPYPAfDt9l8qm0R2g$hS8o0bxO5t6AY9T43+Z/QN9zt/J3g8oqJJRIrtoNUhwÅT, +MM  ÅOÆ;Æü@0éã§!<åfzefaze@fea.fzefze2026-06-19T10:47:25.696025+00:002026-06-19T10:47:25.696027+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$CarDbl3YASf4CX0J5QiLoA$cBAKh/6urfowJTXTJWPqHpmCPx/KBMc2mNcpTF8Wv9MÅU, 'MM  ÅOó∑Zg
+HÔ£¶ôé–GMfze@fzfze.Fzefzefze2026-06-19T10:46:58.636478+00:002026-06-19T10:46:58.636480+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$EjlF3QEEhW8wrtpCqUvg3A$Zh2VUZ27Y/semlCp/eCMDKVyFt5JAKkizZ/fYmrZQR8ÅS, #MM  ÅOdëcf÷ºBˇúwƒ†Ïü¿5fez@fez.fezfezfze2026-06-18T21:46:54.513935+00:002026-06-18T21:46:54.513937+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$igKSmojoVlpqJaMJnihe7Q$L/mnPdw7jiqFQ7HAiuLeaKJb0VZcYeqCrGuOMTMWkoAÅQ, %MM  ÅOî|êCLÄ_µ±˝s°âfjfk@irie.rtFkf2026-06-18T21:46:00.416076+00:002026-06-18T21:46:00.416081+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$/QcVZfO7bgsq6UU6QOP8tA$LdbNbzd1sHC5uN7Vgg0Udezp3BllA75RaO7+gwUhPfAÅN, MM  ÅO…N˛WK ÑTjl] ~bjk@ji.feHbk2026-06-18T19:46:21.322360+00:002026-06-18T19:46:21.322364+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$5lvgBYt9Tj4kmEav1v8dOQ$mw27V1mB4ZFifx8FeICrzYMB1/4S96kiVzNv26yufDsÅO
+, !MM  ÅO∑oÄBBÔKü¢ÍˆÿæW≤@ger@fz.fzegre2026-06-18T12:22:15.672528+00:002026-06-18T12:22:15.672533+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$+VGspPrDlFKUhKszoTiQUQ$ZeD3AW02AVdbXAcPjnAGM+IOpFRpLmdcTcqXiNc/vjwÅO	, MM  ÅOjüA)M$òì'{¸0:g@ger.fefyhyr2026-06-18T12:15:32.778558+00:002026-06-18T12:15:32.778560+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$BUaPEjWt94Bjv2JtjzDoVA$FzMXYXJqyB7xroAVYj3Cxw1qPnFxb8gN3tyGVag57jgÅT, #MM  ÅO~òLÉ\ˆJt©HıßÑÕfzef@fez.fzgregerg2026-06-17T12:46:09.676916+00:002026-06-17T12:46:09.676919+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$CoXer+j8xicC/kgpKl7tcg$sQWLTAUBwsTPF1YT/LYIen92RPx1tJeSPWHOLiYzYs0ÅT, )MM  ÅOˆﬁ\¬ I	¶ÌÈÿw°çfezfze@fze.fzefezf2026-06-17T12:45:37.084388+00:002026-06-17T12:45:37.084397+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$LSEtaMw99XExLXriaqT0TQ$cyN4+1LDvThV7mj1DBwiF7K07FrB0I6HnmjZzIcECREÅS, #MM  ÅO2·˝‘ƒAé£ëı‘su.Åfze@fez.fzefezfze2026-06-16T12:46:33.397852+00:002026-06-16T12:46:33.397856+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$29fvyGwfsB1qNYzwlrWzJw$MsvgGZsAii9yMmGk6zo3ghWM7DYjejaV7JjfiA8Ks34ÅQ, %MM  ÅOí«¸õòNJJ∫-„s‰'Ç0bob@test.comBob2026-06-15T21:52:49.325535+00:002026-06-15T21:52:49.325538+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$IfKkNTx10BmAhH9+dyG0XQ$JrhitILtXpLxTZnaA9k/zHtnoME5TioYLfV4kC297mYÅU, )MM  ÅORﬁ Ã*A≠Ä”Ç3Oq≈palice@test.comAlice2026-06-15T21:52:48.303035+00:002026-06-15T21:52:48.303096+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$t/00gc+WVqKrBwWzLNylxg$sEHXhiZJvJ6l1DisN1GNtfgLb4uqf2/CKVxdac4UGjgÅR, 'MM  ÅOd⁄§AƒùıL ¶€≠’fezfz@gre.fzegre2026-06-15T18:21:47.911921+00:002026-06-15T18:21:47.911923+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$TUwN2/rxEGZ+/x8R8FGbvA$m7MpnvpjU3fWVgZ9/F8OFSeAnD4Py+nOm03uVgtkBR0ÅQ, %MM  ÅOr\é≤HÖ¢ë¬Ÿ¿á’gzre@fze.fzefez2026-06-15T17:06:40.393091+00:002026-06-15T17:06:40.393093+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$VkArFhpRKh+/YMYlf/+MtQ$7vIGLPMwROtLD2q9YDvfZ0wnT0ZWyLdrK99lxrvG8mEf,  MM                  System2026-06-15T17:06:12.924647+00:002026-06-15T17:06:12.924647+00:00pwa   6   6œHØP	ù4†›7›˙   H $H                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            ÅY, 'MM  ÅOõßZ¢ØàB°F§!{—^&fze@fez.fzezefzegregà[2026-06-19T13:25:09.496775+00:002026-06-19T13:25:09.496778+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$E0aSQb2+huj9XwRMLkb3XQ$Ki5TyZE2Xd0QT8IqSqBGJC0KNWi6sq2iCpbBXvumiGwÅY, )MM  ÅO ˛Fx«M~≥›ÑúÂZ0vfzfez@fez.fzefzefzeÜ†2026-06-19T13:20:50.531178+00:002026-06-19T13:20:50.531181+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$Ikzp+uzphvV4QjsaS0yBrQ$mTsVDGhCfW7SXKGy+FPXEdDUIUAsngbV4S+lDmDH/N8   5    œHØP	ù4M’…Ÿøz\    Ü òƒÔCm
+ñ	øÌJv†»Ò;b Ü                                                                                        ÅY, )MM  ÅO˛5x‡g@◊Ø≠ÒP^Qgrege5@fze.fezgregeriê2026-06-19T13:05:16.666265+00:002026-06-19T13:05:16.666268+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$accmcKT2u7uQis+dYIboag$kaSMI1tBfv6Jg7WQiTdw3s2qNe8plvB9pdelPJm7Gv8ÅV, #MM  ÅOÄôUT∆”BÉê¥çYßmﬂfze@fze.fzefzegreÜ†2026-06-19T13:01:15.359545+00:002026-06-19T13:01:15.359551+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$91NgUoeMGyk2v8XhQL0ZJw$qf5eg0Ef5p1YGo7nie/WunOXAViS/V6NgCkpigYE7TAÅZ, +MM  ÅOÂpfl´J÷∑øxÇü˜1fez@fefezfz.fezfezfzeÜ†2026-06-19T12:59:05.434608+00:002026-06-19T12:59:05.434611+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$6R5wCWAlB7JTn6OEIJkkNg$G6Mtp61xFH+ajTuubOMxW5lltNJSh0pod8gg8TsYl2sÅV, )MM  ÅO†⁄7¢FRGùNW<êmofze@fzefez.fzefzeà:2026-06-19T12:43:57.744711+00:002026-06-19T12:43:57.744713+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$XNhktHPYPAfDt9l8qm0R2g$hS8o0bxO5t6AY9T43+Z/QN9zt/J3g8oqJJRIrtoNUhwÅT, +MM  ÅOÆ;Æü@0éã§!<åfzefaze@fea.fzefze2026-06-19T10:47:25.696025+00:002026-06-19T10:47:25.696027+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$CarDbl3YASf4CX0J5QiLoA$cBAKh/6urfowJTXTJWPqHpmCPx/KBMc2mNcpTF8Wv9MÅU, 'MM  ÅOó∑Zg
+HÔ£¶ôé–GMfze@fzfze.Fzefzefze2026-06-19T10:46:58.636478+00:002026-06-19T10:46:58.636480+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$EjlF3QEEhW8wrtpCqUvg3A$Zh2VUZ27Y/semlCp/eCMDKVyFt5JAKkizZ/fYmrZQR8ÅS, #MM  ÅOdëcf÷ºBˇúwƒ†Ïü¿5fez@fez.fezfezfze2026-06-18T21:46:54.513935+00:002026-06-18T21:46:54.513937+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$igKSmojoVlpqJaMJnihe7Q$L/mnPdw7jiqFQ7HAiuLeaKJb0VZcYeqCrGuOMTMWkoAÅQ, %MM  ÅOî|êCLÄ_µ±˝s°âfjfk@irie.rtFkf2026-06-18T21:46:00.416076+00:002026-06-18T21:46:00.416081+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$/QcVZfO7bgsq6UU6QOP8tA$LdbNbzd1sHC5uN7Vgg0Udezp3BllA75RaO7+gwUhPfAÅN, MM  ÅO…N˛WK ÑTjl] ~bjk@ji.feHbk2026-06-18T19:46:21.322360+00:002026-06-18T19:46:21.322364+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$5lvgBYt9Tj4kmEav1v8dOQ$mw27V1mB4ZFifx8FeICrzYMB1/4S96kiVzNv26yufDsÅO
+, !MM  ÅO∑oÄBBÔKü¢ÍˆÿæW≤@ger@fz.fzegre2026-06-18T12:22:15.672528+00:002026-06-18T12:22:15.672533+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$+VGspPrDlFKUhKszoTiQUQ$ZeD3AW02AVdbXAcPjnAGM+IOpFRpLmdcTcqXiNc/vjwÅO	, MM  ÅOjüA)M$òì'{¸0:g@ger.fefyhyr2026-06-18T12:15:32.778558+00:002026-06-18T12:15:32.778560+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$BUaPEjWt94Bjv2JtjzDoVA$FzMXYXJqyB7xroAVYj3Cxw1qPnFxb8gN3tyGVag57jgÅT, #MM  ÅO~òLÉ\ˆJt©HıßÑÕfzef@fez.fzgregerg2026-06-17T12:46:09.676916+00:002026-06-17T12:46:09.676919+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$CoXer+j8xicC/kgpKl7tcg$sQWLTAUBwsTPF1YT/LYIen92RPx1tJeSPWHOLiYzYs0ÅT, )MM  ÅOˆﬁ\¬ I	¶ÌÈÿw°çfezfze@fze.fzefezf2026-06-17T12:45:37.084388+00:002026-06-17T12:45:37.084397+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$LSEtaMw99XExLXriaqT0TQ$cyN4+1LDvThV7mj1DBwiF7K07FrB0I6HnmjZzIcECREÅS, #MM  ÅO2·˝‘ƒAé£ëı‘su.Åfze@fez.fzefezfze2026-06-16T12:46:33.397852+00:002026-06-16T12:46:33.397856+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$29fvyGwfsB1qNYzwlrWzJw$MsvgGZsAii9yMmGk6zo3ghWM7DYjejaV7JjfiA8Ks34ÅQ, %MM  ÅOí«¸õòNJJ∫-„s‰'Ç0bob@test.comBob2026-06-15T21:52:49.325535+00:002026-06-15T21:52:49.325538+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$IfKkNTx10BmAhH9+dyG0XQ$JrhitILtXpLxTZnaA9k/zHtnoME5TioYLfV4kC297mYÅU, )MM  ÅORﬁ Ã*A≠Ä”Ç3Oq≈palice@test.comAlice2026-06-15T21:52:48.303035+00:002026-06-15T21:52:48.303096+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$t/00gc+WVqKrBwWzLNylxg$sEHXhiZJvJ6l1DisN1GNtfgLb4uqf2/CKVxdac4UGjgÅR, 'MM  ÅOd⁄§AƒùıL ¶€≠’fezfz@gre.fzegre2026-06-15T18:21:47.911921+00:002026-06-15T18:21:47.911923+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$TUwN2/rxEGZ+/x8R8FGbvA$m7MpnvpjU3fWVgZ9/F8OFSeAnD4Py+nOm03uVgtkBR0ÅQ, %MM  ÅOr\é≤HÖ¢ë¬Ÿ¿á’gzre@fze.fzefez2026-06-15T17:06:40.393091+00:002026-06-15T17:06:40.393093+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$VkArFhpRKh+/YMYlf/+MtQ$7vIGLPMwROtLD2q9YDvfZ0wnT0ZWyLdrK99lxrvG8mEf,  MM                  System2026-06-15T17:06:12.924647+00:002026-06-15T17:06:12.924647+00:00pwa   6   6œHØP	ù4ä#¢Çí£Ú   H $H                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            ÅY, 'MM  ÅOõßZ¢ØàB°F§!{—^&fze@fez.fzezefzegregÜg2026-06-19T13:25:09.496775+00:002026-06-19T13:25:09.496778+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$E0aSQb2+huj9XwRMLkb3XQ$Ki5TyZE2Xd0QT8IqSqBGJC0KNWi6sq2iCpbBXvumiGwÅY, )MM  ÅO ˛Fx«M~≥›ÑúÂZ0vfzfez@fez.fzefzefzeÜ†2026-06-19T13:20:50.531178+00:002026-06-19T13:20:50.531181+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$Ikzp+uzphvV4QjsaS0yBrQ$mTsVDGhCfW7SXKGy+FPXEdDUIUAsngbV4S+lDmDH/N8   5    œHØP	ù4%¸Õ¬Sî    Ü òƒÔCm
+ñ	øÌJv†»Ò;b Ü                                                                                        ÅY, )MM  ÅO˛5x‡g@◊Ø≠ÒP^Qgrege5@fze.fezgregeri£2026-06-19T13:05:16.666265+00:002026-06-19T13:05:16.666268+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$accmcKT2u7uQis+dYIboag$kaSMI1tBfv6Jg7WQiTdw3s2qNe8plvB9pdelPJm7Gv8ÅV, #MM  ÅOÄôUT∆”BÉê¥çYßmﬂfze@fze.fzefzegreÜ†2026-06-19T13:01:15.359545+00:002026-06-19T13:01:15.359551+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$91NgUoeMGyk2v8XhQL0ZJw$qf5eg0Ef5p1YGo7nie/WunOXAViS/V6NgCkpigYE7TAÅZ, +MM  ÅOÂpfl´J÷∑øxÇü˜1fez@fefezfz.fezfezfzeÜ†2026-06-19T12:59:05.434608+00:002026-06-19T12:59:05.434611+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$6R5wCWAlB7JTn6OEIJkkNg$G6Mtp61xFH+ajTuubOMxW5lltNJSh0pod8gg8TsYl2sÅV, )MM  ÅO†⁄7¢FRGùNW<êmofze@fzefez.fzefzeà:2026-06-19T12:43:57.744711+00:002026-06-19T12:43:57.744713+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$XNhktHPYPAfDt9l8qm0R2g$hS8o0bxO5t6AY9T43+Z/QN9zt/J3g8oqJJRIrtoNUhwÅT, +MM  ÅOÆ;Æü@0éã§!<åfzefaze@fea.fzefze2026-06-19T10:47:25.696025+00:002026-06-19T10:47:25.696027+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$CarDbl3YASf4CX0J5QiLoA$cBAKh/6urfowJTXTJWPqHpmCPx/KBMc2mNcpTF8Wv9MÅU, 'MM  ÅOó∑Zg
+HÔ£¶ôé–GMfze@fzfze.Fzefzefze2026-06-19T10:46:58.636478+00:002026-06-19T10:46:58.636480+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$EjlF3QEEhW8wrtpCqUvg3A$Zh2VUZ27Y/semlCp/eCMDKVyFt5JAKkizZ/fYmrZQR8ÅS, #MM  ÅOdëcf÷ºBˇúwƒ†Ïü¿5fez@fez.fezfezfze2026-06-18T21:46:54.513935+00:002026-06-18T21:46:54.513937+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$igKSmojoVlpqJaMJnihe7Q$L/mnPdw7jiqFQ7HAiuLeaKJb0VZcYeqCrGuOMTMWkoAÅQ, %MM  ÅOî|êCLÄ_µ±˝s°âfjfk@irie.rtFkf2026-06-18T21:46:00.416076+00:002026-06-18T21:46:00.416081+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$/QcVZfO7bgsq6UU6QOP8tA$LdbNbzd1sHC5uN7Vgg0Udezp3BllA75RaO7+gwUhPfAÅN, MM  ÅO…N˛WK ÑTjl] ~bjk@ji.feHbk2026-06-18T19:46:21.322360+00:002026-06-18T19:46:21.322364+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$5lvgBYt9Tj4kmEav1v8dOQ$mw27V1mB4ZFifx8FeICrzYMB1/4S96kiVzNv26yufDsÅO
+, !MM  ÅO∑oÄBBÔKü¢ÍˆÿæW≤@ger@fz.fzegre2026-06-18T12:22:15.672528+00:002026-06-18T12:22:15.672533+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$+VGspPrDlFKUhKszoTiQUQ$ZeD3AW02AVdbXAcPjnAGM+IOpFRpLmdcTcqXiNc/vjwÅO	, MM  ÅOjüA)M$òì'{¸0:g@ger.fefyhyr2026-06-18T12:15:32.778558+00:002026-06-18T12:15:32.778560+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$BUaPEjWt94Bjv2JtjzDoVA$FzMXYXJqyB7xroAVYj3Cxw1qPnFxb8gN3tyGVag57jgÅT, #MM  ÅO~òLÉ\ˆJt©HıßÑÕfzef@fez.fzgregerg2026-06-17T12:46:09.676916+00:002026-06-17T12:46:09.676919+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$CoXer+j8xicC/kgpKl7tcg$sQWLTAUBwsTPF1YT/LYIen92RPx1tJeSPWHOLiYzYs0ÅT, )MM  ÅOˆﬁ\¬ I	¶ÌÈÿw°çfezfze@fze.fzefezf2026-06-17T12:45:37.084388+00:002026-06-17T12:45:37.084397+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$LSEtaMw99XExLXriaqT0TQ$cyN4+1LDvThV7mj1DBwiF7K07FrB0I6HnmjZzIcECREÅS, #MM  ÅO2·˝‘ƒAé£ëı‘su.Åfze@fez.fzefezfze2026-06-16T12:46:33.397852+00:002026-06-16T12:46:33.397856+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$29fvyGwfsB1qNYzwlrWzJw$MsvgGZsAii9yMmGk6zo3ghWM7DYjejaV7JjfiA8Ks34ÅQ, %MM  ÅOí«¸õòNJJ∫-„s‰'Ç0bob@test.comBob2026-06-15T21:52:49.325535+00:002026-06-15T21:52:49.325538+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$IfKkNTx10BmAhH9+dyG0XQ$JrhitILtXpLxTZnaA9k/zHtnoME5TioYLfV4kC297mYÅU, )MM  ÅORﬁ Ã*A≠Ä”Ç3Oq≈palice@test.comAlice2026-06-15T21:52:48.303035+00:002026-06-15T21:52:48.303096+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$t/00gc+WVqKrBwWzLNylxg$sEHXhiZJvJ6l1DisN1GNtfgLb4uqf2/CKVxdac4UGjgÅR, 'MM  ÅOd⁄§AƒùıL ¶€≠’fezfz@gre.fzegre2026-06-15T18:21:47.911921+00:002026-06-15T18:21:47.911923+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$TUwN2/rxEGZ+/x8R8FGbvA$m7MpnvpjU3fWVgZ9/F8OFSeAnD4Py+nOm03uVgtkBR0ÅQ, %MM  ÅOr\é≤HÖ¢ë¬Ÿ¿á’gzre@fze.fzefez2026-06-15T17:06:40.393091+00:002026-06-15T17:06:40.393093+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$VkArFhpRKh+/YMYlf/+MtQ$7vIGLPMwROtLD2q9YDvfZ0wnT0ZWyLdrK99lxrvG8mEf,  MM                  System2026-06-15T17:06:12.924647+00:002026-06-15T17:06:12.924647+00:00pwa   6   6œHØP	ù4)DV&ÃﬂÍ   H $H                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            ÅY, 'MM  ÅOõßZ¢ØàB°F§!{—^&fze@fez.fzezefzegregÜT2026-06-19T13:25:09.496775+00:002026-06-19T13:25:09.496778+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$E0aSQb2+huj9XwRMLkb3XQ$Ki5TyZE2Xd0QT8IqSqBGJC0KNWi6sq2iCpbBXvumiGwÅY, )MM  ÅO ˛Fx«M~≥›ÑúÂZ0vfzfez@fez.fzefzefzeÜ†2026-06-19T13:20:50.531178+00:002026-06-19T13:20:50.531181+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$Ikzp+uzphvV4QjsaS0yBrQ$mTsVDGhCfW7SXKGy+FPXEdDUIUAsngbV4S+lDmDH/N8   5    œHØP	ù4$z^'gÕF    Ü òƒÔCm
+ñ	øÌJv†»Ò;b Ü                                                                                        ÅY, )MM  ÅO˛5x‡g@◊Ø≠ÒP^Qgrege5@fze.fezgregerkó2026-06-19T13:05:16.666265+00:002026-06-19T13:05:16.666268+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$accmcKT2u7uQis+dYIboag$kaSMI1tBfv6Jg7WQiTdw3s2qNe8plvB9pdelPJm7Gv8ÅV, #MM  ÅOÄôUT∆”BÉê¥çYßmﬂfze@fze.fzefzegreÜ†2026-06-19T13:01:15.359545+00:002026-06-19T13:01:15.359551+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$91NgUoeMGyk2v8XhQL0ZJw$qf5eg0Ef5p1YGo7nie/WunOXAViS/V6NgCkpigYE7TAÅZ, +MM  ÅOÂpfl´J÷∑øxÇü˜1fez@fefezfz.fezfezfzeÜ†2026-06-19T12:59:05.434608+00:002026-06-19T12:59:05.434611+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$6R5wCWAlB7JTn6OEIJkkNg$G6Mtp61xFH+ajTuubOMxW5lltNJSh0pod8gg8TsYl2sÅV, )MM  ÅO†⁄7¢FRGùNW<êmofze@fzefez.fzefzeà:2026-06-19T12:43:57.744711+00:002026-06-19T12:43:57.744713+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$XNhktHPYPAfDt9l8qm0R2g$hS8o0bxO5t6AY9T43+Z/QN9zt/J3g8oqJJRIrtoNUhwÅT, +MM  ÅOÆ;Æü@0éã§!<åfzefaze@fea.fzefze2026-06-19T10:47:25.696025+00:002026-06-19T10:47:25.696027+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$CarDbl3YASf4CX0J5QiLoA$cBAKh/6urfowJTXTJWPqHpmCPx/KBMc2mNcpTF8Wv9MÅU, 'MM  ÅOó∑Zg
+HÔ£¶ôé–GMfze@fzfze.Fzefzefze2026-06-19T10:46:58.636478+00:002026-06-19T10:46:58.636480+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$EjlF3QEEhW8wrtpCqUvg3A$Zh2VUZ27Y/semlCp/eCMDKVyFt5JAKkizZ/fYmrZQR8ÅS, #MM  ÅOdëcf÷ºBˇúwƒ†Ïü¿5fez@fez.fezfezfze2026-06-18T21:46:54.513935+00:002026-06-18T21:46:54.513937+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$igKSmojoVlpqJaMJnihe7Q$L/mnPdw7jiqFQ7HAiuLeaKJb0VZcYeqCrGuOMTMWkoAÅQ, %MM  ÅOî|êCLÄ_µ±˝s°âfjfk@irie.rtFkf2026-06-18T21:46:00.416076+00:002026-06-18T21:46:00.416081+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$/QcVZfO7bgsq6UU6QOP8tA$LdbNbzd1sHC5uN7Vgg0Udezp3BllA75RaO7+gwUhPfAÅN, MM  ÅO…N˛WK ÑTjl] ~bjk@ji.feHbk2026-06-18T19:46:21.322360+00:002026-06-18T19:46:21.322364+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$5lvgBYt9Tj4kmEav1v8dOQ$mw27V1mB4ZFifx8FeICrzYMB1/4S96kiVzNv26yufDsÅO
+, !MM  ÅO∑oÄBBÔKü¢ÍˆÿæW≤@ger@fz.fzegre2026-06-18T12:22:15.672528+00:002026-06-18T12:22:15.672533+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$+VGspPrDlFKUhKszoTiQUQ$ZeD3AW02AVdbXAcPjnAGM+IOpFRpLmdcTcqXiNc/vjwÅO	, MM  ÅOjüA)M$òì'{¸0:g@ger.fefyhyr2026-06-18T12:15:32.778558+00:002026-06-18T12:15:32.778560+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$BUaPEjWt94Bjv2JtjzDoVA$FzMXYXJqyB7xroAVYj3Cxw1qPnFxb8gN3tyGVag57jgÅT, #MM  ÅO~òLÉ\ˆJt©HıßÑÕfzef@fez.fzgregerg2026-06-17T12:46:09.676916+00:002026-06-17T12:46:09.676919+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$CoXer+j8xicC/kgpKl7tcg$sQWLTAUBwsTPF1YT/LYIen92RPx1tJeSPWHOLiYzYs0ÅT, )MM  ÅOˆﬁ\¬ I	¶ÌÈÿw°çfezfze@fze.fzefezf2026-06-17T12:45:37.084388+00:002026-06-17T12:45:37.084397+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$LSEtaMw99XExLXriaqT0TQ$cyN4+1LDvThV7mj1DBwiF7K07FrB0I6HnmjZzIcECREÅS, #MM  ÅO2·˝‘ƒAé£ëı‘su.Åfze@fez.fzefezfze2026-06-16T12:46:33.397852+00:002026-06-16T12:46:33.397856+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$29fvyGwfsB1qNYzwlrWzJw$MsvgGZsAii9yMmGk6zo3ghWM7DYjejaV7JjfiA8Ks34ÅQ, %MM  ÅOí«¸õòNJJ∫-„s‰'Ç0bob@test.comBob2026-06-15T21:52:49.325535+00:002026-06-15T21:52:49.325538+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$IfKkNTx10BmAhH9+dyG0XQ$JrhitILtXpLxTZnaA9k/zHtnoME5TioYLfV4kC297mYÅU, )MM  ÅORﬁ Ã*A≠Ä”Ç3Oq≈palice@test.comAlice2026-06-15T21:52:48.303035+00:002026-06-15T21:52:48.303096+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$t/00gc+WVqKrBwWzLNylxg$sEHXhiZJvJ6l1DisN1GNtfgLb4uqf2/CKVxdac4UGjgÅR, 'MM  ÅOd⁄§AƒùıL ¶€≠’fezfz@gre.fzegre2026-06-15T18:21:47.911921+00:002026-06-15T18:21:47.911923+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$TUwN2/rxEGZ+/x8R8FGbvA$m7MpnvpjU3fWVgZ9/F8OFSeAnD4Py+nOm03uVgtkBR0ÅQ, %MM  ÅOr\é≤HÖ¢ë¬Ÿ¿á’gzre@fze.fzefez2026-06-15T17:06:40.393091+00:002026-06-15T17:06:40.393093+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$VkArFhpRKh+/YMYlf/+MtQ$7vIGLPMwROtLD2q9YDvfZ0wnT0ZWyLdrK99lxrvG8mEf,  MM                  System2026-06-15T17:06:12.924647+00:002026-06-15T17:06:12.924647+00:00pwa   6   6œHØP	ù4ÖÈ∏ƒ∆c4   H $H                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            ÅY, 'MM  ÅOõßZ¢ØàB°F§!{—^&fze@fez.fzezefzegregàA2026-06-19T13:25:09.496775+00:002026-06-19T13:25:09.496778+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$E0aSQb2+huj9XwRMLkb3XQ$Ki5TyZE2Xd0QT8IqSqBGJC0KNWi6sq2iCpbBXvumiGwÅY, )MM  ÅO ˛Fx«M~≥›ÑúÂZ0vfzfez@fez.fzefzefzeÜ†2026-06-19T13:20:50.531178+00:002026-06-19T13:20:50.531181+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$Ikzp+uzphvV4QjsaS0yBrQ$mTsVDGhCfW7SXKGy+FPXEdDUIUAsngbV4S+lDmDH/N8   5    œHØP	ù4IÊ˚céN    Ü òƒÔCm
+ñ	øÌJv†»Ò;b Ü                                                                                        ÅY, )MM  ÅO˛5x‡g@◊Ø≠ÒP^Qgrege5@fze.fezgregeri£2026-06-19T13:05:16.666265+00:002026-06-19T13:05:16.666268+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$accmcKT2u7uQis+dYIboag$kaSMI1tBfv6Jg7WQiTdw3s2qNe8plvB9pdelPJm7Gv8ÅV, #MM  ÅOÄôUT∆”BÉê¥çYßmﬂfze@fze.fzefzegreÜ†2026-06-19T13:01:15.359545+00:002026-06-19T13:01:15.359551+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$91NgUoeMGyk2v8XhQL0ZJw$qf5eg0Ef5p1YGo7nie/WunOXAViS/V6NgCkpigYE7TAÅZ, +MM  ÅOÂpfl´J÷∑øxÇü˜1fez@fefezfz.fezfezfzeÜ†2026-06-19T12:59:05.434608+00:002026-06-19T12:59:05.434611+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$6R5wCWAlB7JTn6OEIJkkNg$G6Mtp61xFH+ajTuubOMxW5lltNJSh0pod8gg8TsYl2sÅV, )MM  ÅO†⁄7¢FRGùNW<êmofze@fzefez.fzefzeà:2026-06-19T12:43:57.744711+00:002026-06-19T12:43:57.744713+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$XNhktHPYPAfDt9l8qm0R2g$hS8o0bxO5t6AY9T43+Z/QN9zt/J3g8oqJJRIrtoNUhwÅT, +MM  ÅOÆ;Æü@0éã§!<åfzefaze@fea.fzefze2026-06-19T10:47:25.696025+00:002026-06-19T10:47:25.696027+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$CarDbl3YASf4CX0J5QiLoA$cBAKh/6urfowJTXTJWPqHpmCPx/KBMc2mNcpTF8Wv9MÅU, 'MM  ÅOó∑Zg
+HÔ£¶ôé–GMfze@fzfze.Fzefzefze2026-06-19T10:46:58.636478+00:002026-06-19T10:46:58.636480+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$EjlF3QEEhW8wrtpCqUvg3A$Zh2VUZ27Y/semlCp/eCMDKVyFt5JAKkizZ/fYmrZQR8ÅS, #MM  ÅOdëcf÷ºBˇúwƒ†Ïü¿5fez@fez.fezfezfze2026-06-18T21:46:54.513935+00:002026-06-18T21:46:54.513937+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$igKSmojoVlpqJaMJnihe7Q$L/mnPdw7jiqFQ7HAiuLeaKJb0VZcYeqCrGuOMTMWkoAÅQ, %MM  ÅOî|êCLÄ_µ±˝s°âfjfk@irie.rtFkf2026-06-18T21:46:00.416076+00:002026-06-18T21:46:00.416081+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$/QcVZfO7bgsq6UU6QOP8tA$LdbNbzd1sHC5uN7Vgg0Udezp3BllA75RaO7+gwUhPfAÅN, MM  ÅO…N˛WK ÑTjl] ~bjk@ji.feHbk2026-06-18T19:46:21.322360+00:002026-06-18T19:46:21.322364+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$5lvgBYt9Tj4kmEav1v8dOQ$mw27V1mB4ZFifx8FeICrzYMB1/4S96kiVzNv26yufDsÅO
+, !MM  ÅO∑oÄBBÔKü¢ÍˆÿæW≤@ger@fz.fzegre2026-06-18T12:22:15.672528+00:002026-06-18T12:22:15.672533+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$+VGspPrDlFKUhKszoTiQUQ$ZeD3AW02AVdbXAcPjnAGM+IOpFRpLmdcTcqXiNc/vjwÅO	, MM  ÅOjüA)M$òì'{¸0:g@ger.fefyhyr2026-06-18T12:15:32.778558+00:002026-06-18T12:15:32.778560+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$BUaPEjWt94Bjv2JtjzDoVA$FzMXYXJqyB7xroAVYj3Cxw1qPnFxb8gN3tyGVag57jgÅT, #MM  ÅO~òLÉ\ˆJt©HıßÑÕfzef@fez.fzgregerg2026-06-17T12:46:09.676916+00:002026-06-17T12:46:09.676919+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$CoXer+j8xicC/kgpKl7tcg$sQWLTAUBwsTPF1YT/LYIen92RPx1tJeSPWHOLiYzYs0ÅT, )MM  ÅOˆﬁ\¬ I	¶ÌÈÿw°çfezfze@fze.fzefezf2026-06-17T12:45:37.084388+00:002026-06-17T12:45:37.084397+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$LSEtaMw99XExLXriaqT0TQ$cyN4+1LDvThV7mj1DBwiF7K07FrB0I6HnmjZzIcECREÅS, #MM  ÅO2·˝‘ƒAé£ëı‘su.Åfze@fez.fzefezfze2026-06-16T12:46:33.397852+00:002026-06-16T12:46:33.397856+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$29fvyGwfsB1qNYzwlrWzJw$MsvgGZsAii9yMmGk6zo3ghWM7DYjejaV7JjfiA8Ks34ÅQ, %MM  ÅOí«¸õòNJJ∫-„s‰'Ç0bob@test.comBob2026-06-15T21:52:49.325535+00:002026-06-15T21:52:49.325538+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$IfKkNTx10BmAhH9+dyG0XQ$JrhitILtXpLxTZnaA9k/zHtnoME5TioYLfV4kC297mYÅU, )MM  ÅORﬁ Ã*A≠Ä”Ç3Oq≈palice@test.comAlice2026-06-15T21:52:48.303035+00:002026-06-15T21:52:48.303096+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$t/00gc+WVqKrBwWzLNylxg$sEHXhiZJvJ6l1DisN1GNtfgLb4uqf2/CKVxdac4UGjgÅR, 'MM  ÅOd⁄§AƒùıL ¶€≠’fezfz@gre.fzegre2026-06-15T18:21:47.911921+00:002026-06-15T18:21:47.911923+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$TUwN2/rxEGZ+/x8R8FGbvA$m7MpnvpjU3fWVgZ9/F8OFSeAnD4Py+nOm03uVgtkBR0ÅQ, %MM  ÅOr\é≤HÖ¢ë¬Ÿ¿á’gzre@fze.fzefez2026-06-15T17:06:40.393091+00:002026-06-15T17:06:40.393093+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$VkArFhpRKh+/YMYlf/+MtQ$7vIGLPMwROtLD2q9YDvfZ0wnT0ZWyLdrK99lxrvG8mEf,  MM                  System2026-06-15T17:06:12.924647+00:002026-06-15T17:06:12.924647+00:00pwa   6   6œHØP	ù4Ô%¶|ı„∞º   H $H                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            ÅY, 'MM  ÅOõßZ¢ØàB°F§!{—^&fze@fez.fzezefzegregÜM2026-06-19T13:25:09.496775+00:002026-06-19T13:25:09.496778+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$E0aSQb2+huj9XwRMLkb3XQ$Ki5TyZE2Xd0QT8IqSqBGJC0KNWi6sq2iCpbBXvumiGwÅY, )MM  ÅO ˛Fx«M~≥›ÑúÂZ0vfzfez@fez.fzefzefzeÜ†2026-06-19T13:20:50.531178+00:002026-06-19T13:20:50.531181+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$Ikzp+uzphvV4QjsaS0yBrQ$mTsVDGhCfW7SXKGy+FPXEdDUIUAsngbV4S+lDmDH/N8   5   6œHØP	ù4’ÏåÉ˘B]‚    Ü òƒÔCm
+ñ	øÌJv†»Ò;b Ü                                                                                        ÅY, )MM  ÅO˛5x‡g@◊Ø≠ÒP^Qgrege5@fze.fezgregereª2026-06-19T13:05:16.666265+00:002026-06-19T13:05:16.666268+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$accmcKT2u7uQis+dYIboag$kaSMI1tBfv6Jg7WQiTdw3s2qNe8plvB9pdelPJm7Gv8ÅV, #MM  ÅOÄôUT∆”BÉê¥çYßmﬂfze@fze.fzefzegreÜ†2026-06-19T13:01:15.359545+00:002026-06-19T13:01:15.359551+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$91NgUoeMGyk2v8XhQL0ZJw$qf5eg0Ef5p1YGo7nie/WunOXAViS/V6NgCkpigYE7TAÅZ, +MM  ÅOÂpfl´J÷∑øxÇü˜1fez@fefezfz.fezfezfzeÜ†2026-06-19T12:59:05.434608+00:002026-06-19T12:59:05.434611+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$6R5wCWAlB7JTn6OEIJkkNg$G6Mtp61xFH+ajTuubOMxW5lltNJSh0pod8gg8TsYl2sÅV, )MM  ÅO†⁄7¢FRGùNW<êmofze@fzefez.fzefzeà:2026-06-19T12:43:57.744711+00:002026-06-19T12:43:57.744713+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$XNhktHPYPAfDt9l8qm0R2g$hS8o0bxO5t6AY9T43+Z/QN9zt/J3g8oqJJRIrtoNUhwÅT, +MM  ÅOÆ;Æü@0éã§!<åfzefaze@fea.fzefze2026-06-19T10:47:25.696025+00:002026-06-19T10:47:25.696027+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$CarDbl3YASf4CX0J5QiLoA$cBAKh/6urfowJTXTJWPqHpmCPx/KBMc2mNcpTF8Wv9MÅU, 'MM  ÅOó∑Zg
+HÔ£¶ôé–GMfze@fzfze.Fzefzefze2026-06-19T10:46:58.636478+00:002026-06-19T10:46:58.636480+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$EjlF3QEEhW8wrtpCqUvg3A$Zh2VUZ27Y/semlCp/eCMDKVyFt5JAKkizZ/fYmrZQR8ÅS, #MM  ÅOdëcf÷ºBˇúwƒ†Ïü¿5fez@fez.fezfezfze2026-06-18T21:46:54.513935+00:002026-06-18T21:46:54.513937+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$igKSmojoVlpqJaMJnihe7Q$L/mnPdw7jiqFQ7HAiuLeaKJb0VZcYeqCrGuOMTMWkoAÅQ, %MM  ÅOî|êCLÄ_µ±˝s°âfjfk@irie.rtFkf2026-06-18T21:46:00.416076+00:002026-06-18T21:46:00.416081+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$/QcVZfO7bgsq6UU6QOP8tA$LdbNbzd1sHC5uN7Vgg0Udezp3BllA75RaO7+gwUhPfAÅN, MM  ÅO…N˛WK ÑTjl] ~bjk@ji.feHbk2026-06-18T19:46:21.322360+00:002026-06-18T19:46:21.322364+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$5lvgBYt9Tj4kmEav1v8dOQ$mw27V1mB4ZFifx8FeICrzYMB1/4S96kiVzNv26yufDsÅO
+, !MM  ÅO∑oÄBBÔKü¢ÍˆÿæW≤@ger@fz.fzegre2026-06-18T12:22:15.672528+00:002026-06-18T12:22:15.672533+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$+VGspPrDlFKUhKszoTiQUQ$ZeD3AW02AVdbXAcPjnAGM+IOpFRpLmdcTcqXiNc/vjwÅO	, MM  ÅOjüA)M$òì'{¸0:g@ger.fefyhyr2026-06-18T12:15:32.778558+00:002026-06-18T12:15:32.778560+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$BUaPEjWt94Bjv2JtjzDoVA$FzMXYXJqyB7xroAVYj3Cxw1qPnFxb8gN3tyGVag57jgÅT, #MM  ÅO~òLÉ\ˆJt©HıßÑÕfzef@fez.fzgregerg2026-06-17T12:46:09.676916+00:002026-06-17T12:46:09.676919+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$CoXer+j8xicC/kgpKl7tcg$sQWLTAUBwsTPF1YT/LYIen92RPx1tJeSPWHOLiYzYs0ÅT, )MM  ÅOˆﬁ\¬ I	¶ÌÈÿw°çfezfze@fze.fzefezf2026-06-17T12:45:37.084388+00:002026-06-17T12:45:37.084397+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$LSEtaMw99XExLXriaqT0TQ$cyN4+1LDvThV7mj1DBwiF7K07FrB0I6HnmjZzIcECREÅS, #MM  ÅO2·˝‘ƒAé£ëı‘su.Åfze@fez.fzefezfze2026-06-16T12:46:33.397852+00:002026-06-16T12:46:33.397856+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$29fvyGwfsB1qNYzwlrWzJw$MsvgGZsAii9yMmGk6zo3ghWM7DYjejaV7JjfiA8Ks34ÅQ, %MM  ÅOí«¸õòNJJ∫-„s‰'Ç0bob@test.comBob2026-06-15T21:52:49.325535+00:002026-06-15T21:52:49.325538+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$IfKkNTx10BmAhH9+dyG0XQ$JrhitILtXpLxTZnaA9k/zHtnoME5TioYLfV4kC297mYÅU, )MM  ÅORﬁ Ã*A≠Ä”Ç3Oq≈palice@test.comAlice2026-06-15T21:52:48.303035+00:002026-06-15T21:52:48.303096+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$t/00gc+WVqKrBwWzLNylxg$sEHXhiZJvJ6l1DisN1GNtfgLb4uqf2/CKVxdac4UGjgÅR, 'MM  ÅOd⁄§AƒùıL ¶€≠’fezfz@gre.fzegre2026-06-15T18:21:47.911921+00:002026-06-15T18:21:47.911923+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$TUwN2/rxEGZ+/x8R8FGbvA$m7MpnvpjU3fWVgZ9/F8OFSeAnD4Py+nOm03uVgtkBR0ÅQ, %MM  ÅOr\é≤HÖ¢ë¬Ÿ¿á’gzre@fze.fzefez2026-06-15T17:06:40.393091+00:002026-06-15T17:06:40.393093+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$VkArFhpRKh+/YMYlf/+MtQ$7vIGLPMwROtLD2q9YDvfZ0wnT0ZWyLdrK99lxrvG8mEf,  MM                  System2026-06-15T17:06:12.924647+00:002026-06-15T17:06:12.924647+00:00pwa   6   6œHØP	ù4àdØƒÆ.    H $H                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            ÅY, 'MM  ÅOõßZ¢ØàB°F§!{—^&fze@fez.fzezefzegregÇe2026-06-19T13:25:09.496775+00:002026-06-19T13:25:09.496778+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$E0aSQb2+huj9XwRMLkb3XQ$Ki5TyZE2Xd0QT8IqSqBGJC0KNWi6sq2iCpbBXvumiGwÅY, )MM  ÅO ˛Fx«M~≥›ÑúÂZ0vfzfez@fez.fzefzefzeÜ†2026-06-19T13:20:50.531178+00:002026-06-19T13:20:50.531181+00:00pwa$argon2id$v=19$m=65536,t=2,p=1$Ikzp+uzphvV4QjsaS0yBrQ$mTsVDGhCfW7SXKGy+FPXEdDUIUAsngbV4S+lDmDH/N8
 === backend/.env ===
 # Backend configuration
 DATABASE_URL=sqlite://stackbluff.db?mode=rwc

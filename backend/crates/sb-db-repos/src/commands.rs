@@ -1,4 +1,5 @@
-use sb_contracts::repo_api::PersistenceResult; // Fixed path
+use sb_contracts::repo_api::PersistenceResult;
+use sb_contracts::repo_api::UserProfile;
 use sb_shared_types::{RequestContext, UserId};
 use tokio::sync::oneshot;
 use uuid::Uuid;
@@ -18,11 +19,16 @@ pub enum DbCommand {
         id: UserId,
         respond: ResponseSender<String>,
     },
+    GetUserProfile {
+        ctx: RequestContext,
+        id: UserId,
+        respond: ResponseSender<UserProfile>,
+    },
     UpdateChipBalance {
         ctx: RequestContext,
         user_id: UserId,
         delta: i64,
-        respond: ResponseSender<()>,
+        respond: ResponseSender<i64>,
     },
     StoreHandHistory {
         ctx: RequestContext,
@@ -45,7 +51,7 @@ pub enum DbCommand {
     },
     CreateEmailUser {
         ctx: RequestContext,
-        username: String, // Changed from email to username for display name
+        username: String,
         email: String,
         password_hash: String,
         respond: ResponseSender<UserId>,

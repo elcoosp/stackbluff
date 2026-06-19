@@ -1,21 +1,14 @@
 import type { SoundType, FeedbackPreferences } from './types';
 
 /**
- * AudioEngine — procedural sound synthesis using the Web Audio API.
+ * AudioEngine — Procedural sound synthesis using the Web Audio API.
  *
- * All sounds are generated at runtime from oscillators and noise buffers.
- * No audio files required → zero latency, tiny bundle, infinite variation.
- *
- * Signal chain per voice:
- *   Source(s) → Filter(s) → Gain (envelope) → StereoPanner → masterGain → compressor → destination
- *
- * Key features:
- * - Lazy init (respects browser autoplay policy — needs user gesture)
- * - Pre-generated noise buffer reused across all noise-based sounds
- * - DynamicsCompressor prevents clipping when multiple sounds overlap
- * - Spatial panning per sound for positional audio
- * - Concurrent voice limiting (max 12 simultaneous)
- * - Pitch multiplier for variety (e.g., each card deal sounds slightly different)
+ * Design Philosophy: "Discreet & Realistic"
+ * Mimics high-fidelity recordings of real casino felt, cards, and clay chips.
+ * - Extremely short envelopes (10ms - 60ms) to avoid synthetic drift.
+ * - Soft sine and triangle waves only (no harsh sawtooths or square waves).
+ * - Lowpass filters to remove harsh highs and simulate soft materials.
+ * - Low master volume to remain unobtrusive.
  */
 
 type SoundMethod = (
@@ -35,7 +28,7 @@ export class AudioEngine {
   private noiseBuffer: AudioBuffer | null = null;
   private ready = false;
   private activeVoices = 0;
-  private readonly MAX_VOICES = 12;
+  private readonly MAX_VOICES = 16;
 
   /* ── Lifecycle ── */
 
@@ -44,20 +37,22 @@ export class AudioEngine {
     try {
       this.ctx = new AudioContext();
 
+      // Keep master volume relatively low to be discrete
       this.masterGain = this.ctx.createGain();
-      this.masterGain.gain.value = 0.6;
+      this.masterGain.gain.value = 0.5;
 
+      // Gentle compression to glue the sounds together
       this.compressor = this.ctx.createDynamicsCompressor();
-      this.compressor.threshold.value = -18;
-      this.compressor.knee.value = 12;
-      this.compressor.ratio.value = 6;
-      this.compressor.attack.value = 0.003;
-      this.compressor.release.value = 0.15;
+      this.compressor.threshold.value = -24;
+      this.compressor.knee.value = 20;
+      this.compressor.ratio.value = 4;
+      this.compressor.attack.value = 0.005;
+      this.compressor.release.value = 0.1;
 
       this.masterGain.connect(this.compressor);
       this.compressor.connect(this.ctx.destination);
 
-      // Pre-generate a 0.5s white-noise buffer (reused by all noise-based sounds)
+      // Pre-generate a 0.5s white-noise buffer
       const sr = this.ctx.sampleRate;
       const buf = this.ctx.createBuffer(1, sr * 0.5, sr);
       const data = buf.getChannelData(0);
@@ -82,7 +77,7 @@ export class AudioEngine {
 
   setVolume(v: number): void {
     if (this.masterGain && this.ctx) {
-      this.masterGain.gain.setTargetAtTime(v, this.ctx.currentTime, 0.05);
+      this.masterGain.gain.setTargetAtTime(v * 0.5, this.ctx.currentTime, 0.05); // Scale overall max to 0.5
     }
   }
 
@@ -110,34 +105,18 @@ export class AudioEngine {
 
     try {
       method(this.ctx, now, vol, pan, pitch, this.masterGain!, this.noiseBuffer!);
-    } catch {
-      // Graceful — never crash the game over an audio glitch
+    } catch (e) {
+      console.warn('[AudioEngine] Play failed:', e);
     }
 
-    // Voice will be freed after ~500ms max (all our sounds are short)
+    // Free voice after 200ms (all realistic sounds are very short)
     setTimeout(() => {
       this.activeVoices = Math.max(0, this.activeVoices - 1);
-    }, 600);
+    }, 200);
   }
 
   /* ── Sound synthesis helpers ── */
 
-  /** Create a gain node with an attack/decay envelope */
-  private static env(
-    ctx: AudioContext,
-    now: number,
-    peak: number,
-    attack: number,
-    decay: number,
-  ): GainNode {
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(0.0001, now);
-    g.gain.exponentialRampToValueAtTime(peak, now + attack);
-    g.gain.exponentialRampToValueAtTime(0.0001, now + attack + decay);
-    return g;
-  }
-
-  /** Create a stereo panner */
   private static panner(ctx: AudioContext, value: number): StereoPannerNode {
     const p = ctx.createStereoPanner();
     p.pan.value = Math.max(-1, Math.min(1, value));
@@ -146,39 +125,43 @@ export class AudioEngine {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   SOUND DEFINITIONS
-   Each function builds an ad-hoc audio graph, plays it, and lets
-   the browser GC the nodes when they finish (Web Audio best practice).
+   REALISTIC & DISCREET SOUND DEFINITIONS
    ═══════════════════════════════════════════════════════════════════ */
 
 const SOUND_MAP: Record<SoundType, SoundMethod> = {
 
   /* ── Card Flip ──
-     Filtered noise burst with a high→low bandpass sweep.
-     Mimics the crisp "snap" of a card being turned. */
+     A very short, soft high-frequency noise burst.
+     Sounds like a card sliding and snapping on felt. */
   cardFlip(ctx, now, vol, pan, pitch, masterGain, noiseBuffer) {
     const noise = ctx.createBufferSource();
     noise.buffer = noiseBuffer;
 
-    const bp = ctx.createBiquadFilter();
-    bp.type = 'bandpass';
-    bp.Q.value = 1.5;
-    bp.frequency.setValueAtTime(3200 * pitch, now);
-    bp.frequency.exponentialRampToValueAtTime(600 * pitch, now + 0.07);
+    // Highpass to remove low rumbles, lowpass to remove harsh hiss
+    const hp = ctx.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = 2000 * pitch;
 
-    const gain = AudioEngine.env(ctx, now, vol * 0.45, 0.001, 0.07);
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 6000 * pitch;
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(vol * 0.15, now + 0.002);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.04); // 40ms
+
     const panner = AudioEngine.panner(ctx, pan);
-
-    noise.connect(bp).connect(gain).connect(panner).connect(masterGain);
+    noise.connect(hp).connect(lp).connect(g).connect(panner).connect(masterGain);
     noise.start(now);
-    noise.stop(now + 0.1);
+    noise.stop(now + 0.05);
   },
 
   /* ── Chip Clink ──
-     Two sine oscillators at "ceramic" frequencies with fast decay,
-     plus a tiny noise burst for texture. Sounds like chips clicking. */
+     Two very soft, short sine waves at high frequencies.
+     Sounds like clay chips softly touching. */
   chipClink(ctx, now, vol, pan, pitch, masterGain) {
-    const freqs = [3200 * pitch, 4800 * pitch];
+    const freqs = [1800 * pitch, 2400 * pitch];
 
     freqs.forEach((f, i) => {
       const osc = ctx.createOscillator();
@@ -186,38 +169,39 @@ const SOUND_MAP: Record<SoundType, SoundMethod> = {
       osc.frequency.value = f;
 
       const g = ctx.createGain();
-      g.gain.setValueAtTime(vol * (i === 0 ? 0.25 : 0.18), now);
-      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.04 + i * 0.01);
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.exponentialRampToValueAtTime(vol * (i === 0 ? 0.12 : 0.08), now + 0.001);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.03); // 30ms
 
       const panner = AudioEngine.panner(ctx, pan);
       osc.connect(g).connect(panner).connect(masterGain);
       osc.start(now);
-      osc.stop(now + 0.08);
+      osc.stop(now + 0.04);
     });
   },
 
   /* ── Chip Stack ──
-     Multiple chipClink sounds in rapid succession with slight
-     pitch variation — sounds like chips being gathered/stacked. */
+     A few quick, soft chip clinks with slight pitch variation. */
   chipStack(ctx, now, vol, pan, pitch, masterGain, noiseBuffer) {
-    const count = 4;
+    const count = 3;
     for (let i = 0; i < count; i++) {
-      const t = now + i * 0.04;
+      const t = now + i * 0.025; // 25ms apart
       const p = pitch * (0.95 + Math.random() * 0.1);
-      SOUND_MAP.chipClink(ctx, t, vol * (1 - i * 0.12), pan, p, masterGain, noiseBuffer);
+      SOUND_MAP.chipClink(ctx, t, vol * 0.8, pan, p, masterGain, noiseBuffer);
     }
   },
 
-  /* ── Soft Tap ──
-     Very short sine at 800Hz. Used for "check" — minimal, polite. */
+  /* ── Soft Tap (Check) ──
+     A single, muted, soft sine wave. Very polite. */
   softTap(ctx, now, vol, pan, pitch, masterGain) {
     const osc = ctx.createOscillator();
     osc.type = 'sine';
-    osc.frequency.value = 800 * pitch;
+    osc.frequency.value = 400 * pitch;
 
     const g = ctx.createGain();
-    g.gain.setValueAtTime(vol * 0.2, now);
-    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.03);
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(vol * 0.1, now + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.04); // 40ms
 
     const panner = AudioEngine.panner(ctx, pan);
     osc.connect(g).connect(panner).connect(masterGain);
@@ -225,218 +209,91 @@ const SOUND_MAP: Record<SoundType, SoundMethod> = {
     osc.stop(now + 0.05);
   },
 
-  /* ── Rising Tone ──
-     Sine sweep upward + chip clink. For raise / bet — "going up!" */
+  /* ── Rising Tone (Bet / Raise) ──
+     A very subtle, short sine sweep + a chip clink.
+     No harsh synth sounds, just a soft "ding" of chips. */
   risingTone(ctx, now, vol, pan, pitch, masterGain, noiseBuffer) {
-    const osc = ctx.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(400 * pitch, now);
-    osc.frequency.exponentialRampToValueAtTime(900 * pitch, now + 0.15);
-
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(vol * 0.18, now);
-    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
-
-    const panner = AudioEngine.panner(ctx, pan);
-    osc.connect(g).connect(panner).connect(masterGain);
-    osc.start(now);
-    osc.stop(now + 0.2);
-
-    // Add chip clink at the start
-    SOUND_MAP.chipClink(ctx, now, vol * 0.6, pan, pitch, masterGain, noiseBuffer);
-  },
-
-  /* ── Falling Tone ──
-     Descending sweep. For fold — a subtle "letting go" feeling. */
-  fallingTone(ctx, now, vol, pan, pitch, masterGain) {
+    // Subtle sweep
     const osc = ctx.createOscillator();
     osc.type = 'sine';
     osc.frequency.setValueAtTime(500 * pitch, now);
-    osc.frequency.exponentialRampToValueAtTime(180 * pitch, now + 0.15);
+    osc.frequency.exponentialRampToValueAtTime(700 * pitch, now + 0.08);
 
     const g = ctx.createGain();
-    g.gain.setValueAtTime(vol * 0.12, now);
-    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(vol * 0.08, now + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.1); // 100ms
 
     const panner = AudioEngine.panner(ctx, pan);
     osc.connect(g).connect(panner).connect(masterGain);
     osc.start(now);
-    osc.stop(now + 0.2);
+    osc.stop(now + 0.12);
+
+    // Primary sound is the chip clink
+    SOUND_MAP.chipClink(ctx, now, vol * 0.8, pan, pitch, masterGain, noiseBuffer);
   },
 
-  /* ── Dramatic Hit ──
-     Low thud + noise burst + rising sweep. For all-in — maximum impact. */
+  /* ── Falling Tone (Fold) ──
+     A soft, muted low sine wave. "Sliding cards back". */
+  fallingTone(ctx, now, vol, pan, pitch, masterGain) {
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(300 * pitch, now);
+    osc.frequency.exponentialRampToValueAtTime(150 * pitch, now + 0.1);
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 500 * pitch;
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(vol * 0.1, now + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.12); // 120ms
+
+    const panner = AudioEngine.panner(ctx, pan);
+    osc.connect(filter).connect(g).connect(panner).connect(masterGain);
+    osc.start(now);
+    osc.stop(now + 0.15);
+  },
+
+  /* ── Dramatic Hit (All-In) ──
+     A soft low thud + chip clink.
+     We avoid harsh metallic sweeps to keep it realistic. */
   dramaticHit(ctx, now, vol, pan, pitch, masterGain, noiseBuffer) {
-    // Low sub hit
+    // Soft low thud
     const sub = ctx.createOscillator();
     sub.type = 'sine';
-    sub.frequency.value = 80 * pitch;
+    sub.frequency.setValueAtTime(100 * pitch, now);
+    sub.frequency.exponentialRampToValueAtTime(50 * pitch, now + 0.1);
     const subG = ctx.createGain();
-    subG.gain.setValueAtTime(vol * 0.4, now);
-    subG.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
-    sub.connect(subG);
-
-    // Noise impact
-    const noise = ctx.createBufferSource();
-    noise.buffer = noiseBuffer;
-    const noiseBp = ctx.createBiquadFilter();
-    noiseBp.type = 'lowpass';
-    noiseBp.frequency.value = 2000;
-    const noiseG = ctx.createGain();
-    noiseG.gain.setValueAtTime(vol * 0.3, now);
-    noiseG.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
-
-    // Rising sweep
-    const sweep = ctx.createOscillator();
-    sweep.type = 'sawtooth';
-    sweep.frequency.setValueAtTime(200 * pitch, now);
-    sweep.frequency.exponentialRampToValueAtTime(800 * pitch, now + 0.2);
-    const sweepG = ctx.createGain();
-    sweepG.gain.setValueAtTime(vol * 0.08, now + 0.02);
-    sweepG.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+    subG.gain.setValueAtTime(0.0001, now);
+    subG.gain.exponentialRampToValueAtTime(vol * 0.2, now + 0.005);
+    subG.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
 
     const panner = AudioEngine.panner(ctx, pan);
-    subG.connect(panner);
-    noiseG.connect(panner);
-    sweepG.connect(panner);
-    panner.connect(masterGain);
+    sub.connect(subG).connect(panner).connect(masterGain);
+    sub.start(now);
+    sub.stop(now + 0.2);
 
-    sub.start(now); sub.stop(now + 0.3);
-    noise.connect(noiseBp).connect(noiseG);
-    noise.start(now); noise.stop(now + 0.15);
-    sweep.start(now); sweep.stop(now + 0.3);
+    // Heavy chip stack
+    SOUND_MAP.chipStack(ctx, now, vol * 0.9, pan, pitch * 0.9, masterGain, noiseBuffer);
   },
 
-  /* ── Fanfare ──
-     Major-chord arpeggio (C5 → E5 → G5 → C6) with overlapping
-     decay tails. For winning a hand — celebratory but brief. */
+  /* ── Fanfare (Win) ──
+     A soft, warm, 2-note major chord (C5 → E5).
+     Very short and polite, like a high-end slot machine. */
   fanfare(ctx, now, vol, pan, pitch, masterGain) {
-    const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
+    const notes = [523.25, 659.25]; // C5, E5
     notes.forEach((freq, i) => {
-      const t = now + i * 0.08;
+      const t = now + i * 0.06;
       const osc = ctx.createOscillator();
       osc.type = 'sine';
       osc.frequency.value = freq * pitch;
 
       const g = ctx.createGain();
       g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(vol * 0.2, t + 0.01);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
-
-      const panner = AudioEngine.panner(ctx, pan);
-      osc.connect(g).connect(panner).connect(masterGain);
-      osc.start(t);
-      osc.stop(t + 0.5);
-    });
-  },
-
-  /* ── Defeat ──
-     Minor-second descent (A4 → Ab4). Quiet, somber. */
-  defeat(ctx, now, vol, pan, pitch, masterGain) {
-    [440, 415.3].forEach((freq, i) => {
-      const t = now + i * 0.12;
-      const osc = ctx.createOscillator();
-      osc.type = 'sine';
-      osc.frequency.value = freq * pitch;
-
-      const g = ctx.createGain();
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(vol * 0.1, t + 0.01);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
-
-      const panner = AudioEngine.panner(ctx, pan);
-      osc.connect(g).connect(panner).connect(masterGain);
-      osc.start(t);
-      osc.stop(t + 0.3);
-    });
-  },
-
-  /* ── Click ──
-     Ultra-short pop. For generic button presses. */
-  click(ctx, now, vol, pan, pitch, masterGain) {
-    const osc = ctx.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.value = 1500 * pitch;
-
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(vol * 0.2, now);
-    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.012);
-
-    const panner = AudioEngine.panner(ctx, pan);
-    osc.connect(g).connect(panner).connect(masterGain);
-    osc.start(now);
-    osc.stop(now + 0.02);
-  },
-
-  /* ── Tick ──
-     Minimal click for timer. Nearly subliminal. */
-  tick(ctx, now, vol, pan, pitch, masterGain) {
-    const osc = ctx.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.value = 1000 * pitch;
-
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(vol * 0.08, now);
-    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.008);
-
-    const panner = AudioEngine.panner(ctx, pan);
-    osc.connect(g).connect(panner).connect(masterGain);
-    osc.start(now);
-    osc.stop(now + 0.015);
-  },
-
-  /* ── Urgent Tick ──
-     Louder, lower, double-tap. Timer is running out! */
-  urgentTick(ctx, now, vol, pan, pitch, masterGain) {
-    [0, 0.05].forEach(offset => {
-      const osc = ctx.createOscillator();
-      osc.type = 'sine';
-      osc.frequency.value = 800 * pitch;
-
-      const g = ctx.createGain();
-      g.gain.setValueAtTime(vol * 0.15, now + offset);
-      g.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.02);
-
-      const panner = AudioEngine.panner(ctx, pan);
-      osc.connect(g).connect(panner).connect(masterGain);
-      osc.start(now + offset);
-      osc.stop(now + offset + 0.03);
-    });
-  },
-
-  /* ── Error Buzz ──
-     Square-wave bursts. "Bzzt — invalid action." */
-  errorBuzz(ctx, now, vol, pan, pitch, masterGain) {
-    for (let i = 0; i < 3; i++) {
-      const t = now + i * 0.05;
-      const osc = ctx.createOscillator();
-      osc.type = 'square';
-      osc.frequency.value = 200 * pitch;
-
-      const g = ctx.createGain();
-      g.gain.setValueAtTime(vol * 0.1, t);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.025);
-
-      const panner = AudioEngine.panner(ctx, pan);
-      osc.connect(g).connect(panner).connect(masterGain);
-      osc.start(t);
-      osc.stop(t + 0.04);
-    }
-  },
-
-  /* ── Chime ──
-     Two-tone ascending perfect fifth. For notifications. */
-  chime(ctx, now, vol, pan, pitch, masterGain) {
-    [880, 1318.5].forEach((freq, i) => {
-      const t = now + i * 0.08;
-      const osc = ctx.createOscillator();
-      osc.type = 'sine';
-      osc.frequency.value = freq * pitch;
-
-      const g = ctx.createGain();
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(vol * 0.18, t + 0.005);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+      g.gain.exponentialRampToValueAtTime(vol * 0.15, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2); // 200ms
 
       const panner = AudioEngine.panner(ctx, pan);
       osc.connect(g).connect(panner).connect(masterGain);
@@ -445,43 +302,158 @@ const SOUND_MAP: Record<SoundType, SoundMethod> = {
     });
   },
 
-  /* ── Whoosh ──
-     Filtered noise sweep. For round start / new deal. */
-  whoosh(ctx, now, vol, pan, pitch, masterGain, noiseBuffer) {
-    const noise = ctx.createBufferSource();
-    noise.buffer = noiseBuffer;
-
-    const hp = ctx.createBiquadFilter();
-    hp.type = 'highpass';
-    hp.frequency.setValueAtTime(200 * pitch, now);
-    hp.frequency.exponentialRampToValueAtTime(4000 * pitch, now + 0.12);
-    hp.frequency.exponentialRampToValueAtTime(200 * pitch, now + 0.2);
-
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(vol * 0.15, now);
-    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
-
-    const panner = AudioEngine.panner(ctx, pan);
-    noise.connect(hp).connect(g).connect(panner).connect(masterGain);
-    noise.start(now);
-    noise.stop(now + 0.25);
-  },
-
-  /* ── Settle ──
-     Low sine fade-out. For round end — "the dust settles." */
-  settle(ctx, now, vol, pan, pitch, masterGain) {
+  /* ── Defeat (Lose) ──
+     A soft, muted low click. Barely noticeable. */
+  defeat(ctx, now, vol, pan, pitch, masterGain) {
     const osc = ctx.createOscillator();
     osc.type = 'sine';
     osc.frequency.value = 200 * pitch;
 
     const g = ctx.createGain();
-    g.gain.setValueAtTime(vol * 0.12, now);
-    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(vol * 0.08, now + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.08); // 80ms
 
     const panner = AudioEngine.panner(ctx, pan);
     osc.connect(g).connect(panner).connect(masterGain);
     osc.start(now);
-    osc.stop(now + 0.25);
+    osc.stop(now + 0.1);
+  },
+
+  /* ── Click (UI Button) ──
+     Ultra-short, soft pop. */
+  click(ctx, now, vol, pan, pitch, masterGain) {
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = 800 * pitch;
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(vol * 0.12, now);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.01); // 10ms
+
+    const panner = AudioEngine.panner(ctx, pan);
+    osc.connect(g).connect(panner).connect(masterGain);
+    osc.start(now);
+    osc.stop(now + 0.02);
+  },
+
+  /* ── Tick (Timer) ──
+     Minimal high-frequency click. Nearly subliminal. */
+  tick(ctx, now, vol, pan, pitch, masterGain) {
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = 1200 * pitch;
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(vol * 0.06, now);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.008); // 8ms
+
+    const panner = AudioEngine.panner(ctx, pan);
+    osc.connect(g).connect(panner).connect(masterGain);
+    osc.start(now);
+    osc.stop(now + 0.01);
+  },
+
+  /* ── Urgent Tick (Timer Warning) ──
+     A slightly louder, lower double-tap. */
+  urgentTick(ctx, now, vol, pan, pitch, masterGain) {
+    [0, 0.04].forEach(offset => {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = 900 * pitch;
+
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(vol * 0.1, now + offset);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.015); // 15ms
+
+      const panner = AudioEngine.panner(ctx, pan);
+      osc.connect(g).connect(panner).connect(masterGain);
+      osc.start(now + offset);
+      osc.stop(now + offset + 0.02);
+    });
+  },
+
+  /* ── Error Buzz ──
+     A soft, muted low buzz. */
+  errorBuzz(ctx, now, vol, pan, pitch, masterGain) {
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = 150 * pitch;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 300 * pitch;
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(vol * 0.1, now);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.08); // 80ms
+
+    const panner = AudioEngine.panner(ctx, pan);
+    osc.connect(filter).connect(g).connect(panner).connect(masterGain);
+    osc.start(now);
+    osc.stop(now + 0.1);
+  },
+
+  /* ── Chime (Notification) ──
+     A soft, warm 2-note bell. */
+  chime(ctx, now, vol, pan, pitch, masterGain) {
+    [880, 1108.73].forEach((freq, i) => { // A5, C#6
+      const t = now + i * 0.08;
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = freq * pitch;
+
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol * 0.12, t + 0.005);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.15); // 150ms
+
+      const panner = AudioEngine.panner(ctx, pan);
+      osc.connect(g).connect(panner).connect(masterGain);
+      osc.start(t);
+      osc.stop(t + 0.2);
+    });
+  },
+
+  /* ── Whoosh (Round Start) ──
+     A very soft, short filtered noise sweep. */
+  whoosh(ctx, now, vol, pan, pitch, masterGain, noiseBuffer) {
+    const noise = ctx.createBufferSource();
+    noise.buffer = noiseBuffer;
+
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.Q.value = 0.5; // Wide band
+    bp.frequency.setValueAtTime(400 * pitch, now);
+    bp.frequency.exponentialRampToValueAtTime(1200 * pitch, now + 0.1);
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(vol * 0.08, now + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.12); // 120ms
+
+    const panner = AudioEngine.panner(ctx, pan);
+    noise.connect(bp).connect(g).connect(panner).connect(masterGain);
+    noise.start(now);
+    noise.stop(now + 0.15);
+  },
+
+  /* ── Settle (Round End) ──
+     A soft low sine fade. */
+  settle(ctx, now, vol, pan, pitch, masterGain) {
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(250 * pitch, now);
+    osc.frequency.exponentialRampToValueAtTime(150 * pitch, now + 0.15);
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(vol * 0.1, now);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.15); // 150ms
+
+    const panner = AudioEngine.panner(ctx, pan);
+    osc.connect(g).connect(panner).connect(masterGain);
+    osc.start(now);
+    osc.stop(now + 0.2);
   },
 };
 

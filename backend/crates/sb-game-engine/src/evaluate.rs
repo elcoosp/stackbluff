@@ -68,7 +68,10 @@ impl Ord for HandStrength {
 // -----------------------------------------------------------------------------
 // Core evaluation functions
 // -----------------------------------------------------------------------------
-pub fn evaluate_hand_strength(hole_cards: &[Card; 2], community: &[Card; 5]) -> HandStrength {
+pub fn evaluate_hand_strength(
+    hole_cards: &[Card; 2],
+    community: &[Card; 5],
+) -> (HandStrength, Vec<Card>) {
     let mut all_cards = Vec::with_capacity(7);
     all_cards.extend_from_slice(hole_cards);
     all_cards.extend_from_slice(community);
@@ -78,18 +81,21 @@ pub fn evaluate_hand_strength(hole_cards: &[Card; 2], community: &[Card; 5]) -> 
         rank: HandRank::HighCard,
         kickers: vec![],
     };
+    let mut best_cards: Vec<Card> = vec![];
+
     for comb in combinations(&indices, 5) {
         let hand: Vec<Card> = comb.iter().map(|&i| all_cards[i]).collect();
         let strength = evaluate_5_card_strength(&hand);
         if strength > best_strength {
             best_strength = strength;
+            best_cards = hand;
         }
     }
-    best_strength
+    (best_strength, best_cards)
 }
 
 pub fn evaluate_hand(hole_cards: &[Card; 2], community: &[Card; 5]) -> HandRank {
-    evaluate_hand_strength(hole_cards, community).rank
+    evaluate_hand_strength(hole_cards, community).0.rank
 }
 
 /// Evaluate a 5‑card hand and return its full strength.
@@ -225,8 +231,8 @@ pub fn compare_hands(
     hole2: &[Card; 2],
     community2: &[Card; 5],
 ) -> Ordering {
-    let s1 = evaluate_hand_strength(hole1, community1);
-    let s2 = evaluate_hand_strength(hole2, community2);
+    let (s1, _) = evaluate_hand_strength(hole1, community1);
+    let (s2, _) = evaluate_hand_strength(hole2, community2);
     s1.cmp(&s2)
 }
 
@@ -254,7 +260,7 @@ mod tests {
             card(Suit::Clubs, Rank::Jack),
             card(Suit::Diamonds, Rank::King),
         ];
-        let strength = evaluate_hand_strength(&hole, &community);
+        let (strength, _winning_cards) = evaluate_hand_strength(&hole, &community);
         assert_eq!(strength.rank, HandRank::HighCard);
         assert_eq!(strength.kickers, vec![13, 11, 9, 7, 5]);
     }
@@ -272,7 +278,7 @@ mod tests {
             card(Suit::Clubs, Rank::Eight),
             card(Suit::Diamonds, Rank::King),
         ];
-        let strength = evaluate_hand_strength(&hole, &community);
+        let (strength, _winning_cards) = evaluate_hand_strength(&hole, &community);
         assert_eq!(strength.rank, HandRank::OnePair);
         assert_eq!(strength.kickers, vec![5, 5, 13, 8, 7]);
     }
@@ -290,7 +296,7 @@ mod tests {
             card(Suit::Clubs, Rank::Two),
             card(Suit::Diamonds, Rank::Three),
         ];
-        let strength = evaluate_hand_strength(&hole, &community);
+        let (strength, _winning_cards) = evaluate_hand_strength(&hole, &community);
         assert_eq!(strength.rank, HandRank::ThreeOfAKind);
         assert_eq!(strength.kickers, vec![5, 5, 5, 13, 12]);
     }
@@ -308,9 +314,10 @@ mod tests {
             card(Suit::Clubs, Rank::Two),
             card(Suit::Diamonds, Rank::Three),
         ];
-        let strength = evaluate_hand_strength(&hole, &community);
+        let (strength, winning_cards) = evaluate_hand_strength(&hole, &community);
         assert_eq!(strength.rank, HandRank::StraightFlush);
         assert_eq!(strength.kickers, vec![13, 12, 11, 10, 9]);
+        assert_eq!(winning_cards.len(), 5);
     }
 
     #[test]
@@ -323,7 +330,7 @@ mod tests {
             card(Suit::Clubs, Rank::Nine),
             card(Suit::Diamonds, Rank::King),
         ];
-        let strength = evaluate_hand_strength(&hole, &community);
+        let (strength, _) = evaluate_hand_strength(&hole, &community);
         assert_eq!(strength.rank, HandRank::Straight);
         assert_eq!(strength.kickers, vec![5, 4, 3, 2, 14]);
     }
@@ -341,7 +348,7 @@ mod tests {
             card(Suit::Clubs, Rank::Three),
             card(Suit::Diamonds, Rank::Four),
         ];
-        let strength = evaluate_hand_strength(&hole, &community);
+        let (strength, _) = evaluate_hand_strength(&hole, &community);
         assert_eq!(strength.rank, HandRank::Flush);
         assert_eq!(strength.kickers, vec![13, 9, 7, 5, 2]);
     }
@@ -371,12 +378,15 @@ mod tests {
     }
 }
 /// Evaluates the best 5-card hand from a slice of 2 to 7 cards.
-pub fn evaluate_best_hand(cards: &[Card]) -> HandStrength {
+pub fn evaluate_best_hand(cards: &[Card]) -> (HandStrength, Vec<Card>) {
     if cards.is_empty() {
-        return HandStrength {
-            rank: HandRank::HighCard,
-            kickers: vec![],
-        };
+        return (
+            HandStrength {
+                rank: HandRank::HighCard,
+                kickers: vec![],
+            },
+            vec![],
+        );
     }
 
     if cards.len() < 5 {
@@ -406,7 +416,6 @@ pub fn evaluate_best_hand(cards: &[Card]) -> HandStrength {
             HandRank::HighCard
         };
 
-        // ── FIX: Build the kickers correctly so strength score works ──
         let mut kickers: Vec<u8> = count_rank_pairs
             .iter()
             .flat_map(|&(r, c)| vec![r; c as usize])
@@ -419,21 +428,22 @@ pub fn evaluate_best_hand(cards: &[Card]) -> HandStrength {
         remaining.sort_by(|a, b| b.cmp(a));
         kickers.extend(remaining);
 
-        return HandStrength { rank, kickers };
+        return (HandStrength { rank, kickers }, cards.to_vec());
     }
 
-    // For 5, 6, or 7 cards, evaluate all 5-card combinations
     let indices: Vec<usize> = (0..cards.len()).collect();
     let mut best_strength = HandStrength {
         rank: HandRank::HighCard,
         kickers: vec![],
     };
+    let mut best_cards: Vec<Card> = vec![];
     for comb in combinations(&indices, 5) {
         let hand: Vec<Card> = comb.iter().map(|&i| cards[i]).collect();
         let strength = evaluate_5_card_strength(&hand);
         if strength > best_strength {
             best_strength = strength;
+            best_cards = hand;
         }
     }
-    best_strength
+    (best_strength, best_cards)
 }

@@ -50,8 +50,8 @@ pub fn run_monte_carlo(hero_cards: &[Card; 2], community_cards: &[Card], iterati
         opp_comm.extend_from_slice(&fill_comm);
         let opp_comm_5: [Card; 5] = opp_comm[..5].try_into().unwrap();
 
-        let hero_strength = evaluate_hand_strength(hero_cards, &hero_comm_5);
-        let opp_strength = evaluate_hand_strength(&opp_cards, &opp_comm_5);
+        let (hero_strength, _) = evaluate_hand_strength(hero_cards, &hero_comm_5);
+        let (opp_strength, _) = evaluate_hand_strength(&opp_cards, &opp_comm_5);
 
         match hero_strength.cmp(&opp_strength) {
             std::cmp::Ordering::Greater => wins += 1,

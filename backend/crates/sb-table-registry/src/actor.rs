@@ -150,7 +150,7 @@ fn get_hand_description(strength: &sb_game_engine::evaluate::HandStrength) -> St
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum InternalCommand {
     Join {
         user_id: UserId,
@@ -159,6 +159,7 @@ pub enum InternalCommand {
     },
     Leave {
         user_id: UserId,
+        respond_to: tokio::sync::oneshot::Sender<ChipAmount>,
     },
     Rebuy {
         user_id: UserId,
@@ -305,7 +306,7 @@ fn build_analytics(hand: &ActiveHand, user_id: UserId) -> Option<AnalyticsPayloa
     let mut all_cards = hole_cards.to_vec();
     all_cards.extend_from_slice(comm_cards);
 
-    let strength = sb_game_engine::evaluate::evaluate_best_hand(&all_cards);
+    let (strength, _winning_cards) = sb_game_engine::evaluate::evaluate_best_hand(&all_cards);
 
     info!(
         user_id = %user_id,
@@ -316,11 +317,8 @@ fn build_analytics(hand: &ActiveHand, user_id: UserId) -> Option<AnalyticsPayloa
         "Calculating Analytics"
     );
 
-    // Replaced inline match with the helper function
     let best_hand_name = get_hand_description(&strength);
-
     let base_strength = get_strength_score(&strength);
-
     let win_prob = run_monte_carlo(&hole_cards, comm_cards, 300);
 
     Some(AnalyticsPayload {
@@ -407,9 +405,9 @@ fn run_monte_carlo(
         opp_comm.extend_from_slice(&fill_comm);
         let opp_comm_5: [Card; 5] = opp_comm[..5].try_into().unwrap();
 
-        let hero_strength =
+        let (hero_strength, _) =
             sb_game_engine::evaluate::evaluate_hand_strength(hero_cards, &hero_comm_5);
-        let opp_strength =
+        let (opp_strength, _) =
             sb_game_engine::evaluate::evaluate_hand_strength(&opp_cards, &opp_comm_5);
 
         match hero_strength.cmp(&opp_strength) {
@@ -479,7 +477,10 @@ impl TableActor {
                 seat,
                 stack,
             } => self.join_player(user_id, seat, stack).await,
-            InternalCommand::Leave { user_id } => self.leave_player(user_id).await,
+            InternalCommand::Leave {
+                user_id,
+                respond_to,
+            } => self.leave_player(user_id, respond_to).await,
             InternalCommand::Rebuy { user_id, stack } => self.process_rebuy(user_id, stack).await,
             InternalCommand::Action {
                 user_id,
@@ -493,8 +494,46 @@ impl TableActor {
     }
 
     async fn join_player(&mut self, user_id: UserId, seat: Option<u8>, stack: ChipAmount) {
-        if self.players.contains_key(&user_id) {
-            self.send_error_to(&user_id, "Already at table").await;
+        // ── Idempotent Reconnect Logic ──
+        // If the player is already at the table (e.g., websocket dropped and reconnected),
+        // just resync their state instead of throwing an error.
+        if let Some(player) = self.players.get(&user_id) {
+            info!(%user_id, "Player already at table, resyncing state for reconnect");
+
+            // Re-send Connected message to confirm subscription
+            let _ = self.broadcast_tx.send(RoomMessage::Connected {
+                user_id,
+                seat_index: player.seat,
+            });
+
+            // Resync table state
+            self.broadcast_table_state().await;
+
+            // If there's an active hand, resend hole cards and action required
+            if let Some(hand) = &self.current_hand {
+                if let Some(hole_cards) = hand.state.player_hole_cards(player.player_id) {
+                    let ws_cards: Vec<WsCard> = hole_cards
+                        .iter()
+                        .map(|c| WsCard {
+                            suit: format!("{:?}", c.suit).to_lowercase(),
+                            rank: format!("{:?}", c.rank),
+                        })
+                        .collect();
+                    let _ = self.broadcast_tx.send(RoomMessage::PrivateMessage {
+                        target_user_id: user_id,
+                        payload: PrivatePayload::YourHoleCards {
+                            hole_cards: ws_cards,
+                        },
+                    });
+                }
+
+                if hand.current_player_user() == Some(user_id) {
+                    let action_req = build_action_required(hand, user_id);
+                    let _ = self
+                        .broadcast_tx
+                        .send(RoomMessage::ActionRequired(action_req));
+                }
+            }
             return;
         }
 
@@ -602,8 +641,14 @@ impl TableActor {
         }
     }
 
-    async fn leave_player(&mut self, user_id: UserId) {
-        if let Some(_p) = self.players.remove(&user_id) {
+    async fn leave_player(
+        &mut self,
+        user_id: UserId,
+        respond_to: tokio::sync::oneshot::Sender<ChipAmount>,
+    ) {
+        let mut remaining_stack = zero();
+        if let Some(p) = self.players.remove(&user_id) {
+            remaining_stack = p.stack;
             let mut completion_checked = false;
             if let Some(hand) = &mut self.current_hand
                 && let Some(pid) = hand.player_by_user_id.get(&user_id)
@@ -618,6 +663,7 @@ impl TableActor {
             }
             info!(%user_id, "Left");
         }
+        let _ = respond_to.send(remaining_stack);
     }
 
     async fn start_new_hand(&mut self) {
@@ -1075,24 +1121,28 @@ impl TableActor {
 
                 let seat = self.players.get(&user_id).map(|p| p.seat).unwrap_or(0);
 
-                // Evaluate hand description ONLY if it's a showdown with 5 community cards
-                let hand_description = if is_showdown && community.len() >= 5 {
+                let mut hand_description = String::new();
+                let mut winning_cards_ws: Vec<WsCard> = vec![];
+
+                // Only evaluate and send winning cards if it's a showdown AND the player is a winner
+                if is_showdown && community.len() >= 5 && is_winner {
                     if let Some(cards) = hole_cards_opt {
                         if cards.len() == 2 {
-                            let comm: [sb_shared_types::Card; 5] = community_cards_to_array(hand)?;
-                            let strength =
-                                sb_game_engine::evaluate::evaluate_hand_strength(&cards, &comm);
-                            Some(get_hand_description(&strength))
-                        } else {
-                            None
+                            if let Some(comm) = community_cards_to_array(hand) {
+                                let (strength, winning_cards_raw) =
+                                    sb_game_engine::evaluate::evaluate_hand_strength(&cards, &comm);
+                                hand_description = get_hand_description(&strength);
+                                winning_cards_ws = winning_cards_raw
+                                    .iter()
+                                    .map(|c| WsCard {
+                                        suit: format!("{:?}", c.suit).to_lowercase(),
+                                        rank: format!("{:?}", c.rank),
+                                    })
+                                    .collect();
+                            }
                         }
-                    } else {
-                        None
                     }
-                } else {
-                    None
                 }
-                .unwrap_or_default();
 
                 Some(ShowdownPlayer {
                     user_id,
@@ -1101,6 +1151,7 @@ impl TableActor {
                     hand_description,
                     is_winner,
                     win_amount,
+                    winning_cards: winning_cards_ws,
                 })
             })
             .collect();
@@ -1111,7 +1162,6 @@ impl TableActor {
             pot: hand.state.current_pot().as_i64() as u64,
         }
     }
-
     // ── Securely sends analytics to all players privately ──
     async fn broadcast_analytics(&self, hand: &ActiveHand) {
         for player in self.players.values() {

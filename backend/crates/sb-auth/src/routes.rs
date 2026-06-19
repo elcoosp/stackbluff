@@ -1,7 +1,7 @@
 use axum::{
     Json, Router,
     extract::State,
-    http::StatusCode,
+    http::{HeaderMap, StatusCode, header},
     response::IntoResponse,
     routing::{get, post},
 };
@@ -51,12 +51,23 @@ struct EmailPasswordRequest {
 #[derive(Serialize)]
 struct AuthUserResponse {
     id: String,
+    username: String,
+    email: Option<String>,
 }
 
 #[derive(Serialize)]
 struct AuthResponse {
     token: String,
     user: AuthUserResponse,
+    balance: i64, // <-- Added balance here
+}
+
+#[derive(Serialize)]
+struct MeResponse {
+    id: String,
+    username: String,
+    email: Option<String>,
+    chip_balance: i64,
 }
 
 /// Helper to set the auth cookie on any successful auth response.
@@ -68,18 +79,6 @@ fn set_auth_cookie(cookies: &Cookies, jwt: &str) {
         .same_site(tower_cookies::cookie::SameSite::Lax)
         .build();
     cookies.add(cookie);
-}
-
-fn auth_response(r: sb_contracts::service_api::AuthResult) -> impl IntoResponse {
-    (
-        StatusCode::OK,
-        Json(AuthResponse {
-            token: r.jwt,
-            user: AuthUserResponse {
-                id: r.user_id.to_string(),
-            },
-        }),
-    )
 }
 
 fn error_response(e: AppError) -> axum::response::Response {
@@ -99,7 +98,22 @@ async fn telegram_auth(
     match svc.telegram_auth(&ctx, &req.init_data).await {
         Ok(r) => {
             set_auth_cookie(&cookies, &r.jwt);
-            auth_response(r).into_response()
+            match svc.get_user_profile(&ctx, r.user_id).await {
+                Ok(profile) => (
+                    StatusCode::OK,
+                    Json(AuthResponse {
+                        token: r.jwt,
+                        user: AuthUserResponse {
+                            id: profile.id.to_string(),
+                            username: profile.display_name,
+                            email: profile.email,
+                        },
+                        balance: profile.chip_balance, // <-- Return balance
+                    }),
+                )
+                    .into_response(),
+                Err(e) => error_response(e),
+            }
         }
         Err(e) => error_response(e),
     }
@@ -117,7 +131,22 @@ async fn register(
     {
         Ok(r) => {
             set_auth_cookie(&cookies, &r.jwt);
-            auth_response(r).into_response()
+            match svc.get_user_profile(&ctx, r.user_id).await {
+                Ok(profile) => (
+                    StatusCode::OK,
+                    Json(AuthResponse {
+                        token: r.jwt,
+                        user: AuthUserResponse {
+                            id: profile.id.to_string(),
+                            username: profile.display_name,
+                            email: profile.email,
+                        },
+                        balance: profile.chip_balance, // <-- Return balance
+                    }),
+                )
+                    .into_response(),
+                Err(e) => error_response(e),
+            }
         }
         Err(e) => error_response(e),
     }
@@ -132,22 +161,67 @@ async fn login(
     match svc.login(&ctx, &req.email, &req.password).await {
         Ok(r) => {
             set_auth_cookie(&cookies, &r.jwt);
-            auth_response(r).into_response()
+            match svc.get_user_profile(&ctx, r.user_id).await {
+                Ok(profile) => (
+                    StatusCode::OK,
+                    Json(AuthResponse {
+                        token: r.jwt,
+                        user: AuthUserResponse {
+                            id: profile.id.to_string(),
+                            username: profile.display_name,
+                            email: profile.email,
+                        },
+                        balance: profile.chip_balance, // <-- Return balance
+                    }),
+                )
+                    .into_response(),
+                Err(e) => error_response(e),
+            }
         }
         Err(e) => error_response(e),
     }
 }
 
-async fn me() -> impl IntoResponse {
-    (
-        StatusCode::OK,
-        Json(serde_json::json!({
-            "id": "demo",
-            "username": "Demo User",
-            "email": "demo@stackbluff.com",
-            "chip_balance": 100000
-        })),
-    )
+async fn me_handler(
+    cookies: Cookies,
+    headers: HeaderMap,
+    State(svc): State<SharedAuthService>,
+) -> impl IntoResponse {
+    let token = cookies
+        .get("token")
+        .map(|c| c.value().to_string())
+        .or_else(|| {
+            headers
+                .get(header::AUTHORIZATION)
+                .and_then(|h| h.to_str().ok())
+                .and_then(|h| h.strip_prefix("Bearer "))
+                .map(|s| s.to_string())
+        });
+
+    let token = match token {
+        Some(t) => t,
+        None => {
+            return error_response(AppError::Unauthorized("Missing token".to_string()));
+        }
+    };
+
+    let ctx = dummy_ctx();
+    match svc.validate_token(&token).await {
+        Ok(user_id) => match svc.get_user_profile(&ctx, user_id).await {
+            Ok(profile) => (
+                StatusCode::OK,
+                Json(MeResponse {
+                    id: profile.id.to_string(),
+                    username: profile.display_name,
+                    email: profile.email,
+                    chip_balance: profile.chip_balance,
+                }),
+            )
+                .into_response(),
+            Err(e) => error_response(e),
+        },
+        Err(e) => error_response(e),
+    }
 }
 
 pub fn auth_router(svc: SharedAuthService) -> Router {
@@ -155,6 +229,6 @@ pub fn auth_router(svc: SharedAuthService) -> Router {
         .route("/auth/telegram", post(telegram_auth))
         .route("/auth/register", post(register))
         .route("/auth/login", post(login))
-        .route("/auth/me", get(me))
+        .route("/auth/me", get(me_handler))
         .with_state(svc)
 }

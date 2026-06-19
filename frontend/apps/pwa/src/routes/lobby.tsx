@@ -91,7 +91,6 @@ function LobbyPage() {
   }
 
   return (
-    // Outer container: fills the main (h-full), flex to have sidebar + content
     <div className="flex h-full relative">
       {/* Sidebar – sticky to the scroll container (the main) */}
       <aside className="hidden md:flex flex-col w-64 bg-surface-container-low border-r border-outline-variant py-gutter space-y-4 sticky top-0 h-full">
@@ -136,7 +135,7 @@ function LobbyPage() {
         </div>
       </aside>
 
-      {/* Main content – fills remaining space, no overflow handling here (parent does it) */}
+      {/* Main content */}
       <section className="flex-1 relative">
         <div className="absolute inset-0 carbon-bg pointer-events-none" />
 
@@ -239,7 +238,11 @@ function LobbyPage() {
                 </div>
 
                 <div className="w-full lg:col-span-4 flex lg:justify-end gap-2 mt-1 lg:mt-0">
-                  <Button variant="outline" className="flex-1 lg:flex-initial px-3 lg:px-4 py-2 border-white/10 font-label-caps text-[10px] text-on-surface-variant hover:border-tertiary/50 hover:text-tertiary uppercase tracking-wider rounded-lg">
+                  {/* 🔽 Fixed Observe button */}
+                  <Button
+                    variant="outline"
+                    className="flex-1 lg:flex-initial px-3 lg:px-4 py-2 border-outline-variant text-on-surface hover:border-tertiary hover:text-tertiary hover:bg-tertiary/10 font-label-caps text-[10px] uppercase tracking-wider rounded-lg"
+                  >
                     Observe
                   </Button>
                   <Button

@@ -47,7 +47,7 @@ function IndexPage() {
         <motion.div variants={cardVariants}>
           <Card className="flex flex-col h-full">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-on-surface">
                 <Swords className="w-5 h-5" />
                 Play Now
               </CardTitle>
@@ -55,7 +55,7 @@ function IndexPage() {
             <CardContent className="flex-1 flex flex-col">
               <p className="text-on-surface-variant text-sm mb-4">Join a table and test your skills against other players.</p>
               <Link to="/lobby" className="mt-auto">
-                <Button variant="default" className="w-full font-data-mono text-black">
+                <Button className="w-full bg-tertiary text-on-tertiary hover:bg-tertiary-fixed font-data-mono tracking-wider uppercase">
                   JOIN TABLE
                 </Button>
               </Link>
@@ -66,7 +66,7 @@ function IndexPage() {
         <motion.div variants={cardVariants}>
           <Card className="flex flex-col h-full">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-on-surface">
                 <Trophy className="w-5 h-5" />
                 Leaderboard
               </CardTitle>
@@ -74,7 +74,10 @@ function IndexPage() {
             <CardContent className="flex-1 flex flex-col">
               <p className="text-on-surface-variant text-sm mb-4">See who's on top. Rankings update in real-time.</p>
               <Link to="/leaderboard" className="mt-auto">
-                <Button variant="outline" className="w-full font-data-mono text-black">
+                <Button
+                  variant="outline"
+                  className="w-full text-on-surface border-outline-variant hover:border-tertiary hover:text-tertiary hover:bg-tertiary/10 font-data-mono tracking-wider uppercase"
+                >
                   VIEW RANKS
                 </Button>
               </Link>
@@ -85,7 +88,7 @@ function IndexPage() {
         <motion.div variants={cardVariants}>
           <Card className="flex flex-col h-full">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-on-surface">
                 <BookOpen className="w-5 h-5" />
                 Learn
               </CardTitle>
@@ -93,7 +96,10 @@ function IndexPage() {
             <CardContent className="flex-1 flex flex-col">
               <p className="text-on-surface-variant text-sm mb-4">New to poker? Start with the basics.</p>
               <Link to="/guide" className="mt-auto">
-                <Button variant="outline" className="w-full font-data-mono text-black">
+                <Button
+                  variant="outline"
+                  className="w-full text-on-surface border-outline-variant hover:border-tertiary hover:text-tertiary hover:bg-tertiary/10 font-data-mono tracking-wider uppercase"
+                >
                   GUIDE
                 </Button>
               </Link>

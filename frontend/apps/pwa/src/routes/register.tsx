@@ -30,7 +30,11 @@ function RegisterPage() {
   const [step, setStep] = useState(1);
   const mutation = useMutation({
     mutationFn: authApi.register,
-    onSuccess: (data) => { setToken(data.token); setAuth(data.user, data.token, 0); navigate({ to: '/' }); },
+    onSuccess: (data) => {
+      setToken(data.token);
+      setAuth(data.user, data.token, data.balance || 0);
+      navigate({ to: '/' });
+    },
     onError: (error) => { toast.error(error.message || 'Registration failed'); },
   });
   const form = useForm({
@@ -74,7 +78,7 @@ function RegisterPage() {
                     <Label htmlFor="username" className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
                       Username
                     </Label>
-                    <div className="relative">
+                    <div className="relative mt-2">
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="username"
@@ -113,7 +117,7 @@ function RegisterPage() {
                     <Label htmlFor="email" className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
                       Email Address
                     </Label>
-                    <div className="relative">
+                    <div className="relative mt-2">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="email"
@@ -152,7 +156,7 @@ function RegisterPage() {
                     <Label htmlFor="password" className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
                       Password
                     </Label>
-                    <div className="relative">
+                    <div className="relative mt-2">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="password"
@@ -191,19 +195,37 @@ function RegisterPage() {
                 const canContinue = currentSchema.safeParse({ [step === 1 ? 'username' : step === 2 ? 'email' : 'password']: current }).success;
 
                 return (
-                  <div className="flex justify-between pt-4">
+                  <div
+                    className={`flex items-center gap-2 pt-4 ${step > 1 ? 'justify-between' : 'justify-end'
+                      }`}
+                  >
                     {step > 1 && (
-                      <LiquidMetalButton type="button" onClick={prevStep} variant="silver" className="w-auto px-6">
+                      <LiquidMetalButton
+                        type="button"
+                        onClick={prevStep}
+                        variant="silver"
+                        className="flex-1 md:flex-none px-6 text-[10px] whitespace-nowrap"
+                      >
                         BACK
                       </LiquidMetalButton>
                     )}
-                    <div className="flex-grow" />
                     {step < 3 ? (
-                      <LiquidMetalButton type="button" onClick={nextStep} disabled={!canContinue} variant="silver" className="w-auto px-6">
+                      <LiquidMetalButton
+                        type="button"
+                        onClick={nextStep}
+                        disabled={!canContinue}
+                        variant="silver"
+                        className={step > 1 ? 'flex-1 md:flex-none px-6 text-[10px] whitespace-nowrap' : 'px-6'}
+                      >
                         CONTINUE
                       </LiquidMetalButton>
                     ) : (
-                      <LiquidMetalButton type="submit" disabled={mutation.isPending || !canContinue} variant="silver">
+                      <LiquidMetalButton
+                        type="submit"
+                        disabled={mutation.isPending || !canContinue}
+                        variant="silver"
+                        className="flex-1 text-[10px] whitespace-nowrap"
+                      >
                         {mutation.isPending ? 'INITIALIZING...' : 'CREATE ACCOUNT'}
                       </LiquidMetalButton>
                     )}

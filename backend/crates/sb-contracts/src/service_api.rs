@@ -4,6 +4,7 @@ use sb_shared_types::RequestContext;
 use sb_shared_types::{AppError, ChipAmount, HandRank, TableId, UserId};
 use serde::{Deserialize, Serialize};
 
+use crate::repo_api::UserProfile;
 use crate::{ClubError, LeaderboardPage};
 use sb_shared_types::game_types::GameVariant;
 use sb_shared_types::{ClubId, StakeLevel};
@@ -228,7 +229,7 @@ pub trait AuthService: Send + Sync {
     async fn register(
         &self,
         ctx: &RequestContext,
-        username: &str, // Added
+        username: &str,
         email: &str,
         password: &str,
     ) -> Result<AuthResult, AppError>;
@@ -240,5 +241,14 @@ pub trait AuthService: Send + Sync {
     ) -> Result<AuthResult, sb_shared_types::AppError>;
     async fn verify_token(&self, token: &str) -> Result<TokenClaims, sb_shared_types::AppError>;
 
-    async fn validate_token(&self, token: &str) -> Result<sb_shared_types::UserId, sb_shared_types::AppError>;
+    async fn validate_token(
+        &self,
+        token: &str,
+    ) -> Result<sb_shared_types::UserId, sb_shared_types::AppError>;
+
+    async fn get_user_profile(
+        &self,
+        ctx: &sb_shared_types::RequestContext,
+        user_id: sb_shared_types::UserId,
+    ) -> Result<UserProfile, sb_shared_types::AppError>;
 }

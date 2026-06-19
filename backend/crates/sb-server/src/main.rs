@@ -20,7 +20,7 @@ use sb_contracts::repo_api::UserRepo;
 use sb_db_repos::init_writer_loop;
 use sb_db_repos::user_repo::UserRepoImpl;
 use sb_rest_router::create_router;
-use sb_shared_types::{ChipAmount, GameVariant, StakeLevel, TableConfig};
+use sb_shared_types::{GameVariant, StakeLevel, TableConfig};
 use sb_table_registry::buy_in_limits_for_stake; // <--- ADDED
 use sb_table_registry::registry::Registry;
 use sb_table_registry::table_service::TableServiceImpl;
@@ -55,7 +55,7 @@ async fn main() {
 
     // ── Wire up Auth Service ──────────────────────────────
     let auth_config = AuthConfig::from_env();
-    let auth_impl = Arc::new(AuthServiceImpl::new(user_repo, auth_config));
+    let auth_impl = Arc::new(AuthServiceImpl::new(user_repo.clone(), auth_config));
     let auth_service: SharedAuthService = auth_impl.clone();
     let auth_authenticator: Arc<dyn Authenticator + Send + Sync> = auth_impl;
 
@@ -75,13 +75,13 @@ async fn main() {
         .await
         .expect("failed to list DB tables");
     for t in &db_tables {
-        let (min_buy_in, max_buy_in) = buy_in_limits_for_stake(t.stake_level); // <--- ADDED
+        let (min_buy_in, max_buy_in) = buy_in_limits_for_stake(t.stake_level);
         let config = TableConfig {
             max_players: t.max_players as u8,
             stake_level: t.stake_level,
             variant: GameVariant::Holdem,
-            min_buy_in, // <--- was ChipAmount::new(100).unwrap()
-            max_buy_in, // <--- was ChipAmount::new(10000).unwrap()
+            min_buy_in,
+            max_buy_in,
         };
         registry.register_existing_table(t.table_id, config).await;
         tracing::info!(table_id = %t.table_id, "Hydrated table from DB");
@@ -119,7 +119,11 @@ async fn main() {
     // Build the application router
     let app = Router::new()
         .merge(rest_router)
-        .merge(ws_route(auth_authenticator.clone(), registry.clone()))
+        .merge(ws_route(
+            auth_authenticator.clone(),
+            registry.clone(),
+            user_repo.clone(),
+        ))
         .merge(auth_router(auth_service))
         .merge(sb_bot_handler::attach(bot_state))
         .merge(sb_rest_router::oracle_router(oracle_service))
@@ -133,7 +137,6 @@ async fn main() {
     tracing::info!("server listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.expect("server error");
 }
-
 #[cfg(feature = "test-stubs")]
 fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
     let table_service: Arc<dyn sb_contracts::service_api::TableService> =

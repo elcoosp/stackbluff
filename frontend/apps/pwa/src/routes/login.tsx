@@ -12,7 +12,7 @@ import { Mail, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { motion, AnimatePresence } from 'framer-motion'; // ✅ added
+import { motion, AnimatePresence } from 'framer-motion';
 
 const loginSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Invalid email address'),
@@ -29,19 +29,9 @@ function LoginPage() {
   const setAuth = useAuthStore((s) => s.setAuth);
   const mutation = useMutation({
     mutationFn: authApi.login,
-    onSuccess: async (data) => {
+    onSuccess: (data) => {
       setToken(data.token);
-      try {
-        const res = await fetch('/auth/me', { credentials: 'include', headers: { Authorization: `Bearer ${data.token}` } });
-        if (res.ok) {
-          const userData = await res.json();
-          setAuth(data.user, data.token, userData.chip_balance || 0);
-        } else {
-          setAuth(data.user, data.token, 0);
-        }
-      } catch {
-        setAuth(data.user, data.token, 0);
-      }
+      setAuth(data.user, data.token, data.balance || 0);
       navigate({ to: '/' });
     },
     onError: (error) => {
@@ -67,10 +57,13 @@ function LoginPage() {
             <form.Field name="email">
               {(field) => (
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+                  <Label
+                    htmlFor="email"
+                    className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase"
+                  >
                     Email Address
                   </Label>
-                  <div className="relative">
+                  <div className="relative mt-2">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="email"
@@ -82,7 +75,6 @@ function LoginPage() {
                       className="pl-9 bg-background/50 border-white/10 text-on-surface placeholder:text-muted-foreground/50 focus-visible:ring-tertiary"
                     />
                   </div>
-                  {/* Error container – fixed height, no layout shift */}
                   <div className="min-h-[1.5rem] overflow-hidden">
                     <AnimatePresence mode="wait">
                       {field.state.meta.errors.length > 0 && (
@@ -105,10 +97,13 @@ function LoginPage() {
             <form.Field name="password">
               {(field) => (
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+                  <Label
+                    htmlFor="password"
+                    className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase"
+                  >
                     Password
                   </Label>
-                  <div className="relative">
+                  <div className="relative mt-2">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="password"

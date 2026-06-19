@@ -107,14 +107,27 @@ impl Registry {
             .map_err(|_| TableError::ActorError("actor dropped".into()))
     }
 
-    pub async fn send_leave(&self, table_id: TableId, user_id: UserId) -> Result<(), TableError> {
+    pub async fn send_leave(
+        &self,
+        table_id: TableId,
+        user_id: UserId,
+    ) -> Result<ChipAmount, TableError> {
         let guard = self.tables.read().await;
         let entry = guard.get(&table_id).ok_or(TableError::NotFound(table_id))?;
-        let cmd = InternalCommand::Leave { user_id };
+
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        let cmd = InternalCommand::Leave {
+            user_id,
+            respond_to: tx,
+        };
+
         entry
             .cmd_tx
             .send(cmd)
             .await
+            .map_err(|_| TableError::ActorError("actor dropped".into()))?;
+
+        rx.await
             .map_err(|_| TableError::ActorError("actor dropped".into()))
     }
 
@@ -213,7 +226,7 @@ impl Registry {
                     .ok_or(TableError::NotFound(table_id))?;
                 let internal = InternalCommand::Join {
                     user_id,
-                    seat: Some(seat), // ✅ FIX: wrap in Some
+                    seat: Some(seat),
                     stack,
                 };
                 match sender.send(internal).await {

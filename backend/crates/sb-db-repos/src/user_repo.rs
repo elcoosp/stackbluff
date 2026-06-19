@@ -1,5 +1,7 @@
 use crate::commands::DbCommand;
-use sb_contracts::repo_api::{PersistenceError, PersistenceResult, UserCreate, UserRepository};
+use sb_contracts::repo_api::{
+    PersistenceError, PersistenceResult, UserCreate, UserProfile, UserRepository,
+};
 use sb_shared_types::{RequestContext, UserId};
 use tokio::sync::{mpsc, oneshot};
 
@@ -65,7 +67,7 @@ impl UserRepository for UserRepoImpl {
             ctx,
             username: username.to_string(),
             email: email.to_string(),
-            password_hash: password_hash.to_string(), // Pass it here
+            password_hash: password_hash.to_string(),
             respond: tx,
         };
         self.sender
@@ -93,10 +95,27 @@ impl UserRepository for UserRepoImpl {
             .map_err(|e| PersistenceError::Database(e.to_string()))?
     }
 
-    // Added missing trait methods
     async fn get_user(&self, ctx: RequestContext, id: UserId) -> PersistenceResult<String> {
         let (tx, rx) = oneshot::channel();
         let cmd = DbCommand::GetUser {
+            ctx,
+            id,
+            respond: tx,
+        };
+        self.sender
+            .send(cmd)
+            .map_err(|e| PersistenceError::Database(e.to_string()))?;
+        rx.await
+            .map_err(|e| PersistenceError::Database(e.to_string()))?
+    }
+
+    async fn get_user_profile(
+        &self,
+        ctx: RequestContext,
+        id: UserId,
+    ) -> PersistenceResult<UserProfile> {
+        let (tx, rx) = oneshot::channel();
+        let cmd = DbCommand::GetUserProfile {
             ctx,
             id,
             respond: tx,
@@ -113,7 +132,7 @@ impl UserRepository for UserRepoImpl {
         ctx: RequestContext,
         user_id: UserId,
         delta: i64,
-    ) -> PersistenceResult<()> {
+    ) -> PersistenceResult<i64> {
         let (tx, rx) = oneshot::channel();
         let cmd = DbCommand::UpdateChipBalance {
             ctx,

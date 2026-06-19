@@ -86,6 +86,7 @@ pub struct ShowdownPlayer {
     pub hand_description: String,
     pub is_winner: bool,
     pub win_amount: u64,
+    pub winning_cards: Vec<WsCard>, // <-- ADDED
 }
 
 #[derive(Debug, Clone, Serialize)]

@@ -9,6 +9,8 @@ interface CardProps {
   rounded?: string;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   hoverable?: boolean;
+  isWinning?: boolean;
+  isLosing?: boolean;
 }
 
 export const Card = ({
@@ -19,25 +21,29 @@ export const Card = ({
   rounded = 'rounded-sm',
   size = 'md',
   hoverable = true,
+  isWinning = false,
+  isLosing = false,
 }: CardProps) => {
   const isRed = suit === '♥' || suit === '♦';
   const suitColor = isRed ? '#e11d48' : '#1e293b';
 
+  // Standardized shadow layers so Framer Motion can interpolate smoothly
+  const baseShadow =
+    '0 4px 12px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.2), 0 0 0px rgba(78,222,163,0)';
+  const winningShadowLow =
+    '0 4px 12px rgba(0,0,0,0.5), 0 0 12px rgba(78,222,163,0.5), 0 0 4px rgba(78,222,163,0.8)';
+  const winningShadowHigh =
+    '0 4px 12px rgba(0,0,0,0.5), 0 0 24px rgba(78,222,163,0.7), 0 0 8px rgba(78,222,163,1)';
+
   const renderFront = () => (
     <div
-      className={cn(
-        'relative bg-white shadow-[0_4px_12px_rgba(0,0,0,0.5),0_1px_4px_rgba(0,0,0,0.2)]',
-        rounded,
-        className
-      )}
+      className={cn('relative bg-white', rounded, className)}
       style={{
         aspectRatio: '5/7',
-        containerType: 'inline-size' // Allows internal elements to scale responsively using cqw
+        containerType: 'inline-size',
       }}
     >
-      <div
-        className="absolute top-0 left-0 flex flex-col items-center leading-none p-[10%]"
-      >
+      <div className="absolute top-0 left-0 flex flex-col items-center leading-none p-[10%]">
         <span className="font-bold" style={{ color: suitColor, fontSize: '25cqw' }}>
           {rank}
         </span>
@@ -56,15 +62,11 @@ export const Card = ({
 
   const renderBack = () => (
     <div
-      className={cn(
-        'relative overflow-hidden border border-white/30 shadow-[0_4px_12px_rgba(0,0,0,0.5),0_1px_4px_rgba(0,0,0,0.2)]',
-        rounded,
-        className
-      )}
+      className={cn('relative overflow-hidden border border-white/30', rounded, className)}
       style={{
         background: 'linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%)',
         aspectRatio: '5/7',
-        containerType: 'inline-size'
+        containerType: 'inline-size',
       }}
     >
       <div className={cn('absolute inset-[10%] border border-white/10', rounded)} />
@@ -86,11 +88,43 @@ export const Card = ({
     </div>
   );
 
+  // Determine animation state
+  let animateProps: any = {
+    boxShadow: baseShadow,
+    filter: 'grayscale(0) brightness(1)',
+    scale: 1,
+  };
+  let transitionProps: any = {
+    duration: 0.5,
+    ease: [0.22, 1, 0.36, 1],
+  };
+
+  if (isLosing) {
+    animateProps = {
+      boxShadow: '0 4px 8px rgba(0,0,0,0.7)',
+      filter: 'grayscale(0.8) brightness(0.5)',
+      scale: 0.98,
+    };
+  } else if (isWinning) {
+    animateProps = {
+      boxShadow: [winningShadowLow, winningShadowHigh, winningShadowLow],
+      filter: 'grayscale(0) brightness(1.1)',
+      scale: 1,
+    };
+    transitionProps = {
+      duration: 3,
+      repeat: Infinity,
+      ease: 'easeInOut',
+    };
+  }
+
   return (
     <motion.div
-      {...(hoverable
+      {...(hoverable && !isWinning && !isLosing
         ? { whileHover: { y: -4, transition: { type: 'spring', stiffness: 300 } } }
         : {})}
+      animate={animateProps}
+      transition={transitionProps}
       className={cn(rounded)}
     >
       {faceDown ? renderBack() : renderFront()}

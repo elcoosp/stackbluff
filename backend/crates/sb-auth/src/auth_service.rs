@@ -8,7 +8,7 @@ use argon2::PasswordHasher;
 
 use crate::config::AuthConfig;
 use crate::jwt::{create_jwt, verify_jwt};
-use sb_contracts::repo_api::{PersistenceError, UserRepo};
+use sb_contracts::repo_api::{PersistenceError, UserProfile, UserRepo};
 use sb_contracts::service_api::{AuthResult, AuthService, TokenClaims};
 use sb_shared_types::{AppError, RequestContext, UserId};
 
@@ -197,11 +197,24 @@ impl AuthService for AuthServiceImpl {
             platform: claims.platform,
         })
     }
+
+    async fn get_user_profile(
+        &self,
+        ctx: &RequestContext,
+        user_id: UserId,
+    ) -> Result<UserProfile, AppError> {
+        self.user_repo
+            .get_user_profile(ctx.clone(), user_id)
+            .await
+            .map_err(map_persistence_error)
+    }
 }
 
 fn map_persistence_error(e: PersistenceError) -> AppError {
     match e {
-        PersistenceError::UniqueViolation => AppError::Conflict("Resource already exists".to_string()),
+        PersistenceError::UniqueViolation => {
+            AppError::Conflict("Resource already exists".to_string())
+        }
         PersistenceError::NotFound => AppError::NotFound("User not found".to_string()),
         _ => AppError::Internal(e.to_string()),
     }

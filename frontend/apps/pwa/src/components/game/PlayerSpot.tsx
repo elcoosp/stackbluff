@@ -26,6 +26,7 @@ interface PlayerSpotProps {
     is_winner?: boolean;
     is_showdown_revealed?: boolean;
     hand_description?: string;
+    winning_cards?: Array<{ rank: string; suit: string }>;
   };
   isHero?: boolean;
   isMobile?: boolean;
@@ -42,12 +43,18 @@ const CardGroup = ({
   cardSize,
   sizeProp,
   isMobile,
+  winningCards,
+  isWinner,
+  isShowdown,
 }: {
   showCardsFaceUp: boolean;
   hole_cards?: Array<{ rank: string; suit: string }>;
   cardSize: string;
   sizeProp: 'xs' | 'sm' | 'md';
   isMobile: boolean;
+  winningCards?: Array<{ rank: string; suit: string }>;
+  isWinner?: boolean;
+  isShowdown?: boolean;
 }) => {
   const gap = isMobile ? 4 : 4;
   const containerVariants = {
@@ -74,6 +81,17 @@ const CardGroup = ({
       x: -30,
       transition: { duration: 0.4, ease: 'easeInOut' },
     },
+  };
+
+  const isWinningCard = (card?: { rank: string; suit: string }) => {
+    if (!card) return false;
+    return winningCards?.some((wc) => wc.rank === card.rank && wc.suit === card.suit);
+  };
+
+  const isCardLosing = (card?: { rank: string; suit: string }) => {
+    if (!isShowdown) return false;
+    if (isWinner) return !isWinningCard(card);
+    return true; // Not winner = all cards lose
   };
 
   if (!hole_cards || hole_cards.length === 0) {
@@ -126,8 +144,10 @@ const CardGroup = ({
                 <Card
                   rank={hole_cards[0].rank}
                   suit={hole_cards[0].suit}
-                  className={cn(cardSize, 'shadow-xl')}
+                  className={cn(cardSize)}
                   size={sizeProp}
+                  isWinning={isWinningCard(hole_cards[0])}
+                  isLosing={isCardLosing(hole_cards[0])}
                 />
               </motion.div>
             ) : (
@@ -139,7 +159,7 @@ const CardGroup = ({
                 transition={{ duration: 0.3 }}
                 style={{ backfaceVisibility: 'hidden' }}
               >
-                <CardBack className={cn(cardSize, 'shadow-xl')} size={sizeProp} />
+                <CardBack className={cn(cardSize)} size={sizeProp} />
               </motion.div>
             )}
           </AnimatePresence>
@@ -163,8 +183,10 @@ const CardGroup = ({
                 <Card
                   rank={hole_cards[1].rank}
                   suit={hole_cards[1].suit}
-                  className={cn(cardSize, 'shadow-xl')}
+                  className={cn(cardSize)}
                   size={sizeProp}
+                  isWinning={isWinningCard(hole_cards[1])}
+                  isLosing={isCardLosing(hole_cards[1])}
                 />
               </motion.div>
             ) : (
@@ -176,7 +198,7 @@ const CardGroup = ({
                 transition={{ duration: 0.3, delay: 0.1 }}
                 style={{ backfaceVisibility: 'hidden' }}
               >
-                <CardBack className={cn(cardSize, 'shadow-xl')} size={sizeProp} />
+                <CardBack className={cn(cardSize)} size={sizeProp} />
               </motion.div>
             )}
           </AnimatePresence>
@@ -207,6 +229,9 @@ export const PlayerSpot = ({
     position_badge,
     action,
     hole_cards,
+    winning_cards,
+    is_winner,
+    is_showdown_revealed,
   } = seat;
 
   const isActive = is_active && !is_folded && !is_all_in;
@@ -214,6 +239,9 @@ export const PlayerSpot = ({
 
   const showCardsFaceUp = isHero || seat.is_showdown_revealed;
   const isLargeCards = isHero || showCardsFaceUp;
+
+  // If cards are revealed at showdown, but the player didn't win, they are losing player
+  const isLosingPlayer = is_showdown_revealed && !is_winner;
 
   // ── Seat‑aware visual feedback ──
   const effect = useVisualFeedback(500);
@@ -282,9 +310,9 @@ export const PlayerSpot = ({
       'bg-[rgba(8,8,8,0.85)] backdrop-blur-md border border-white/10': true,
       'border-tertiary/40 shadow-[0_0_20px_rgba(78,222,163,0.15)]': isActive && !isHero,
       'border-tertiary shadow-[0_0_30px_rgba(78,222,163,0.25)]': isActive && isHero,
-      'border-tertiary/60 shadow-[0_0_25px_rgba(78,222,163,0.3)]': seat.is_winner,
+      'border-tertiary/60 shadow-[0_0_25px_rgba(78,222,163,0.3)]': is_winner,
       'opacity-30 grayscale': isFolded,
-      'opacity-50 grayscale': seat.is_showdown_revealed && !seat.is_winner,
+      'opacity-50 grayscale': isLosingPlayer,
     }
   );
 
@@ -313,16 +341,16 @@ export const PlayerSpot = ({
       animate={{ opacity: 1, scale: 1 }}
       transition={{ type: 'spring', stiffness: 300, damping: 25 }}
       className={cn(
-        "absolute z-[110] rounded-full flex items-center justify-center font-bold pointer-events-none border border-gray-400/80",
-        "bg-gradient-to-br from-white to-gray-400 text-black",
-        "shadow-[0_3px_6px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.8),inset_0_-1px_2px_rgba(0,0,0,0.2)]",
+        'absolute z-[110] rounded-full flex items-center justify-center font-bold pointer-events-none border border-gray-400/80',
+        'bg-gradient-to-br from-white to-gray-400 text-black',
+        'shadow-[0_3px_6px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.8),inset_0_-1px_2px_rgba(0,0,0,0.2)]',
         isMobile
           ? isLeftSide
-            ? "-bottom-2 -right-2 w-5 h-5 text-[8px]"
-            : "-bottom-2 -left-2 w-5 h-5 text-[8px]"
+            ? '-bottom-2 -right-2 w-5 h-5 text-[8px]'
+            : '-bottom-2 -left-2 w-5 h-5 text-[8px]'
           : isLeftSide
-            ? "-bottom-2 -right-2 w-5 h-5 text-[9px]"
-            : "-bottom-2 -left-2 w-5 h-5 text-[9px]"
+            ? '-bottom-2 -right-2 w-5 h-5 text-[9px]'
+            : '-bottom-2 -left-2 w-5 h-5 text-[9px]'
       )}
     >
       D
@@ -339,8 +367,8 @@ export const PlayerSpot = ({
           exit={{ opacity: 0, scale: 0.5, x: -5 }}
           transition={{ duration: 0.2, ease: 'easeOut' }}
           className={cn(
-            "font-bold text-tertiary uppercase tracking-wider rounded px-1 py-px flex items-center justify-center bg-tertiary/25 shrink-0",
-            isMobile ? "text-[8px]" : "text-[7px]"
+            'font-bold text-tertiary uppercase tracking-wider rounded px-1 py-px flex items-center justify-center bg-tertiary/25 shrink-0',
+            isMobile ? 'text-[8px]' : 'text-[7px]'
           )}
         >
           {position_badge}
@@ -400,7 +428,7 @@ export const PlayerSpot = ({
   const hasTimer = timerRemainingMs !== null && timerRemainingMs !== undefined;
 
   // ── Winner glow: uniform scaling (both width and height) ──
-  const winnerGlow = seat.is_winner ? (
+  const winnerGlow = is_winner ? (
     <motion.div
       initial={{ opacity: 0, scale: 0.8 }}
       animate={{
@@ -438,8 +466,12 @@ export const PlayerSpot = ({
       return { top, right };
     } else {
       const topOffset = showCardsFaceUp
-        ? (isMobile ? -44 : -40)
-        : (isMobile ? -20 : -28);
+        ? isMobile
+          ? -44
+          : -40
+        : isMobile
+          ? -20
+          : -28;
       return {
         top: topOffset,
         left: '50%',
@@ -528,6 +560,9 @@ export const PlayerSpot = ({
                   cardSize={cardSize}
                   sizeProp={sizeProp}
                   isMobile={isMobile}
+                  winningCards={winning_cards}
+                  isWinner={is_winner}
+                  isShowdown={is_showdown_revealed}
                 />
               )}
             </AnimatePresence>
@@ -546,8 +581,8 @@ export const PlayerSpot = ({
             exit={{ opacity: 0, y: 8, scale: 0.8 }}
             transition={{ type: 'spring', stiffness: 500, damping: 30 }}
             className={cn(
-              "absolute z-[100] whitespace-nowrap px-1.5 py-0.5 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-tertiary font-mono text-center shadow-lg",
-              isMobile ? "text-[9px]" : "text-[8px]"
+              'absolute z-[100] whitespace-nowrap px-1.5 py-0.5 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-tertiary font-mono text-center shadow-lg',
+              isMobile ? 'text-[9px]' : 'text-[8px]'
             )}
             style={badgePlacement}
           >
@@ -564,9 +599,9 @@ export const PlayerSpot = ({
             exit={{ opacity: 0, y: 5 }}
             transition={{ delay: 0.4, duration: 0.3 }}
             className={cn(
-              "absolute -bottom-4 whitespace-nowrap font-mono uppercase tracking-wider px-1 py-0.5 rounded z-[100]",
-              isMobile ? "text-[8px]" : "text-[6px]",
-              seat.is_winner
+              'absolute -bottom-4 whitespace-nowrap font-mono uppercase tracking-wider px-1 py-0.5 rounded z-[100]',
+              isMobile ? 'text-[8px]' : 'text-[6px]',
+              is_winner
                 ? 'bg-tertiary/20 text-tertiary border border-tertiary/40'
                 : 'bg-black/80 text-on-surface-variant border border-white/5'
             )}

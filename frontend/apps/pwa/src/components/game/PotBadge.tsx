@@ -47,7 +47,8 @@ interface PotShowdownBadgeProps {
 }
 
 export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, potRef }: PotShowdownBadgeProps) => {
-  const winners = showdownReveal?.players.filter((p: any) => p.is_winner) ?? [];
+  // ── No deduplication – just all winners ──
+  const winners = (showdownReveal?.players ?? []).filter((p: any) => p.is_winner);
   const isShowdown = !!showdownReveal;
 
   const animatedAmount = useAnimatedCounter(amount);
@@ -59,7 +60,6 @@ export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, pot
   const MORPH_DURATION = 0.4;
   const CONTENT_DELAY = 0.45;
 
-  // ── Chip arrival effects ──
   const lastAction = useGameStore((s) => s.lastAction);
   const [effectKey, setEffectKey] = useState(0);
 
@@ -69,14 +69,12 @@ export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, pot
     }
   }, [lastAction]);
 
-  // ── Ripple ring configuration ──
   const rippleVariants = {
     initial: { scale: 0.8, opacity: 0.6, borderWidth: '2px' },
     animate: { scale: 2.2, opacity: 0, borderWidth: '1px' },
     exit: { opacity: 0 },
   };
 
-  // ── Badge squash & stretch ──
   const badgeBounceVariants = {
     initial: { scaleX: 1, scaleY: 1 },
     animate: {
@@ -86,7 +84,6 @@ export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, pot
     },
   };
 
-  // ── Number pop ──
   const numberPopVariants = {
     initial: { scale: 1 },
     animate: {
@@ -95,8 +92,75 @@ export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, pot
     },
   };
 
+  // ── Trophy with `overflow="visible"` and adjusted translation ──
+  const TrophyIcon = ({ className }: { className?: string }) => (
+    <svg
+      className={className}
+      viewBox="0 0 36 36"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      overflow="visible"          // prevent stroke clipping
+    >
+      <defs>
+        <linearGradient id="trophyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#fcd34d" />
+          <stop offset="30%" stopColor="#fbbf24" />
+          <stop offset="70%" stopColor="#f59e0b" />
+          <stop offset="100%" stopColor="#d97706" />
+        </linearGradient>
+      </defs>
+      {/* Shift more to the top (Y=4) so bottom has more room */}
+      <g transform="translate(6, 4)">
+        <path
+          d="M10 14.66v1.626a2 2 0 0 1-.976 1.696A5 5 0 0 0 7 21.978"
+          stroke="url(#trophyGrad)"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M14 14.66v1.626a2 2 0 0 0 .976 1.696A5 5 0 0 1 17 21.978"
+          stroke="url(#trophyGrad)"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M18 9h1.5a1 1 0 0 0 0-5H18"
+          stroke="url(#trophyGrad)"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M4 22h16"
+          stroke="url(#trophyGrad)"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z"
+          stroke="url(#trophyGrad)"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          fill="url(#trophyGrad)"
+          fillOpacity="0.15"
+        />
+        <path
+          d="M6 9H4.5a1 1 0 0 1 0-5H6"
+          stroke="url(#trophyGrad)"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </g>
+    </svg>
+  );
+
   return (
-    <div ref={potRef} className="relative z-30 font-mono flex items-center justify-center">
+    <div ref={potRef} className="relative z-30 font-mono flex items-center justify-center overflow-visible">
       <AnimatePresence mode="wait">
         {isShowdown ? (
           <motion.div
@@ -106,29 +170,23 @@ export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, pot
             exit={{ opacity: 0, scale: 0.95, filter: "blur(4px)" }}
             transition={{ duration: MORPH_DURATION, ease: [0.22, 1, 0.36, 1] }}
             className={cn(
-              "flex flex-col items-center justify-center text-center rounded-xl",
+              "flex items-center justify-center gap-2 rounded-full",
               "border border-tertiary/30 bg-[rgba(8,8,8,0.92)] backdrop-blur-xl",
               "shadow-[0_0_40px_rgba(0,0,0,0.8),0_0_20px_rgba(78,222,163,0.1)]",
-              isMobile ? "px-5 py-3 min-w-[240px]" : "px-6 py-3 min-w-[260px]",
+              isMobile ? "px-4 py-2 min-w-[240px]" : "px-3 py-1.5 min-w-[260px]",
             )}
           >
-            {/* ... winner content (unchanged) ... */}
-            <motion.span
-              className={cn(
-                "font-label-caps tracking-[0.3em] text-tertiary uppercase",
-                isMobile ? "text-[8px] mb-1" : "text-[9px] mb-1.5",
-              )}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: CONTENT_DELAY, duration: 0.2 }}
-            >
-              Winner
-            </motion.span>
+            <div className="flex items-center justify-center gap-2 w-full overflow-visible">
+              {/* ── Bigger trophy, no clipping ── */}
+              <TrophyIcon className={cn(
+                isMobile ? "w-5 h-5" : "w-6 h-6",   // bigger size
+                "flex-shrink-0 drop-shadow-[0_0_10px_rgba(251,191,36,0.6)]"
+              )} />
 
-            {winners.map((w: any) => (
-              <div key={w.user_id} className="flex flex-col items-center gap-1 w-full">
-                <div className={cn("flex items-center gap-3 w-full justify-center", isMobile && "gap-3")}>
-                  <div className="flex gap-1.5 perspective-1000">
+              {winners.map((w: any, idx: number) => (
+                <div key={idx} className="flex items-center gap-2 flex-shrink-0">
+                  {idx > 0 && <span className="text-white/15">+</span>}
+                  <div className="flex gap-1">
                     {w.hole_cards.map((c: any, i: number) => (
                       <motion.div
                         key={i}
@@ -137,61 +195,45 @@ export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, pot
                         transition={{ delay: CONTENT_DELAY + 0.1 + i * 0.06, duration: 0.25 }}
                         style={{ transformStyle: 'preserve-3d' }}
                       >
-                        <Card rank={c.rank} suit={c.suit} size={isMobile ? 'sm' : 'sm'} hoverable={false} />
+                        <Card rank={c.rank} suit={c.suit} size="sm" hoverable={false} />
                       </motion.div>
                     ))}
                   </div>
-
-                  <motion.div
-                    className="flex flex-col items-start gap-0.5"
-                    initial={{ opacity: 0, x: 4 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: CONTENT_DELAY + 0.2, duration: 0.15 }}
-                  >
+                  <div className="flex flex-col items-start leading-tight">
                     <span className={cn(
-                      "font-bold text-on-surface tracking-wider uppercase text-left",
-                      isMobile ? "text-[11px]" : "text-[11px]",
+                      "font-bold text-on-surface tracking-wider uppercase",
+                      isMobile ? "text-[10px]" : "text-[11px]",
                     )}>
                       {w.display_name}
                     </span>
                     <span className={cn(
-                      "font-label-caps tracking-widest text-on-surface-variant uppercase text-left max-w-[140px] whitespace-normal leading-tight",
-                      isMobile ? "text-[8px]" : "text-[8px]",
+                      "font-label-caps tracking-widest text-on-surface-variant uppercase",
+                      isMobile ? "text-[8px]" : "text-[9px]",
                     )}>
                       {w.hand_description}
                     </span>
-                  </motion.div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
 
-            <motion.div
-              className={cn(
-                "w-full bg-gradient-to-r from-transparent via-tertiary/30 to-transparent",
-                isMobile ? "h-px my-1" : "h-px my-1.5",
-              )}
-              initial={{ scaleX: 0 }}
-              animate={{ scaleX: 1 }}
-              transition={{ delay: CONTENT_DELAY + 0.3, duration: 0.15 }}
-            />
+              <span className="text-white/15">|</span>
 
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: CONTENT_DELAY + 0.35, duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            >
-              <span className={cn(
-                "text-tertiary font-bold tabular-nums tracking-wider drop-shadow-[0_0_12px_rgba(78,222,163,0.35)]",
-                isMobile ? "text-xl" : "text-xl",
-              )}>
+              <motion.span
+                className={cn(
+                  "text-tertiary font-bold tabular-nums tracking-wider drop-shadow-[0_0_12px_rgba(78,222,163,0.35)]",
+                  isMobile ? "text-lg" : "text-xl",
+                )}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: CONTENT_DELAY + 0.35, duration: 0.2 }}
+              >
                 ${formatAmount(Math.round(animatedAmount))}
-              </span>
-            </motion.div>
+              </motion.span>
+            </div>
           </motion.div>
         ) : (
           <motion.div
             key="pot"
-            // ── Badge bounce on chip arrival ──
             variants={badgeBounceVariants}
             initial="initial"
             animate={effectKey > 0 ? "animate" : "initial"}
@@ -201,7 +243,6 @@ export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, pot
               toCall && toCall > 0 && 'border-tertiary/20'
             )}
           >
-            {/* ── Ripple ring ── */}
             <AnimatePresence>
               {effectKey > 0 && (
                 <motion.div
@@ -216,7 +257,6 @@ export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, pot
               )}
             </AnimatePresence>
 
-            {/* ── Pot content ── */}
             <motion.div
               className="flex items-center justify-center gap-1 text-center"
               initial={{ opacity: 0, scale: 0.9, y: 4 }}
@@ -225,7 +265,7 @@ export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, pot
             >
               <Coins className={cn('text-tertiary/70', isMobile ? 'w-3.5 h-3.5' : 'w-3 h-3')} />
               <motion.span
-                key={animatedAmount} // triggers number pop on amount change
+                key={animatedAmount}
                 variants={numberPopVariants}
                 initial="initial"
                 animate={effectKey > 0 ? "animate" : "initial"}
@@ -241,7 +281,6 @@ export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, pot
               </motion.span>
             </motion.div>
 
-            {/* Call indicator – unchanged */}
             {toCall !== undefined && toCall > 0 && (
               <motion.div
                 className="flex items-center justify-center gap-1 text-center"

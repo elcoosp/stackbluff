@@ -9,13 +9,15 @@ use axum::{
 use axum_extra::extract::CookieJar;
 use futures::{SinkExt, StreamExt};
 use sb_auth::Authenticator;
-use sb_shared_types::{ChipAmount, TableId, UserId};
+use sb_contracts::repo_api::UserRepo;
+use sb_shared_types::{ChipAmount, RequestContext, TableId, UserId};
 use sb_table_registry::game_room::RoomMessage;
 use sb_table_registry::registry::Registry;
 use serde::Deserialize;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use tracing::{debug, error, info, warn};
+use uuid::Uuid;
 
 #[derive(Deserialize)]
 struct WsQuery {
@@ -25,10 +27,19 @@ struct WsQuery {
 struct AppState {
     auth: Arc<dyn Authenticator + Send + Sync>,
     registry: Arc<Registry>,
+    user_repo: Arc<dyn UserRepo>,
 }
 
-pub fn ws_route(auth: Arc<dyn Authenticator + Send + Sync>, registry: Arc<Registry>) -> Router {
-    let state = Arc::new(AppState { auth, registry });
+pub fn ws_route(
+    auth: Arc<dyn Authenticator + Send + Sync>,
+    registry: Arc<Registry>,
+    user_repo: Arc<dyn UserRepo>,
+) -> Router {
+    let state = Arc::new(AppState {
+        auth,
+        registry,
+        user_repo,
+    });
     Router::new()
         .route("/ws/game", get(ws_handler))
         .with_state(state)
@@ -206,15 +217,23 @@ async fn handle_websocket(
 
     info!(%user_id, "WebSocket handler loop exited");
 
-    // Leave table if joined
+    // Leave table if joined (handles disconnects)
     if let Some(table_id) = current_table_id {
-        info!(%user_id, %table_id, "Sending leave to table actor");
-        if let Err(e) = state.registry.send_leave(table_id, user_id).await {
-            warn!(%user_id, %table_id, error = %e, "Failed to send leave");
+        info!(%user_id, %table_id, "Sending leave to table actor due to disconnect");
+        if let Ok(remaining_stack) = state.registry.send_leave(table_id, user_id).await {
+            if remaining_stack > ChipAmount::new(0).unwrap() {
+                let ctx = RequestContext::new(Uuid::new_v4(), Some(user_id));
+                if let Err(e) = state
+                    .user_repo
+                    .update_chip_balance(ctx, user_id, remaining_stack.as_i64())
+                    .await
+                {
+                    error!(%user_id, error = ?e, "Failed to credit remaining stack on disconnect");
+                }
+            }
         }
     }
 
-    // Abort the send task (it should already be finished, but just in case)
     send_task.abort();
     info!(%user_id, "WebSocket handler finished");
 }
@@ -275,7 +294,6 @@ async fn handle_client_message(
             };
 
             // ── Early validation against table limits BEFORE joining ──
-            // This prevents sending a premature "Connected" message when the buy-in is rejected.
             match state.registry.get_table_config(table_id).await {
                 Some(cfg) => {
                     if stack < cfg.min_buy_in || stack > cfg.max_buy_in {
@@ -298,6 +316,29 @@ async fn handle_client_message(
                 }
             }
 
+            // ── Deduct buy_in from user's global balance ──
+            let ctx = RequestContext::new(Uuid::new_v4(), Some(*user_id));
+            match state
+                .user_repo
+                .update_chip_balance(ctx.clone(), *user_id, -buy_in)
+                .await
+            {
+                Ok(new_balance) => {
+                    let balance_msg =
+                        serde_json::json!({"type": "BalanceUpdated", "balance": new_balance});
+                    let _ = client_tx.send(axum::extract::ws::Message::Text(
+                        balance_msg.to_string().into(),
+                    ));
+                }
+                Err(e) => {
+                    error!(%user_id, error = ?e, "Insufficient balance for buy-in");
+                    let err = serde_json::json!({"type": "Error", "message": "Insufficient balance for buy-in"});
+                    let _ =
+                        client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
+                    return;
+                }
+            }
+
             info!(%user_id, %table_id, buy_in = buy_in, "Attempting to join table");
             match state
                 .registry
@@ -306,15 +347,13 @@ async fn handle_client_message(
             {
                 Ok(()) => {
                     info!(%user_id, %table_id, "Successfully joined table");
-                    // Subscribe to broadcasts from this table
                     match state.registry.subscribe_to_table(table_id).await {
                         Some(bcast_tx) => {
                             *broadcast_rx = Some(bcast_tx.subscribe());
                             info!(%user_id, %table_id, "Subscribed to table broadcast");
-                            // Send a Connected message to the client
                             let connected = RoomMessage::Connected {
                                 user_id: *user_id,
-                                seat_index: seat_opt.unwrap_or(0), // backend may override, but this is a placeholder
+                                seat_index: seat_opt.unwrap_or(0),
                             };
                             if let Ok(json) = serde_json::to_string(&connected) {
                                 let _ =
@@ -326,6 +365,12 @@ async fn handle_client_message(
                             let err = serde_json::json!({"type": "Error", "message": "Table broadcast unavailable"});
                             let _ = client_tx
                                 .send(axum::extract::ws::Message::Text(err.to_string().into()));
+
+                            // Refund the buy_in since subscription failed
+                            let _ = state
+                                .user_repo
+                                .update_chip_balance(ctx, *user_id, buy_in)
+                                .await;
                             return;
                         }
                     }
@@ -336,6 +381,12 @@ async fn handle_client_message(
                     let err = serde_json::json!({"type": "Error", "message": format!("Failed to join: {:?}", e)});
                     let _ =
                         client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
+
+                    // Refund the buy_in since join failed
+                    let _ = state
+                        .user_repo
+                        .update_chip_balance(ctx, *user_id, buy_in)
+                        .await;
                 }
             }
         }
@@ -366,10 +417,81 @@ async fn handle_client_message(
                 }
             };
 
+            // ── Deduct rebuy amount from user's global balance ──
+            let ctx = RequestContext::new(Uuid::new_v4(), Some(*user_id));
+            match state
+                .user_repo
+                .update_chip_balance(ctx.clone(), *user_id, -amount)
+                .await
+            {
+                Ok(new_balance) => {
+                    let balance_msg =
+                        serde_json::json!({"type": "BalanceUpdated", "balance": new_balance});
+                    let _ = client_tx.send(axum::extract::ws::Message::Text(
+                        balance_msg.to_string().into(),
+                    ));
+                }
+                Err(e) => {
+                    error!(%user_id, error = ?e, "Insufficient balance for rebuy");
+                    let err = serde_json::json!({"type": "Error", "message": "Insufficient balance for rebuy"});
+                    let _ =
+                        client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
+                    return;
+                }
+            }
+
             if let Err(e) = state.registry.send_rebuy(table_id, *user_id, stack).await {
                 error!(%user_id, %table_id, error = ?e, "Rebuy failed");
                 let err = serde_json::json!({"type": "Error", "message": format!("Rebuy failed: {:?}", e)});
                 let _ = client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
+
+                // Refund the rebuy amount since rebuy failed
+                let _ = state
+                    .user_repo
+                    .update_chip_balance(ctx, *user_id, amount)
+                    .await;
+            }
+        }
+
+        "leave_table" => {
+            let table_id = match current_table_id {
+                Some(id) => *id,
+                None => {
+                    let err = serde_json::json!({"type": "Error", "message": "Not at a table"});
+                    let _ =
+                        client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
+                    return;
+                }
+            };
+
+            let ctx = RequestContext::new(Uuid::new_v4(), Some(*user_id));
+
+            match state.registry.send_leave(table_id, *user_id).await {
+                Ok(remaining_stack) => {
+                    if remaining_stack > ChipAmount::new(0).unwrap() {
+                        match state
+                            .user_repo
+                            .update_chip_balance(ctx.clone(), *user_id, remaining_stack.as_i64())
+                            .await
+                        {
+                            Ok(new_balance) => {
+                                let balance_msg = serde_json::json!({"type": "BalanceUpdated", "balance": new_balance});
+                                let _ = client_tx.send(axum::extract::ws::Message::Text(
+                                    balance_msg.to_string().into(),
+                                ));
+                            }
+                            Err(e) => {
+                                error!(%user_id, error = ?e, "Failed to credit remaining stack");
+                            }
+                        }
+                    }
+                    *current_table_id = None;
+                }
+                Err(e) => {
+                    let err = serde_json::json!({"type": "Error", "message": format!("Failed to leave: {:?}", e)});
+                    let _ =
+                        client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
+                }
             }
         }
 

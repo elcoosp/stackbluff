@@ -1,4 +1,4 @@
-import { useParams } from '@tanstack/react-router';
+import { useParams, useSearch } from '@tanstack/react-router';
 import { useGameWebSocket } from '../hooks/useGameWebSocket';
 import { usePreAction } from '../hooks/usePreAction';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
@@ -16,6 +16,7 @@ import {
   BetAnimationLayer,
   DealAnimationLayer,
   LeaveTableDialog,
+  BuyInDialog,
 } from '../components/game';
 import { useGameStore } from '@stackbluff/shared/stores/gameStore';
 import { useDealStore } from '@stackbluff/shared/stores/dealStore';
@@ -29,6 +30,7 @@ import { cn } from '@/lib/utils';
 import { Settings, LogOut } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useNavigate } from '@tanstack/react-router';
+import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 
 function Fallback({ error, resetErrorBoundary }: any) {
   return (
@@ -42,7 +44,7 @@ function Fallback({ error, resetErrorBoundary }: any) {
 function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState(false);
   useEffect(() => {
-    const media = window.matchMedia(query);
+    const media = window.matchMedia(query); // FIXED HERE
     setMatches(media.matches);
     const listener = (e: MediaQueryListEvent) => setMatches(e.matches);
     media.addEventListener('change', listener);
@@ -199,15 +201,20 @@ function useDelayedBoolean(value: boolean, delayMs: number): boolean {
    ═══════════════════════════════════════════════════════════════════ */
 export function TablePage() {
   const { tableId } = useParams({ from: '/table/$tableId' });
+  const search = useSearch({ from: '/table/$tableId' });
   const navigate = useNavigate();
-  const { sendAction, connectionStatus, myUserId } = useGameWebSocket(tableId);
+  const { sendJoin, sendAction, sendRebuy, connectionStatus, myUserId } = useGameWebSocket(tableId);
   const isDesktop = useResponsiveLayout();
   const showAnalytics = useMediaQuery('(min-width: 980px)');
   const game = useGameStore();
   const { trigger } = useFeedback();
   const [showSettings, setShowSettings] = useState(false);
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
+  const [showRebuyDialog, setShowRebuyDialog] = useState(false);
+  const [hasJoined, setHasJoined] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
   const { isDealing } = useDealStore();
+  const balance = useAuthStore((s) => s.balance);
 
   const {
     seats,
@@ -271,6 +278,7 @@ export function TablePage() {
           hand_description: player.hand_description,
           is_winner: player.is_winner,
           win_amount: player.win_amount,
+          winning_cards: player.winning_cards, // Pass winning cards to seat
           is_showdown_revealed: true,
         };
       }
@@ -282,6 +290,9 @@ export function TablePage() {
       ? showdownReveal.community_cards
       : communityCards;
 
+  // Aggregate all winning cards to highlight community cards
+  const allWinningCards = showdownReveal?.players.flatMap(p => p.winning_cards || []) || [];
+
   const isMyTurn = !!actionRequired;
   const toCall = actionRequired?.to_call ?? 0;
   const minRaiseDelta = actionRequired?.min_raise ?? 0;
@@ -292,6 +303,34 @@ export function TablePage() {
   const canRaise = heroStack >= minRaiseAmount;
   const maxRaiseAmount = heroStack > 0 ? heroStack : minRaiseAmount;
   const finalMinRaise = canRaise ? minRaiseAmount : maxRaiseAmount;
+
+  // Initial Join Logic
+  useEffect(() => {
+    if (connectionStatus === 'connected' && !hasJoined) {
+      const urlBuyIn = (search as any)?.buyIn as number | undefined;
+      if (urlBuyIn && urlBuyIn > 0) {
+        sendJoin(urlBuyIn);
+        setHasJoined(true);
+        setIsJoining(true);
+        setShowRebuyDialog(false);
+      } else {
+        setShowRebuyDialog(true);
+      }
+    }
+  }, [connectionStatus, hasJoined, search, sendJoin]);
+
+  // Show Rebuy Dialog if hero runs out of chips AND they have already joined
+  useEffect(() => {
+    if (isJoining && heroStack > 0) {
+      setIsJoining(false);
+    }
+
+    if (hasJoined && heroStack === 0 && !isJoining && connectionStatus === 'connected' && !game.handInProgress) {
+      setShowRebuyDialog(true);
+    } else if (heroStack > 0) {
+      setShowRebuyDialog(false);
+    }
+  }, [heroStack, connectionStatus, hasJoined, isJoining, game.handInProgress]);
 
   const { preAction, togglePreAction, executingAction } = usePreAction({
     isMyTurn,
@@ -412,7 +451,7 @@ export function TablePage() {
           onClick={() => { setShowSettings(true); trigger('buttonClick'); }}
           className={cn(
             "absolute top-3 right-3 z-[700] p-2 rounded-full bg-black/50 backdrop-blur-md border border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-black/70 transition-all",
-            !isDesktop && "top-16"
+            !showAnalytics && "top-16"
           )}
           aria-label="Feedback settings"
         >
@@ -427,7 +466,7 @@ export function TablePage() {
           onClick={() => { setShowLeaveDialog(true); trigger('buttonClick'); }}
           className={cn(
             "absolute top-3 left-3 z-[700] p-2 rounded-full bg-black/50 backdrop-blur-md border border-white/10 text-on-surface-variant hover:text-red-400 hover:bg-black/70 transition-all",
-            !isDesktop && "top-16"
+            !showAnalytics && "top-16"
           )}
           aria-label="Leave table"
         >
@@ -442,6 +481,32 @@ export function TablePage() {
           onConfirm={handleLeaveTable}
           stackAmount={heroStack}
           isHandInProgress={!!game.handInProgress}
+        />
+
+        <BuyInDialog
+          open={showRebuyDialog}
+          onClose={() => {
+            if (!hasJoined) {
+              navigate({ to: '/lobby' });
+            } else {
+              setShowRebuyDialog(false);
+            }
+          }}
+          onConfirm={(amount) => {
+            if (!hasJoined) {
+              sendJoin(amount);
+              setHasJoined(true);
+              setIsJoining(true);
+            } else {
+              sendRebuy(amount);
+            }
+            setShowRebuyDialog(false);
+          }}
+          minBuyIn={100}
+          maxBuyIn={200000}
+          defaultBuyIn={1000}
+          isRebuy={hasJoined}
+          currentBalance={balance}
         />
 
         {!showAnalytics && (
@@ -463,6 +528,7 @@ export function TablePage() {
                   cards={displayCommunityCards}
                   isMobile={!isDesktop}
                   revealedCount={displayCommunityCards.length}
+                  winningCards={allWinningCards} // Pass winning cards
                 />
               </div>
 

@@ -96,6 +96,7 @@ const parseMessage = (data: any) => {
         hand_description: p.hand_description || '',
         is_winner: p.is_winner || false,
         win_amount: p.win_amount || 0,
+        winning_cards: (p.winning_cards || []).map(convertCard), // <-- ADDED
       }));
       const communityCards = (data.community_cards || []).map(convertCard);
       return {
@@ -177,6 +178,7 @@ export function useGameWebSocket(tableId: string) {
 
   const myUserIdRef = useRef<string | null>(null);
   const mySeatRef = useRef<number | null>(null);
+  const buyInRef = useRef<number | null>(null);
 
   const connect = useCallback(() => {
     if (!mountedRef.current) return;
@@ -200,11 +202,10 @@ export function useGameWebSocket(tableId: string) {
       setConnectionStatus('connected');
       reconnectAttempts.current = 0;
 
-      // Read buy-in amount from URL search params
-      const params = new URLSearchParams(window.location.search);
-      const buyIn = parseInt(params.get('buyIn') || '1000', 10);
-
-      ws.send(JSON.stringify({ type: 'join_table', table_id: tableId, buy_in: buyIn }));
+      // If we already have a buy-in amount (e.g. from a previous connection), re-join automatically
+      if (buyInRef.current !== null) {
+        ws.send(JSON.stringify({ type: 'join_table', table_id: tableId, buy_in: buyInRef.current }));
+      }
 
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
@@ -280,7 +281,7 @@ export function useGameWebSocket(tableId: string) {
       }
     };
 
-    ws.onclose = (event) => {
+    ws.onclose = () => {
       if (!mountedRef.current) return;
       wsRef.current = null;
       setConnectionStatus('reconnecting');
@@ -311,6 +312,19 @@ export function useGameWebSocket(tableId: string) {
     };
   }, [connect]);
 
+  const sendJoin = useCallback((amount: number) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      buyInRef.current = amount;
+      wsRef.current.send(JSON.stringify({ type: 'join_table', table_id: tableId, buy_in: amount }));
+    }
+  }, [tableId]);
+
+  const sendRebuy = useCallback((amount: number) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'rebuy', amount }));
+    }
+  }, []);
+
   const sendAction = useCallback(
     (action: string, amount?: number) => {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -329,5 +343,5 @@ export function useGameWebSocket(tableId: string) {
     [clearActionRequired]
   );
 
-  return { sendAction, connectionStatus, myUserId };
+  return { sendJoin, sendAction, sendRebuy, connectionStatus, myUserId };
 }
