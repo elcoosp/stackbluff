@@ -35,6 +35,7 @@ interface PlayerSpotProps {
   timerRemainingMs?: number | null;
   timerTotalMs?: number | null;
   isDealing?: boolean;
+  onShowStats?: (userId: string) => void;
 }
 
 const CardGroup = ({
@@ -230,6 +231,7 @@ export const PlayerSpot = ({
   timerRemainingMs,
   timerTotalMs,
   isDealing = false,
+  onShowStats,
 }: PlayerSpotProps) => {
   const {
     display_name = 'Player',
@@ -494,6 +496,16 @@ export const PlayerSpot = ({
       <div className={cn(glassClasses, 'relative z-20')} style={visualStyle} data-hub>
         {winnerGlow}
         {allInGlow}
+
+        {/* Clickable Overlay for Stats */}
+        {onShowStats && (
+          <button
+            type="button"
+            onClick={() => onShowStats(seat.user_id)}
+            className="absolute inset-0 w-full h-full z-[60] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50 rounded-sm"
+            aria-label={`Show stats for ${display_name}`}
+          />
+        )}
 
         <div
           className={cn(

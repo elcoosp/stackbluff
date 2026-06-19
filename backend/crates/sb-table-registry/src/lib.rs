@@ -2,6 +2,7 @@ pub mod actor;
 pub mod events;
 pub mod game_room;
 pub mod registry;
+pub mod stats_aggregator;
 pub mod table_service;
 
 pub use actor::buy_in_limits_for_stake;

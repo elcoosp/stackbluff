@@ -5,6 +5,7 @@ pub mod notification_api;
 pub mod persistence_error;
 pub mod repo_api;
 pub mod service_api;
+pub mod stats_api;
 pub mod user_resolution;
 pub use service_api::{
     ClubService, HandResult, ReferralStats, ReplayCard, UserService, ViralService,

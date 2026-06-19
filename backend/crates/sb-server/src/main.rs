@@ -17,14 +17,18 @@ use sb_auth::{
 };
 use sb_contracts::lobby_api::TableRepo;
 use sb_contracts::repo_api::{HandHistoryRepository, UserRepo};
+use sb_contracts::stats_api::PlayerStatsRepo;
 use sb_db_repos::hand_history_repo::{HandHistoryRepoImpl, spawn_hand_history_cleanup};
 use sb_db_repos::init_writer_loop;
+use sb_db_repos::player_stats_repo::PlayerStatsRepoImpl;
 use sb_db_repos::user_repo::UserRepoImpl;
 use sb_rest_router::create_router;
+use sb_rest_router::player_stats::player_stats_routes;
 use sb_shared_types::{GameVariant, StakeLevel, TableConfig};
 use sb_table_registry::buy_in_limits_for_stake;
 use sb_table_registry::registry::Registry;
 use sb_table_registry::spawn_history_recorder;
+use sb_table_registry::stats_aggregator::spawn_stats_aggregator; // Added this import
 use sb_table_registry::table_service::TableServiceImpl;
 use sb_ws_handler::ws_route;
 
@@ -116,13 +120,22 @@ async fn main() {
     // ── Spawn Hand History Cleanup Task ──────────────────────────
     spawn_hand_history_cleanup(db.clone()).await;
 
-    // ── Rest Router (lobby, tables, history) ─────────────────────
+    // ── Initialize Player Stats Repository ───────────────────────
+    let stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync> =
+        Arc::new(PlayerStatsRepoImpl::new(db.clone()));
+
+    // ── Spawn Player Stats Aggregator ────────────────────────────
+    let stats_event_rx = registry.event_sender().subscribe();
+    spawn_stats_aggregator(stats_event_rx, stats_repo.clone());
+
+    // ── Rest Router (lobby, tables, history, stats) ──────────────
     let rest_router = create_router(
         table_service.clone(),
         table_repo.clone(),
         registry.clone(),
         hand_history_repo.clone(),
-    );
+    )
+    .merge(player_stats_routes(stats_repo.clone(), user_repo.clone()));
 
     // Configure CORS
     let allowed_origins = vec![

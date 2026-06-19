@@ -1,5 +1,6 @@
 mod m20250101_000001_add_participants_to_hand_history;
 mod m20250614_create_payment_intents;
+mod m20260101_000008_player_statistics;
 mod m20260607_000001_create_all_tables;
 mod m20260607_000002_create_clubs_tables;
 mod m20260614_145806_add_referrals_and_counters;
@@ -28,6 +29,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260617_add_table_name::Migration),
             Box::new(m20260616_seed_base_tables::Migration),
             Box::new(m20250101_000001_add_participants_to_hand_history::Migration),
+            Box::new(m20260101_000008_player_statistics::Migration),
         ]
     }
 }

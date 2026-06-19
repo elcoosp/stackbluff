@@ -426,6 +426,7 @@ const DesktopActionBar = ({
   minRaise,
   maxRaise,
   pot,
+  bigBlind,
   onAction,
   preAction,
   onSetPreAction,
@@ -440,6 +441,7 @@ const DesktopActionBar = ({
   minRaise: number;
   maxRaise: number;
   pot: number;
+  bigBlind: number;
   onAction: (action: string, amount?: number) => void;
   preAction: PreAction | null;
   onSetPreAction: (pa: PreAction | null) => void;
@@ -494,8 +496,9 @@ const DesktopActionBar = ({
               key="desktop-raise-slider"
               min={minRaise || 10}
               max={maxRaise || 1000}
-              step={10}
+              step={bigBlind || 10}
               pot={pot || 0}
+              bigBlind={bigBlind || 10}
               onConfirm={(amt) => {
                 onAction('raise', amt);
                 setRaiseOpen(false);
@@ -603,6 +606,7 @@ const MobileActionBar = ({
   minRaise,
   maxRaise,
   pot,
+  bigBlind,
   onAction,
   preAction,
   onSetPreAction,
@@ -617,6 +621,7 @@ const MobileActionBar = ({
   minRaise: number;
   maxRaise: number;
   pot: number;
+  bigBlind: number;
   onAction: (action: string, amount?: number) => void;
   preAction: PreAction | null;
   onSetPreAction: (pa: PreAction | null) => void;
@@ -732,8 +737,9 @@ const MobileActionBar = ({
               key="mobile-raise-slider"
               min={minRaise || 10}
               max={maxRaise || 1000}
-              step={10}
+              step={bigBlind || 10}
               pot={pot || 0}
+              bigBlind={bigBlind || 10}
               onConfirm={(amt) => {
                 onAction('raise', amt);
                 setRaiseOpen(false);
@@ -799,6 +805,7 @@ export const ActionBar = ({
   minRaise,
   maxRaise,
   pot,
+  bigBlind = 10,
   onAction,
   preAction,
   onSetPreAction,
@@ -814,6 +821,7 @@ export const ActionBar = ({
   minRaise: number;
   maxRaise: number;
   pot: number;
+  bigBlind?: number;
   onAction: (action: string, amount?: number) => void;
   preAction: PreAction | null;
   onSetPreAction: (pa: PreAction | null) => void;
@@ -829,6 +837,7 @@ export const ActionBar = ({
     minRaise,
     maxRaise,
     pot,
+    bigBlind,
     onAction,
     preAction,
     onSetPreAction,

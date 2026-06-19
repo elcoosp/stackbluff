@@ -21,3 +21,4 @@ export * from './AnimatedChip';
 export * from './BuyInDialog';
 export * from './LeaveTableDialog';
 export * from './HistoryDialog';
+export * from './PlayerStatsDialog';

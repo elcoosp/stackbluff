@@ -19,7 +19,8 @@ export const SeatGrid = ({
   opponentTurnUserId,
   opponentTimerRemainingMs,
   opponentTimerTotalMs,
-  isDealing,                              // ← ADD
+  isDealing,
+  onShowStats,
 }: {
   seats: Record<number, any>;
   heroSeat: number;
@@ -30,7 +31,8 @@ export const SeatGrid = ({
   opponentTurnUserId?: string | null;
   opponentTimerRemainingMs?: number | null;
   opponentTimerTotalMs?: number | null;
-  isDealing?: boolean;                    // ← ADD
+  isDealing?: boolean;
+  onShowStats?: (userId: string) => void;
 }) => {
   const vw = useState(typeof window !== 'undefined' ? window.innerWidth : 500)[0];
   const isNarrowMobile = !isDesktop && vw < 362;
@@ -102,7 +104,8 @@ export const SeatGrid = ({
               seatPosition={pos}
               timerRemainingMs={timerRemainingMs}
               timerTotalMs={timerTotalMs}
-              isDealing={isDealing}          // ← ADD
+              isDealing={isDealing}
+              onShowStats={onShowStats}
             />
           </div>
         );

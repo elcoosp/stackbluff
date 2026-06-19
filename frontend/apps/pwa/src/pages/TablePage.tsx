@@ -18,6 +18,7 @@ import {
   LeaveTableDialog,
   BuyInDialog,
   HistoryDialog,
+  PlayerStatsDialog,
 } from '../components/game';
 import { useGameStore } from '@stackbluff/shared/stores/gameStore';
 import { useDealStore } from '@stackbluff/shared/stores/dealStore';
@@ -215,6 +216,7 @@ export function TablePage() {
   const [showHistory, setShowHistory] = useState(false);
   const [hasJoined, setHasJoined] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
+  const [statsUserId, setStatsUserId] = useState<string | null>(null);
   const { isDealing } = useDealStore();
   const balance = useAuthStore((s) => s.balance);
 
@@ -551,6 +553,12 @@ export function TablePage() {
           currentBalance={balance}
         />
 
+        {/* ── Player Stats Dialog ── */}
+        <PlayerStatsDialog
+          userId={statsUserId}
+          onOpenChange={(open) => !open && setStatsUserId(null)}
+        />
+
         {!showAnalytics && (
           <MobileAnalyticsStrip winProb={winProb} potOdds={potOdds} bestHand={bestHand} strength={strength} />
         )}
@@ -601,6 +609,7 @@ export function TablePage() {
               opponentTimerRemainingMs={opponentTimerRemainingMs}
               opponentTimerTotalMs={opponentTimerTotalMs}
               isDealing={isDealing}
+              onShowStats={setStatsUserId}
             />
 
             <DealAnimationLayer isDesktop={isDesktop} heroSeat={resolvedHeroSeat} />

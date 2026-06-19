@@ -4124,6 +4124,7 @@ dependencies = [
  "chrono",
  "jsonwebtoken",
  "mockall",
+ "moka",
  "sb-anti-cheat",
  "sb-auth",
  "sb-contracts",
