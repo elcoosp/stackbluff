@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardBack } from './Card';
 import { cn } from '@/lib/utils';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 
 interface CommunityCardsProps {
   cards: any[];
@@ -21,7 +21,7 @@ function useWindowWidth() {
 }
 
 /* ── EmptySlot ── */
-function EmptySlot({ isNextStreet }: { isNextStreet: boolean }) {
+const EmptySlot = memo(({ isNextStreet }: { isNextStreet: boolean }) => {
   return (
     <motion.div
       className={cn(
@@ -41,7 +41,8 @@ function EmptySlot({ isNextStreet }: { isNextStreet: boolean }) {
       )}
     </motion.div>
   );
-}
+});
+EmptySlot.displayName = 'EmptySlot';
 
 /* ── CommunityCards ── */
 export const CommunityCards = ({
@@ -156,69 +157,77 @@ export const CommunityCards = ({
           {!isDealt && <EmptySlot isNextStreet={isNextStreet(slotIndex)} />}
         </AnimatePresence>
 
-        {isDealt && (
-          <motion.div
-            className="absolute inset-0"
-            style={{ transformStyle: 'preserve-3d' }}
-            initial={{
-              y: windowWidth < 768 ? -80 : -120,
-              scale: 0.88,
-              opacity: 0,
-              boxShadow: '0 30px 60px rgba(0,0,0,0.9)',
-            }}
-            animate={{
-              y: 0,
-              scale: 1,
-              opacity: 1,
-              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-            }}
-            transition={{
-              delay: dealDelay,
-              type: 'spring',
-              damping: 18,
-              stiffness: 380,
-              mass: 0.8,
-            }}
-          >
+        <AnimatePresence>
+          {isDealt && (
             <motion.div
+              className="absolute inset-0 transform-gpu [will-change:transform]"
               style={{ transformStyle: 'preserve-3d' }}
-              animate={{ rotateY: -180 }}
+              initial={{
+                y: windowWidth < 768 ? -80 : -120,
+                scale: 0.88,
+                opacity: 0,
+              }}
+              animate={{
+                y: 0,
+                scale: 1,
+                opacity: 1,
+              }}
+              exit={{
+                y: windowWidth < 768 ? -150 : -200,
+                opacity: 0,
+                scale: 0.8,
+                rotate: slotIndex % 2 === 0 ? 15 : -15,
+                transition: { duration: 0.4, ease: 'easeIn' }
+              }}
               transition={{
-                rotateY: {
-                  delay: flipDelay,
-                  duration: FLIP_DURATION,
-                  ease: [0.4, 0, 0.2, 1],
-                },
+                delay: dealDelay,
+                type: 'spring',
+                damping: 18,
+                stiffness: 380,
+                mass: 0.8,
               }}
             >
-              {/* Front: Card Back */}
-              <div style={{ backfaceVisibility: 'hidden' }} className="transition-[width,height] duration-300 ease-in-out">
-                <CardBack
-                  className={`${cardWidth} ${cardHeight} ${roundedClass} transition-[width,height] duration-300 ease-in-out`}
-                  size={sizeProp}
-                  rounded={roundedClass}
-                  hoverable={false}
-                />
-              </div>
-
-              {/* Back: Card Front */}
-              <div
-                className="absolute inset-0 transition-[width,height] duration-300 ease-in-out"
-                style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+              <motion.div
+                className="w-full h-full transform-gpu [will-change:transform]"
+                style={{ transformStyle: 'preserve-3d' }}
+                animate={{ rotateY: -180 }}
+                transition={{
+                  rotateY: {
+                    delay: flipDelay,
+                    duration: FLIP_DURATION,
+                    ease: [0.4, 0, 0.2, 1],
+                  },
+                }}
               >
-                <Card
-                  rank={card.rank}
-                  suit={card.suit}
-                  className={realCardClass}
-                  size={sizeProp}
-                  hoverable={false}
-                  isWinning={isWinningCard(card)}
-                  isLosing={hasShowdownWinner && !isWinningCard(card)}
-                />
-              </div>
+                {/* Front: Card Back */}
+                <div style={{ backfaceVisibility: 'hidden' }} className="transition-[width,height] duration-300 ease-in-out">
+                  <CardBack
+                    className={`${cardWidth} ${cardHeight} ${roundedClass} transition-[width,height] duration-300 ease-in-out`}
+                    size={sizeProp}
+                    rounded={roundedClass}
+                    hoverable={false}
+                  />
+                </div>
+
+                {/* Back: Card Front */}
+                <div
+                  className="absolute inset-0 transition-[width,height] duration-300 ease-in-out"
+                  style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+                >
+                  <Card
+                    rank={card.rank}
+                    suit={card.suit}
+                    className={realCardClass}
+                    size={sizeProp}
+                    hoverable={false}
+                    isWinning={isWinningCard(card)}
+                    isLosing={hasShowdownWinner && !isWinningCard(card)}
+                  />
+                </div>
+              </motion.div>
             </motion.div>
-          </motion.div>
-        )}
+          )}
+        </AnimatePresence>
       </div>
     );
   };

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { LayoutGroup } from 'framer-motion';
 import { PlayerSpot } from './PlayerSpot';
 import {
@@ -8,7 +8,7 @@ import {
 } from '@/lib/seatPositions';
 import { cn } from '@/lib/utils';
 
-const seatTransition = 'left 0.4s ease, top 0.4s ease, transform 0.4s ease';
+const seatTransition = 'left 0.4s ease, top 0.4s ease, bottom 0.4s ease, transform 0.4s ease';
 
 export const SeatGrid = ({
   seats,
@@ -22,27 +22,25 @@ export const SeatGrid = ({
   opponentTimerTotalMs,
   isDealing,
   onShowStats,
-}: {
-  seats: Record<number, any>;
-  heroSeat: number;
-  isDesktop: boolean;
-  currentTurnUserId?: string | null;
-  heroTimerRemainingMs?: number | null;
-  heroTimerTotalMs?: number | null;
-  opponentTurnUserId?: string | null;
-  opponentTimerRemainingMs?: number | null;
-  opponentTimerTotalMs?: number | null;
-  isDealing?: boolean;
-  onShowStats?: (userId: string) => void;
-}) => {
-  const vw = useState(typeof window !== 'undefined' ? window.innerWidth : 500)[0];
-  const isNarrowMobile = !isDesktop && vw < 362;
+}: any) => {
+  const [vw, setVw] = useState(typeof window !== 'undefined' ? window.innerWidth : 500);
 
-  const positions = isDesktop ? desktopPositions : getMobilePositions(isNarrowMobile);
+  useEffect(() => {
+    const onResize = () => setVw(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  const isNarrowMobile = !isDesktop && vw < 390;
+
+  const positions = useMemo(
+    () => (isDesktop ? desktopPositions : getMobilePositions(isNarrowMobile)),
+    [isDesktop, isNarrowMobile]
+  );
 
   let currentDealerSeat: number | null = null;
   for (const [index, seat] of Object.entries(seats)) {
-    if (seat.position_badge === 'BTN') {
+    if ((seat as any).position_badge === 'BTN') {
       currentDealerSeat = Number(index);
       break;
     }
@@ -58,7 +56,7 @@ export const SeatGrid = ({
 
   return (
     <LayoutGroup>
-      {Object.entries(seats).map(([index, seat]) => {
+      {Object.entries(seats).map(([index, seat]: [string, any]) => {
         const seatIndex = Number(index);
         const posIndex =
           heroSeat !== null
@@ -80,26 +78,20 @@ export const SeatGrid = ({
           timerTotalMs = opponentTimerTotalMs ?? null;
         }
 
-        const seatWithName = {
-          ...seat,
-          display_name: seat.display_name || seat.user_id?.slice(0, 8) || 'Player',
-          position_badge: seat.position_badge || undefined,
-        };
-
         return (
           <div
             key={index}
-            // Hero wrapper gets z-[445] to sit above opponents (440) and focus mask (441), but below PotBadge (450)
             className={cn("absolute overflow-visible", isHero ? "z-[445]" : "z-[440]")}
             style={{
               left: pos.left,
               top: pos.top,
+              bottom: pos.bottom, // Added bottom support
               transform: pos.transform,
               transition: seatTransition,
             }}
           >
             <PlayerSpot
-              seat={seatWithName}
+              seat={seat}
               isHero={isHero}
               isMobile={!isDesktop}
               isDealer={isDealer}

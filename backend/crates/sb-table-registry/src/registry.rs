@@ -1,5 +1,6 @@
 use crate::actor::{InternalCommand, spawn_table_actor};
 use crate::events::HandCompletedEvent;
+use sb_contracts::stats_api::PlayerStatsRepo;
 use sb_contracts::{TableCommand, TableError, lobby_api::TableInfo};
 use sb_game_engine::game_state::Action;
 use sb_shared_types::{ActionType, ChipAmount, TableConfig, TableId, UserId};
@@ -25,10 +26,11 @@ pub struct Registry {
     next_seat: Arc<RwLock<HashMap<TableId, u8>>>,
     users_at_table: Arc<RwLock<HashMap<TableId, HashSet<UserId>>>>,
     event_tx: tokio::sync::broadcast::Sender<HandCompletedEvent>,
+    stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
 }
 
 impl Registry {
-    pub fn new() -> Self {
+    pub fn new(stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>) -> Self {
         let (event_tx, _) = tokio::sync::broadcast::channel(64);
         Self {
             tables: Arc::new(RwLock::new(HashMap::new())),
@@ -36,6 +38,7 @@ impl Registry {
             next_seat: Arc::new(RwLock::new(HashMap::new())),
             users_at_table: Arc::new(RwLock::new(HashMap::new())),
             event_tx,
+            stats_repo,
         }
     }
 
@@ -47,6 +50,7 @@ impl Registry {
             config.clone(),
             broadcast_tx.clone(),
             self.event_tx.clone(),
+            self.stats_repo.clone(),
         );
         let entry = TableEntry {
             cmd_tx,
@@ -68,6 +72,7 @@ impl Registry {
             config.clone(),
             broadcast_tx.clone(),
             self.event_tx.clone(),
+            self.stats_repo.clone(),
         );
         let entry = TableEntry {
             cmd_tx,
@@ -321,11 +326,5 @@ impl Registry {
 
     pub fn event_sender(&self) -> tokio::sync::broadcast::Sender<HandCompletedEvent> {
         self.event_tx.clone()
-    }
-}
-
-impl Default for Registry {
-    fn default() -> Self {
-        Self::new()
     }
 }

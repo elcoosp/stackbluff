@@ -76,13 +76,12 @@ function useRandomSparkle(enabled: boolean) {
     let timeout2: ReturnType<typeof setTimeout>;
 
     const run = () => {
-      // Random delay between 2s and 5s
       timeout1 = setTimeout(() => {
-        setSparkIndex(Math.floor(Math.random() * 4)); // 0 to 3 for the 4 buttons
+        setSparkIndex(Math.floor(Math.random() * 4));
         timeout2 = setTimeout(() => {
           setSparkIndex(null);
           run();
-        }, 800); // Let the animation play
+        }, 800);
       }, 2000 + Math.random() * 3000);
     };
 
@@ -521,12 +520,7 @@ const DesktopActionBar = ({
   const visibleAction = useVisibleAction(executingAction, toCall);
   useActionKeys(onAction, toggleRaise, actionRequired, toCall);
 
-  // Trigger sparkles only when waiting for user action (not when raise slider is open)
   const sparkIndex = useRandomSparkle(!actionRequired && !raiseOpen);
-
-  useEffect(() => {
-    if (!actionRequired) setPreActionOpen(true);
-  }, [actionRequired]);
 
   const getPreActionLabel = () => {
     if (!preAction) return 'Auto';
@@ -537,18 +531,21 @@ const DesktopActionBar = ({
   return (
     <motion.div
       key="desktop-bar"
-      initial={{ opacity: 0, y: 20, x: '-50%' }}
-      animate={{ opacity: 1, y: 0, x: '-50%' }}
-      exit={{ opacity: 0, y: 20, x: '-50%' }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 20 }}
       transition={transition}
-      className="fixed bottom-2 left-1/2 z-[450] pointer-events-none"
+      className="relative mx-auto w-fit z-[450] pointer-events-none pb-2"
     >
-      <div
+      {/* Added layout prop here to animate height changes smoothly */}
+      <motion.div
+        layout
         className={cn(
           "pointer-events-auto rounded-2xl overflow-hidden",
           actionRequired && "action-bar-breathing"
         )}
         style={glassStyle}
+        transition={{ layout: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } }}
       >
         <ExecutionBanner visibleAction={visibleAction} />
 
@@ -626,7 +623,7 @@ const DesktopActionBar = ({
             All-in
           </ActionBtn>
         </div>
-      </div>
+      </motion.div>
     </motion.div>
   );
 };
@@ -684,12 +681,7 @@ const MobileActionBar = ({
 
   useActionKeys(onAction, toggleRaise, actionRequired, toCall);
 
-  // Trigger sparkles only when waiting for user action (not when raise slider is open)
   const sparkIndex = useRandomSparkle(!actionRequired && !raiseOpen);
-
-  useEffect(() => {
-    if (actionRequired) setDrawerOpen(false);
-  }, [actionRequired]);
 
   const getPreActionText = () => {
     if (!preAction) return '';
@@ -724,14 +716,17 @@ const MobileActionBar = ({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
       transition={transition}
-      className="fixed bottom-0 left-0 right-0 z-[450] pointer-events-auto"
+      className="relative w-full z-[450] pointer-events-auto"
     >
-      <div
+      {/* Added layout prop here to animate height changes smoothly */}
+      <motion.div
+        layout
         className={cn(
           "border-x-0 border-b-0 rounded-none",
           actionRequired && "action-bar-breathing"
         )}
         style={glassStyle}
+        transition={{ layout: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } }}
       >
         <ExecutionBanner visibleAction={visibleAction} />
 
@@ -818,7 +813,7 @@ const MobileActionBar = ({
             </div>
           )}
         </AnimatePresence>
-      </div>
+      </motion.div>
     </motion.div>
   );
 };

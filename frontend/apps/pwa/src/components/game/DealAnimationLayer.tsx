@@ -90,7 +90,14 @@ export const DealAnimationLayer = ({ isDesktop, heroSeat }: DealAnimationLayerPr
     if (w === 0 || h === 0) return null;
 
     const x = (pct(pos.left) / 100) * w;
-    const y = (pct(pos.top) / 100) * h;
+
+    // Updated Y calculation to handle bottom property
+    let y;
+    if (pos.bottom) {
+      y = h - parseFloat(pos.bottom);
+    } else {
+      y = (pct(pos.top) / 100) * h;
+    }
 
     const hubWidth = isHero
       ? (isDesktop ? 160 : 128)
@@ -108,7 +115,8 @@ export const DealAnimationLayer = ({ isDesktop, heroSeat }: DealAnimationLayerPr
       centerX = x - (hubWidth / 2);
     }
 
-    centerY -= (isHero ? 52 : 34);
+    // Changed from 52 to 80 to land cards on the hub correctly when anchored from bottom
+    centerY -= (isHero ? 80 : 34);
 
     return { x: centerX, y: centerY };
   }, [positions, isDesktop]);
@@ -129,8 +137,6 @@ export const DealAnimationLayer = ({ isDesktop, heroSeat }: DealAnimationLayerPr
 
     if (isFirstRenderRef.current) {
       isFirstRenderRef.current = false;
-      // If cards are already present on the very first render,
-      // it means we joined mid-hand. We should NOT trigger the deal animation.
       prevHoleCardsKey.current = currentKey;
       return;
     }
@@ -269,7 +275,7 @@ export const DealAnimationLayer = ({ isDesktop, heroSeat }: DealAnimationLayerPr
               scale: 0.85,
               transition: { duration: 0.4, delay: 0.2 },
             }}
-            className="absolute"
+            className="absolute transform-gpu [will-change:transform]"
             style={{
               left: deckPx.x,
               top: deckPx.y,
@@ -340,11 +346,10 @@ export const DealAnimationLayer = ({ isDesktop, heroSeat }: DealAnimationLayerPr
           return (
             <motion.div
               key={card.id}
-              className="absolute"
+              className="absolute transform-gpu [will-change:transform]"
               style={{
                 width: cardW,
                 height: cardH,
-                willChange: 'transform, opacity',
                 perspective: '800px',
               }}
               initial={{
@@ -415,35 +420,35 @@ export const DealAnimationLayer = ({ isDesktop, heroSeat }: DealAnimationLayerPr
                 />
               </div>
 
-              {/* Hero arrival glow */}
+              {/* Hero arrival glow (Animated opacity instead of boxShadow) */}
               {card.isHero && card.round === 1 && (
                 <motion.div
                   className="absolute -inset-3 rounded-sm pointer-events-none"
-                  animate={{
-                    boxShadow: [
-                      '0 0 0px rgba(78,222,163,0)',
-                      '0 0 40px rgba(78,222,163,0.4), 0 0 80px rgba(78,222,163,0.15)',
-                    ],
+                  style={{
+                    boxShadow: '0 0 40px rgba(78,222,163,0.4), 0 0 80px rgba(78,222,163,0.15)',
                   }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: [0, 1, 0] }}
                   transition={{
                     delay: card.delay + 0.45,
-                    duration: 0.4,
+                    duration: 0.8,
                   }}
                 />
               )}
 
-              {/* Dynamic motion shadow */}
+              {/* Dynamic motion shadow (Animating y/scale instead of top) */}
               <motion.div
-                className="absolute pointer-events-none rounded-full"
+                className="absolute pointer-events-none rounded-full transform-gpu"
                 style={{
                   width: cardW * 0.8,
                   height: 4,
                   left: '10%',
+                  top: cardH + 5,
                   background: 'rgba(0,0,0,0.5)',
                   filter: 'blur(4px)',
                 }}
                 animate={{
-                  top: [cardH + 10, cardH + 4, cardH + 5, cardH + 5],
+                  y: [5, -1, 0, 0],
                   opacity: [0, 0.4, 0.6, 0],
                   scale: [1.5, 1.1, 0.9, 0.9],
                 }}

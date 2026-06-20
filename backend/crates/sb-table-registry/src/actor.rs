@@ -2,13 +2,16 @@
 #![allow(unused_imports)]
 
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
 use tokio::sync::mpsc;
 
+use sb_contracts::stats_api::PlayerStatsRepo;
 use sb_game_engine::game_state::{Action, ActionError, GameState};
 use sb_shared_types::AppError;
+use sb_shared_types::player_stats::PlayerStatsDto;
 use sb_shared_types::{ActionType, ChipAmount, PlayerId, StakeLevel, TableConfig, TableId, UserId};
 
 use crate::events::HandCompletedEvent;
@@ -17,7 +20,6 @@ use sb_db_entities::hand_history_json::{
     HandAction, HandActions, HandPlayer, HandPlayers, HandResult, PotSplit, Winner,
 };
 
-// Assurez-vous d'avoir ajouté `ActionInfo` dans votre fichier game_room.rs
 use crate::game_room::{
     ActionBroadcast, ActionInfo, ActionRequired, AnalyticsPayload, BroadcastSender,
     HandResult as RoomHandResult, PlayerStateInfo, PrivatePayload, RoomMessage, ShowdownPlayer,
@@ -183,7 +185,7 @@ pub enum InternalCommand {
         user_id: UserId,
     },
     ShowdownComplete,
-    ClearLastActions, // Pattern propre pour pacer l'UI
+    ClearLastActions,
 }
 
 #[derive(Debug, Clone)]
@@ -194,6 +196,7 @@ struct Player {
     player_id: PlayerId,
     stack: ChipAmount,
     pub time_bank_remaining_seconds: u32,
+    pub stats: Option<PlayerStatsDto>,
 }
 
 impl Player {
@@ -205,6 +208,7 @@ impl Player {
             player_id: PlayerId(Uuid::new_v4()),
             stack,
             time_bank_remaining_seconds: 0,
+            stats: None,
         }
     }
 }
@@ -462,7 +466,8 @@ pub struct TableActor {
     hand_players: Vec<HandPlayer>,
     hand_actions: Vec<HandAction>,
     hand_started_at: Option<chrono::DateTime<chrono::Utc>>,
-    last_actions: HashMap<UserId, ActionInfo>, // Mémorisation propre des actions du tour
+    last_actions: HashMap<UserId, ActionInfo>,
+    stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
 }
 
 impl TableActor {
@@ -472,6 +477,7 @@ impl TableActor {
         broadcast_tx: BroadcastSender,
         cmd_tx: mpsc::Sender<InternalCommand>,
         event_tx: tokio::sync::broadcast::Sender<HandCompletedEvent>,
+        stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
     ) -> Self {
         Self {
             table_id,
@@ -490,6 +496,7 @@ impl TableActor {
             hand_actions: Vec::new(),
             hand_started_at: None,
             last_actions: HashMap::new(),
+            stats_repo,
         }
     }
 
@@ -642,7 +649,13 @@ impl TableActor {
             return;
         }
 
-        let player = Player::new(user_id, display_name, seat, stack);
+        let mut player = Player::new(user_id, display_name, seat, stack);
+
+        // Récupération des stats depuis la base de données lors de l'assise
+        if let Ok(stats_dto) = self.stats_repo.get(&user_id.0.to_string()).await {
+            player.stats = Some(stats_dto);
+        }
+
         self.players.insert(player.user_id, player);
         let _ = self.broadcast_tx.send(RoomMessage::Connected {
             user_id,
@@ -728,6 +741,13 @@ impl TableActor {
 
         self.last_actions.clear();
 
+        // Rafraîchissement des stats de tous les joueurs depuis la base de données au début de chaque main
+        for player in self.players.values_mut() {
+            if let Ok(stats_dto) = self.stats_repo.get(&player.user_id.0.to_string()).await {
+                player.stats = Some(stats_dto);
+            }
+        }
+
         let dealer_index = match self.last_dealer_index {
             Some(idx) => (idx + 1) % active_players_count,
             None => 0,
@@ -797,7 +817,6 @@ impl TableActor {
         let mut active = ActiveHand::new(state, user_by_player_id, player_by_user_id, dealer_index);
         active.timeout_duration_ms = self.config.turn_time_limit_ms;
 
-        // ── Hand History Data Collection ──
         self.hand_players.clear();
         self.hand_actions.clear();
         self.hand_started_at = Some(Utc::now());
@@ -976,7 +995,6 @@ impl TableActor {
                         new_pot: new_pot.as_i64() as u64,
                     }));
 
-                // ── Record action for history ──
                 if let Some(started_at) = self.hand_started_at {
                     let elapsed_ms = (Utc::now() - started_at).num_milliseconds().max(0) as u64;
                     self.hand_actions.push(HandAction {
@@ -987,7 +1005,6 @@ impl TableActor {
                     });
                 }
 
-                // Si on change de street, on schedule un nettoyage dans 1.5s
                 if hand.state.community_cards().len() > prev_comm_cards_len {
                     let cmd_tx = self.cmd_tx.clone();
                     tokio::spawn(async move {
@@ -1138,7 +1155,6 @@ impl TableActor {
     async fn finalize_hand(&mut self, hand: ActiveHand) {
         self.process_winners(&hand).await;
 
-        // ── Update stack_after in hand_players ──
         let final_stacks: HashMap<PlayerId, i64> = self
             .players
             .iter()
@@ -1150,11 +1166,10 @@ impl TableActor {
             }
         }
 
-        // ── Build and emit HandCompletedEvent ──
         let result = self.build_hand_result(&hand);
         let event = HandCompletedEvent {
             table_id: self.table_id,
-            played_at: self.hand_started_at.unwrap_or_else(Utc::now),
+            played_at: self.hand_started_at.unwrap_or_else(|| Utc::now()), // <-- FIXED
             players: HandPlayers {
                 seats: self.hand_players.clone(),
             },
@@ -1453,6 +1468,7 @@ impl TableActor {
                         is_folded: folded,
                         position_badge: positions_map.get(&player.seat).cloned(),
                         last_action: self.last_actions.get(&uid).cloned(),
+                        stats: player.stats.clone(),
                     }
                 })
                 .collect()
@@ -1469,6 +1485,7 @@ impl TableActor {
                     is_folded: false,
                     position_badge: None,
                     last_action: None,
+                    stats: player.stats.clone(),
                 })
                 .collect()
         };
@@ -1600,9 +1617,17 @@ pub fn spawn_table_actor(
     config: TableConfig,
     broadcast_tx: BroadcastSender,
     event_tx: tokio::sync::broadcast::Sender<HandCompletedEvent>,
+    stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
 ) -> (mpsc::Sender<InternalCommand>, tokio::task::JoinHandle<()>) {
     let (tx, rx) = mpsc::channel(32);
-    let actor = TableActor::new(table_id, config, broadcast_tx, tx.clone(), event_tx);
+    let actor = TableActor::new(
+        table_id,
+        config,
+        broadcast_tx,
+        tx.clone(),
+        event_tx,
+        stats_repo,
+    );
     let handle = tokio::spawn(actor.run(rx));
     (tx, handle)
 }

@@ -127,12 +127,21 @@ impl GameState {
         }
         let sb = blinds.0;
         let bb = blinds.1;
-        let small_idx = (dealer_index + 1) % players.len();
-        let big_idx = (dealer_index + 2) % players.len();
-        if players[small_idx].1 < sb {
+
+        // FIX: Règle du Heads-up (2 joueurs). Le Dealer est la Small Blind.
+        let (small_blind_index, big_blind_index) = if players.len() == 2 {
+            (dealer_index, (dealer_index + 1) % 2)
+        } else {
+            (
+                (dealer_index + 1) % players.len(),
+                (dealer_index + 2) % players.len(),
+            )
+        };
+
+        if players[small_blind_index].1 < sb {
             return Err("Small blind cannot post");
         }
-        if players[big_idx].1 < bb {
+        if players[big_blind_index].1 < bb {
             return Err("Big blind cannot post");
         }
 
@@ -160,9 +169,6 @@ impl GameState {
             state.hole_cards = Some([c1, c2]);
         }
 
-        let small_blind_index = (dealer_index + 1) % player_states.len();
-        let big_blind_index = (dealer_index + 2) % player_states.len();
-
         let mut round_bets = vec![ChipAmount::new(0).unwrap(); player_states.len()];
         Self::post_blind(
             &mut player_states[small_blind_index],
@@ -179,6 +185,8 @@ impl GameState {
         let smallest_bet = bb;
         let min_raise = bb;
 
+        // En heads-up, la Small Blind (Dealer) parle en premier préflop.
+        // À 3+ joueurs, c'est le joueur après la Big Blind (UTG).
         let current_player_index = if player_states.len() == 2 {
             small_blind_index
         } else {
@@ -762,6 +770,26 @@ mod tests {
     }
 
     #[test]
+    fn test_heads_up_dealer_is_small_blind() {
+        let players = vec![
+            (pid(1), ChipAmount::new(1000).unwrap()),
+            (pid(2), ChipAmount::new(1000).unwrap()),
+        ];
+        let state = GameState::new_hand(
+            TableId::generate(),
+            players,
+            0, // Dealer is pid(1)
+            (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap()),
+        )
+        .unwrap();
+
+        // Dealer (pid 1) should have bet 5 (SB)
+        assert_eq!(state.player_current_bet(pid(1)).unwrap().as_i64(), 5);
+        // Non-dealer (pid 2) should have bet 10 (BB)
+        assert_eq!(state.player_current_bet(pid(2)).unwrap().as_i64(), 10);
+    }
+
+    #[test]
     fn test_heads_up_call_then_bb_option() {
         let players = vec![
             (pid(1), ChipAmount::new(1000).unwrap()),
@@ -775,9 +803,9 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(state.current_player_id(), Some(pid(1)));
+        assert_eq!(state.current_player_id(), Some(pid(1))); // SB acts first
         state.apply_action(pid(1), Action::Call).unwrap();
-        assert_eq!(state.current_player_id(), Some(pid(2)));
+        assert_eq!(state.current_player_id(), Some(pid(2))); // BB acts second
         assert_eq!(state.current_round, BettingRound::Preflop);
         state.apply_action(pid(2), Action::Check).unwrap();
         assert_eq!(state.current_round, BettingRound::Flop);
@@ -798,24 +826,30 @@ mod tests {
         )
         .unwrap();
 
+        // Preflop: SB (pid 1) acts first, BB (pid 2) acts last
         assert_eq!(state.current_player_id(), Some(pid(1)));
         state.apply_action(pid(1), Action::Call).unwrap();
         assert_eq!(state.current_player_id(), Some(pid(2)));
         state.apply_action(pid(2), Action::Check).unwrap();
 
+        // Flop: BB (pid 2) acts first, SB (pid 1) acts last
         assert_eq!(state.current_round, BettingRound::Flop);
-        assert_eq!(state.current_player_id(), Some(pid(1)));
-        state.apply_action(pid(1), Action::Check).unwrap();
         assert_eq!(state.current_player_id(), Some(pid(2)));
         state.apply_action(pid(2), Action::Check).unwrap();
+        assert_eq!(state.current_player_id(), Some(pid(1)));
+        state.apply_action(pid(1), Action::Check).unwrap();
 
+        // Turn: BB acts first
         assert_eq!(state.current_round, BettingRound::Turn);
-        state.apply_action(pid(1), Action::Check).unwrap();
+        assert_eq!(state.current_player_id(), Some(pid(2)));
         state.apply_action(pid(2), Action::Check).unwrap();
+        state.apply_action(pid(1), Action::Check).unwrap();
 
+        // River: BB acts first
         assert_eq!(state.current_round, BettingRound::River);
-        state.apply_action(pid(1), Action::Check).unwrap();
+        assert_eq!(state.current_player_id(), Some(pid(2)));
         state.apply_action(pid(2), Action::Check).unwrap();
+        state.apply_action(pid(1), Action::Check).unwrap();
 
         assert!(state.is_hand_complete());
     }

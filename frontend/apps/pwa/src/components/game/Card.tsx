@@ -27,13 +27,12 @@ export const Card = ({
   const isRed = suit === '♥' || suit === '♦';
   const suitColor = isRed ? '#e11d48' : '#1e293b';
 
-  // Standardized shadow layers so Framer Motion can interpolate smoothly
-  const baseShadow =
-    '0 4px 12px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.2), 0 0 0px rgba(78,222,163,0)';
-  const winningShadowLow =
-    '0 4px 12px rgba(0,0,0,0.5), 0 0 12px rgba(78,222,163,0.5), 0 0 4px rgba(78,222,163,0.8)';
-  const winningShadowHigh =
-    '0 4px 12px rgba(0,0,0,0.5), 0 0 24px rgba(78,222,163,0.7), 0 0 8px rgba(78,222,163,1)';
+  // Standardized filter layers so Framer Motion can interpolate smoothly
+  // Using drop-shadow instead of boxShadow ensures the shadow hides when backface-visibility is hidden
+  const baseFilter = 'grayscale(0) brightness(1) drop-shadow(0 4px 12px rgba(0,0,0,0.5)) drop-shadow(0 1px 4px rgba(0,0,0,0.2))';
+  const winningFilterLow = 'grayscale(0) brightness(1.1) drop-shadow(0 4px 12px rgba(0,0,0,0.5)) drop-shadow(0 0 12px rgba(78,222,163,0.5))';
+  const winningFilterHigh = 'grayscale(0) brightness(1.1) drop-shadow(0 4px 12px rgba(0,0,0,0.5)) drop-shadow(0 0 24px rgba(78,222,163,0.7))';
+  const losingFilter = 'grayscale(0.8) brightness(0.5) drop-shadow(0 4px 8px rgba(0,0,0,0.7))';
 
   const renderFront = () => (
     <div
@@ -90,8 +89,7 @@ export const Card = ({
 
   // Determine animation state
   let animateProps: any = {
-    boxShadow: baseShadow,
-    filter: 'grayscale(0) brightness(1)',
+    filter: baseFilter,
     scale: 1,
   };
   let transitionProps: any = {
@@ -101,14 +99,12 @@ export const Card = ({
 
   if (isLosing) {
     animateProps = {
-      boxShadow: '0 4px 8px rgba(0,0,0,0.7)',
-      filter: 'grayscale(0.8) brightness(0.5)',
+      filter: losingFilter,
       scale: 0.98,
     };
   } else if (isWinning) {
     animateProps = {
-      boxShadow: [winningShadowLow, winningShadowHigh, winningShadowLow],
-      filter: 'grayscale(0) brightness(1.1)',
+      filter: [winningFilterLow, winningFilterHigh, winningFilterLow],
       scale: 1,
     };
     transitionProps = {

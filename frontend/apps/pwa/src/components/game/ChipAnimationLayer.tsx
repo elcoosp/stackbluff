@@ -79,10 +79,19 @@ export const ChipAnimationLayer = ({ isDesktop, heroSeat }: ChipAnimationLayerPr
     y: containerSize.h * 0.3
   };
 
-  const toPixels = (pos: Position) => ({
-    x: (pct(pos.left) / 100) * containerSize.w,
-    y: (pct(pos.top) / 100) * containerSize.h,
-  });
+  // Updated toPixels to handle bottom property safely
+  const toPixels = (pos: Position) => {
+    let y;
+    if (pos.bottom) {
+      y = containerSize.h - parseFloat(pos.bottom);
+    } else {
+      y = (pct(pos.top) / 100) * containerSize.h;
+    }
+    return {
+      x: (pct(pos.left) / 100) * containerSize.w,
+      y: y,
+    };
+  };
 
   return (
     <div

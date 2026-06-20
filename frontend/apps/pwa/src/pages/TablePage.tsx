@@ -463,12 +463,29 @@ export function TablePage() {
 
   return (
     <ErrorBoundary FallbackComponent={Fallback}>
+      {/* ROOT CONTAINER: fixed inset-0 prevents scrollbars. */}
       <div
-        className="h-full w-full relative overflow-hidden select-none"
+        className="fixed inset-0 w-full overflow-hidden select-none"
         style={{
           background: 'radial-gradient(ellipse at 50% 40%, #1a1c1b 0%, #111 40%, #0a0a0a 100%)',
         }}
       >
+        {/* ─── FOCUS OVERLAY ─── */}
+        <AnimatePresence>
+          {isMyTurn && !showdownReveal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4, ease: 'easeInOut' }}
+              className="fixed inset-0 z-[450] pointer-events-none"
+              style={{
+                background: 'radial-gradient(ellipse 120% 90% at 50% 60%, transparent 25%, rgba(0,0,0,0.5) 70%, rgba(0,0,0,0.85) 100%)',
+              }}
+            />
+          )}
+        </AnimatePresence>
+
         <VisualFeedbackOverlay />
 
         {/* ═══ PORTALED HEADER ACTIONS ═══ */}
@@ -500,84 +517,28 @@ export function TablePage() {
         )}
 
         <FeedbackSettingsDialog open={showSettings} onClose={() => setShowSettings(false)} />
-
-        <LeaveTableDialog
-          open={showLeaveDialog}
-          onClose={() => setShowLeaveDialog(false)}
-          onConfirm={handleLeaveTable}
-          stackAmount={heroStack}
-          isHandInProgress={!!game.handInProgress}
-        />
-
-        <HistoryDialog
-          open={showHistory}
-          onClose={() => setShowHistory(false)}
-          tableId={tableId}
-        />
-
+        <LeaveTableDialog open={showLeaveDialog} onClose={() => setShowLeaveDialog(false)} onConfirm={handleLeaveTable} stackAmount={heroStack} isHandInProgress={!!game.handInProgress} />
+        <HistoryDialog open={showHistory} onClose={() => setShowHistory(false)} tableId={tableId} />
         <BuyInDialog
           open={showRebuyDialog}
-          onClose={() => {
-            if (!hasJoined) {
-              navigate({ to: '/lobby' });
-            } else {
-              setShowRebuyDialog(false);
-            }
-          }}
-          onConfirm={(amount) => {
-            if (!hasJoined) {
-              sendJoin(amount);
-              setHasJoined(true);
-              setIsJoining(true);
-            } else {
-              sendRebuy(amount);
-            }
-            setShowRebuyDialog(false);
-          }}
+          onClose={() => { if (!hasJoined) { navigate({ to: '/lobby' }); } else { setShowRebuyDialog(false); } }}
+          onConfirm={(amount) => { if (!hasJoined) { sendJoin(amount); setHasJoined(true); setIsJoining(true); } else { sendRebuy(amount); } setShowRebuyDialog(false); }}
           minBuyIn={100}
           maxBuyIn={200000}
           defaultBuyIn={1000}
           isRebuy={hasJoined}
           currentBalance={balance}
         />
+        <PlayerStatsDialog userId={statsUserId} onOpenChange={(open) => !open && setStatsUserId(null)} />
 
-        {/* ── Player Stats Dialog ── */}
-        <PlayerStatsDialog
-          userId={statsUserId}
-          onOpenChange={(open) => !open && setStatsUserId(null)}
-        />
-
-        {/* Wrapped MobileAnalyticsStrip in z-445 to sit above the table/mask, but below PotBadge */}
-        <div className="absolute top-0 left-0 right-0 z-[445] pointer-events-none">
-          {!showAnalytics && (
-            <MobileAnalyticsStrip winProb={winProb} potOdds={potOdds} bestHand={bestHand} strength={strength} />
-          )}
-        </div>
-
-        <div className="flex items-center justify-center h-full pt-3 px-3 pb-3 md:pt-4 md:px-4 md:pb-4">
-          {/* Table container is z-1, NO isolate so global z-indices work inside it */}
+        {/* MAIN TABLE AREA - pt-16 exactly matches the h-16 (64px) global header. */}
+        <div className="absolute inset-0 flex items-center justify-center pt-16 px-3 pb-28 md:pt-16 md:px-4 md:pb-24 z-10">
+          {/* Table Wrapper */}
           <div
-            className="relative z-[1] w-full h-full"
+            className="relative w-full h-full transform-gpu [will-change:transform]"
             style={{ maxWidth: isDesktop ? '1000px' : '500px', transition: 'max-width 0.4s ease' }}
           >
             <TableRail isMobile={!isDesktop} />
-
-            {/* ═══ DYNAMIC FOCUS MASK (Fixed Gradient & Z-Index) ═══ */}
-            <AnimatePresence>
-              {isMyTurn && !showdownReveal && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.4, ease: 'easeInOut' }}
-                  className="absolute inset-0 z-[441] pointer-events-none"
-                  style={{
-                    background: 'radial-gradient(ellipse 90% 80% at 50% 60%, transparent 30%, rgba(0,0,0,0.6) 75%, rgba(0,0,0,0.8) 100%)',
-                    borderRadius: isDesktop ? '140px' : '40px',
-                  }}
-                />
-              )}
-            </AnimatePresence>
 
             <div className="absolute inset-3 md:inset-10" style={{ transition: 'inset 0.4s ease' }}>
               {/* ═══ ALL-IN TENSION AURA ═══ */}
@@ -615,7 +576,8 @@ export function TablePage() {
 
               <TableFelt isMobile={!isDesktop} />
 
-              <div className="absolute top-[40%] md:top-[42%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+              {/* Community Cards */}
+              <div className="absolute top-[42%] md:top-[40%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
                 <CommunityCards
                   cards={displayCommunityCards}
                   isMobile={!isDesktop}
@@ -623,14 +585,23 @@ export function TablePage() {
                   winningCards={allWinningCards}
                 />
               </div>
+            </div>
 
-              {/* PotBadge using pure px to avoid resize bounce (40px mobile, 20px desktop) */}
-              <div className={cn(
-                "absolute left-1/2 -translate-x-1/2 z-[450] transition-all duration-700 ease-in-out",
-                showdownReveal
-                  ? "top-[20px] md:top-[10px]"
-                  : "top-[40px] md:top-[20px]"
-              )}>
+            {/* Analytics strip set to z-30 so it overlays the top of the table perfectly right below the header */}
+            <div className="absolute top-0 left-0 right-0 z-30 pointer-events-none">
+              {!showAnalytics && (
+                <MobileAnalyticsStrip winProb={winProb} potOdds={potOdds} bestHand={bestHand} strength={strength} />
+              )}
+            </div>
+
+            {/* POT BADGE - z-30 (Moved down slightly to clear the analytics strip) */}
+            <div className={cn(
+              "absolute left-1/2 -translate-x-1/2 z-30 transition-[top] duration-700 ease-in-out pointer-events-none",
+              showdownReveal
+                ? "top-[50px] md:top-[40px]"
+                : "top-[60px] md:top-[60px]"
+            )}>
+              <div className="pointer-events-auto">
                 <PotBadge
                   amount={pot}
                   toCall={actionRequired?.to_call}
@@ -671,25 +642,28 @@ export function TablePage() {
           </>
         )}
 
-        <ActionBar
-          isDesktop={isDesktop}
-          actionRequired={isMyTurn}
-          toCall={toCall}
-          minRaise={finalMinRaise}
-          maxRaise={maxRaiseAmount}
-          pot={potForAction}
-          onAction={sendActionWithFeedback}
-          preAction={preAction}
-          onSetPreAction={togglePreAction}
-          executingAction={executingAction}
-          heroTimerRemainingMs={heroTimerRemainingMs}
-          heroTimerTotalMs={heroTimerTotalMs}
-          canRaise={canRaise}
-          heroStack={heroStack}
-        />
+        {/* ACTION BAR - Absolute bottom. Overlays table if expanded, preventing layout shift. Safe area insets prevent mobile overlap. */}
+        <div className="absolute bottom-0 left-0 right-0 z-[450] pb-[env(safe-area-inset-bottom)]">
+          <ActionBar
+            isDesktop={isDesktop}
+            actionRequired={isMyTurn}
+            toCall={toCall}
+            minRaise={finalMinRaise}
+            maxRaise={maxRaiseAmount}
+            pot={potForAction}
+            onAction={sendActionWithFeedback}
+            preAction={preAction}
+            onSetPreAction={togglePreAction}
+            executingAction={executingAction}
+            heroTimerRemainingMs={heroTimerRemainingMs}
+            heroTimerTotalMs={heroTimerTotalMs}
+            canRaise={canRaise}
+            heroStack={heroStack}
+          />
+        </div>
 
         {connectionStatus !== 'connected' && (
-          <div className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md text-white px-4 py-2 rounded-full text-sm font-mono z-[500] border border-white/10">
+          <div className="absolute bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md text-white px-4 py-2 rounded-full text-sm font-mono z-[500] border border-white/10">
             {connectionStatus === 'reconnecting' ? '⚡ Reconnecting…' : '⛔ Disconnected'}
           </div>
         )}

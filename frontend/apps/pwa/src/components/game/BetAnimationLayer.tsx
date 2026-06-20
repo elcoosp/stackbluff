@@ -56,7 +56,9 @@ export const BetAnimationLayer = ({ isDesktop, heroSeat }: BetAnimationLayerProp
 
   useEffect(() => {
     if (!lastAction || containerSize.w === 0) return;
-    if (lastAction.action === 'fold' || lastAction.action === 'check') return;
+
+    const actionLower = lastAction.action?.toLowerCase();
+    if (actionLower === 'fold' || actionLower === 'check') return;
 
     // 1. Prevent duplicate animations for the same action
     const actionId = `${lastAction.player_id}-${lastAction.action}-${lastAction.amount}`;
@@ -72,10 +74,19 @@ export const BetAnimationLayer = ({ isDesktop, heroSeat }: BetAnimationLayerProp
     const seatPos = positions[posIdx];
     if (!seatPos) return;
 
-    const toPixels = (pos: Position) => ({
-      x: (pct(pos.left) / 100) * containerSize.w,
-      y: (pct(pos.top) / 100) * containerSize.h,
-    });
+    // Updated toPixels to handle bottom property safely
+    const toPixels = (pos: Position) => {
+      let y;
+      if (pos.bottom) {
+        y = containerSize.h - parseFloat(pos.bottom);
+      } else {
+        y = (pct(pos.top) / 100) * containerSize.h;
+      }
+      return {
+        x: (pct(pos.left) / 100) * containerSize.w,
+        y: y,
+      };
+    };
 
     const seatPx = toPixels(seatPos);
 

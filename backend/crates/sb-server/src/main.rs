@@ -73,7 +73,12 @@ async fn main() {
     // ── Initialize Table Repo, Service, and Registry ─────────────
     let table_repo: Arc<dyn TableRepo + Send + Sync> =
         Arc::new(sb_db_repos::table_repo::TableRepoImpl::new(db.clone()));
-    let registry = Arc::new(Registry::new());
+
+    // ── Initialize Player Stats Repository ───────────────────────
+    let stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync> =
+        Arc::new(PlayerStatsRepoImpl::new(db.clone()));
+
+    let registry = Arc::new(Registry::new(stats_repo.clone()));
 
     // ── Hydrate Registry from DB (DB is source of truth) ─────────
     let db_tables = table_repo
@@ -119,10 +124,6 @@ async fn main() {
 
     // ── Spawn Hand History Cleanup Task ──────────────────────────
     spawn_hand_history_cleanup(db.clone()).await;
-
-    // ── Initialize Player Stats Repository ───────────────────────
-    let stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync> =
-        Arc::new(PlayerStatsRepoImpl::new(db.clone()));
 
     // ── Spawn Player Stats Aggregator ────────────────────────────
     let stats_event_rx = registry.event_sender().subscribe();

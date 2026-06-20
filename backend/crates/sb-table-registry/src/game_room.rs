@@ -42,6 +42,7 @@ pub struct PlayerStateInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub position_badge: Option<String>,
     pub last_action: Option<ActionInfo>,
+    pub stats: Option<sb_shared_types::player_stats::PlayerStatsDto>,
 }
 
 #[derive(Debug, Clone, Serialize)]
