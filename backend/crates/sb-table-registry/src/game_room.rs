@@ -24,6 +24,11 @@ pub struct SidePotMessage {
     pub amount: u64,
     pub eligible_players: Vec<UserId>,
 }
+#[derive(Debug, Clone, Serialize)]
+pub struct ActionInfo {
+    pub text: String,
+    pub amount: Option<u64>,
+}
 
 #[derive(Debug, Clone, Serialize)]
 pub struct PlayerStateInfo {
@@ -36,6 +41,7 @@ pub struct PlayerStateInfo {
     pub is_folded: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub position_badge: Option<String>,
+    pub last_action: Option<ActionInfo>,
 }
 
 #[derive(Debug, Clone, Serialize)]

@@ -1,16 +1,73 @@
 import { motion, AnimatePresence } from 'framer-motion';
+import { useMemo } from 'react';
 import type { CSSProperties } from 'react';
 import { PlayerAvatar } from './PlayerAvatar';
 import { CardBack, Card } from './Card';
 import { TimerBar } from './TimerBar';
 import { cn } from '@/lib/utils';
 import { useVisualFeedback } from '@stackbluff/shared/hooks/useVisualFeedback';
+import { LogOut, DollarSign, TrendingUp, Swords, Check } from 'lucide-react';
+
+// ─── Action Styles Mapping (Matching ActionBar) ──────────────────────────────
+const getActionStyles = (text?: string) => {
+  switch (text) {
+    case 'FOLD': return { Icon: LogOut, color: 'rgba(248, 113, 113, 1)' }; // Red
+    case 'CHECK': return { Icon: Check, color: 'rgba(78, 222, 163, 1)' }; // Emerald
+    case 'CALL': return { Icon: DollarSign, color: 'rgba(78, 222, 163, 1)' }; // Emerald
+    case 'BET':
+    case 'RAISE': return { Icon: TrendingUp, color: 'rgba(255, 255, 255, 0.85)' }; // White
+    case 'ALL-IN': return { Icon: Swords, color: 'rgba(251, 191, 36, 1)' }; // Amber
+    default: return { Icon: null, color: 'rgba(78, 222, 163, 1)' };
+  }
+};
+
+// ─── Tailored Variants for Action Badge ──────────────────────────────────────
+const getActionBadgeVariants = (text?: string) => {
+  switch (text) {
+    case 'FOLD':
+      return {
+        initial: { opacity: 0, y: -15, scale: 0.5, rotate: -10 },
+        animate: { opacity: 1, y: 0, scale: 1, rotate: 0, transition: { type: 'spring', stiffness: 300, damping: 20 } },
+        exit: { opacity: 0, y: 20, scale: 0.8, rotate: 15, transition: { duration: 0.3, ease: 'easeIn' } },
+      };
+    case 'CHECK':
+      return {
+        initial: { opacity: 0, y: 10, scale: 0.8 },
+        animate: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 400, damping: 15 } },
+        exit: { opacity: 0, y: -10, scale: 0.8, transition: { duration: 0.2 } },
+      };
+    case 'CALL':
+      return {
+        initial: { opacity: 0, x: -20, scale: 0.8 },
+        animate: { opacity: 1, x: 0, scale: 1, transition: { type: 'spring', stiffness: 300, damping: 20 } },
+        exit: { opacity: 0, x: 20, scale: 0.8, transition: { duration: 0.2 } },
+      };
+    case 'BET':
+    case 'RAISE':
+      return {
+        initial: { opacity: 0, y: 15, scale: 0.5 },
+        animate: { opacity: 1, y: 0, scale: [1, 1.1, 1], transition: { duration: 0.4, ease: 'easeOut' } },
+        exit: { opacity: 0, y: -15, scale: 0.8, transition: { duration: 0.2 } },
+      };
+    case 'ALL-IN':
+      return {
+        initial: { opacity: 0, scale: 0.2 },
+        animate: { opacity: 1, scale: [1, 1.2, 1], transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } },
+        exit: { opacity: 0, scale: 0.5, filter: 'blur(2px)', transition: { duration: 0.3, ease: 'easeIn' } },
+      };
+    default:
+      return {
+        initial: { opacity: 0, scale: 0.6 },
+        animate: { opacity: 1, scale: 1, transition: { type: 'spring', stiffness: 500, damping: 30 } },
+        exit: { opacity: 0, scale: 0.6, transition: { duration: 0.2 } },
+      };
+  }
+};
 
 // ─── 3D Winner Overlay ──────────────────────────────────────────────────────
 const WinnerOverlay = () => {
   const accent = 'rgba(78, 222, 163, ';
 
-  // 6 sparkles with 3D motion (z-axis via scale)
   const sparkles = [
     { x: 15, y: 25, delay: 0.1, dx: 8, dy: -6, scaleZ: 0.8 },
     { x: 75, y: 20, delay: 0.6, dx: -10, dy: 5, scaleZ: 1.2 },
@@ -21,93 +78,41 @@ const WinnerOverlay = () => {
   ];
 
   return (
-    <div
-      className="absolute inset-0 overflow-hidden rounded-sm pointer-events-none"
-      style={{ perspective: '800px' }}
-    >
-      {/* 1. Breathing aura – 2 cycles */}
+    <div className="absolute inset-0 overflow-hidden rounded-sm pointer-events-none" style={{ perspective: '800px' }}>
       <motion.div
         className="absolute inset-0 rounded-sm"
-        style={{
-          background: `radial-gradient(circle at center, ${accent}0.2) 0%, ${accent}0.05) 60%, transparent 100%)`,
-          filter: 'blur(6px)',
-        }}
+        style={{ background: `radial-gradient(circle at center, ${accent}0.2) 0%, ${accent}0.05) 60%, transparent 100%)`, filter: 'blur(6px)' }}
         animate={{ opacity: [0.3, 0.7, 0.3] }}
         transition={{ duration: 2.2, repeat: 2, repeatType: 'reverse', ease: 'easeInOut' }}
       />
-
-      {/* 2. Shockwave pulse – 3D scale */}
       <motion.div
         className="absolute inset-0 rounded-sm border-2"
         style={{ borderColor: `${accent}0.6)` }}
-        animate={{
-          scale: [1, 1.08, 1.15],
-          opacity: [0.8, 0.3, 0],
-          rotateX: [0, 5, 0],
-          rotateY: [0, -5, 0],
-        }}
+        animate={{ scale: [1, 1.08, 1.15], opacity: [0.8, 0.3, 0], rotateX: [0, 5, 0], rotateY: [0, -5, 0] }}
         transition={{ duration: 1.8, repeat: 2, delay: 0.2, ease: 'easeOut' }}
       />
-
-      {/* 3. 3D Diamond – floating and rotating in 3D */}
       <motion.div
         className="absolute"
         style={{
-          left: '50%',
-          top: '50%',
-          width: 40,
-          height: 40,
-          marginLeft: -20,
-          marginTop: -20,
-          border: `1.5px solid ${accent}0.5)`,
-          transform: 'rotate(45deg)',
-          boxShadow: `0 0 30px ${accent}0.2)`,
+          left: '50%', top: '50%', width: 40, height: 40, marginLeft: -20, marginTop: -20,
+          border: `1.5px solid ${accent}0.5)`, transform: 'rotate(45deg)', boxShadow: `0 0 30px ${accent}0.2)`,
           background: `radial-gradient(circle at 30% 30%, ${accent}0.15) 0%, transparent 70%)`,
         }}
-        animate={{
-          rotateX: [0, 360],
-          rotateY: [0, 180],
-          rotateZ: [0, 90],
-          scale: [0.8, 1.2, 0.8],
-          opacity: [0, 1, 0],
-        }}
+        animate={{ rotateX: [0, 360], rotateY: [0, 180], rotateZ: [0, 90], scale: [0.8, 1.2, 0.8], opacity: [0, 1, 0] }}
         transition={{ duration: 4, repeat: 2, ease: 'easeInOut' }}
       />
-
-      {/* 4. Sparkles with 3D depth (scale simulates Z) */}
       {sparkles.map((s) => (
         <motion.div
           key={s.x}
           className="absolute w-1.5 h-1.5 rounded-full"
-          style={{
-            left: `${s.x}%`,
-            top: `${s.y}%`,
-            backgroundColor: '#4EDEA3',
-            boxShadow: `0 0 12px ${accent}0.8), 0 0 24px ${accent}0.4)`,
-          }}
-          animate={{
-            x: [0, s.dx, 0],
-            y: [0, s.dy, 0],
-            scale: [0.5, 1.8 * s.scaleZ, 0.5],
-            opacity: [0, 1, 0],
-            rotateX: [0, 180],
-            rotateY: [0, 90],
-          }}
-          transition={{
-            duration: 3.5,
-            repeat: 2,
-            delay: s.delay,
-            ease: 'easeInOut',
-          }}
+          style={{ left: `${s.x}%`, top: `${s.y}%`, backgroundColor: '#4EDEA3', boxShadow: `0 0 12px ${accent}0.8), 0 0 24px ${accent}0.4)` }}
+          animate={{ x: [0, s.dx, 0], y: [0, s.dy, 0], scale: [0.5, 1.8 * s.scaleZ, 0.5], opacity: [0, 1, 0], rotateX: [0, 180], rotateY: [0, 90] }}
+          transition={{ duration: 3.5, repeat: 2, delay: s.delay, ease: 'easeInOut' }}
         />
       ))}
-
-      {/* 5. Diagonal shine – one smooth pass */}
       <motion.div
         className="absolute inset-0 rounded-sm"
-        style={{
-          background: `linear-gradient(135deg, transparent 35%, ${accent}0.12) 50%, transparent 65%)`,
-        }}
+        style={{ background: `linear-gradient(135deg, transparent 35%, ${accent}0.12) 50%, transparent 65%)` }}
         animate={{ x: ['-120%', '120%'] }}
         transition={{ duration: 2.8, repeat: 2, ease: 'easeInOut' }}
       />
@@ -115,56 +120,30 @@ const WinnerOverlay = () => {
   );
 };
 
-// ─── CardGroup (unchanged) ────────────────────────────────────────────────────
-const CardGroup = ({
-  showCardsFaceUp,
-  hole_cards,
-  cardSize,
-  sizeProp,
-  isMobile,
-  winningCards,
-  isWinner,
-  isShowdown,
-  isHero,
-  isDealing,
-}: {
-  showCardsFaceUp: boolean;
-  hole_cards?: Array<{ rank: string; suit: string }>;
-  cardSize: string;
-  sizeProp: 'xs' | 'sm' | 'md';
-  isMobile: boolean;
-  winningCards?: Array<{ rank: string; suit: string }>;
-  isWinner?: boolean;
-  isShowdown?: boolean;
-  isHero?: boolean;
-  isDealing?: boolean;
-}) => {
-  const gap = isMobile ? 4 : 4;
-  const containerVariants = {
-    collapsed: { gap: 0 },
-    fan: { gap, transition: { duration: 0.25, ease: 'easeOut' } },
-  };
+// ─── CardGroup (Memoized Variants) ────────────────────────────────────────────
+const groupExit = {
+  exit: { opacity: 0, scale: 0.2, rotate: -30, y: 20, x: -30, transition: { duration: 0.4, ease: 'easeInOut' as const } },
+};
 
-  const leftCardVariants = {
+const containerVariants = {
+  collapsed: { gap: 0 },
+  fan: { gap: 4, transition: { duration: 0.25, ease: 'easeOut' as const } },
+};
+
+const CardGroup = ({
+  showCardsFaceUp, hole_cards, cardSize, sizeProp, isMobile, winningCards, isWinner, isShowdown, isHero, isDealing,
+}: {
+  showCardsFaceUp: boolean; hole_cards?: Array<{ rank: string; suit: string }>; cardSize: string; sizeProp: 'xs' | 'sm' | 'md'; isMobile: boolean; winningCards?: Array<{ rank: string; suit: string }>; isWinner?: boolean; isShowdown?: boolean; isHero?: boolean; isDealing?: boolean;
+}) => {
+  const leftCardVariants = useMemo(() => ({
     collapsed: { rotate: -6, x: isMobile ? 4 : 6 },
     fan: { rotate: -8, x: isMobile ? -3 : -4 },
-  };
+  }), [isMobile]);
 
-  const rightCardVariants = {
+  const rightCardVariants = useMemo(() => ({
     collapsed: { rotate: 6, x: isMobile ? -4 : -6 },
     fan: { rotate: 8, x: isMobile ? 3 : 4 },
-  };
-
-  const groupExit = {
-    exit: {
-      opacity: 0,
-      scale: 0.2,
-      rotate: -30,
-      y: 20,
-      x: -30,
-      transition: { duration: 0.4, ease: 'easeInOut' },
-    },
-  };
+  }), [isMobile]);
 
   const isWinningCard = (card?: { rank: string; suit: string }) => {
     if (!card) return false;
@@ -177,22 +156,12 @@ const CardGroup = ({
     return true;
   };
 
-  if (isHero && isDealing) {
-    return null;
-  }
+  if (isHero && isDealing) return null;
 
   if (!hole_cards || hole_cards.length === 0) {
     if (isHero) return null;
-
     return (
-      <motion.div
-        variants={groupExit}
-        initial={{ opacity: 1, scale: 1, rotate: 0, y: 0, x: 0 }}
-        animate={{ opacity: 1, scale: 1, rotate: 0, y: 0, x: 0 }}
-        exit="exit"
-        className={cn('flex', isMobile ? '-space-x-1' : '-space-x-3')}
-        style={{ transformOrigin: 'center' }}
-      >
+      <motion.div variants={groupExit} initial={{ opacity: 1, scale: 1, rotate: 0, y: 0, x: 0 }} animate={{ opacity: 1, scale: 1, rotate: 0, y: 0, x: 0 }} exit="exit" className={cn('flex', isMobile ? '-space-x-1' : '-space-x-3')} style={{ transformOrigin: 'center' }}>
         <CardBack className={cn(cardSize, '-rotate-[6deg]')} size={sizeProp} />
         <CardBack className={cn(cardSize, 'rotate-[6deg]')} size={sizeProp} />
       </motion.div>
@@ -200,93 +169,29 @@ const CardGroup = ({
   }
 
   return (
-    <motion.div
-      variants={groupExit}
-      initial={{ opacity: 1, scale: 1, rotate: 0, y: 0, x: 0 }}
-      animate={{ opacity: 1, scale: 1, rotate: 0, y: 0, x: 0 }}
-      exit="exit"
-      className="flex items-center pointer-events-auto"
-      style={{ transformOrigin: 'center' }}
-    >
-      <motion.div
-        className="flex items-center"
-        variants={containerVariants}
-        initial="collapsed"
-        whileHover="fan"
-        whileTap="fan"
-      >
-        <motion.div
-          variants={leftCardVariants}
-          className="relative"
-          style={{ transformStyle: 'preserve-3d', perspective: '1000px' }}
-        >
+    <motion.div variants={groupExit} initial={{ opacity: 1, scale: 1, rotate: 0, y: 0, x: 0 }} animate={{ opacity: 1, scale: 1, rotate: 0, y: 0, x: 0 }} exit="exit" className="flex items-center pointer-events-auto" style={{ transformOrigin: 'center' }}>
+      <motion.div className="flex items-center" variants={containerVariants} initial="collapsed" whileHover="fan" whileTap="fan">
+        <motion.div variants={leftCardVariants} className="relative" style={{ transformStyle: 'preserve-3d', perspective: '1000px' }}>
           <AnimatePresence mode="wait">
             {showCardsFaceUp ? (
-              <motion.div
-                key="front1"
-                initial={{ rotateY: 90, opacity: 0 }}
-                animate={{ rotateY: 0, opacity: 1 }}
-                exit={{ rotateY: -90, opacity: 0 }}
-                transition={{ duration: 0.3 }}
-                style={{ backfaceVisibility: 'hidden' }}
-              >
-                <Card
-                  rank={hole_cards[0].rank}
-                  suit={hole_cards[0].suit}
-                  className={cn(cardSize)}
-                  size={sizeProp}
-                  isWinning={isWinningCard(hole_cards[0])}
-                  isLosing={isCardLosing(hole_cards[0])}
-                />
+              <motion.div key="front1" initial={{ rotateY: 90, opacity: 0 }} animate={{ rotateY: 0, opacity: 1 }} exit={{ rotateY: -90, opacity: 0 }} transition={{ duration: 0.3 }} style={{ backfaceVisibility: 'hidden' }}>
+                <Card rank={hole_cards[0].rank} suit={hole_cards[0].suit} className={cn(cardSize)} size={sizeProp} isWinning={isWinningCard(hole_cards[0])} isLosing={isCardLosing(hole_cards[0])} />
               </motion.div>
             ) : (
-              <motion.div
-                key="back1"
-                initial={{ rotateY: -90, opacity: 0 }}
-                animate={{ rotateY: 0, opacity: 1 }}
-                exit={{ rotateY: 90, opacity: 0 }}
-                transition={{ duration: 0.3 }}
-                style={{ backfaceVisibility: 'hidden' }}
-              >
+              <motion.div key="back1" initial={{ rotateY: -90, opacity: 0 }} animate={{ rotateY: 0, opacity: 1 }} exit={{ rotateY: 90, opacity: 0 }} transition={{ duration: 0.3 }} style={{ backfaceVisibility: 'hidden' }}>
                 <CardBack className={cn(cardSize)} size={sizeProp} />
               </motion.div>
             )}
           </AnimatePresence>
         </motion.div>
-
-        <motion.div
-          variants={rightCardVariants}
-          className="relative"
-          style={{ transformStyle: 'preserve-3d', perspective: '1000px' }}
-        >
+        <motion.div variants={rightCardVariants} className="relative" style={{ transformStyle: 'preserve-3d', perspective: '1000px' }}>
           <AnimatePresence mode="wait">
             {showCardsFaceUp ? (
-              <motion.div
-                key="front2"
-                initial={{ rotateY: 90, opacity: 0 }}
-                animate={{ rotateY: 0, opacity: 1 }}
-                exit={{ rotateY: -90, opacity: 0 }}
-                transition={{ duration: 0.3, delay: 0.1 }}
-                style={{ backfaceVisibility: 'hidden' }}
-              >
-                <Card
-                  rank={hole_cards[1].rank}
-                  suit={hole_cards[1].suit}
-                  className={cn(cardSize)}
-                  size={sizeProp}
-                  isWinning={isWinningCard(hole_cards[1])}
-                  isLosing={isCardLosing(hole_cards[1])}
-                />
+              <motion.div key="front2" initial={{ rotateY: 90, opacity: 0 }} animate={{ rotateY: 0, opacity: 1 }} exit={{ rotateY: -90, opacity: 0 }} transition={{ duration: 0.3, delay: 0.1 }} style={{ backfaceVisibility: 'hidden' }}>
+                <Card rank={hole_cards[1].rank} suit={hole_cards[1].suit} className={cn(cardSize)} size={sizeProp} isWinning={isWinningCard(hole_cards[1])} isLosing={isCardLosing(hole_cards[1])} />
               </motion.div>
             ) : (
-              <motion.div
-                key="back2"
-                initial={{ rotateY: -90, opacity: 0 }}
-                animate={{ rotateY: 0, opacity: 1 }}
-                exit={{ rotateY: 90, opacity: 0 }}
-                transition={{ duration: 0.3, delay: 0.1 }}
-                style={{ backfaceVisibility: 'hidden' }}
-              >
+              <motion.div key="back2" initial={{ rotateY: -90, opacity: 0 }} animate={{ rotateY: 0, opacity: 1 }} exit={{ rotateY: 90, opacity: 0 }} transition={{ duration: 0.3, delay: 0.1 }} style={{ backfaceVisibility: 'hidden' }}>
                 <CardBack className={cn(cardSize)} size={sizeProp} />
               </motion.div>
             )}
@@ -299,85 +204,40 @@ const CardGroup = ({
 
 // ─── Main PlayerSpot ─────────────────────────────────────────────────────────
 export const PlayerSpot = ({
-  seat,
-  isHero = false,
-  isMobile = false,
-  isDealer = false,
-  seatPosition,
-  timerRemainingMs,
-  timerTotalMs,
-  isDealing = false,
-  onShowStats,
+  seat, isHero = false, isMobile = false, isDealer = false, seatPosition, timerRemainingMs, timerTotalMs, isDealing = false, onShowStats,
 }: PlayerSpotProps) => {
   const {
-    display_name = 'Player',
-    stack,
-    current_bet,
-    is_all_in,
-    is_folded,
-    is_active,
-    avatar_url,
-    position_badge,
-    action,
-    hole_cards,
-    winning_cards,
-    is_winner,
-    is_showdown_revealed,
+    display_name = 'Player', stack, current_bet, is_all_in, is_folded, is_active, avatar_url, position_badge, action, hole_cards, winning_cards, is_winner, is_showdown_revealed,
   } = seat;
 
   const isActive = is_active && !is_folded && !is_all_in;
   const isFolded = is_folded;
-
   const showCardsFaceUp = isHero || seat.is_showdown_revealed;
   const isLargeCards = isHero || showCardsFaceUp;
-
   const isLosingPlayer = is_showdown_revealed && !is_winner;
 
   const effect = useVisualFeedback(500);
   const shouldApplyEffect = effect && effect.seatIndex === seat.seat;
-  const visualStyle = shouldApplyEffect
-    ? {
-      boxShadow: effect.glow
-        ? `0 0 30px ${effect.glow}44, 0 0 60px ${effect.glow}22`
-        : undefined,
-    }
-    : {};
+  const visualStyle = shouldApplyEffect ? { boxShadow: effect.glow ? `0 0 30px ${effect.glow}44, 0 0 60px ${effect.glow}22` : undefined } : {};
 
+  // Badge Placement: Hero overflows top-left corner, Opponents are slightly shifted (-6px mobile, -4px desktop) on bottom-center
   const getBadgePlacement = (): CSSProperties => {
-    if (!seatPosition) return { left: '50%', top: '-8px', transform: 'translateX(-50%)' };
+    if (!seatPosition) return { left: '50%', bottom: '-3px' };
     if (isHero) {
-      return {
-        left: isMobile ? '-12px' : '-12px',
-        top: isMobile ? '-10px' : '-8px',
-        transform: 'translateX(0)',
-      };
+      return { left: '0px', top: '0px' };
     }
-    const topPercent = parseFloat(seatPosition.top);
-    const isTopHalf = topPercent < 50;
-    if (isTopHalf) {
-      return {
-        left: '50%',
-        bottom: isMobile ? '-10px' : '-8px',
-        transform: 'translateX(-50%)',
-      };
-    } else {
-      return {
-        left: '50%',
-        top: isMobile ? '-10px' : '-8px',
-        transform: 'translateX(-50%)',
-      };
-    }
+    return { left: '50%', bottom: isMobile ? '-6px' : '-4px' };
   };
 
   const badgePlacement = getBadgePlacement();
-  const isBadgeAbove = badgePlacement.top !== undefined && !isHero;
 
-  const oppHubWidth = isMobile ? 'w-[100px]' : 'w-[120px]';
-  const oppHubPadding = isMobile ? 'p-[6px]' : 'p-1.5';
-  const oppCardSize = isMobile ? 'w-[20px] h-[28px]' : 'w-[28px] h-[40px]';
+  // Responsive widths tweaked to be even smaller on mobile
+  const oppHubWidth = isMobile ? 'w-[22vw] max-w-[75px]' : 'w-[120px]';
+  const oppHubPadding = isMobile ? 'p-[3px]' : 'p-1.5';
+  const oppCardSize = isMobile ? 'w-[16px] h-[22px]' : 'w-[28px] h-[40px]';
   const oppSizeProp = isMobile ? 'xs' : 'sm';
 
-  const heroHubWidth = isMobile ? 'w-[128px]' : 'w-[160px]';
+  const heroHubWidth = isMobile ? 'w-[36vw] max-w-[128px]' : 'w-[160px]';
   const heroHubPadding = isMobile ? 'p-[8px]' : 'p-2.5';
   const heroCardSize = isMobile ? 'w-[48px] h-[64px]' : 'w-12 h-16';
   const heroSizeProp = isMobile ? 'sm' : 'md';
@@ -387,12 +247,11 @@ export const PlayerSpot = ({
   const cardSize = isLargeCards ? heroCardSize : oppCardSize;
   const sizeProp = isLargeCards ? heroSizeProp : oppSizeProp;
 
-  const infoPr = isHero ? (isMobile ? 'pr-2' : 'pr-4') : isMobile ? 'pr-2' : 'pr-0';
+  const infoPr = isHero ? (isMobile ? 'pr-2' : 'pr-4') : isMobile ? 'pr-1' : 'pr-0';
 
   const glassClasses = cn(
     'relative rounded-sm transition-all duration-300 overflow-visible font-mono',
-    hubPadding,
-    hubWidth,
+    hubPadding, hubWidth,
     {
       'bg-[rgba(8,8,8,0.85)] backdrop-blur-md border border-white/10': true,
       'border-tertiary/40 shadow-[0_0_20px_rgba(78,222,163,0.15)]': isActive && !isHero,
@@ -400,20 +259,6 @@ export const PlayerSpot = ({
       'border-tertiary/70 shadow-[0_0_30px_rgba(78,222,163,0.35)]': is_winner,
       'opacity-30 grayscale': isFolded,
       'opacity-50 grayscale': isLosingPlayer,
-    }
-  );
-
-  const actionPillClasses = cn(
-    'inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full font-mono font-bold uppercase tracking-wider border transition-all',
-    isMobile ? 'text-[10px]' : 'text-[9px]',
-    {
-      'border-tertiary/30 text-tertiary bg-tertiary/5':
-        action?.text === 'CHECK' || action?.text === 'CALL',
-      'border-white/20 text-white bg-white/5':
-        action?.text === 'RAISE' || action?.text === 'BET',
-      'border-red-500/30 text-red-400 bg-red-500/5': action?.text === 'FOLD',
-      'border-red-500/50 text-red-400 bg-red-500/10': action?.text === 'ALL-IN',
-      'border-white/10 text-white/40 bg-transparent': !action,
     }
   );
 
@@ -429,17 +274,9 @@ export const PlayerSpot = ({
         'absolute z-[110] rounded-full flex items-center justify-center font-bold pointer-events-none border border-gray-400/80',
         'bg-gradient-to-br from-white to-gray-400 text-black',
         'shadow-[0_3px_6px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.8),inset_0_-1px_2px_rgba(0,0,0,0.2)]',
-        isMobile
-          ? isLeftSide
-            ? '-bottom-2 -right-2 w-5 h-5 text-[8px]'
-            : '-bottom-2 -left-2 w-5 h-5 text-[8px]'
-          : isLeftSide
-            ? '-bottom-2 -right-2 w-5 h-5 text-[9px]'
-            : '-bottom-2 -left-2 w-5 h-5 text-[9px]'
+        isMobile ? (isLeftSide ? '-bottom-2 -right-2 w-5 h-5 text-[8px]' : '-bottom-2 -left-2 w-5 h-5 text-[8px]') : (isLeftSide ? '-bottom-2 -right-2 w-5 h-5 text-[9px]' : '-bottom-2 -left-2 w-5 h-5 text-[9px]')
       )}
-    >
-      D
-    </motion.div>
+    >D</motion.div>
   );
 
   const positionTag = (
@@ -451,152 +288,72 @@ export const PlayerSpot = ({
           animate={{ opacity: 1, scale: 1, x: 0 }}
           exit={{ opacity: 0, scale: 0.5, x: -5 }}
           transition={{ duration: 0.2, ease: 'easeOut' }}
-          className={cn(
-            'font-bold text-tertiary uppercase tracking-wider rounded px-1 py-px flex items-center justify-center bg-tertiary/25 shrink-0',
-            isMobile ? 'text-[8px]' : 'text-[7px]'
-          )}
-        >
-          {position_badge}
-        </motion.span>
+          className={cn('font-bold text-tertiary uppercase tracking-wider rounded px-1 py-px flex items-center justify-center bg-tertiary/25 shrink-0', isMobile ? 'text-[7px]' : 'text-[7px]')}
+        >{position_badge}</motion.span>
       )}
     </AnimatePresence>
-  );
-
-  const actionPill = action && (
-    <div className={cn('flex justify-center', isMobile ? 'mt-0.5' : 'mt-1.5')}>
-      <span className={actionPillClasses}>
-        {action.text}
-        {action.amount !== undefined && (
-          <span className="opacity-60 ml-0.5">${action.amount}</span>
-        )}
-      </span>
-    </div>
   );
 
   const avatarElement = (
     <motion.div
       initial={false}
-      animate={{
-        scale: isMobile ? 0 : 1,
-        opacity: isMobile ? 0 : 1,
-        width: isMobile ? 0 : 'auto',
-      }}
+      animate={{ scale: isMobile ? 0 : 1, opacity: isMobile ? 0 : 1, width: isMobile ? 0 : 'auto' }}
       transition={{ type: 'spring', stiffness: 300, damping: 25, duration: 0.3 }}
       className={isMobile ? 'w-0 overflow-hidden' : ''}
     >
-      <PlayerAvatar
-        name={display_name}
-        avatarUrl={avatar_url}
-        isActive={isActive}
-        size={isMobile ? 'w-4 h-4' : 'w-8 h-8'}
-      />
+      <PlayerAvatar name={display_name} avatarUrl={avatar_url} isActive={isActive} size={isMobile ? 'w-4 h-4' : 'w-8 h-8'} />
     </motion.div>
   );
 
-  const formattedStack =
-    stack >= 1000
-      ? `$${(stack / 1000).toFixed(stack % 1000 === 0 ? 0 : 1)}k`
-      : `$${stack}`;
+  const formattedStack = stack >= 1000 ? `$${(stack / 1000).toFixed(stack % 1000 === 0 ? 0 : 1)}k` : `$${stack}`;
 
   const bankrollElement = (
-    <span
-      className={cn(
-        'font-mono whitespace-nowrap font-bold bg-gradient-to-b from-zinc-200 to-zinc-400 text-transparent bg-clip-text truncate',
-        isMobile ? 'text-[10px]' : 'text-[11px]'
-      )}
-    >
+    <span className={cn('font-mono whitespace-nowrap font-bold bg-gradient-to-b from-zinc-200 to-zinc-400 text-transparent bg-clip-text truncate', isMobile ? 'text-[9px]' : 'text-[11px]')}>
       {formattedStack}
     </span>
   );
 
   const hasTimer = timerRemainingMs !== null && timerRemainingMs !== undefined;
 
-  // ─── Winner overlay with 3D ──────────────────────────────────────────────────
   const winnerOverlay = is_winner && (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      className="absolute inset-0 z-10"
-    >
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }} className="absolute inset-0 z-10">
       <WinnerOverlay />
     </motion.div>
   );
 
-  // All‑in glow (unchanged)
   const allInGlow = is_all_in && !is_folded ? (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{
-        opacity: [0.3, 0.7, 0.3],
-      }}
-      transition={{ duration: 0.8, repeat: 2, repeatType: 'reverse' }}
-      className="absolute inset-0 rounded-sm pointer-events-none"
-      style={{
-        boxShadow: '0 0 15px rgba(239,68,68,0.3), 0 0 30px rgba(239,68,68,0.15)',
-      }}
-    />
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: [0.3, 0.7, 0.3] }} transition={{ duration: 0.8, repeat: 2, repeatType: 'reverse' }} className="absolute inset-0 rounded-sm pointer-events-none" style={{ boxShadow: '0 0 15px rgba(239,68,68,0.3), 0 0 30px rgba(239,68,68,0.15)' }} />
   ) : null;
 
+  const isCardAreaCentered = !isHero;
+
+  // Adjusted desktop cards to be moved slightly higher
   const cardPositionStyle: CSSProperties = (() => {
-    if (isHero) {
-      const top = -56;
-      const right = isMobile ? -20 : -10;
-      return { top, right };
-    } else {
-      const topOffset = showCardsFaceUp
-        ? isMobile
-          ? -44
-          : -40
-        : isMobile
-          ? -20
-          : -28;
-      return {
-        top: topOffset,
-        left: '50%',
-        transform: 'translateX(-50%)',
-      };
-    }
+    if (isHero) return { top: -56, right: isMobile ? -20 : -10 };
+    const topOffset = showCardsFaceUp ? (isMobile ? -44 : -48) : (isMobile ? -20 : -34);
+    return { top: topOffset, left: '50%' };
   })();
+
+  const actionInfo = getActionStyles(action?.text);
+  // Removed !isFolded condition to allow FOLD badge to appear
+  const showActionBadge = (action || current_bet > 0) && !seat.is_showdown_revealed;
+  const badgeVariants = getActionBadgeVariants(action?.text);
 
   return (
     <div
-      className={cn(
-        'relative inline-flex flex-col items-center',
-        isHero ? 'z-50' : 'z-20'
-      )}
+      className={cn('relative inline-flex flex-col items-center', isHero ? 'z-[455]' : 'z-20')}
       style={{ perspective: '1000px' }}
     >
-      {/* ─── Hub with 3D tilt and scale ───────────────────────────────────────── */}
       <motion.div
         className={cn(glassClasses, 'relative z-20')}
         style={visualStyle}
         data-hub
-        animate={
-          is_winner
-            ? {
-              scale: [1, 1.03, 1],
-              rotateX: [0, 2, 0],
-              rotateY: [0, -3, 0],
-              boxShadow: [
-                '0 0 10px rgba(78,222,163,0.2)',
-                '0 0 30px rgba(78,222,163,0.5)',
-                '0 0 10px rgba(78,222,163,0.2)',
-              ],
-            }
-            : {}
-        }
-        transition={{
-          duration: 2.5,
-          repeat: is_winner ? 2 : 0,
-          ease: [0.22, 1, 0.36, 1],
-        }}
+        animate={is_winner ? { scale: [1, 1.03, 1], rotateX: [0, 2, 0], rotateY: [0, -3, 0], boxShadow: ['0 0 10px rgba(78,222,163,0.2)', '0 0 30px rgba(78,222,163,0.5)', '0 0 10px rgba(78,222,163,0.2)'] } : {}}
+        transition={{ duration: 2.5, repeat: is_winner ? 2 : 0, ease: [0.22, 1, 0.36, 1] }}
       >
         {winnerOverlay}
         {allInGlow}
 
-        {/* Clickable Overlay for Stats */}
         {onShowStats && (
           <button
             type="button"
@@ -606,24 +363,11 @@ export const PlayerSpot = ({
           />
         )}
 
-        <div
-          className={cn(
-            'flex items-center',
-            isMobile ? 'gap-1' : 'gap-2',
-            infoPr,
-            isMobile && isBadgeAbove && 'mt-0.5'
-          )}
-        >
+        <div className={cn('flex items-center', isMobile ? 'gap-1' : 'gap-2', infoPr)}>
           {avatarElement}
           <div className="flex flex-col leading-tight min-w-0 w-full">
-            <span
-              className={cn(
-                'font-mono font-medium text-on-surface whitespace-nowrap truncate',
-                isMobile ? 'text-[10px]' : 'text-[11px]',
-                isFolded && 'opacity-60'
-              )}
-            >
-              {isMobile && display_name.length > 8 ? `${display_name.slice(0, 7)}…` : display_name}
+            <span className={cn('font-mono font-medium text-on-surface whitespace-nowrap truncate block', isMobile ? 'text-[9px]' : 'text-[11px]', isFolded && 'opacity-60')}>
+              {display_name}
             </span>
             <div className="flex items-center gap-1 min-w-0">
               {bankrollElement}
@@ -642,26 +386,19 @@ export const PlayerSpot = ({
               transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
               className="w-full px-0.5 overflow-hidden"
             >
-              <TimerBar
-                remainingMs={timerRemainingMs!}
-                totalMs={timerTotalMs ?? null}
-                isActive={true}
-              />
+              <TimerBar remainingMs={timerRemainingMs!} totalMs={timerTotalMs ?? null} isActive={true} />
             </motion.div>
           )}
         </AnimatePresence>
-
-        {actionPill}
       </motion.div>
 
-      {/* ── Cards (hidden during deal animation) ── */}
       <AnimatePresence>
         {!isDealing && (
           <motion.div
             key={`card-area-${seat.seat}`}
-            initial={{ opacity: 0, scale: 0.85 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.85 }}
+            initial={{ opacity: 0, scale: 0.85, x: isCardAreaCentered ? '-50%' : 0 }}
+            animate={{ opacity: 1, scale: 1, x: isCardAreaCentered ? '-50%' : 0 }}
+            exit={{ opacity: 0, scale: 0.85, x: isCardAreaCentered ? '-50%' : 0 }}
             transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
             className="absolute z-40"
             style={cardPositionStyle}
@@ -689,24 +426,40 @@ export const PlayerSpot = ({
 
       {dealerButton}
 
-      <AnimatePresence mode="popLayout" initial={false}>
-        {current_bet > 0 && !isFolded && !seat.is_showdown_revealed && (
-          <motion.div
-            key={current_bet}
-            initial={{ opacity: 0, y: -8, scale: 0.8 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.8 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-            className={cn(
-              'absolute z-[100] whitespace-nowrap px-1.5 py-0.5 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-tertiary font-mono text-center shadow-lg',
-              isMobile ? 'text-[9px]' : 'text-[8px]'
-            )}
-            style={badgePlacement}
-          >
-            ${current_bet}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Positioning Wrapper for Action Badge */}
+      <div
+        className="absolute z-[100] pointer-events-none"
+        style={{
+          ...badgePlacement,
+          transform: isHero ? 'translate(-50%, -50%)' : 'translate(-50%, 50%)'
+        }}
+      >
+        <AnimatePresence mode="wait">
+          {showActionBadge && (
+            <motion.div
+              key={`${action?.text}-${current_bet}`}
+              variants={badgeVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              className={cn(
+                'whitespace-nowrap px-1.5 py-0.5 rounded-full bg-black/80 backdrop-blur-md border font-mono text-center shadow-lg flex items-center justify-center gap-1 leading-none',
+                isMobile ? 'text-[8px]' : 'text-[8px]'
+              )}
+              style={{
+                transformOrigin: 'center',
+                borderColor: actionInfo.color + '50',
+                color: actionInfo.color,
+              }}
+            >
+              {actionInfo.Icon && <actionInfo.Icon className="w-2.5 h-2.5 shrink-0" />}
+              {action?.text && <span className="font-bold uppercase tracking-wider">{action.text}</span>}
+              {/* Hide bet amount if folded for a cleaner look */}
+              {!isFolded && current_bet > 0 && <span className="opacity-80 font-bold">${current_bet}</span>}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
       <AnimatePresence>
         {seat.is_showdown_revealed && seat.hand_description && (
@@ -715,16 +468,8 @@ export const PlayerSpot = ({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 5 }}
             transition={{ delay: 0.4, duration: 0.3 }}
-            className={cn(
-              'absolute -bottom-4 whitespace-nowrap font-mono uppercase tracking-wider px-1 py-0.5 rounded z-[100]',
-              isMobile ? 'text-[8px]' : 'text-[6px]',
-              is_winner
-                ? 'bg-tertiary/20 text-tertiary border border-tertiary/40'
-                : 'bg-black/80 text-on-surface-variant border border-white/5'
-            )}
-          >
-            {seat.hand_description}
-          </motion.div>
+            className={cn('absolute -bottom-6 whitespace-nowrap font-mono uppercase tracking-wider px-1.5 py-0.5 rounded-md z-[100] shadow-lg', isMobile ? 'text-[8px]' : 'text-[8px]', is_winner ? 'bg-tertiary/20 text-tertiary border border-tertiary/40' : 'bg-black/80 text-on-surface-variant border border-white/5')}
+          >{seat.hand_description}</motion.div>
         )}
       </AnimatePresence>
     </div>

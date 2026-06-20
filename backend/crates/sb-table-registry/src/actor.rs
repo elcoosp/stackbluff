@@ -17,8 +17,9 @@ use sb_db_entities::hand_history_json::{
     HandAction, HandActions, HandPlayer, HandPlayers, HandResult, PotSplit, Winner,
 };
 
+// Assurez-vous d'avoir ajouté `ActionInfo` dans votre fichier game_room.rs
 use crate::game_room::{
-    ActionBroadcast, ActionRequired, AnalyticsPayload, BroadcastSender,
+    ActionBroadcast, ActionInfo, ActionRequired, AnalyticsPayload, BroadcastSender,
     HandResult as RoomHandResult, PlayerStateInfo, PrivatePayload, RoomMessage, ShowdownPlayer,
     ShowdownReveal, SidePotMessage, TableStateUpdate, WinnerResult, WsCard,
 };
@@ -182,6 +183,7 @@ pub enum InternalCommand {
         user_id: UserId,
     },
     ShowdownComplete,
+    ClearLastActions, // Pattern propre pour pacer l'UI
 }
 
 #[derive(Debug, Clone)]
@@ -460,6 +462,7 @@ pub struct TableActor {
     hand_players: Vec<HandPlayer>,
     hand_actions: Vec<HandAction>,
     hand_started_at: Option<chrono::DateTime<chrono::Utc>>,
+    last_actions: HashMap<UserId, ActionInfo>, // Mémorisation propre des actions du tour
 }
 
 impl TableActor {
@@ -486,6 +489,7 @@ impl TableActor {
             hand_players: Vec::new(),
             hand_actions: Vec::new(),
             hand_started_at: None,
+            last_actions: HashMap::new(),
         }
     }
 
@@ -525,6 +529,10 @@ impl TableActor {
             InternalCommand::StartHand => self.start_new_hand().await,
             InternalCommand::Timeout { user_id } => self.handle_timeout(user_id).await,
             InternalCommand::ShowdownComplete => self.finalize_hand_after_reveal().await,
+            InternalCommand::ClearLastActions => {
+                self.last_actions.clear();
+                self.broadcast_table_state().await;
+            }
         }
     }
 
@@ -718,6 +726,8 @@ impl TableActor {
             return;
         }
 
+        self.last_actions.clear();
+
         let dealer_index = match self.last_dealer_index {
             Some(idx) => (idx + 1) % active_players_count,
             None => 0,
@@ -804,7 +814,7 @@ impl TableActor {
                     seat: p.seat,
                     hole_cards: Some(hole_strs),
                     stack_before: p.stack_before.as_i64(),
-                    stack_after: p.stack_before.as_i64(), // Will be updated in finalize_hand
+                    stack_after: p.stack_before.as_i64(),
                     is_dealer: p.player_id == dealer_pid,
                 });
             }
@@ -929,18 +939,38 @@ impl TableActor {
                 }
 
                 let new_pot = hand.state.current_pot();
-                let action_str = format!("{:?}", action_type).to_lowercase();
+
+                let action_str_lower = format!("{:?}", action_type).to_lowercase();
+                let action_str_upper = match action_type {
+                    ActionType::Fold => "FOLD",
+                    ActionType::Check => "CHECK",
+                    ActionType::Call => "CALL",
+                    ActionType::Raise => "RAISE",
+                    ActionType::AllIn => "ALL-IN",
+                    ActionType::Bet => "BET",
+                }
+                .to_string();
+
                 let amount_u64 = amount.map(|a| a.as_i64() as u64);
                 let new_stack = self
                     .players
                     .get(&user_id)
                     .map(|p| p.stack)
                     .unwrap_or_else(zero);
+
+                self.last_actions.insert(
+                    user_id,
+                    ActionInfo {
+                        text: action_str_upper.clone(),
+                        amount: amount_u64,
+                    },
+                );
+
                 let _ = self
                     .broadcast_tx
                     .send(RoomMessage::ActionBroadcast(ActionBroadcast {
                         player_id: user_id,
-                        action: action_str,
+                        action: action_str_lower,
                         amount: amount_u64,
                         new_stack: new_stack.as_i64() as u64,
                         new_pot: new_pot.as_i64() as u64,
@@ -954,6 +984,15 @@ impl TableActor {
                         action_type: format!("{:?}", action_type).to_lowercase(),
                         amount: amount.map(|a| a.as_i64()),
                         timestamp_ms: elapsed_ms,
+                    });
+                }
+
+                // Si on change de street, on schedule un nettoyage dans 1.5s
+                if hand.state.community_cards().len() > prev_comm_cards_len {
+                    let cmd_tx = self.cmd_tx.clone();
+                    tokio::spawn(async move {
+                        tokio::time::sleep(Duration::from_millis(1500)).await;
+                        let _ = cmd_tx.send(InternalCommand::ClearLastActions).await;
                     });
                 }
 
@@ -1413,6 +1452,7 @@ impl TableActor {
                         is_all_in: all_in,
                         is_folded: folded,
                         position_badge: positions_map.get(&player.seat).cloned(),
+                        last_action: self.last_actions.get(&uid).cloned(),
                     }
                 })
                 .collect()
@@ -1428,6 +1468,7 @@ impl TableActor {
                     is_all_in: false,
                     is_folded: false,
                     position_badge: None,
+                    last_action: None,
                 })
                 .collect()
         };

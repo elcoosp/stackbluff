@@ -48,6 +48,8 @@ const parseMessage = (data: any) => {
         is_active: !p.is_folded && !p.is_all_in,
         avatar_url: p.avatar_url || undefined,
         position_badge: p.position_badge || undefined,
+        // LECTURE PROPRE DEPUIS LE BACKEND
+        action: p.last_action || undefined,
       }));
       const communityCards = (data.community_cards || []).map(convertCard);
       return {
@@ -82,8 +84,8 @@ const parseMessage = (data: any) => {
       return {
         type: 'ActionBroadcast',
         player_id: data.player_id,
-        action: data.action,
-        amount: data.amount,
+        action: data.action ? data.action.toUpperCase() : data.action,
+        amount: data.amount ?? undefined,
         new_stack: data.new_stack,
         new_pot: data.new_pot,
       };
@@ -149,7 +151,6 @@ const parseMessage = (data: any) => {
     }
 
     case 'Error': {
-      // We handle "Not seated" error silently in the component, so we return a specific type
       if (data.message.includes("Not seated")) {
         return { type: 'NotSeatedError' };
       }
@@ -210,10 +211,8 @@ export function useGameWebSocket(tableId: string) {
       setConnectionStatus('connected');
       reconnectAttempts.current = 0;
 
-      // Always attempt to reconnect first
       ws.send(JSON.stringify({ type: 'reconnect', table_id: tableId }));
 
-      // If we have a buy-in amount (e.g. from a previous connection in this same tab), re-join automatically
       if (buyInRef.current !== null) {
         ws.send(JSON.stringify({ type: 'join_table', table_id: tableId, buy_in: buyInRef.current }));
       }
@@ -238,7 +237,7 @@ export function useGameWebSocket(tableId: string) {
               mySeatRef.current = message.seat_index;
               setMyUserId(message.user_id);
               setHeroSeat(message.seat_index);
-              setNotSeated(false); // We are seated!
+              setNotSeated(false);
             }
             break;
           }
@@ -309,10 +308,11 @@ export function useGameWebSocket(tableId: string) {
     };
 
     ws.onerror = () => { };
-  }, [tableId]);
+  }, [tableId, setHeroSeat, setHeroHoleCards, setTableState, setActionRequired, clearActionRequired, applyActionBroadcast, setHandResult, setAnalytics, setShowdownReveal, setMyUserId, setNotSeated]);
 
   useEffect(() => {
     mountedRef.current = true;
+
     connect();
     return () => {
       mountedRef.current = false;

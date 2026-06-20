@@ -6,6 +6,7 @@ import {
   getMobilePositions,
   MAX_SEATS,
 } from '@/lib/seatPositions';
+import { cn } from '@/lib/utils';
 
 const seatTransition = 'left 0.4s ease, top 0.4s ease, transform 0.4s ease';
 
@@ -88,7 +89,8 @@ export const SeatGrid = ({
         return (
           <div
             key={index}
-            className="absolute z-[440] overflow-visible"
+            // Hero wrapper gets z-[445] to sit above opponents (440) and focus mask (441), but below PotBadge (450)
+            className={cn("absolute overflow-visible", isHero ? "z-[445]" : "z-[440]")}
             style={{
               left: pos.left,
               top: pos.top,

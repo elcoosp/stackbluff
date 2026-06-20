@@ -52,12 +52,16 @@ export function Header() {
   };
 
   return (
-    <nav className="fixed top-0 w-full z-[100] flex justify-between items-center px-4 md:px-8 h-16 border-b border-white/10 bg-black/80 backdrop-blur-md">
-      <Link to="/" className="font-display-lg text-2xl tracking-tighter uppercase" style={{ color: '#e2e2e2' }}>
-        STACKBLUFF
+    <nav className="fixed top-0 w-full z-[100] flex justify-between items-center px-2 sm:px-4 md:px-8 h-16 border-b border-white/10 bg-black/80 backdrop-blur-md">
+      <Link to="/" className="font-display-lg text-xl md:text-2xl tracking-tighter uppercase" style={{ color: '#e2e2e2' }}>
+        <span className="md:hidden">SB</span>
+        <span className="hidden md:inline">STACKBLUFF</span>
       </Link>
 
-      <div className="flex items-center gap-4 h-full">
+      <div className="flex items-center gap-2 md:gap-4 h-full">
+        {/* ═══ PORTAL TARGET FOR TABLE ACTIONS ═══ */}
+        <div id="header-portal-actions" className="flex items-center gap-1 h-full"></div>
+
         <AnimatePresence mode="wait">
           {isLoading ? (
             <motion.div
@@ -75,7 +79,7 @@ export function Header() {
               animate="animate"
               exit="exit"
               variants={containerVariants}
-              className="flex items-center gap-4 h-full"
+              className="flex items-center gap-2 md:gap-4 h-full"
             >
               <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full glass-hub border border-tertiary/30">
                 <Coins className="w-4 h-4 text-tertiary" />
@@ -86,7 +90,7 @@ export function Header() {
 
               <div className="relative h-full flex items-center" ref={dropdownRef}>
                 <button
-                  type="button" // prevents form submission
+                  type="button"
                   onClick={toggleDropdown}
                   className="flex items-center gap-2 px-2 py-1 rounded-full glass-hub border border-white/10 hover:border-tertiary/50 transition-all cursor-pointer"
                 >
@@ -106,12 +110,12 @@ export function Header() {
                       animate="animate"
                       exit="exit"
                       variants={dropdownVariants}
-                      className="absolute right-0 top-full mt-2 w-48 bg-surface-container border border-outline-variant rounded-lg shadow-xl py-2 z-50 backdrop-blur-md origin-top-right"
-                      onClick={(e) => e.stopPropagation()} // prevent closing when clicking inside
+                      className="absolute right-0 top-full mt-2 w-44 max-w-[calc(100vw-1rem)] bg-surface-container border border-outline-variant rounded-lg shadow-xl py-2 z-[2000] backdrop-blur-md origin-top-right"
+                      onClick={(e) => e.stopPropagation()}
                     >
                       <div className="px-4 py-2 border-b border-outline-variant mb-1">
-                        <p className="font-data-mono text-sm text-on-surface">{user.username}</p>
-                        <p className="font-label-caps text-[10px] text-on-surface-variant">{user.email}</p>
+                        <p className="font-data-mono text-sm text-on-surface truncate">{user.username}</p>
+                        <p className="font-label-caps text-[10px] text-on-surface-variant truncate">{user.email}</p>
                       </div>
                       <button
                         type="button"

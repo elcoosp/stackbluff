@@ -28,6 +28,7 @@ import { VisualFeedbackOverlay } from '@stackbluff/shared/components/feedback/Vi
 import type { FeedbackEvent } from '@stackbluff/shared/services/feedback/types';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 import { Settings, LogOut, History } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -309,17 +310,15 @@ export function TablePage() {
   const maxRaiseAmount = heroStack > 0 ? heroStack : minRaiseAmount;
   const finalMinRaise = canRaise ? minRaiseAmount : maxRaiseAmount;
 
-  // Initial Join Logic (Fix for multi-tab double deduction)
+  // Initial Join Logic
   useEffect(() => {
     if (connectionStatus !== 'connected' || hasJoined) return;
 
-    // 1. If the reconnect succeeded, we are already seated. Mark as joined and do not deduct chips.
     if (myUserId) {
       setHasJoined(true);
       return;
     }
 
-    // 2. If the backend explicitly said we are NOT seated, we can safely attempt to buy in.
     if (notSeated) {
       const urlBuyIn = (search as any)?.buyIn as number | undefined;
       if (urlBuyIn && urlBuyIn > 0) {
@@ -328,13 +327,12 @@ export function TablePage() {
         setIsJoining(true);
         setShowRebuyDialog(false);
       } else {
-        // No buy-in in URL, show the dialog
         setShowRebuyDialog(true);
       }
     }
   }, [connectionStatus, hasJoined, search, sendJoin, notSeated, myUserId]);
 
-  // Show Rebuy Dialog if hero runs out of chips AND they have already joined
+  // Show Rebuy Dialog if hero runs out of chips
   useEffect(() => {
     if (isJoining && heroStack > 0) {
       setIsJoining(false);
@@ -460,6 +458,9 @@ export function TablePage() {
     (s: any) => s.is_all_in && !s.is_folded
   );
 
+  // Portal target for header actions
+  const headerActionsEl = typeof document !== 'undefined' ? document.getElementById('header-portal-actions') : null;
+
   return (
     <ErrorBoundary FallbackComponent={Fallback}>
       <div
@@ -470,50 +471,33 @@ export function TablePage() {
       >
         <VisualFeedbackOverlay />
 
-        {/* ── Settings button ── */}
-        <motion.button
-          type="button"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={() => { setShowSettings(true); trigger('buttonClick'); }}
-          className={cn(
-            "absolute top-3 right-3 z-[700] p-2 rounded-full bg-black/50 backdrop-blur-md border border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-black/70 transition-all",
-            !showAnalytics && "top-16"
-          )}
-          aria-label="Feedback settings"
-        >
-          <Settings className="w-4 h-4" />
-        </motion.button>
-
-        {/* ── History button ── */}
-        <motion.button
-          type="button"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={() => { setShowHistory(true); trigger('buttonClick'); }}
-          className={cn(
-            "absolute top-3 right-16 z-[700] p-2 rounded-full bg-black/50 backdrop-blur-md border border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-black/70 transition-all",
-            !isDesktop && "top-16"
-          )}
-          aria-label="Hand history"
-        >
-          <History className="w-4 h-4" />
-        </motion.button>
-
-        {/* ── Leave table button ── */}
-        <motion.button
-          type="button"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={() => { setShowLeaveDialog(true); trigger('buttonClick'); }}
-          className={cn(
-            "absolute top-3 left-3 z-[700] p-2 rounded-full bg-black/50 backdrop-blur-md border border-white/10 text-on-surface-variant hover:text-red-400 hover:bg-black/70 transition-all",
-            !showAnalytics && "top-16"
-          )}
-          aria-label="Leave table"
-        >
-          <LogOut className="w-4 h-4" />
-        </motion.button>
+        {/* ═══ PORTALED HEADER ACTIONS ═══ */}
+        {headerActionsEl && createPortal(
+          <div className="flex items-center gap-1 md:gap-2 h-full pr-2 md:pr-4 border-r border-white/5 mr-2 md:mr-4">
+            <button
+              onClick={() => { setShowHistory(true); trigger('buttonClick'); }}
+              className="p-2 rounded-full hover:bg-white/5 text-zinc-400 hover:text-white transition-colors"
+              aria-label="Hand history"
+            >
+              <History className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => { setShowSettings(true); trigger('buttonClick'); }}
+              className="p-2 rounded-full hover:bg-white/5 text-zinc-400 hover:text-white transition-colors"
+              aria-label="Feedback settings"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => { setShowLeaveDialog(true); trigger('buttonClick'); }}
+              className="p-2 rounded-full hover:bg-red-500/10 text-zinc-400 hover:text-red-400 transition-colors"
+              aria-label="Leave table"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>,
+          headerActionsEl
+        )}
 
         <FeedbackSettingsDialog open={showSettings} onClose={() => setShowSettings(false)} />
 
@@ -578,7 +562,7 @@ export function TablePage() {
           >
             <TableRail isMobile={!isDesktop} />
 
-            {/* ═══ DYNAMIC FOCUS MASK ═══ */}
+            {/* ═══ DYNAMIC FOCUS MASK (Fixed Gradient & Z-Index) ═══ */}
             <AnimatePresence>
               {isMyTurn && !showdownReveal && (
                 <motion.div
@@ -586,9 +570,9 @@ export function TablePage() {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.4, ease: 'easeInOut' }}
-                  className="absolute inset-0 z-[435] pointer-events-none"
+                  className="absolute inset-0 z-[441] pointer-events-none"
                   style={{
-                    background: 'radial-gradient(ellipse at 50% 85%, transparent 25%, rgba(0,0,0,0.65) 70%, rgba(0,0,0,0.85) 100%)',
+                    background: 'radial-gradient(ellipse 90% 80% at 50% 60%, transparent 30%, rgba(0,0,0,0.6) 75%, rgba(0,0,0,0.8) 100%)',
                     borderRadius: isDesktop ? '140px' : '40px',
                   }}
                 />
@@ -613,6 +597,22 @@ export function TablePage() {
                 )}
               </AnimatePresence>
 
+              {/* ═══ HERO CARD SPOTLIGHT ═══ */}
+              <AnimatePresence>
+                {isMyTurn && !showdownReveal && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: [0.4, 0.8, 0.4] }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+                    className="absolute inset-0 pointer-events-none z-[442]"
+                    style={{
+                      background: 'radial-gradient(circle at 50% 85%, rgba(78, 222, 163, 0.15) 0%, transparent 40%)'
+                    }}
+                  />
+                )}
+              </AnimatePresence>
+
               <TableFelt isMobile={!isDesktop} />
 
               <div className="absolute top-[40%] md:top-[42%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
@@ -624,12 +624,12 @@ export function TablePage() {
                 />
               </div>
 
-              {/* PotBadge is z-450 to be above the MobileAnalyticsStrip (445) and mask (435) */}
+              {/* PotBadge using pure px to avoid resize bounce (40px mobile, 20px desktop) */}
               <div className={cn(
                 "absolute left-1/2 -translate-x-1/2 z-[450] transition-all duration-700 ease-in-out",
                 showdownReveal
-                  ? "top-[4%] md:top-[3%]"
-                  : "top-[6%] md:top-[3%]"
+                  ? "top-[20px] md:top-[10px]"
+                  : "top-[40px] md:top-[20px]"
               )}>
                 <PotBadge
                   amount={pot}

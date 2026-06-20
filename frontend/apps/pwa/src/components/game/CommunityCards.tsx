@@ -25,7 +25,7 @@ function EmptySlot({ isNextStreet }: { isNextStreet: boolean }) {
   return (
     <motion.div
       className={cn(
-        'w-full h-full rounded-sm relative overflow-hidden',
+        'w-full h-full rounded-sm relative overflow-hidden transition-[width,height] duration-300 ease-in-out',
         isNextStreet
           ? 'border border-dashed border-tertiary/25 bg-tertiary/[0.02]'
           : 'border border-dashed border-white/[0.05] bg-white/[0.008]'
@@ -59,7 +59,12 @@ export const CommunityCards = ({
   let gap = 'gap-5';
   let containerMaxWidth = 'max-w-none';
 
-  if (windowWidth < 400) {
+  if (windowWidth < 365) {
+    cardWidth = 'w-14';
+    cardHeight = 'h-20';
+    gap = 'gap-2';
+    containerMaxWidth = 'max-w-[150px]';
+  } else if (windowWidth < 400) {
     cardWidth = 'w-14';
     cardHeight = 'h-20';
     gap = 'gap-2';
@@ -70,13 +75,18 @@ export const CommunityCards = ({
     gap = 'gap-2.5';
     containerMaxWidth = 'max-w-sm';
   } else if (windowWidth < 640) {
+    cardWidth = 'w-16';
+    cardHeight = 'h-24';
+    gap = 'gap-3';
+    containerMaxWidth = 'max-w-sm';
+  } else if (windowWidth < 846) {
     cardWidth = 'w-20';
     cardHeight = 'h-28';
     gap = 'gap-3';
     containerMaxWidth = 'max-w-md';
-  } else if (windowWidth < 768) {
+  } else if (windowWidth < 980) {
     cardWidth = 'w-24';
-    cardHeight = 'h-34';
+    cardHeight = 'h-32';
     gap = 'gap-4';
     containerMaxWidth = 'max-w-lg';
   } else {
@@ -86,17 +96,16 @@ export const CommunityCards = ({
     containerMaxWidth = 'max-w-none';
   }
 
-  const sizeProp = windowWidth < 768 ? 'lg' : 'xl';
+  const sizeProp = windowWidth < 980 ? 'lg' : 'xl';
   const roundedClass = 'rounded-sm';
 
-  // If we have winning cards passed in, we are at showdown and any non-winning card is a "losing" card
   const hasShowdownWinner = winningCards.length > 0;
 
   const isWinningCard = (card: any) => {
     return winningCards.some((wc) => wc.rank === card.rank && wc.suit === card.suit);
   };
 
-  const realCardClass = cn(`${cardWidth} ${cardHeight} ${roundedClass} border-b-4 border-gray-200`);
+  const realCardClass = cn(`${cardWidth} ${cardHeight} ${roundedClass} border-b-4 border-gray-200 transition-[width,height] duration-300 ease-in-out`);
 
   const prevRevealedCount = useRef(revealedCount);
   useEffect(() => {
@@ -110,8 +119,13 @@ export const CommunityCards = ({
     return false;
   };
 
-  const flopSlots = slots.slice(0, 3);
-  const turnRiverSlots = slots.slice(3, 5);
+  // Splitting slots for different layouts
+  const row1Slots = slots.slice(0, 2); // 2 cards
+  const row2Slots = slots.slice(2, 4); // 2 cards
+  const row3Slots = slots.slice(4, 5); // 1 card
+
+  const flopSlots = slots.slice(0, 3); // 3 cards
+  const turnRiverSlots = slots.slice(3, 5); // 2 cards
 
   const SLIDE_DURATION = 0.28;
   const PAUSE = 0.12;
@@ -135,7 +149,7 @@ export const CommunityCards = ({
     return (
       <div
         key={slotIndex}
-        className={cn('relative', cardWidth, cardHeight)}
+        className={cn('relative transition-[width,height] duration-300 ease-in-out', cardWidth, cardHeight)}
         style={{ perspective: '700px' }}
       >
         <AnimatePresence>
@@ -178,9 +192,9 @@ export const CommunityCards = ({
               }}
             >
               {/* Front: Card Back */}
-              <div style={{ backfaceVisibility: 'hidden' }}>
+              <div style={{ backfaceVisibility: 'hidden' }} className="transition-[width,height] duration-300 ease-in-out">
                 <CardBack
-                  className={`${cardWidth} ${cardHeight} ${roundedClass}`}
+                  className={`${cardWidth} ${cardHeight} ${roundedClass} transition-[width,height] duration-300 ease-in-out`}
                   size={sizeProp}
                   rounded={roundedClass}
                   hoverable={false}
@@ -189,7 +203,7 @@ export const CommunityCards = ({
 
               {/* Back: Card Front */}
               <div
-                className="absolute inset-0"
+                className="absolute inset-0 transition-[width,height] duration-300 ease-in-out"
                 style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
               >
                 <Card
@@ -211,21 +225,40 @@ export const CommunityCards = ({
 
   const containerClasses = `flex flex-col items-center ${gap} w-full ${containerMaxWidth} mx-auto transition-all duration-300`;
 
+  // 3-row layout for extremely narrow screens (< 365px)
+  if (windowWidth < 365) {
+    return (
+      <div className={containerClasses}>
+        <div className={`flex justify-center ${gap} w-full transition-all duration-300`}>
+          {row1Slots.map((idx) => renderSlot(idx))}
+        </div>
+        <div className={`flex justify-center ${gap} w-full transition-all duration-300`}>
+          {row2Slots.map((idx) => renderSlot(idx))}
+        </div>
+        <div className={`flex justify-center ${gap} w-full transition-all duration-300`}>
+          {row3Slots.map((idx) => renderSlot(idx))}
+        </div>
+      </div>
+    );
+  }
+
+  // 2-row layout for mobile/tablets (< 768px)
   if (windowWidth < 768) {
     return (
       <div className={containerClasses}>
-        <div className={`flex justify-center ${gap} w-full`}>
+        <div className={`flex justify-center ${gap} w-full transition-all duration-300`}>
           {flopSlots.map((idx) => renderSlot(idx))}
         </div>
-        <div className={`flex justify-center ${gap} w-full`}>
+        <div className={`flex justify-center ${gap} w-full transition-all duration-300`}>
           {turnRiverSlots.map((idx) => renderSlot(idx))}
         </div>
       </div>
     );
   }
 
+  // 1-row layout for desktops
   return (
-    <div className={`flex justify-center ${gap}`}>
+    <div className={`flex justify-center ${gap} transition-all duration-300`}>
       {slots.map((idx) => renderSlot(idx))}
     </div>
   );
