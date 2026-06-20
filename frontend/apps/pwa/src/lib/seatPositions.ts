@@ -15,9 +15,12 @@ export const desktopPositions: Position[] = [
 ];
 
 export function getMobilePositions(isNarrow: boolean): Position[] {
-  const topPositions = [16, 32, 48, 64]; // percentages from top
+  // Expanded vertical range from 10% to 70% to increase the gap between side seats
+  const topPositions = [10, 30, 50, 70]; // percentages from top
+
   const heroTop = 'auto';
-  const heroBottom = '5px'; // 60px from bottom ensures the center of the hub clears the action bar
+  // Restored to 10px to keep the hero seat flush at the bottom
+  const heroBottom = '10px';
 
   const rightSide = topPositions.map((t) => ({ left: '91%', top: t + '%', transform: 'translate(-50%, -50%)' }));
   const leftSide = topPositions.map((t) => ({ left: '9%', top: t + '%', transform: 'translate(-50%, -50%)' }));

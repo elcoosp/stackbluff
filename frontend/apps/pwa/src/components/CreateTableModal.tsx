@@ -3,14 +3,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@stackbluff/shared';
 import { LiquidMetalButton } from '@stackbluff/shared/ui/LiquidMetalButton';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import { Dialog } from '@stackbluff/shared/components/Dialog'; // Using the new primitive
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -66,15 +59,20 @@ export function CreateTableModal({ open, onClose, onTableCreated }: CreateTableM
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md bg-surface-container/90 backdrop-blur-xl border border-white/10">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-display-lg">Create New Table</DialogTitle>
-          <DialogDescription className="text-on-surface-variant">
-            Enter a name and choose the stakes.
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-6">
+    <Dialog open={open} onClose={onClose} className="max-w-md">
+      <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/5 shrink-0">
+          <div>
+            <h2 className="text-lg font-display-lg text-on-surface">Create New Table</h2>
+            <p className="text-[11px] text-on-surface-variant mt-0.5">
+              Enter a name and choose the stakes.
+            </p>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="px-5 py-4 space-y-6 dialog-scroll overflow-y-auto flex-1">
           <div className="space-y-2">
             <label className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
               Table Name
@@ -87,6 +85,7 @@ export function CreateTableModal({ open, onClose, onTableCreated }: CreateTableM
               autoFocus
             />
           </div>
+
           <div className="space-y-2">
             <label className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
               Stake Level
@@ -104,6 +103,7 @@ export function CreateTableModal({ open, onClose, onTableCreated }: CreateTableM
               </SelectContent>
             </Select>
           </div>
+
           <div className="space-y-2">
             <label className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
               Max Players: {maxPlayers}
@@ -120,16 +120,23 @@ export function CreateTableModal({ open, onClose, onTableCreated }: CreateTableM
               <span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span>
             </div>
           </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <LiquidMetalButton type="submit" variant="emerald" disabled={createMutation.isPending}>
-              {createMutation.isPending ? 'Creating...' : 'Create Table'}
-            </LiquidMetalButton>
-          </DialogFooter>
-        </form>
-      </DialogContent>
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-4 border-t border-white/5 flex gap-3 justify-end shrink-0">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            className="border-white/10 text-on-surface-variant hover:bg-white/5 hover:text-on-surface"
+          >
+            Cancel
+          </Button>
+          <LiquidMetalButton type="submit" variant="emerald" disabled={createMutation.isPending}>
+            {createMutation.isPending ? 'Creating...' : 'Create Table'}
+          </LiquidMetalButton>
+        </div>
+      </form>
     </Dialog>
   );
 }

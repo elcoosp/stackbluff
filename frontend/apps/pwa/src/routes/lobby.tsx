@@ -91,9 +91,9 @@ function LobbyPage() {
   }
 
   return (
-    <div className="flex h-full relative">
-      {/* Sidebar – sticky to the scroll container (the main) */}
-      <aside className="hidden md:flex flex-col w-64 bg-surface-container-low border-r border-outline-variant py-gutter space-y-4 sticky top-0 h-full">
+    <div className="flex min-h-screen w-full relative">
+      {/* Sidebar */}
+      <aside className="hidden md:flex flex-col w-64 bg-surface-container-low border-r border-outline-variant py-gutter space-y-4 sticky top-0 h-screen">
         <div className="px-6 pt-6 mb-8">
           <div className="p-4 rounded-lg bg-surface-container-highest razor-highlight border border-outline-variant">
             <h3 className="font-headline-md text-headline-md text-on-surface mb-1">StackBluff Elite</h3>
@@ -136,7 +136,7 @@ function LobbyPage() {
       </aside>
 
       {/* Main content */}
-      <section className="flex-1 relative">
+      <section className="flex-1 relative min-w-0">
         <div className="absolute inset-0 carbon-bg pointer-events-none" />
 
         <div className="max-w-6xl mx-auto p-4 md:p-6 lg:p-8 pb-28 md:pb-8 relative z-10">
@@ -169,8 +169,8 @@ function LobbyPage() {
             </button>
           </div>
 
-          {/* Table list */}
-          <div className="space-y-3 gap-4">
+          {/* Table list wrapper */}
+          <div className="flex flex-col gap-3">
             <div className="hidden lg:grid grid-cols-12 px-6 py-2 text-outline font-label-caps text-[10px] uppercase">
               <div className="col-span-4">Room Name</div>
               <div
@@ -192,16 +192,19 @@ function LobbyPage() {
               <motion.div
                 layout
                 key={table.table_id}
-                className="flex flex-col lg:grid lg:grid-cols-12 items-start lg:items-center px-4 lg:px-8 py-4 lg:py-5 bg-surface-container-lowest/80 backdrop-blur-xl border border-white/10 rounded-xl razor-highlight group hover:border-tertiary/40 transition-all duration-200 gap-3 lg:gap-0"
+                className="flex flex-col lg:grid lg:grid-cols-12 items-start lg:items-center px-4 lg:px-8 py-4 lg:py-5 bg-surface-container-lowest/80 backdrop-blur-xl border border-white/10 rounded-xl razor-highlight group hover:border-tertiary/40 transition-colors duration-200 gap-3 lg:gap-0"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
+                transition={{
+                  delay: i * 0.05,
+                  layout: { duration: 0.3, ease: "easeInOut" }
+                }}
               >
                 <div className="w-full lg:col-span-4 flex items-start lg:items-center gap-3 lg:gap-4">
                   <div
                     className={`mt-1.5 lg:mt-0 w-1.5 h-1.5 rounded-full shrink-0 ${table.status === 'active'
-                        ? 'bg-tertiary status-led animate-pulse'
-                        : 'bg-outline-variant'
+                      ? 'bg-tertiary status-led animate-pulse'
+                      : 'bg-outline-variant'
                       }`}
                   />
                   <div className="flex-1 min-w-0">
@@ -238,9 +241,16 @@ function LobbyPage() {
                 </div>
 
                 <div className="w-full lg:col-span-4 flex lg:justify-end gap-2 mt-1 lg:mt-0">
-                  {/* 🔽 Fixed Observe button */}
+                  {/* Updated Observe Button */}
                   <Button
                     variant="outline"
+                    onClick={() =>
+                      navigate({
+                        to: '/table/$tableId',
+                        params: { tableId: table.table_id },
+                        search: { observe: 'true' } // Pass observe flag
+                      })
+                    }
                     className="flex-1 lg:flex-initial px-3 lg:px-4 py-2 border-outline-variant text-on-surface hover:border-tertiary hover:text-tertiary hover:bg-tertiary/10 font-label-caps text-[10px] uppercase tracking-wider rounded-lg"
                   >
                     Observe

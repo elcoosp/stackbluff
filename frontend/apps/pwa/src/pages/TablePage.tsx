@@ -221,6 +221,9 @@ export function TablePage() {
   const { isDealing } = useDealStore();
   const balance = useAuthStore((s) => s.balance);
 
+  // Check if user is explicitly observing
+  const isObserving = (search as any)?.observe === 'true' || (search as any)?.observe === true;
+
   const {
     seats,
     communityCards,
@@ -310,11 +313,14 @@ export function TablePage() {
   const maxRaiseAmount = heroStack > 0 ? heroStack : minRaiseAmount;
   const finalMinRaise = canRaise ? minRaiseAmount : maxRaiseAmount;
 
+  // Check if hero is actually seated in the game
+  const isHeroSeated = Object.values(seatsWithShowdown).some((s: any) => s.user_id === myUserId);
+
   // Initial Join Logic
   useEffect(() => {
     if (connectionStatus !== 'connected' || hasJoined) return;
 
-    if (myUserId) {
+    if (myUserId && isHeroSeated) {
       setHasJoined(true);
       return;
     }
@@ -326,11 +332,15 @@ export function TablePage() {
         setHasJoined(true);
         setIsJoining(true);
         setShowRebuyDialog(false);
-      } else {
+      } else if (!isObserving) {
+        // Only prompt to buy in if they didn't click "Observe"
         setShowRebuyDialog(true);
+      } else {
+        // They are observing, let them in without a buy-in prompt
+        setHasJoined(true);
       }
     }
-  }, [connectionStatus, hasJoined, search, sendJoin, notSeated, myUserId]);
+  }, [connectionStatus, hasJoined, search, sendJoin, notSeated, myUserId, isObserving, isHeroSeated]);
 
   // Show Rebuy Dialog if hero runs out of chips
   useEffect(() => {
@@ -338,12 +348,24 @@ export function TablePage() {
       setIsJoining(false);
     }
 
-    if (hasJoined && heroStack === 0 && !isJoining && connectionStatus === 'connected' && !game.handInProgress) {
+    // Prevent rebuy dialog if they are explicitly observing
+    if (hasJoined && heroStack === 0 && !isJoining && connectionStatus === 'connected' && !game.handInProgress && !isObserving) {
       setShowRebuyDialog(true);
     } else if (heroStack > 0) {
       setShowRebuyDialog(false);
     }
-  }, [heroStack, connectionStatus, hasJoined, isJoining, game.handInProgress]);
+  }, [heroStack, connectionStatus, hasJoined, isJoining, game.handInProgress, isObserving]);
+
+  // Prevent "Disconnected" flash on initial mount
+  const [showDisconnect, setShowDisconnect] = useState(false);
+  useEffect(() => {
+    if (connectionStatus !== 'connected') {
+      const timer = setTimeout(() => setShowDisconnect(true), 1500);
+      return () => clearTimeout(timer);
+    } else {
+      setShowDisconnect(false);
+    }
+  }, [connectionStatus]);
 
   const { preAction, togglePreAction, executingAction } = usePreAction({
     isMyTurn,
@@ -521,12 +543,22 @@ export function TablePage() {
         <HistoryDialog open={showHistory} onClose={() => setShowHistory(false)} tableId={tableId} />
         <BuyInDialog
           open={showRebuyDialog}
-          onClose={() => { if (!hasJoined) { navigate({ to: '/lobby' }); } else { setShowRebuyDialog(false); } }}
-          onConfirm={(amount) => { if (!hasJoined) { sendJoin(amount); setHasJoined(true); setIsJoining(true); } else { sendRebuy(amount); } setShowRebuyDialog(false); }}
+          onClose={() => { if (!hasJoined && !isHeroSeated) { navigate({ to: '/lobby' }); } else { setShowRebuyDialog(false); } }}
+          onConfirm={(amount) => {
+            // Use isHeroSeated to determine if it's a rebuy or initial join
+            if (!isHeroSeated) {
+              sendJoin(amount);
+              setHasJoined(true);
+              setIsJoining(true);
+            } else {
+              sendRebuy(amount);
+            }
+            setShowRebuyDialog(false);
+          }}
           minBuyIn={100}
           maxBuyIn={200000}
           defaultBuyIn={1000}
-          isRebuy={hasJoined}
+          isRebuy={isHeroSeated}
           currentBalance={balance}
         />
         <PlayerStatsDialog userId={statsUserId} onOpenChange={(open) => !open && setStatsUserId(null)} />
@@ -547,7 +579,8 @@ export function TablePage() {
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: [0.3, 0.7, 0.3] }}
-                    exit={{ opacity: 0 }}
+                    // Added explicit transition here to break the infinite loop on exit
+                    exit={{ opacity: 0, transition: { duration: 0.3, repeat: 0 } }}
                     transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
                     className="absolute inset-0 pointer-events-none z-20"
                     style={{
@@ -558,17 +591,17 @@ export function TablePage() {
                 )}
               </AnimatePresence>
 
-              {/* ═══ HERO CARD SPOTLIGHT ═══ */}
+              {/* ═══ HERO CARD SPOTLIGHT (Premium Subtle Breathing) ═══ */}
               <AnimatePresence>
                 {isMyTurn && !showdownReveal && (
                   <motion.div
                     initial={{ opacity: 0 }}
-                    animate={{ opacity: [0.4, 0.8, 0.4] }}
+                    animate={{ opacity: [0.15, 0.3, 0.15], scale: [1, 1.02, 1] }}
                     exit={{ opacity: 0 }}
-                    transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+                    transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
                     className="absolute inset-0 pointer-events-none z-[442]"
                     style={{
-                      background: 'radial-gradient(circle at 50% 85%, rgba(78, 222, 163, 0.15) 0%, transparent 40%)'
+                      background: 'radial-gradient(ellipse 60% 40% at 50% 90%, rgba(78, 222, 163, 0.1) 0%, transparent 70%)'
                     }}
                   />
                 )}
@@ -599,7 +632,7 @@ export function TablePage() {
               "absolute left-1/2 -translate-x-1/2 z-30 transition-[top] duration-700 ease-in-out pointer-events-none",
               showdownReveal
                 ? "top-[50px] md:top-[40px]"
-                : "top-[60px] md:top-[60px]"
+                : "top-[70px] md:top-[60px]"
             )}>
               <div className="pointer-events-auto">
                 <PotBadge
@@ -642,27 +675,38 @@ export function TablePage() {
           </>
         )}
 
-        {/* ACTION BAR - Absolute bottom. Overlays table if expanded, preventing layout shift. Safe area insets prevent mobile overlap. */}
-        <div className="absolute bottom-0 left-0 right-0 z-[450] pb-[env(safe-area-inset-bottom)]">
-          <ActionBar
-            isDesktop={isDesktop}
-            actionRequired={isMyTurn}
-            toCall={toCall}
-            minRaise={finalMinRaise}
-            maxRaise={maxRaiseAmount}
-            pot={potForAction}
-            onAction={sendActionWithFeedback}
-            preAction={preAction}
-            onSetPreAction={togglePreAction}
-            executingAction={executingAction}
-            heroTimerRemainingMs={heroTimerRemainingMs}
-            heroTimerTotalMs={heroTimerTotalMs}
-            canRaise={canRaise}
-            heroStack={heroStack}
-          />
-        </div>
+        {/* ACTION BAR / OBSERVER CONTROLS */}
+        {isObserving && !isHeroSeated ? (
+          <div className="absolute bottom-0 left-0 right-0 z-[450] pb-[env(safe-area-inset-bottom)] flex justify-center">
+            <button
+              onClick={() => setShowRebuyDialog(true)}
+              className="mb-4 px-8 py-3 md:py-4 bg-tertiary text-on-tertiary font-label-caps text-xs md:text-sm hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg rounded-lg transition-colors"
+            >
+              Take a Seat
+            </button>
+          </div>
+        ) : (
+          <div className="absolute bottom-0 left-0 right-0 z-[450] pb-[env(safe-area-inset-bottom)]">
+            <ActionBar
+              isDesktop={isDesktop}
+              actionRequired={isMyTurn}
+              toCall={toCall}
+              minRaise={finalMinRaise}
+              maxRaise={maxRaiseAmount}
+              pot={potForAction}
+              onAction={sendActionWithFeedback}
+              preAction={preAction}
+              onSetPreAction={togglePreAction}
+              executingAction={executingAction}
+              heroTimerRemainingMs={heroTimerRemainingMs}
+              heroTimerTotalMs={heroTimerTotalMs}
+              canRaise={canRaise}
+              heroStack={heroStack}
+            />
+          </div>
+        )}
 
-        {connectionStatus !== 'connected' && (
+        {showDisconnect && (
           <div className="absolute bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md text-white px-4 py-2 rounded-full text-sm font-mono z-[500] border border-white/10">
             {connectionStatus === 'reconnecting' ? '⚡ Reconnecting…' : '⛔ Disconnected'}
           </div>

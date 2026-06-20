@@ -1,9 +1,9 @@
-import { motion, AnimatePresence } from 'motion/react';
-import { X } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePlayerStats } from '@/hooks/usePlayerStats';
 import { cn } from '@/lib/utils';
+import { Dialog } from '@stackbluff/shared/components/Dialog'; // Using the new primitive
 
 interface PlayerStatsDialogProps {
   userId: string | null;
@@ -41,158 +41,126 @@ export function PlayerStatsDialog({ userId, onOpenChange }: PlayerStatsDialogPro
   const { data: stats, isLoading, isError } = usePlayerStats(userId);
 
   return (
-    <AnimatePresence>
-      {open && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            key="stats-backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[800] bg-black/70 backdrop-blur-sm"
-            onClick={() => onOpenChange(false)}
-          />
+    <Dialog open={open} onClose={() => onOpenChange(false)} className="max-w-sm">
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/5">
+        <div>
+          <h2 className="text-sm font-semibold text-on-surface">Player Statistics</h2>
+          <p className="text-[11px] text-on-surface-variant mt-0.5">
+            {stats?.display_name || (isLoading ? 'Loading...' : 'Player Profile')}
+          </p>
+        </div>
+      </div>
 
-          {/* Dialog */}
-          <motion.div
-            key="stats-dialog"
-            initial={{ opacity: 0, y: 40, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 40, scale: 0.95 }}
-            transition={{ type: 'spring', damping: 30, stiffness: 400, duration: 0.3 }}
-            className="fixed z-[810] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-sm rounded-xl bg-[rgba(12,12,12,0.97)] border border-white/10 backdrop-blur-xl shadow-2xl overflow-hidden"
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/5">
-              <div>
-                <h2 className="text-sm font-semibold text-on-surface">Player Statistics</h2>
-                <p className="text-[11px] text-on-surface-variant mt-0.5">
-                  {stats?.display_name || (isLoading ? 'Loading...' : 'Player Profile')}
-                </p>
+      {/* Animated Content Container */}
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+        className="px-5 py-4 space-y-6 max-h-[60vh] overflow-y-auto dialog-scroll"
+      >
+        {isLoading ? (
+          <div className="space-y-4">
+            <Skeleton className="h-6 w-full bg-white/5" />
+            <Skeleton className="h-6 w-full bg-white/5" />
+            <Skeleton className="h-6 w-full bg-white/5" />
+            <Skeleton className="h-6 w-full bg-white/5" />
+          </div>
+        ) : isError ? (
+          <motion.div variants={itemVariants} className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[11px]">
+            Failed to load stats. Please try again later.
+          </motion.div>
+        ) : stats && stats.hands_played === 0 ? (
+          <motion.div variants={itemVariants} className="text-center py-8 text-on-surface-variant text-sm">
+            Player hasn't completed any hands yet.
+          </motion.div>
+        ) : stats ? (
+          <>
+            {/* Volume Section */}
+            <motion.div variants={itemVariants} className="space-y-3">
+              <h3 className="font-label-caps text-[10px] text-tertiary tracking-widest uppercase">Volume</h3>
+              <div className="flex justify-between font-mono text-sm">
+                <span className="text-on-surface-variant">Hands Played</span>
+                <span className="text-on-surface">{stats.hands_played.toLocaleString()}</span>
               </div>
-              <button
-                type="button"
-                onClick={() => onOpenChange(false)}
-                className="p-1.5 rounded-lg hover:bg-white/5 text-on-surface-variant hover:text-on-surface transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Animated Content Container */}
-            <motion.div
-              variants={containerVariants}
-              initial="hidden"
-              animate="show"
-              className="px-5 py-4 space-y-6 max-h-[70vh] overflow-y-auto"
-            >
-              {isLoading ? (
-                <div className="space-y-4">
-                  <Skeleton className="h-6 w-full bg-white/5" />
-                  <Skeleton className="h-6 w-full bg-white/5" />
-                  <Skeleton className="h-6 w-full bg-white/5" />
-                  <Skeleton className="h-6 w-full bg-white/5" />
-                </div>
-              ) : isError ? (
-                <motion.div variants={itemVariants} className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[11px]">
-                  Failed to load stats. Please try again later.
-                </motion.div>
-              ) : stats && stats.hands_played === 0 ? (
-                <motion.div variants={itemVariants} className="text-center py-8 text-on-surface-variant text-sm">
-                  Player hasn't completed any hands yet.
-                </motion.div>
-              ) : stats ? (
-                <>
-                  {/* Volume Section */}
-                  <motion.div variants={itemVariants} className="space-y-3">
-                    <h3 className="font-label-caps text-[10px] text-tertiary tracking-widest uppercase">Volume</h3>
-                    <div className="flex justify-between font-mono text-sm">
-                      <span className="text-on-surface-variant">Hands Played</span>
-                      <span className="text-on-surface">{stats.hands_played.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between font-mono text-sm">
-                      <span className="text-on-surface-variant">Hands Won</span>
-                      <span className="text-on-surface">{stats.hands_won.toLocaleString()} ({formatPercent(stats.win_rate)})</span>
-                    </div>
-                  </motion.div>
-
-                  {/* Preflop Aggression */}
-                  <motion.div variants={itemVariants} className="space-y-3">
-                    <h3 className="font-label-caps text-[10px] text-tertiary tracking-widest uppercase">Preflop</h3>
-                    <div className="space-y-1">
-                      <div className="flex justify-between font-mono text-xs mb-1">
-                        <span className="text-on-surface-variant">VPIP</span>
-                        <span className="text-tertiary">{formatPercent(stats.vpip)}</span>
-                      </div>
-                      <Progress value={stats.vpip * 100} indicatorClassName="bg-tertiary" />
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex justify-between font-mono text-xs mb-1">
-                        <span className="text-on-surface-variant">PFR</span>
-                        <span className="text-tertiary">{formatPercent(stats.pfr)}</span>
-                      </div>
-                      <Progress value={stats.pfr * 100} indicatorClassName="bg-tertiary" />
-                    </div>
-                    <div className="flex justify-between font-mono text-sm">
-                      <span className="text-on-surface-variant">Aggression Factor</span>
-                      <span className="text-on-surface">{stats.aggression_factor.toFixed(2)}</span>
-                    </div>
-                  </motion.div>
-
-                  {/* Showdown */}
-                  <motion.div variants={itemVariants} className="space-y-3">
-                    <h3 className="font-label-caps text-[10px] text-tertiary tracking-widest uppercase">Showdown</h3>
-                    <div className="flex justify-between font-mono text-sm">
-                      <span className="text-on-surface-variant">Went to Showdown</span>
-                      <span className="text-on-surface">{formatPercent(stats.wtsd)}</span>
-                    </div>
-                    <div className="flex justify-between font-mono text-sm">
-                      <span className="text-on-surface-variant">Won at Showdown</span>
-                      <span className="text-on-surface">
-                        {stats.showdowns > 0 ? formatPercent(stats.showdown_wins / stats.showdowns) : '0%'}
-                      </span>
-                    </div>
-                  </motion.div>
-
-                  {/* Money */}
-                  <motion.div variants={itemVariants} className="space-y-3">
-                    <h3 className="font-label-caps text-[10px] text-tertiary tracking-widest uppercase">Money</h3>
-                    <div className="flex justify-between font-mono text-sm">
-                      <span className="text-on-surface-variant">Net Profit</span>
-                      <span className={cn(stats.net_profit >= 0 ? 'text-tertiary' : 'text-red-400')}>
-                        {stats.net_profit >= 0 ? '+' : ''}{formatCurrency(stats.net_profit)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between font-mono text-sm">
-                      <span className="text-on-surface-variant">Biggest Pot Won</span>
-                      <span className="text-on-surface">{formatCurrency(stats.biggest_pot_won)}</span>
-                    </div>
-                    <div className="flex justify-between font-mono text-sm">
-                      <span className="text-on-surface-variant">All-ins</span>
-                      <span className="text-on-surface">{stats.all_in_count}</span>
-                    </div>
-                  </motion.div>
-                </>
-              ) : null}
+              <div className="flex justify-between font-mono text-sm">
+                <span className="text-on-surface-variant">Hands Won</span>
+                <span className="text-on-surface">{stats.hands_won.toLocaleString()} ({formatPercent(stats.win_rate)})</span>
+              </div>
             </motion.div>
 
-            {/* Footer */}
-            <div className="px-5 py-4 border-t border-white/5 flex gap-3">
-              <motion.button
-                type="button"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => onOpenChange(false)}
-                className="flex-1 py-2.5 rounded-lg border border-white/10 text-on-surface-variant text-[11px] font-label-caps uppercase tracking-wider hover:bg-white/5 transition-all"
-              >
-                Close
-              </motion.button>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+            {/* Preflop Aggression */}
+            <motion.div variants={itemVariants} className="space-y-3">
+              <h3 className="font-label-caps text-[10px] text-tertiary tracking-widest uppercase">Preflop</h3>
+              <div className="space-y-1">
+                <div className="flex justify-between font-mono text-xs mb-1">
+                  <span className="text-on-surface-variant">VPIP</span>
+                  <span className="text-tertiary">{formatPercent(stats.vpip)}</span>
+                </div>
+                <Progress value={stats.vpip * 100} indicatorClassName="bg-tertiary" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex justify-between font-mono text-xs mb-1">
+                  <span className="text-on-surface-variant">PFR</span>
+                  <span className="text-tertiary">{formatPercent(stats.pfr)}</span>
+                </div>
+                <Progress value={stats.pfr * 100} indicatorClassName="bg-tertiary" />
+              </div>
+              <div className="flex justify-between font-mono text-sm">
+                <span className="text-on-surface-variant">Aggression Factor</span>
+                <span className="text-on-surface">{stats.aggression_factor.toFixed(2)}</span>
+              </div>
+            </motion.div>
+
+            {/* Showdown */}
+            <motion.div variants={itemVariants} className="space-y-3">
+              <h3 className="font-label-caps text-[10px] text-tertiary tracking-widest uppercase">Showdown</h3>
+              <div className="flex justify-between font-mono text-sm">
+                <span className="text-on-surface-variant">Went to Showdown</span>
+                <span className="text-on-surface">{formatPercent(stats.wtsd)}</span>
+              </div>
+              <div className="flex justify-between font-mono text-sm">
+                <span className="text-on-surface-variant">Won at Showdown</span>
+                <span className="text-on-surface">
+                  {stats.showdowns > 0 ? formatPercent(stats.showdown_wins / stats.showdowns) : '0%'}
+                </span>
+              </div>
+            </motion.div>
+
+            {/* Money */}
+            <motion.div variants={itemVariants} className="space-y-3">
+              <h3 className="font-label-caps text-[10px] text-tertiary tracking-widest uppercase">Money</h3>
+              <div className="flex justify-between font-mono text-sm">
+                <span className="text-on-surface-variant">Net Profit</span>
+                <span className={cn(stats.net_profit >= 0 ? 'text-tertiary' : 'text-red-400')}>
+                  {stats.net_profit >= 0 ? '+' : ''}{formatCurrency(stats.net_profit)}
+                </span>
+              </div>
+              <div className="flex justify-between font-mono text-sm">
+                <span className="text-on-surface-variant">Biggest Pot Won</span>
+                <span className="text-on-surface">{formatCurrency(stats.biggest_pot_won)}</span>
+              </div>
+              <div className="flex justify-between font-mono text-sm">
+                <span className="text-on-surface-variant">All-ins</span>
+                <span className="text-on-surface">{stats.all_in_count}</span>
+              </div>
+            </motion.div>
+          </>
+        ) : null}
+      </motion.div>
+
+      {/* Footer */}
+      <div className="px-5 py-4 border-t border-white/5 flex gap-3 shrink-0">
+        <motion.button
+          type="button"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={() => onOpenChange(false)}
+          className="flex-1 py-2.5 rounded-lg border border-white/10 text-on-surface-variant text-[11px] font-label-caps uppercase tracking-wider hover:bg-white/5 transition-all"
+        >
+          Close
+        </motion.button>
+      </div>
+    </Dialog>
   );
 }

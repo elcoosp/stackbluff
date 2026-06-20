@@ -5,7 +5,6 @@ import { PlayerAvatar } from './PlayerAvatar';
 import { CardBack, Card } from './Card';
 import { TimerBar } from './TimerBar';
 import { cn } from '@/lib/utils';
-import { useVisualFeedback } from '@stackbluff/shared/hooks/useVisualFeedback';
 import { LogOut, DollarSign, TrendingUp, Swords, Check } from 'lucide-react';
 
 // ─── Animated Counter Hook ──────────────────────────────────────────────────
@@ -325,10 +324,6 @@ export const PlayerSpot = memo(({
 
   const isLosingPlayer = is_showdown_revealed && !is_winner;
 
-  const effect = useVisualFeedback(500);
-  const shouldApplyEffect = effect && effect.seatIndex === seat.seat;
-  const glowColor = shouldApplyEffect && effect?.glow ? effect.glow : null;
-
   const getBadgePlacement = (): CSSProperties => {
     if (isHero) {
       return { left: '0px', top: '0px' };
@@ -338,8 +333,9 @@ export const PlayerSpot = memo(({
 
   const badgePlacement = getBadgePlacement();
 
-  // --- Mobile sizes adjusted for readability ---
-  const oppHubWidth = isMobile ? 'w-[28vw] max-w-[100px]' : 'w-[120px]';
+  // --- Sizes adjusted for readability ---
+  // ONLY reduced mobile opponent width. Everything else remains untouched.
+  const oppHubWidth = isMobile ? 'w-[26vw] max-w-[100px]' : 'w-[120px]';
   const oppHubPadding = isMobile ? 'p-[4px]' : 'p-1.5';
   const oppCardSize = isMobile ? 'w-[16px] h-[22px]' : 'w-[28px] h-[40px]';
   const oppSizeProp = isMobile ? 'xs' : 'sm';
@@ -360,7 +356,7 @@ export const PlayerSpot = memo(({
     {
       'bg-[rgba(8,8,8,0.85)] backdrop-blur-md border border-white/10': true,
       'border-tertiary/40 shadow-[0_0_20px_rgba(78,222,163,0.15)]': isActive && !isHero,
-      'border-tertiary shadow-[0_0_30px_rgba(78,222,163,0.25)]': isActive && isHero,
+      'border-tertiary/60 shadow-[0_0_25px_rgba(78,222,163,0.15)]': isActive && isHero,
       'border-tertiary/70 shadow-[0_0_30px_rgba(78,222,163,0.35)]': is_winner,
       'opacity-30 grayscale': isFolded,
       'opacity-50 grayscale': isLosingPlayer,
@@ -560,14 +556,7 @@ export const PlayerSpot = memo(({
                 '0 0 10px rgba(78,222,163,0.2)',
               ],
             }
-            : {
-              scale: 1,
-              rotateX: 0,
-              rotateY: 0,
-              boxShadow: glowColor
-                ? `0 0 30px ${glowColor}44, 0 0 60px ${glowColor}22`
-                : '0 0 0px rgba(0,0,0,0), 0 0 0px rgba(0,0,0,0)',
-            }
+            : { scale: 1, rotateX: 0, rotateY: 0 }
         }
         transition={
           is_winner
