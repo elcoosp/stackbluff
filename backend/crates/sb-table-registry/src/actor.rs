@@ -188,7 +188,7 @@ pub enum InternalCommand {
     ClearLastActions,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 struct Player {
     user_id: UserId,
     display_name: String,
@@ -197,6 +197,8 @@ struct Player {
     stack: ChipAmount,
     pub time_bank_remaining_seconds: u32,
     pub stats: Option<PlayerStatsDto>,
+    pub is_leaving: bool,
+    pub leave_responder: Option<tokio::sync::oneshot::Sender<ChipAmount>>,
 }
 
 impl Player {
@@ -209,6 +211,8 @@ impl Player {
             stack,
             time_bank_remaining_seconds: 0,
             stats: None,
+            is_leaving: false,
+            leave_responder: None,
         }
     }
 }
@@ -544,15 +548,29 @@ impl TableActor {
     }
 
     async fn handle_reconnect(&mut self, user_id: UserId) {
-        if let Some(player) = self.players.get(&user_id) {
+        let player_info = if let Some(player) = self.players.get_mut(&user_id) {
+            if player.is_leaving {
+                player.is_leaving = false;
+                if let Some(responder) = player.leave_responder.take() {
+                    let _ = responder.send(zero());
+                }
+                info!(%user_id, "Player reconnected. Canceling pending leave.");
+            }
             info!(%user_id, "Player already at table, resyncing state for reconnect");
+            Some(player.player_id)
+        } else {
+            None
+        };
+
+        if let Some(player_id) = player_info {
+            let seat = self.players.get(&user_id).map(|p| p.seat).unwrap_or(0);
             let _ = self.broadcast_tx.send(RoomMessage::Connected {
                 user_id,
-                seat_index: player.seat,
+                seat_index: seat,
             });
             self.broadcast_table_state().await;
             if let Some(hand) = &self.current_hand {
-                if let Some(hole_cards) = hand.state.player_hole_cards(player.player_id) {
+                if let Some(hole_cards) = hand.state.player_hole_cards(player_id) {
                     let ws_cards: Vec<WsCard> = hole_cards
                         .iter()
                         .map(|c| WsCard {
@@ -651,7 +669,6 @@ impl TableActor {
 
         let mut player = Player::new(user_id, display_name, seat, stack);
 
-        // Récupération des stats depuis la base de données lors de l'assise
         if let Ok(stats_dto) = self.stats_repo.get(&user_id.0.to_string()).await {
             player.stats = Some(stats_dto);
         }
@@ -672,6 +689,11 @@ impl TableActor {
 
     async fn process_rebuy(&mut self, user_id: UserId, stack: ChipAmount) {
         if let Some(player) = self.players.get_mut(&user_id) {
+            if player.is_leaving {
+                self.send_error_to(&user_id, "You are in the process of leaving the table")
+                    .await;
+                return;
+            }
             if player.stack > zero() {
                 self.send_error_to(&user_id, "You still have chips, cannot rebuy")
                     .await;
@@ -707,24 +729,47 @@ impl TableActor {
         user_id: UserId,
         respond_to: tokio::sync::oneshot::Sender<ChipAmount>,
     ) {
-        let mut remaining_stack = zero();
-        if let Some(p) = self.players.remove(&user_id) {
-            remaining_stack = p.stack;
-            let mut completion_checked = false;
-            if let Some(hand) = &mut self.current_hand
-                && let Some(pid) = hand.player_by_user_id.get(&user_id)
-            {
-                let _ = hand.state.apply_action(*pid, Action::Fold);
-                hand.cancel_timeout();
-                completion_checked = true;
-                self.check_hand_completion().await;
+        let mut should_fold = false;
+        let mut is_in_hand = false;
+        let mut responder_opt = Some(respond_to);
+
+        if let Some(player) = self.players.get_mut(&user_id) {
+            if let Some(hand) = &self.current_hand {
+                if hand.player_by_user_id.contains_key(&user_id) {
+                    is_in_hand = true;
+                    player.is_leaving = true;
+                    if let Some(rt) = responder_opt.take() {
+                        player.leave_responder = Some(rt);
+                    }
+
+                    if hand.current_player_user() == Some(user_id) {
+                        should_fold = true;
+                    }
+                    info!(%user_id, "Player left during hand. Deferring refund until hand completes.");
+                }
             }
-            if !completion_checked {
-                self.broadcast_table_state().await;
-            }
-            info!(%user_id, "Left");
         }
-        let _ = respond_to.send(remaining_stack);
+
+        if is_in_hand {
+            if should_fold {
+                if let Some(hand) = &mut self.current_hand {
+                    if let Some(pid) = hand.player_by_user_id.get(&user_id).copied() {
+                        let _ = hand.state.apply_action(pid, Action::Fold);
+                    }
+                    hand.cancel_timeout();
+                    self.check_hand_completion().await;
+                }
+            }
+        } else if let Some(player) = self.players.remove(&user_id) {
+            let remaining_stack = player.stack;
+            self.broadcast_table_state().await;
+            info!(%user_id, stack = remaining_stack.as_i64(), "Player left and refunded.");
+            if let Some(rt) = responder_opt.take() {
+                let _ = rt.send(remaining_stack);
+            }
+        } else if let Some(rt) = responder_opt.take() {
+            let _ = rt.send(zero());
+        }
     }
 
     async fn start_new_hand(&mut self) {
@@ -741,7 +786,6 @@ impl TableActor {
 
         self.last_actions.clear();
 
-        // Rafraîchissement des stats de tous les joueurs depuis la base de données au début de chaque main
         for player in self.players.values_mut() {
             if let Ok(stats_dto) = self.stats_repo.get(&player.user_id.0.to_string()).await {
                 player.stats = Some(stats_dto);
@@ -1169,7 +1213,7 @@ impl TableActor {
         let result = self.build_hand_result(&hand);
         let event = HandCompletedEvent {
             table_id: self.table_id,
-            played_at: self.hand_started_at.unwrap_or_else(|| Utc::now()), // <-- FIXED
+            played_at: self.hand_started_at.unwrap_or_else(|| Utc::now()),
             players: HandPlayers {
                 seats: self.hand_players.clone(),
             },
@@ -1268,6 +1312,20 @@ impl TableActor {
     async fn clear_board_and_start_next(&mut self, hand: ActiveHand) {
         self.last_dealer_index = Some(hand.dealer_index);
         self.current_hand = None;
+
+        let mut users_to_remove = Vec::new();
+        for (user_id, player) in &mut self.players {
+            if player.is_leaving {
+                if let Some(responder) = player.leave_responder.take() {
+                    let _ = responder.send(player.stack);
+                }
+                users_to_remove.push(*user_id);
+            }
+        }
+        for user_id in users_to_remove {
+            self.players.remove(&user_id);
+        }
+
         self.broadcast_table_state().await;
 
         if self.players.values().filter(|p| p.stack > zero()).count() >= 2 {
