@@ -1,15 +1,141 @@
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-interface CardProps { rank?: string; suit?: string; faceDown?: boolean; className?: string; }
-export const Card = ({ rank, suit, faceDown, className }: CardProps) => (
-  <motion.div className={cn("relative w-24 h-32 rounded-lg shadow-2xl", faceDown ? "card-back" : "bg-white", className)} whileHover={{ y: -4, transition: { type: "spring", stiffness: 300 } }}>
-    {!faceDown && rank && suit && (
-      <>
-        <span className="absolute top-2 left-2 text-2xl font-bold text-error-container">{rank}</span>
-        <span className="absolute bottom-2 right-2 text-2xl font-bold text-error-container rotate-180">{rank}</span>
-        <span className="absolute inset-0 flex items-center justify-center text-6xl" style={{ color: suit === '♥' || suit === '♦' ? '#e11d48' : '#1e293b' }}>{suit === '♥' ? '♥' : suit === '♦' ? '♦' : suit === '♣' ? '♣' : '♠'}</span>
-      </>
-    )}
-  </motion.div>
-);
-export const CardBack = ({ className }: { className?: string }) => <Card faceDown className={cn("bg-gradient-to-br from-gray-800 to-gray-900 border border-white/20", className)} />;
+
+interface CardProps {
+  rank?: string;
+  suit?: string;
+  faceDown?: boolean;
+  className?: string;
+  rounded?: string;
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  hoverable?: boolean;
+  isWinning?: boolean;
+  isLosing?: boolean;
+}
+
+export const Card = ({
+  rank,
+  suit,
+  faceDown,
+  className,
+  rounded = 'rounded-sm',
+  size = 'md',
+  hoverable = true,
+  isWinning = false,
+  isLosing = false,
+}: CardProps) => {
+  const isRed = suit === '♥' || suit === '♦';
+  const suitColor = isRed ? '#e11d48' : '#1e293b';
+
+  // Standardized filter layers so Framer Motion can interpolate smoothly
+  // Using drop-shadow instead of boxShadow ensures the shadow hides when backface-visibility is hidden
+  const baseFilter = 'grayscale(0) brightness(1) drop-shadow(0 4px 12px rgba(0,0,0,0.5)) drop-shadow(0 1px 4px rgba(0,0,0,0.2))';
+  const winningFilterLow = 'grayscale(0) brightness(1.1) drop-shadow(0 4px 12px rgba(0,0,0,0.5)) drop-shadow(0 0 12px rgba(78,222,163,0.5))';
+  const winningFilterHigh = 'grayscale(0) brightness(1.1) drop-shadow(0 4px 12px rgba(0,0,0,0.5)) drop-shadow(0 0 24px rgba(78,222,163,0.7))';
+  const losingFilter = 'grayscale(0.8) brightness(0.5) drop-shadow(0 4px 8px rgba(0,0,0,0.7))';
+
+  const renderFront = () => (
+    <div
+      className={cn('relative bg-white', rounded, className)}
+      style={{
+        aspectRatio: '5/7',
+        containerType: 'inline-size',
+      }}
+    >
+      <div className="absolute top-0 left-0 flex flex-col items-center leading-none p-[10%]">
+        <span className="font-bold" style={{ color: suitColor, fontSize: '25cqw' }}>
+          {rank}
+        </span>
+        <span className="font-bold" style={{ color: suitColor, fontSize: '20cqw' }}>
+          {suit}
+        </span>
+      </div>
+
+      <div className="absolute inset-x-0 bottom-[10%] flex items-center justify-center pointer-events-none">
+        <span className="leading-none" style={{ color: suitColor, fontSize: '55cqw' }}>
+          {suit}
+        </span>
+      </div>
+    </div>
+  );
+
+  const renderBack = () => (
+    <div
+      className={cn('relative overflow-hidden border border-white/30', rounded, className)}
+      style={{
+        background: 'linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%)',
+        aspectRatio: '5/7',
+        containerType: 'inline-size',
+      }}
+    >
+      <div className={cn('absolute inset-[10%] border border-white/10', rounded)} />
+      <div
+        className="absolute inset-0 opacity-10"
+        style={{
+          backgroundImage: `repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 2px,
+            rgba(78, 222, 163, 0.15) 2px,
+            rgba(78, 222, 163, 0.15) 4px
+          )`,
+        }}
+      />
+      {/* Sharp corner accents with radius ONLY on the intersecting corner */}
+      <div className="absolute top-[10%] left-[10%] w-[10%] h-[10%] border-t border-l border-white/15 rounded-tl-sm" />
+      <div className="absolute bottom-[10%] right-[10%] w-[10%] h-[10%] border-b border-r border-white/15 rounded-br-sm" />
+    </div>
+  );
+
+  // Determine animation state
+  let animateProps: any = {
+    filter: baseFilter,
+    scale: 1,
+  };
+  let transitionProps: any = {
+    duration: 0.5,
+    ease: [0.22, 1, 0.36, 1],
+  };
+
+  if (isLosing) {
+    animateProps = {
+      filter: losingFilter,
+      scale: 0.98,
+    };
+  } else if (isWinning) {
+    animateProps = {
+      filter: [winningFilterLow, winningFilterHigh, winningFilterLow],
+      scale: 1,
+    };
+    transitionProps = {
+      duration: 3,
+      repeat: Infinity,
+      ease: 'easeInOut',
+    };
+  }
+
+  return (
+    <motion.div
+      {...(hoverable && !isWinning && !isLosing
+        ? { whileHover: { y: -4, transition: { type: 'spring', stiffness: 300 } } }
+        : {})}
+      animate={animateProps}
+      transition={transitionProps}
+      className={cn(rounded)}
+    >
+      {faceDown ? renderBack() : renderFront()}
+    </motion.div>
+  );
+};
+
+export const CardBack = ({
+  className,
+  rounded = 'rounded-sm',
+  size = 'md',
+  hoverable = true,
+}: {
+  className?: string;
+  rounded?: string;
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  hoverable?: boolean;
+}) => <Card faceDown className={className} rounded={rounded} size={size} hoverable={hoverable} />;

@@ -3,6 +3,8 @@ export interface PlatformUser {
   name: string;
   avatarUrl?: string;
   isTelegram?: boolean;
+  email?: string;
+  chip_balance?: number;
 }
 
 export interface PaymentRequest {

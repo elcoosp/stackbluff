@@ -3,16 +3,34 @@ mod leaderboard_refresh;
 mod test_utils;
 
 use axum::Router;
+use axum::http::Method;
+use axum::http::header;
 use sea_orm::Database;
 use sea_orm_migration::MigratorTrait;
 use std::sync::Arc;
-use tower_http::cors::{Any, CorsLayer};
+use std::time::Duration;
+use tower_cookies::CookieManagerLayer;
+use tower_http::cors::CorsLayer;
 
-// Import the necessary types from your crates
-use sb_auth::{AuthServiceImpl, SharedAuthService, config::AuthConfig, routes::auth_router};
-use sb_contracts::repo_api::UserRepo;
+use sb_auth::{
+    AuthServiceImpl, Authenticator, SharedAuthService, config::AuthConfig, routes::auth_router,
+};
+use sb_contracts::lobby_api::TableRepo;
+use sb_contracts::repo_api::{HandHistoryRepository, UserRepo};
+use sb_contracts::stats_api::PlayerStatsRepo;
+use sb_db_repos::hand_history_repo::{HandHistoryRepoImpl, spawn_hand_history_cleanup};
 use sb_db_repos::init_writer_loop;
+use sb_db_repos::player_stats_repo::PlayerStatsRepoImpl;
 use sb_db_repos::user_repo::UserRepoImpl;
+use sb_rest_router::create_router;
+use sb_rest_router::player_stats::player_stats_routes;
+use sb_shared_types::{GameVariant, StakeLevel, TableConfig};
+use sb_table_registry::buy_in_limits_for_stake;
+use sb_table_registry::registry::Registry;
+use sb_table_registry::spawn_history_recorder;
+use sb_table_registry::stats_aggregator::spawn_stats_aggregator; // Added this import
+use sb_table_registry::table_service::TableServiceImpl;
+use sb_ws_handler::ws_route;
 
 #[cfg(feature = "test-stubs")]
 use test_utils::notification_service::InMemoryNotificationService;
@@ -23,7 +41,7 @@ use test_utils::user_resolution_service::InMemoryUserResolutionService;
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt::init();
+    tracing_subscriber::fmt().init();
 
     let db_url = std::env::var("DATABASE_URL")
         .unwrap_or_else(|_| "sqlite://stackbluff.db?mode=rwc".to_string());
@@ -43,25 +61,108 @@ async fn main() {
 
     // ── Wire up Auth Service ──────────────────────────────
     let auth_config = AuthConfig::from_env();
-    let auth_service: SharedAuthService = Arc::new(AuthServiceImpl::new(user_repo, auth_config));
+    let auth_impl = Arc::new(AuthServiceImpl::new(user_repo.clone(), auth_config));
+    let auth_service: SharedAuthService = auth_impl.clone();
+    let auth_authenticator: Arc<dyn Authenticator + Send + Sync> = auth_impl;
 
     // ── Wire up bot handler services ──────────────────────
     let bot_state = build_bot_state();
 
     let oracle_service = Arc::new(sb_oracle::OracleServiceImpl::new());
 
-    // Configure CORS
-    let cors = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods(Any)
-        .allow_headers(Any);
+    // ── Initialize Table Repo, Service, and Registry ─────────────
+    let table_repo: Arc<dyn TableRepo + Send + Sync> =
+        Arc::new(sb_db_repos::table_repo::TableRepoImpl::new(db.clone()));
 
+    // ── Initialize Player Stats Repository ───────────────────────
+    let stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync> =
+        Arc::new(PlayerStatsRepoImpl::new(db.clone()));
+
+    let registry = Arc::new(Registry::new(stats_repo.clone()));
+
+    // ── Hydrate Registry from DB (DB is source of truth) ─────────
+    let db_tables = table_repo
+        .list_tables()
+        .await
+        .expect("failed to list DB tables");
+    for t in &db_tables {
+        let (min_buy_in, max_buy_in) = buy_in_limits_for_stake(t.stake_level);
+        let config = TableConfig {
+            max_players: t.max_players as u8,
+            stake_level: t.stake_level,
+            variant: GameVariant::Holdem,
+            min_buy_in,
+            max_buy_in,
+            turn_time_limit_ms: 30_000,
+        };
+        registry.register_existing_table(t.table_id, config).await;
+        tracing::info!(table_id = %t.table_id, "Hydrated table from DB");
+    }
+    tracing::info!(count = db_tables.len(), "Registry hydrated from DB");
+
+    // ── Create TableService (coordinates DB + Registry) ──────────
+    let table_service: Arc<dyn sb_contracts::lobby_api::TableService> =
+        Arc::new(TableServiceImpl::new(registry.clone(), table_repo.clone()));
+
+    // ── Create default table only if DB is empty ─────────────────
+    if db_tables.is_empty() {
+        let default_table_id = table_service
+            .create_cash_table(StakeLevel::Micro, 6)
+            .await
+            .expect("failed to create default table");
+        tracing::info!(%default_table_id, "Default table created (DB was empty)");
+    }
+
+    // ── Initialize Hand History Repository ───────────────────────
+    let hand_history_repo: Arc<dyn HandHistoryRepository + Send + Sync> = Arc::new(
+        HandHistoryRepoImpl::new(writer_handle.sender.clone(), db.clone()),
+    );
+
+    // ── Spawn History Event Recorder ─────────────────────────────
+    let event_rx = registry.event_sender().subscribe();
+    spawn_history_recorder(event_rx, hand_history_repo.clone());
+
+    // ── Spawn Hand History Cleanup Task ──────────────────────────
+    spawn_hand_history_cleanup(db.clone()).await;
+
+    // ── Spawn Player Stats Aggregator ────────────────────────────
+    let stats_event_rx = registry.event_sender().subscribe();
+    spawn_stats_aggregator(stats_event_rx, stats_repo.clone());
+
+    // ── Rest Router (lobby, tables, history, stats) ──────────────
+    let rest_router = create_router(
+        table_service.clone(),
+        table_repo.clone(),
+        registry.clone(),
+        hand_history_repo.clone(),
+    )
+    .merge(player_stats_routes(stats_repo.clone(), user_repo.clone()));
+
+    // Configure CORS
+    let allowed_origins = vec![
+        "http://localhost:5173".parse().unwrap(),
+        "http://localhost:5174".parse().unwrap(),
+    ];
+    let cors = CorsLayer::new()
+        .allow_origin(allowed_origins.clone())
+        .allow_credentials(true)
+        .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+        .allow_headers([header::CONTENT_TYPE, header::COOKIE, header::AUTHORIZATION])
+        .max_age(Duration::from_secs(86400));
+
+    // Build the application router
     let app = Router::new()
-        // .merge(club_router(club_state))
+        .merge(rest_router)
+        .merge(ws_route(
+            auth_authenticator.clone(),
+            registry.clone(),
+            user_repo.clone(),
+        ))
+        .merge(auth_router(auth_service))
         .merge(sb_bot_handler::attach(bot_state))
-        .merge(sb_rest_router::oracle_routes::oracle_router(oracle_service))
-        .merge(auth_router(auth_service)) // Use the sb-auth router!
-        .layer(cors);
+        .merge(sb_rest_router::oracle_router(oracle_service))
+        .layer(cors)
+        .layer(CookieManagerLayer::new());
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
         .await
@@ -94,5 +195,5 @@ fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
     compile_error!(
         "Production service wiring not yet configured. \
          Build with --features test-stubs for development."
-    );
+    )
 }

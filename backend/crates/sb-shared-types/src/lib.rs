@@ -4,6 +4,7 @@ pub mod errors;
 pub mod game_types;
 pub mod ids;
 pub mod logging;
+pub mod player_stats;
 pub mod request_context;
 
 // Re-export commonly used types

@@ -1,19 +1,30 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
-const DEFAULT_TIMER_MS: u64 = 30_000;
-// Production table actor – stable PlayerId, dealer rotation,
-// timeout cleanup, error propagation, full observability.
 
 use std::collections::HashMap;
+use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
 use tokio::sync::mpsc;
 
+use sb_contracts::stats_api::PlayerStatsRepo;
 use sb_game_engine::game_state::{Action, ActionError, GameState};
 use sb_shared_types::AppError;
+use sb_shared_types::player_stats::PlayerStatsDto;
 use sb_shared_types::{ActionType, ChipAmount, PlayerId, StakeLevel, TableConfig, TableId, UserId};
-use sb_ws_handler::BroadcastSender;
-use sb_ws_messages::{Card as WsCard, ServerMessage, TableStateUpdate};
+
+use crate::events::HandCompletedEvent;
+use chrono::Utc;
+use sb_db_entities::hand_history_json::{
+    HandAction, HandActions, HandPlayer, HandPlayers, HandResult, PotSplit, Winner,
+};
+
+use crate::game_room::{
+    ActionBroadcast, ActionInfo, ActionRequired, AnalyticsPayload, BroadcastSender,
+    HandResult as RoomHandResult, PlayerStateInfo, PrivatePayload, RoomMessage, ShowdownPlayer,
+    ShowdownReveal, SidePotMessage, TableStateUpdate, WinnerResult, WsCard,
+};
 use std::pin::Pin;
 use tokio::time::{Duration, Sleep, sleep};
 use tracing::{Instrument, Level, debug, error, info, span, warn};
@@ -24,23 +35,145 @@ fn zero() -> ChipAmount {
 
 fn blinds_for_stake(stake: StakeLevel) -> (ChipAmount, ChipAmount) {
     match stake {
-        StakeLevel::Micro => (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap()),
-        StakeLevel::Low => (ChipAmount::new(10).unwrap(), ChipAmount::new(20).unwrap()),
-        StakeLevel::Medium => (ChipAmount::new(25).unwrap(), ChipAmount::new(50).unwrap()),
-        StakeLevel::High => (ChipAmount::new(50).unwrap(), ChipAmount::new(100).unwrap()),
-        StakeLevel::VeryHigh => (ChipAmount::new(100).unwrap(), ChipAmount::new(200).unwrap()),
+        StakeLevel::Micro => (ChipAmount::new(2).unwrap(), ChipAmount::new(5).unwrap()),
+        StakeLevel::Low => (ChipAmount::new(10).unwrap(), ChipAmount::new(25).unwrap()),
+        StakeLevel::Medium => (ChipAmount::new(50).unwrap(), ChipAmount::new(100).unwrap()),
+        StakeLevel::High => (ChipAmount::new(200).unwrap(), ChipAmount::new(400).unwrap()),
+        StakeLevel::VeryHigh => (
+            ChipAmount::new(500).unwrap(),
+            ChipAmount::new(1000).unwrap(),
+        ),
     }
 }
 
-#[derive(Debug, Clone)]
+pub fn buy_in_limits_for_stake(stake: StakeLevel) -> (ChipAmount, ChipAmount) {
+    let (_, bb) = blinds_for_stake(stake);
+    let bb_val = bb.as_i64();
+    let min =
+        ChipAmount::new(bb_val.saturating_mul(20)).unwrap_or_else(|| ChipAmount::new(100).unwrap());
+    let max = ChipAmount::new(bb_val.saturating_mul(200))
+        .unwrap_or_else(|| ChipAmount::new(10_000).unwrap());
+    (min, max)
+}
+
+fn street_name(state: &GameState) -> String {
+    let cards = state.community_cards();
+    match cards.len() {
+        0 => "preflop".to_string(),
+        3 => "flop".to_string(),
+        4 => "turn".to_string(),
+        5 => "river".to_string(),
+        _ => format!("unknown({})", cards.len()),
+    }
+}
+
+fn get_hand_description(strength: &sb_game_engine::evaluate::HandStrength) -> String {
+    use sb_game_engine::hand_rank::HandRank;
+
+    let rank_short = |val: u8| -> String {
+        match val {
+            14 => "A".to_string(),
+            13 => "K".to_string(),
+            12 => "Q".to_string(),
+            11 => "J".to_string(),
+            10 => "10".to_string(),
+            _ => val.to_string(),
+        }
+    };
+
+    match strength.rank {
+        HandRank::HighCard => {
+            if let Some(&kicker) = strength.kickers.first() {
+                format!("{} High", rank_short(kicker))
+            } else {
+                "High Card".to_string()
+            }
+        }
+        HandRank::OnePair => {
+            if let Some(&kicker) = strength.kickers.first() {
+                format!("Pair of {}s", rank_short(kicker))
+            } else {
+                "One Pair".to_string()
+            }
+        }
+        HandRank::TwoPair => {
+            if strength.kickers.len() >= 3 {
+                let high = strength.kickers[0];
+                let low = strength.kickers[2];
+                format!("Two Pair {}s & {}s", rank_short(high), rank_short(low))
+            } else {
+                "Two Pair".to_string()
+            }
+        }
+        HandRank::ThreeOfAKind => {
+            if let Some(&kicker) = strength.kickers.first() {
+                format!("Trips {}s", rank_short(kicker))
+            } else {
+                "Three of a Kind".to_string()
+            }
+        }
+        HandRank::Straight => {
+            if let Some(&kicker) = strength.kickers.first() {
+                format!("Straight to {}", rank_short(kicker))
+            } else {
+                "Straight".to_string()
+            }
+        }
+        HandRank::Flush => {
+            if let Some(&kicker) = strength.kickers.first() {
+                format!("{} High Flush", rank_short(kicker))
+            } else {
+                "Flush".to_string()
+            }
+        }
+        HandRank::FullHouse => {
+            if strength.kickers.len() >= 4 {
+                let three = strength.kickers[0];
+                let two = strength.kickers[3];
+                format!(
+                    "Full House {}s over {}s",
+                    rank_short(three),
+                    rank_short(two)
+                )
+            } else {
+                "Full House".to_string()
+            }
+        }
+        HandRank::FourOfAKind => {
+            if let Some(&kicker) = strength.kickers.first() {
+                format!("Quads {}s", rank_short(kicker))
+            } else {
+                "Four of a Kind".to_string()
+            }
+        }
+        HandRank::StraightFlush => {
+            if let Some(&kicker) = strength.kickers.first() {
+                format!("Straight Flush to {}", rank_short(kicker))
+            } else {
+                "Straight Flush".to_string()
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
 pub enum InternalCommand {
     Join {
         user_id: UserId,
-        seat: u8,
+        display_name: String,
+        seat: Option<u8>,
         stack: ChipAmount,
+    },
+    Reconnect {
+        user_id: UserId,
     },
     Leave {
         user_id: UserId,
+        respond_to: tokio::sync::oneshot::Sender<ChipAmount>,
+    },
+    Rebuy {
+        user_id: UserId,
+        stack: ChipAmount,
     },
     Action {
         user_id: UserId,
@@ -51,25 +184,35 @@ pub enum InternalCommand {
     Timeout {
         user_id: UserId,
     },
+    ShowdownComplete,
+    ClearLastActions,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 struct Player {
     user_id: UserId,
+    display_name: String,
     seat: u8,
     player_id: PlayerId,
     stack: ChipAmount,
     pub time_bank_remaining_seconds: u32,
+    pub stats: Option<PlayerStatsDto>,
+    pub is_leaving: bool,
+    pub leave_responder: Option<tokio::sync::oneshot::Sender<ChipAmount>>,
 }
 
 impl Player {
-    fn new(user_id: UserId, seat: u8, stack: ChipAmount) -> Self {
+    fn new(user_id: UserId, display_name: String, seat: u8, stack: ChipAmount) -> Self {
         Self {
             user_id,
+            display_name,
             seat,
             player_id: PlayerId(Uuid::new_v4()),
             stack,
             time_bank_remaining_seconds: 0,
+            stats: None,
+            is_leaving: false,
+            leave_responder: None,
         }
     }
 }
@@ -80,6 +223,8 @@ struct ActiveHand {
     player_by_user_id: HashMap<UserId, PlayerId>,
     dealer_index: usize,
     timeout_handle: Option<tokio::task::JoinHandle<()>>,
+    timeout_expires_at: Option<u64>,
+    timeout_duration_ms: u64,
 }
 
 impl ActiveHand {
@@ -95,43 +240,218 @@ impl ActiveHand {
             player_by_user_id,
             dealer_index,
             timeout_handle: None,
+            timeout_expires_at: None,
+            timeout_duration_ms: 30000,
         }
     }
+
     fn cancel_timeout(&mut self) {
         if let Some(handle) = self.timeout_handle.take() {
             handle.abort();
         }
+        self.timeout_expires_at = None;
     }
-    fn schedule_timeout(&mut self, user_id: UserId, cmd_tx: mpsc::Sender<InternalCommand>) {
+
+    fn schedule_timeout(
+        &mut self,
+        user_id: UserId,
+        cmd_tx: mpsc::Sender<InternalCommand>,
+        duration_ms: u64,
+    ) {
         self.cancel_timeout();
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64;
+        self.timeout_expires_at = Some(now + duration_ms);
+        self.timeout_duration_ms = duration_ms;
+
         let tx = cmd_tx.clone();
         let handle = tokio::spawn(async move {
-            sleep(Duration::from_secs(30)).await;
+            sleep(Duration::from_millis(duration_ms)).await;
             let _ = tx.send(InternalCommand::Timeout { user_id }).await;
         });
         self.timeout_handle = Some(handle);
     }
+
     fn current_player_user(&self) -> Option<UserId> {
         self.state
             .current_player_id()
             .and_then(|pid| self.user_by_player_id.get(&pid).cloned())
     }
+
     fn player_stack(&self, user_id: UserId) -> Option<ChipAmount> {
         self.player_by_user_id
             .get(&user_id)
             .and_then(|pid| self.state.player_stack(*pid))
     }
+
     fn player_current_bet(&self, user_id: UserId) -> Option<ChipAmount> {
         self.player_by_user_id
             .get(&user_id)
             .and_then(|pid| self.state.player_current_bet(*pid))
     }
+
     fn player_is_all_in(&self, user_id: UserId) -> bool {
         self.player_by_user_id
             .get(&user_id)
             .map(|pid| self.state.player_is_all_in(*pid))
             .unwrap_or(false)
     }
+
+    fn player_is_folded(&self, user_id: UserId) -> bool {
+        self.player_by_user_id
+            .get(&user_id)
+            .map(|pid| self.state.player_is_folded(*pid))
+            .unwrap_or(false)
+    }
+}
+
+fn build_action_required(hand: &ActiveHand, user_id: UserId) -> ActionRequired {
+    let to_call = hand.state.current_call_amount();
+    let min_raise = hand.state.min_raise_amount();
+    let can_check = to_call == ChipAmount::new(0).unwrap();
+    let pot = hand.state.current_pot();
+
+    let expires_at = hand.timeout_expires_at.unwrap_or_else(|| {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64
+            + hand.timeout_duration_ms
+    });
+
+    ActionRequired {
+        player_id: user_id,
+        expires_at,
+        timeout_ms: hand.timeout_duration_ms,
+        to_call: to_call.as_i64() as u64,
+        min_raise: min_raise.as_i64() as u64,
+        can_check,
+        pot: pot.as_i64() as u64,
+    }
+}
+
+fn build_analytics(hand: &ActiveHand, user_id: UserId) -> Option<AnalyticsPayload> {
+    let pid = hand.player_by_user_id.get(&user_id)?;
+    let hole_cards = hand.state.player_hole_cards(*pid)?;
+    let comm_cards = hand.state.community_cards();
+    let to_call = hand.state.current_call_amount();
+    let pot = hand.state.current_pot();
+
+    let pot_odds = if to_call.as_i64() > 0 {
+        let odds = pot.as_i64() as f32 / to_call.as_i64() as f32;
+        (odds * 10.0).round() / 10.0
+    } else {
+        0.0
+    };
+
+    let mut all_cards = hole_cards.to_vec();
+    all_cards.extend_from_slice(comm_cards);
+
+    let (strength, _winning_cards) = sb_game_engine::evaluate::evaluate_best_hand(&all_cards);
+
+    let best_hand_name = get_hand_description(&strength);
+    let base_strength = get_strength_score(&strength);
+    let win_prob = run_monte_carlo(&hole_cards, comm_cards, 300);
+
+    Some(AnalyticsPayload {
+        win_prob,
+        pot_odds,
+        best_hand: best_hand_name,
+        strength: base_strength,
+    })
+}
+
+fn get_strength_score(strength: &sb_game_engine::evaluate::HandStrength) -> u8 {
+    use sb_game_engine::hand_rank::HandRank;
+
+    let base = match strength.rank {
+        HandRank::HighCard => 0,
+        HandRank::OnePair => 25,
+        HandRank::TwoPair => 45,
+        HandRank::ThreeOfAKind => 60,
+        HandRank::Straight => 70,
+        HandRank::Flush => 80,
+        HandRank::FullHouse => 88,
+        HandRank::FourOfAKind => 95,
+        HandRank::StraightFlush => 99,
+    };
+
+    if let Some(&kicker) = strength.kickers.first() {
+        let bonus = (kicker as u8 - 2) / 4;
+        let total = base + bonus;
+        if total > 100 { 100 } else { total }
+    } else {
+        base
+    }
+}
+
+fn run_monte_carlo(
+    hero_cards: &[sb_shared_types::Card; 2],
+    community_cards: &[sb_shared_types::Card],
+    iterations: u32,
+) -> u8 {
+    use rand::seq::SliceRandom;
+    use sb_shared_types::{Card, Rank, Suit};
+
+    let mut wins = 0;
+    let mut ties = 0;
+
+    let mut remaining_deck: Vec<Card> = Vec::new();
+    for suit in [Suit::Clubs, Suit::Diamonds, Suit::Hearts, Suit::Spades] {
+        for rank in [
+            Rank::Two,
+            Rank::Three,
+            Rank::Four,
+            Rank::Five,
+            Rank::Six,
+            Rank::Seven,
+            Rank::Eight,
+            Rank::Nine,
+            Rank::Ten,
+            Rank::Jack,
+            Rank::Queen,
+            Rank::King,
+            Rank::Ace,
+        ] {
+            let c = Card { suit, rank };
+            if !hero_cards.contains(&c) && !community_cards.contains(&c) {
+                remaining_deck.push(c);
+            }
+        }
+    }
+
+    let mut rng = rand::rng();
+
+    for _ in 0..iterations {
+        remaining_deck.shuffle(&mut rng);
+
+        let opp_cards: [Card; 2] = [remaining_deck[0], remaining_deck[1]];
+        let fill_count = 5 - community_cards.len();
+        let fill_comm: Vec<Card> = remaining_deck[2..2 + fill_count].to_vec();
+
+        let mut hero_comm = community_cards.to_vec();
+        hero_comm.extend_from_slice(&fill_comm);
+        let hero_comm_5: [Card; 5] = hero_comm[..5].try_into().unwrap();
+
+        let mut opp_comm = community_cards.to_vec();
+        opp_comm.extend_from_slice(&fill_comm);
+        let opp_comm_5: [Card; 5] = opp_comm[..5].try_into().unwrap();
+
+        let (hero_strength, _) =
+            sb_game_engine::evaluate::evaluate_hand_strength(hero_cards, &hero_comm_5);
+        let (opp_strength, _) =
+            sb_game_engine::evaluate::evaluate_hand_strength(&opp_cards, &opp_comm_5);
+
+        match hero_strength.cmp(&opp_strength) {
+            std::cmp::Ordering::Greater => wins += 1,
+            std::cmp::Ordering::Equal => ties += 1,
+            _ => {}
+        }
+    }
+
+    (((wins as f32) + (ties as f32) * 0.5) / iterations as f32 * 100.0) as u8
 }
 
 pub struct TableActor {
@@ -139,20 +459,29 @@ pub struct TableActor {
     config: TableConfig,
     players: HashMap<UserId, Player>,
     current_hand: Option<ActiveHand>,
-    broadcast_tx: BroadcastSender<ServerMessage>,
+    broadcast_tx: BroadcastSender,
     cmd_tx: mpsc::Sender<InternalCommand>,
     current_timer: Option<Pin<Box<Sleep>>>,
     current_timer_player: Option<PlayerId>,
     current_main_timer_remaining_ms: Option<u64>,
     player_user_map: HashMap<PlayerId, UserId>,
+    last_dealer_index: Option<usize>,
+    event_tx: tokio::sync::broadcast::Sender<HandCompletedEvent>,
+    hand_players: Vec<HandPlayer>,
+    hand_actions: Vec<HandAction>,
+    hand_started_at: Option<chrono::DateTime<chrono::Utc>>,
+    last_actions: HashMap<UserId, ActionInfo>,
+    stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
 }
 
 impl TableActor {
     pub fn new(
         table_id: TableId,
         config: TableConfig,
-        broadcast_tx: BroadcastSender<ServerMessage>,
+        broadcast_tx: BroadcastSender,
         cmd_tx: mpsc::Sender<InternalCommand>,
+        event_tx: tokio::sync::broadcast::Sender<HandCompletedEvent>,
+        stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
     ) -> Self {
         Self {
             table_id,
@@ -161,11 +490,17 @@ impl TableActor {
             current_hand: None,
             broadcast_tx,
             cmd_tx,
-
             current_timer: None,
             current_timer_player: None,
             current_main_timer_remaining_ms: None,
             player_user_map: HashMap::new(),
+            last_dealer_index: None,
+            event_tx,
+            hand_players: Vec::new(),
+            hand_actions: Vec::new(),
+            hand_started_at: None,
+            last_actions: HashMap::new(),
+            stats_repo,
         }
     }
 
@@ -187,10 +522,16 @@ impl TableActor {
         match cmd {
             InternalCommand::Join {
                 user_id,
+                display_name,
                 seat,
                 stack,
-            } => self.join_player(user_id, seat, stack).await,
-            InternalCommand::Leave { user_id } => self.leave_player(user_id).await,
+            } => self.join_player(user_id, display_name, seat, stack).await,
+            InternalCommand::Reconnect { user_id } => self.handle_reconnect(user_id).await,
+            InternalCommand::Leave {
+                user_id,
+                respond_to,
+            } => self.leave_player(user_id, respond_to).await,
+            InternalCommand::Rebuy { user_id, stack } => self.process_rebuy(user_id, stack).await,
             InternalCommand::Action {
                 user_id,
                 action_type,
@@ -198,48 +539,236 @@ impl TableActor {
             } => self.process_action(user_id, action_type, amount).await,
             InternalCommand::StartHand => self.start_new_hand().await,
             InternalCommand::Timeout { user_id } => self.handle_timeout(user_id).await,
+            InternalCommand::ShowdownComplete => self.finalize_hand_after_reveal().await,
+            InternalCommand::ClearLastActions => {
+                self.last_actions.clear();
+                self.broadcast_table_state().await;
+            }
         }
     }
 
-    async fn join_player(&mut self, user_id: UserId, seat: u8, stack: ChipAmount) {
-        if self.players.contains_key(&user_id) {
-            warn!(%user_id, "Already at table");
-            self.send_error(&user_id, "Already at table").await;
+    async fn handle_reconnect(&mut self, user_id: UserId) {
+        let player_info = if let Some(player) = self.players.get_mut(&user_id) {
+            if player.is_leaving {
+                player.is_leaving = false;
+                if let Some(responder) = player.leave_responder.take() {
+                    let _ = responder.send(zero());
+                }
+                info!(%user_id, "Player reconnected. Canceling pending leave.");
+            }
+            info!(%user_id, "Player already at table, resyncing state for reconnect");
+            Some(player.player_id)
+        } else {
+            None
+        };
+
+        if let Some(player_id) = player_info {
+            let seat = self.players.get(&user_id).map(|p| p.seat).unwrap_or(0);
+            let _ = self.broadcast_tx.send(RoomMessage::Connected {
+                user_id,
+                seat_index: seat,
+            });
+            self.broadcast_table_state().await;
+            if let Some(hand) = &self.current_hand {
+                if let Some(hole_cards) = hand.state.player_hole_cards(player_id) {
+                    let ws_cards: Vec<WsCard> = hole_cards
+                        .iter()
+                        .map(|c| WsCard {
+                            suit: format!("{:?}", c.suit).to_lowercase(),
+                            rank: format!("{:?}", c.rank),
+                        })
+                        .collect();
+                    let _ = self.broadcast_tx.send(RoomMessage::PrivateMessage {
+                        target_user_id: user_id,
+                        payload: PrivatePayload::YourHoleCards {
+                            hole_cards: ws_cards,
+                        },
+                    });
+                }
+                if hand.current_player_user() == Some(user_id) {
+                    let action_req = build_action_required(hand, user_id);
+                    let _ = self
+                        .broadcast_tx
+                        .send(RoomMessage::ActionRequired(action_req));
+                }
+                if let Some(analytics) = build_analytics(hand, user_id) {
+                    let _ = self.broadcast_tx.send(RoomMessage::PrivateMessage {
+                        target_user_id: user_id,
+                        payload: PrivatePayload::Analytics { analytics },
+                    });
+                }
+            }
+        } else {
+            self.send_error_to(&user_id, "Not seated at table. Please buy in.")
+                .await;
+        }
+    }
+
+    async fn join_player(
+        &mut self,
+        user_id: UserId,
+        display_name: String,
+        seat: Option<u8>,
+        stack: ChipAmount,
+    ) {
+        if stack < self.config.min_buy_in {
+            self.send_error_to(
+                &user_id,
+                &format!(
+                    "Buy-in of {} is below the table minimum of {}.",
+                    stack.as_i64(),
+                    self.config.min_buy_in.as_i64()
+                ),
+            )
+            .await;
             return;
         }
+        if stack > self.config.max_buy_in {
+            self.send_error_to(
+                &user_id,
+                &format!(
+                    "Buy-in of {} exceeds the table maximum of {}.",
+                    stack.as_i64(),
+                    self.config.max_buy_in.as_i64()
+                ),
+            )
+            .await;
+            return;
+        }
+
+        let seat = match seat {
+            Some(s) => s,
+            None => {
+                let occupied: std::collections::HashSet<u8> =
+                    self.players.values().map(|p| p.seat).collect();
+                let mut free = None;
+                for s in 0..self.config.max_players {
+                    if !occupied.contains(&s) {
+                        free = Some(s);
+                        break;
+                    }
+                }
+                match free {
+                    Some(s) => s,
+                    None => {
+                        self.send_error_to(&user_id, "Table is full").await;
+                        return;
+                    }
+                }
+            }
+        };
         if self.players.values().any(|p| p.seat == seat) {
-            warn!(seat, "Seat occupied");
-            self.send_error(&user_id, &format!("Seat {} taken", seat))
+            self.send_error_to(&user_id, &format!("Seat {} taken", seat))
                 .await;
             return;
         }
         if seat >= self.config.max_players {
-            warn!(seat, max = self.config.max_players, "Invalid seat");
-            self.send_error(&user_id, "Seat out of range").await;
+            self.send_error_to(&user_id, "Seat out of range").await;
             return;
         }
-        if stack < self.config.min_buy_in {
-            warn!(%user_id, stack = ?stack, min = ?self.config.min_buy_in, "Below min buy-in");
-            self.send_error(&user_id, "Buy-in too low").await;
-            return;
+
+        let mut player = Player::new(user_id, display_name, seat, stack);
+
+        if let Ok(stats_dto) = self.stats_repo.get(&user_id.0.to_string()).await {
+            player.stats = Some(stats_dto);
         }
-        let player = Player::new(user_id, seat, stack);
+
         self.players.insert(player.user_id, player);
+        let _ = self.broadcast_tx.send(RoomMessage::Connected {
+            user_id,
+            seat_index: seat,
+        });
         self.broadcast_table_state().await;
-        info!(%user_id, seat, "Joined");
+        info!(%user_id, seat, stack = stack.as_i64(), "Joined");
+
+        if self.players.len() >= 2 && self.current_hand.is_none() {
+            info!("2+ players seated and no hand in progress, auto-starting hand");
+            self.start_new_hand().await;
+        }
     }
 
-    async fn leave_player(&mut self, user_id: UserId) {
-        if let Some(_p) = self.players.remove(&user_id) {
-            if let Some(hand) = &mut self.current_hand
-                && let Some(pid) = hand.player_by_user_id.get(&user_id)
-            {
-                let _ = hand.state.apply_action(*pid, Action::Fold);
-                hand.cancel_timeout();
-                self.check_hand_completion().await;
+    async fn process_rebuy(&mut self, user_id: UserId, stack: ChipAmount) {
+        if let Some(player) = self.players.get_mut(&user_id) {
+            if player.is_leaving {
+                self.send_error_to(&user_id, "You are in the process of leaving the table")
+                    .await;
+                return;
             }
+            if player.stack > zero() {
+                self.send_error_to(&user_id, "You still have chips, cannot rebuy")
+                    .await;
+                return;
+            }
+            if stack < self.config.min_buy_in || stack > self.config.max_buy_in {
+                self.send_error_to(
+                    &user_id,
+                    &format!(
+                        "Rebuy amount {} is outside the allowed range ({}–{}).",
+                        stack.as_i64(),
+                        self.config.min_buy_in.as_i64(),
+                        self.config.max_buy_in.as_i64()
+                    ),
+                )
+                .await;
+                return;
+            }
+            player.stack = stack;
             self.broadcast_table_state().await;
-            info!(%user_id, "Left");
+            info!(%user_id, stack = stack.as_i64(), "Player rebought");
+            if self.players.len() >= 2 && self.current_hand.is_none() {
+                info!("2+ players seated and no hand in progress, auto-starting hand after rebuy");
+                self.start_new_hand().await;
+            }
+        } else {
+            self.send_error_to(&user_id, "Not at table").await;
+        }
+    }
+
+    async fn leave_player(
+        &mut self,
+        user_id: UserId,
+        respond_to: tokio::sync::oneshot::Sender<ChipAmount>,
+    ) {
+        let mut should_fold = false;
+        let mut is_in_hand = false;
+        let mut responder_opt = Some(respond_to);
+
+        if let Some(player) = self.players.get_mut(&user_id) {
+            if let Some(hand) = &self.current_hand {
+                if hand.player_by_user_id.contains_key(&user_id) {
+                    is_in_hand = true;
+                    player.is_leaving = true;
+                    if let Some(rt) = responder_opt.take() {
+                        player.leave_responder = Some(rt);
+                    }
+
+                    if hand.current_player_user() == Some(user_id) {
+                        should_fold = true;
+                    }
+                    info!(%user_id, "Player left during hand. Deferring refund until hand completes.");
+                }
+            }
+        }
+
+        if is_in_hand {
+            if should_fold {
+                if let Some(hand) = &mut self.current_hand {
+                    if let Some(pid) = hand.player_by_user_id.get(&user_id).copied() {
+                        let _ = hand.state.apply_action(pid, Action::Fold);
+                    }
+                    hand.cancel_timeout();
+                    self.check_hand_completion().await;
+                }
+            }
+        } else if let Some(player) = self.players.remove(&user_id) {
+            let remaining_stack = player.stack;
+            self.broadcast_table_state().await;
+            info!(%user_id, stack = remaining_stack.as_i64(), "Player left and refunded.");
+            if let Some(rt) = responder_opt.take() {
+                let _ = rt.send(remaining_stack);
+            }
+        } else if let Some(rt) = responder_opt.take() {
+            let _ = rt.send(zero());
         }
     }
 
@@ -248,22 +777,52 @@ impl TableActor {
             warn!("Hand already in progress");
             return;
         }
-        if self.players.len() < 2 {
-            warn!("Not enough players");
+
+        let active_players_count = self.players.values().filter(|p| p.stack > zero()).count();
+        if active_players_count < 2 {
+            warn!("Not enough players with chips");
             return;
         }
 
-        let dealer_index = self
-            .current_hand
-            .as_ref()
-            .map(|h| (h.dealer_index + 1) % self.players.len())
-            .unwrap_or(0);
+        self.last_actions.clear();
+
+        for player in self.players.values_mut() {
+            if let Ok(stats_dto) = self.stats_repo.get(&player.user_id.0.to_string()).await {
+                player.stats = Some(stats_dto);
+            }
+        }
+
+        let dealer_index = match self.last_dealer_index {
+            Some(idx) => (idx + 1) % active_players_count,
+            None => 0,
+        };
         let (sb, bb) = blinds_for_stake(self.config.stake_level);
 
-        let mut player_list: Vec<&Player> = self.players.values().collect();
-        player_list.sort_by_key(|p| p.seat);
-        let players_for_engine: Vec<(PlayerId, ChipAmount)> =
-            player_list.iter().map(|p| (p.player_id, p.stack)).collect();
+        struct PlayerInfo {
+            player_id: PlayerId,
+            user_id: UserId,
+            seat: u8,
+            stack_before: ChipAmount,
+        }
+
+        let mut player_infos: Vec<PlayerInfo> = self
+            .players
+            .values()
+            .filter(|p| p.stack > zero())
+            .map(|p| PlayerInfo {
+                player_id: p.player_id,
+                user_id: p.user_id,
+                seat: p.seat,
+                stack_before: p.stack,
+            })
+            .collect();
+
+        player_infos.sort_by_key(|p| p.seat);
+
+        let players_for_engine: Vec<(PlayerId, ChipAmount)> = player_infos
+            .iter()
+            .map(|p| (p.player_id, p.stack_before))
+            .collect();
 
         let small_idx = (dealer_index + 1) % players_for_engine.len();
         let big_idx = (dealer_index + 2) % players_for_engine.len();
@@ -276,13 +835,21 @@ impl TableActor {
             return;
         }
 
-        let state = match GameState::new_hand(players_for_engine, dealer_index, (sb, bb)) {
-            Ok(s) => s,
-            Err(e) => {
-                error!(error = %e, "Failed to create hand");
-                return;
+        let dealer_pid = players_for_engine[dealer_index].0;
+        let state =
+            match GameState::new_hand(self.table_id, players_for_engine, dealer_index, (sb, bb)) {
+                Ok(s) => s,
+                Err(e) => {
+                    error!(error = %e, "Failed to create hand");
+                    return;
+                }
+            };
+
+        for player in self.players.values_mut() {
+            if let Some(engine_stack) = state.player_stack(player.player_id) {
+                player.stack = engine_stack;
             }
-        };
+        }
 
         let mut user_by_player_id = HashMap::new();
         let mut player_by_user_id = HashMap::new();
@@ -292,10 +859,66 @@ impl TableActor {
         }
 
         let mut active = ActiveHand::new(state, user_by_player_id, player_by_user_id, dealer_index);
-        if let Some(user) = active.current_player_user() {
-            active.schedule_timeout(user, self.cmd_tx.clone());
+        active.timeout_duration_ms = self.config.turn_time_limit_ms;
+
+        self.hand_players.clear();
+        self.hand_actions.clear();
+        self.hand_started_at = Some(Utc::now());
+
+        for p in &player_infos {
+            if let Some(hole_cards) = active.state.player_hole_cards(p.player_id) {
+                let hole_strs = [
+                    format!("{:?}{:?}", hole_cards[0].rank, hole_cards[0].suit),
+                    format!("{:?}{:?}", hole_cards[1].rank, hole_cards[1].suit),
+                ];
+                self.hand_players.push(HandPlayer {
+                    player_id: p.player_id,
+                    user_id: Some(p.user_id),
+                    seat: p.seat,
+                    hole_cards: Some(hole_strs),
+                    stack_before: p.stack_before.as_i64(),
+                    stack_after: p.stack_before.as_i64(),
+                    is_dealer: p.player_id == dealer_pid,
+                });
+            }
         }
+
+        for player in self.players.values() {
+            if player.stack == zero() {
+                continue;
+            }
+            if let Some(hole_cards) = active.state.player_hole_cards(player.player_id) {
+                let ws_cards: Vec<WsCard> = hole_cards
+                    .iter()
+                    .map(|c| WsCard {
+                        suit: format!("{:?}", c.suit).to_lowercase(),
+                        rank: format!("{:?}", c.rank),
+                    })
+                    .collect();
+                let _ = self.broadcast_tx.send(RoomMessage::PrivateMessage {
+                    target_user_id: player.user_id,
+                    payload: PrivatePayload::YourHoleCards {
+                        hole_cards: ws_cards,
+                    },
+                });
+            }
+        }
+
+        if let Some(user) = active.current_player_user() {
+            active.schedule_timeout(user, self.cmd_tx.clone(), self.config.turn_time_limit_ms);
+            let action_req = build_action_required(&active, user);
+            let _ = self
+                .broadcast_tx
+                .send(RoomMessage::ActionRequired(action_req));
+        }
+
+        self.last_dealer_index = Some(dealer_index);
         self.current_hand = Some(active);
+
+        if let Some(hand) = &self.current_hand {
+            self.broadcast_analytics(hand).await;
+        }
+
         self.broadcast_table_state().await;
         info!(dealer_index, "Hand started");
     }
@@ -309,24 +932,34 @@ impl TableActor {
         let hand = match &mut self.current_hand {
             Some(h) => h,
             None => {
-                warn!(%user_id, "No active hand");
-                self.send_error(&user_id, "No hand").await;
+                self.send_error_to(&user_id, "No active hand").await;
                 return;
             }
         };
+
         if hand.current_player_user() != Some(user_id) {
-            warn!(%user_id, "Not your turn");
-            self.send_error(&user_id, "Not your turn").await;
+            let turn_user = hand.current_player_user();
+            self.send_error_to(
+                &user_id,
+                &format!(
+                    "Not your turn — it's {}'s turn",
+                    turn_user
+                        .map(|u| u.to_string())
+                        .unwrap_or_else(|| "unknown".into())
+                ),
+            )
+            .await;
             return;
         }
+
         let player_id = match hand.player_by_user_id.get(&user_id) {
             Some(pid) => *pid,
             None => {
-                warn!(%user_id, "Player not in hand");
-                self.send_error(&user_id, "Not in hand").await;
+                self.send_error_to(&user_id, "Not in hand").await;
                 return;
             }
         };
+
         let engine_action = match action_type {
             ActionType::Fold => Action::Fold,
             ActionType::Check => Action::Check,
@@ -335,41 +968,140 @@ impl TableActor {
                 let raise = amount.unwrap_or_else(zero);
                 let min_raise = hand.state.min_raise_amount();
                 if raise < min_raise {
-                    warn!(%user_id, raise = ?raise, min = ?min_raise);
-                    self.send_error(&user_id, &format!("Minimum raise is {}", min_raise))
+                    self.send_error_to(&user_id, &format!("Minimum raise is {}", min_raise))
                         .await;
                     return;
                 }
                 Action::Raise(raise)
             }
-            _ => {
-                self.send_error(&user_id, "Unsupported action").await;
-                return;
+            ActionType::AllIn => {
+                let stack = self
+                    .players
+                    .get(&user_id)
+                    .map(|p| p.stack)
+                    .unwrap_or_else(zero);
+                Action::Raise(stack)
+            }
+            ActionType::Bet => {
+                let bet = amount.unwrap_or_else(zero);
+                Action::Raise(bet)
             }
         };
+
+        info!(%user_id, action = ?action_type, ?amount, "Processing action");
+        let prev_comm_cards_len = hand.state.community_cards().len();
+
         match hand.state.apply_action(player_id, engine_action) {
             Ok(()) => {
                 hand.cancel_timeout();
+
+                if let Some(new_stack) = hand.player_stack(user_id) {
+                    if let Some(player) = self.players.get_mut(&user_id) {
+                        player.stack = new_stack;
+                    }
+                }
+
+                let new_pot = hand.state.current_pot();
+
+                let action_str_lower = format!("{:?}", action_type).to_lowercase();
+                let action_str_upper = match action_type {
+                    ActionType::Fold => "FOLD",
+                    ActionType::Check => "CHECK",
+                    ActionType::Call => "CALL",
+                    ActionType::Raise => "RAISE",
+                    ActionType::AllIn => "ALL-IN",
+                    ActionType::Bet => "BET",
+                }
+                .to_string();
+
+                let amount_u64 = amount.map(|a| a.as_i64() as u64);
+                let new_stack = self
+                    .players
+                    .get(&user_id)
+                    .map(|p| p.stack)
+                    .unwrap_or_else(zero);
+
+                self.last_actions.insert(
+                    user_id,
+                    ActionInfo {
+                        text: action_str_upper.clone(),
+                        amount: amount_u64,
+                    },
+                );
+
+                let _ = self
+                    .broadcast_tx
+                    .send(RoomMessage::ActionBroadcast(ActionBroadcast {
+                        player_id: user_id,
+                        action: action_str_lower,
+                        amount: amount_u64,
+                        new_stack: new_stack.as_i64() as u64,
+                        new_pot: new_pot.as_i64() as u64,
+                    }));
+
+                if let Some(started_at) = self.hand_started_at {
+                    let elapsed_ms = (Utc::now() - started_at).num_milliseconds().max(0) as u64;
+                    self.hand_actions.push(HandAction {
+                        player_id,
+                        action_type: format!("{:?}", action_type).to_lowercase(),
+                        amount: amount.map(|a| a.as_i64()),
+                        timestamp_ms: elapsed_ms,
+                    });
+                }
+
+                if hand.state.community_cards().len() > prev_comm_cards_len {
+                    let cmd_tx = self.cmd_tx.clone();
+                    tokio::spawn(async move {
+                        tokio::time::sleep(Duration::from_millis(1500)).await;
+                        let _ = cmd_tx.send(InternalCommand::ClearLastActions).await;
+                    });
+                }
+
                 if let Some(next) = hand.current_player_user() {
-                    hand.schedule_timeout(next, self.cmd_tx.clone());
+                    hand.schedule_timeout(
+                        next,
+                        self.cmd_tx.clone(),
+                        self.config.turn_time_limit_ms,
+                    );
+                    let action_req = build_action_required(hand, next);
+                    let _ = self
+                        .broadcast_tx
+                        .send(RoomMessage::ActionRequired(action_req));
+
+                    if hand.state.community_cards().len() > prev_comm_cards_len {
+                        for player in self.players.values() {
+                            if let Some(analytics) = build_analytics(hand, player.user_id) {
+                                let _ = self.broadcast_tx.send(RoomMessage::PrivateMessage {
+                                    target_user_id: player.user_id,
+                                    payload: PrivatePayload::Analytics { analytics },
+                                });
+                            }
+                        }
+                    }
+                    self.broadcast_table_state().await;
                 } else {
                     self.check_hand_completion().await;
                 }
-                self.broadcast_table_state().await;
             }
             Err(e) => {
                 let msg = match e {
                     ActionError::NotYourTurn => "Not your turn".into(),
                     ActionError::AlreadyFolded => "Already folded".into(),
                     ActionError::AlreadyAllIn => "Already all-in".into(),
-                    ActionError::InvalidRaise { .. } => "Invalid raise".into(),
+                    ActionError::InvalidRaise { .. } => {
+                        let min = hand.state.min_raise_amount();
+                        format!(
+                            "Invalid action — if facing a bet, use 'call' instead of 'check'. Minimum raise is {}",
+                            min
+                        )
+                    }
                     ActionError::HandComplete => "Hand finished".into(),
                     ActionError::ShowdownNotActionable => "No actions in showdown".into(),
                     ActionError::InsufficientStack { action, .. } => {
                         format!("Insufficient stack to {}", action)
                     }
                 };
-                self.send_error(&user_id, &msg).await;
+                self.send_error_to(&user_id, &msg).await;
             }
         }
     }
@@ -382,7 +1114,7 @@ impl TableActor {
         if hand.current_player_user() != Some(user_id) {
             return;
         }
-        info!(%user_id, "Auto‑fold timeout");
+        info!(%user_id, "Auto-fold timeout");
         let pid = match hand.player_by_user_id.get(&user_id) {
             Some(p) => *p,
             None => return,
@@ -390,11 +1122,15 @@ impl TableActor {
         let _ = hand.state.apply_action(pid, Action::Fold);
         hand.cancel_timeout();
         if let Some(next) = hand.current_player_user() {
-            hand.schedule_timeout(next, self.cmd_tx.clone());
+            hand.schedule_timeout(next, self.cmd_tx.clone(), self.config.turn_time_limit_ms);
+            let action_req = build_action_required(hand, next);
+            let _ = self
+                .broadcast_tx
+                .send(RoomMessage::ActionRequired(action_req));
+            self.broadcast_table_state().await;
         } else {
             self.check_hand_completion().await;
         }
-        self.broadcast_table_state().await;
     }
 
     async fn check_hand_completion(&mut self) {
@@ -403,11 +1139,138 @@ impl TableActor {
             None => return,
         };
         hand.cancel_timeout();
+
         if !hand.state.is_hand_complete() {
+            if let Some(next) = hand.current_player_user() {
+                info!(%next, street = %street_name(&hand.state), "New street, notifying next player");
+                hand.schedule_timeout(next, self.cmd_tx.clone(), self.config.turn_time_limit_ms);
+                let action_req = build_action_required(&hand, next);
+                let _ = self
+                    .broadcast_tx
+                    .send(RoomMessage::ActionRequired(action_req));
+            } else {
+                warn!("Hand not complete but no current player — engine issue");
+            }
+
+            self.broadcast_analytics(&hand).await;
             self.current_hand = Some(hand);
+            self.broadcast_table_state().await;
             return;
         }
+
+        let active_count = hand
+            .player_by_user_id
+            .keys()
+            .filter(|uid| !hand.player_is_folded(**uid))
+            .count();
+        let is_showdown = active_count > 1;
+
+        let reveal = self.build_showdown_reveal(&hand, is_showdown);
+        let _ = self.broadcast_tx.send(RoomMessage::ShowdownReveal(reveal));
+
+        self.current_hand = Some(hand);
+
+        let cmd_tx = self.cmd_tx.clone();
+        let delay = if is_showdown {
+            info!("Showdown reached — revealing cards with 3s delay");
+            Duration::from_secs(3)
+        } else {
+            info!("Walkover — single player wins with 2.5s delay");
+            Duration::from_millis(2_500)
+        };
+
+        tokio::spawn(async move {
+            tokio::time::sleep(delay).await;
+            let _ = cmd_tx.send(InternalCommand::ShowdownComplete).await;
+        });
+    }
+
+    async fn finalize_hand_after_reveal(&mut self) {
+        let hand = match self.current_hand.take() {
+            Some(h) => h,
+            None => {
+                warn!("ShowdownComplete fired but no active hand — ignoring");
+                return;
+            }
+        };
+        self.finalize_hand(hand).await;
+    }
+
+    async fn finalize_hand(&mut self, hand: ActiveHand) {
+        self.process_winners(&hand).await;
+
+        let final_stacks: HashMap<PlayerId, i64> = self
+            .players
+            .iter()
+            .map(|(_, p)| (p.player_id, p.stack.as_i64()))
+            .collect();
+        for hp in &mut self.hand_players {
+            if let Some(stack) = final_stacks.get(&hp.player_id) {
+                hp.stack_after = *stack;
+            }
+        }
+
+        let result = self.build_hand_result(&hand);
+        let event = HandCompletedEvent {
+            table_id: self.table_id,
+            played_at: self.hand_started_at.unwrap_or_else(|| Utc::now()),
+            players: HandPlayers {
+                seats: self.hand_players.clone(),
+            },
+            actions: HandActions {
+                actions: self.hand_actions.clone(),
+            },
+            result,
+        };
+
+        if let Err(e) = self.event_tx.send(event) {
+            warn!(
+                table_id = %self.table_id,
+                error = %e,
+                "Failed to send hand completed event"
+            );
+        }
+
+        self.clear_board_and_start_next(hand).await;
+    }
+
+    fn build_hand_result(&self, hand: &ActiveHand) -> HandResult {
         let winners = hand.state.calculate_pot_winners();
+        let pot_splits: Vec<PotSplit> = winners
+            .iter()
+            .map(|w| PotSplit {
+                winner_id: w.player_id,
+                amount: w.amount.as_i64(),
+            })
+            .collect();
+
+        let community: Vec<String> = hand
+            .state
+            .community_cards()
+            .iter()
+            .map(|c| format!("{:?}{:?}", c.rank, c.suit))
+            .collect();
+
+        let winner_models: Vec<Winner> = winners
+            .iter()
+            .map(|w| Winner {
+                player_id: w.player_id,
+                hand_rank: w.hand_rank as u16,
+                hand_description: w.hand_rank.name().to_string(),
+                amount_won: w.amount.as_i64(),
+            })
+            .collect();
+
+        HandResult {
+            winners: winner_models,
+            pot_distribution: pot_splits,
+            community_cards: community,
+        }
+    }
+
+    async fn process_winners(&mut self, hand: &ActiveHand) {
+        let winners = hand.state.calculate_pot_winners();
+
         for winner in &winners {
             if let Some(user) = hand.user_by_player_id.get(&winner.player_id)
                 && let Some(player) = self.players.get_mut(user)
@@ -418,28 +1281,274 @@ impl TableActor {
                     .unwrap_or(player.stack);
             }
         }
+
+        let winner_results: Vec<WinnerResult> = winners
+            .iter()
+            .filter_map(|w| {
+                let user_id = hand.user_by_player_id.get(&w.player_id)?;
+                let display_name = self
+                    .players
+                    .get(user_id)
+                    .map(|p| p.display_name.clone())
+                    .unwrap_or_else(|| user_id.to_string());
+                Some(WinnerResult {
+                    user_id: *user_id,
+                    display_name,
+                    amount: w.amount.as_i64() as u64,
+                    hand_rank: w.hand_rank.name().to_string(),
+                })
+            })
+            .collect();
+
+        let total_pot = hand.state.current_pot().as_i64() as u64;
+        let _ = self
+            .broadcast_tx
+            .send(RoomMessage::HandResult(RoomHandResult {
+                winners: winner_results,
+                pot: total_pot,
+            }));
+    }
+
+    async fn clear_board_and_start_next(&mut self, hand: ActiveHand) {
+        self.last_dealer_index = Some(hand.dealer_index);
         self.current_hand = None;
+
+        let mut users_to_remove = Vec::new();
+        for (user_id, player) in &mut self.players {
+            if player.is_leaving {
+                if let Some(responder) = player.leave_responder.take() {
+                    let _ = responder.send(player.stack);
+                }
+                users_to_remove.push(*user_id);
+            }
+        }
+        for user_id in users_to_remove {
+            self.players.remove(&user_id);
+        }
+
         self.broadcast_table_state().await;
+
+        if self.players.values().filter(|p| p.stack > zero()).count() >= 2 {
+            info!("Hand complete, auto-starting next hand");
+            self.start_new_hand().await;
+        }
+    }
+
+    fn build_showdown_reveal(&self, hand: &ActiveHand, is_showdown: bool) -> ShowdownReveal {
+        let community: Vec<WsCard> = hand
+            .state
+            .community_cards()
+            .iter()
+            .map(|c| WsCard {
+                suit: format!("{:?}", c.suit).to_lowercase(),
+                rank: format!("{:?}", c.rank),
+            })
+            .collect();
+
+        let winners = hand.state.calculate_pot_winners();
+
+        let players: Vec<ShowdownPlayer> = hand
+            .player_by_user_id
+            .keys()
+            .filter(|uid| !hand.player_is_folded(**uid))
+            .filter_map(|user_id| {
+                let user_id = *user_id;
+                let pid = hand.player_by_user_id.get(&user_id)?;
+
+                let hole_cards_opt = if is_showdown {
+                    hand.state.player_hole_cards(*pid)
+                } else {
+                    None
+                };
+
+                let hole_cards: Vec<WsCard> = match hole_cards_opt {
+                    Some(cards) => cards
+                        .iter()
+                        .map(|c| WsCard {
+                            suit: format!("{:?}", c.suit).to_lowercase(),
+                            rank: format!("{:?}", c.rank),
+                        })
+                        .collect(),
+                    None => vec![],
+                };
+
+                let is_winner = winners.iter().any(|w| w.player_id == *pid);
+                let win_amount = winners
+                    .iter()
+                    .find(|w| w.player_id == *pid)
+                    .map(|w| w.amount.as_i64() as u64)
+                    .unwrap_or(0);
+
+                let seat = self.players.get(&user_id).map(|p| p.seat).unwrap_or(0);
+                let display_name = self
+                    .players
+                    .get(&user_id)
+                    .map(|p| p.display_name.clone())
+                    .unwrap_or_else(|| "Player".to_string());
+
+                let mut hand_description = String::new();
+                let mut winning_cards_ws: Vec<WsCard> = vec![];
+
+                if is_showdown && community.len() >= 5 && is_winner {
+                    if let Some(cards) = hole_cards_opt {
+                        if cards.len() == 2 {
+                            if let Some(comm) = community_cards_to_array(hand) {
+                                let (strength, winning_cards_raw) =
+                                    sb_game_engine::evaluate::evaluate_hand_strength(&cards, &comm);
+                                hand_description = get_hand_description(&strength);
+                                winning_cards_ws = winning_cards_raw
+                                    .iter()
+                                    .map(|c| WsCard {
+                                        suit: format!("{:?}", c.suit).to_lowercase(),
+                                        rank: format!("{:?}", c.rank),
+                                    })
+                                    .collect();
+                            }
+                        }
+                    }
+                }
+
+                Some(ShowdownPlayer {
+                    user_id,
+                    display_name,
+                    seat,
+                    hole_cards,
+                    hand_description,
+                    is_winner,
+                    win_amount,
+                    winning_cards: winning_cards_ws,
+                })
+            })
+            .collect();
+
+        ShowdownReveal {
+            players,
+            community_cards: community,
+            pot: hand.state.current_pot().as_i64() as u64,
+        }
+    }
+
+    async fn broadcast_analytics(&self, hand: &ActiveHand) {
+        for player in self.players.values() {
+            if player.stack == zero() {
+                continue;
+            }
+            if let Some(analytics) = build_analytics(hand, player.user_id) {
+                let _ = self.broadcast_tx.send(RoomMessage::PrivateMessage {
+                    target_user_id: player.user_id,
+                    payload: PrivatePayload::Analytics { analytics },
+                });
+            }
+        }
     }
 
     async fn broadcast_table_state(&self) {
-        let players_state = if let Some(hand) = &self.current_hand {
+        let current_turn_user_id = self
+            .current_hand
+            .as_ref()
+            .and_then(|h| h.current_player_user());
+        let current_turn_expires_at = self
+            .current_hand
+            .as_ref()
+            .and_then(|h| h.timeout_expires_at);
+        let current_turn_timeout_ms = self.current_hand.as_ref().map(|h| h.timeout_duration_ms);
+        let street = self
+            .current_hand
+            .as_ref()
+            .map(|h| street_name(&h.state))
+            .unwrap_or_default();
+
+        let positions_map: HashMap<u8, String> = if let Some(hand) = &self.current_hand {
+            let mut active_players: Vec<&Player> = self
+                .players
+                .values()
+                .filter(|p| !hand.player_is_folded(p.user_id) && !hand.player_is_all_in(p.user_id))
+                .collect();
+
+            if active_players.len() <= 1 {
+                HashMap::new()
+            } else {
+                active_players.sort_by_key(|p| p.seat);
+                let num_players = active_players.len() as i32;
+
+                let dealer_idx_in_active = active_players
+                    .iter()
+                    .position(|p| p.seat as usize == hand.dealer_index)
+                    .map(|i| i as i32)
+                    .unwrap_or(0);
+
+                let mut map = HashMap::new();
+                for (i, player) in active_players.iter().enumerate() {
+                    let pos_idx = (i as i32 - dealer_idx_in_active + num_players) % num_players;
+                    let badge = match num_players {
+                        2 => match pos_idx {
+                            0 => "BTN",
+                            1 => "BB",
+                            _ => "",
+                        },
+                        _ => match pos_idx {
+                            0 => "BTN",
+                            1 => "SB",
+                            2 => "BB",
+                            3 => "UTG",
+                            n if n == num_players - 1 => "CO",
+                            n if n == num_players - 2 => "HJ",
+                            n if n == num_players - 3 => "MP",
+                            _ => "",
+                        },
+                    };
+                    if !badge.is_empty() {
+                        map.insert(player.seat, badge.to_string());
+                    }
+                }
+                map
+            }
+        } else {
+            HashMap::new()
+        };
+
+        let players_state: Vec<PlayerStateInfo> = if let Some(hand) = &self.current_hand {
             self.players
-                .keys()
-                .map(|uid| {
-                    let stack = hand.player_stack(*uid).unwrap_or_else(zero);
-                    let bet = hand.player_current_bet(*uid).unwrap_or_else(zero);
-                    let all_in = hand.player_is_all_in(*uid);
-                    (*uid, stack, bet, all_in)
+                .values()
+                .map(|player| {
+                    let uid = player.user_id;
+                    let stack = hand.player_stack(uid).unwrap_or_else(zero);
+                    let bet = hand.player_current_bet(uid).unwrap_or_else(zero);
+                    let all_in = hand.player_is_all_in(uid);
+                    let folded = hand.player_is_folded(uid);
+                    PlayerStateInfo {
+                        user_id: uid,
+                        display_name: player.display_name.clone(),
+                        seat: player.seat,
+                        stack,
+                        current_bet: bet,
+                        is_all_in: all_in,
+                        is_folded: folded,
+                        position_badge: positions_map.get(&player.seat).cloned(),
+                        last_action: self.last_actions.get(&uid).cloned(),
+                        stats: player.stats.clone(),
+                    }
                 })
                 .collect()
         } else {
             self.players
-                .iter()
-                .map(|(uid, p)| (*uid, p.stack, zero(), false))
+                .values()
+                .map(|player| PlayerStateInfo {
+                    user_id: player.user_id,
+                    display_name: player.display_name.clone(),
+                    seat: player.seat,
+                    stack: player.stack,
+                    current_bet: zero(),
+                    is_all_in: false,
+                    is_folded: false,
+                    position_badge: None,
+                    last_action: None,
+                    stats: player.stats.clone(),
+                })
                 .collect()
         };
-        let community = self
+
+        let community: Vec<WsCard> = self
             .current_hand
             .as_ref()
             .map(|h| {
@@ -447,40 +1556,69 @@ impl TableActor {
                     .community_cards()
                     .iter()
                     .map(|c| WsCard {
-                        suit: c.suit.to_string(),
-                        rank: c.rank.to_string(),
+                        suit: format!("{:?}", c.suit).to_lowercase(),
+                        rank: format!("{:?}", c.rank),
                     })
                     .collect()
             })
             .unwrap_or_default();
-        let msg = ServerMessage::TableState(TableStateUpdate {
+
+        let (pot, side_pots) = if let Some(hand) = &self.current_hand {
+            let pot = hand.state.current_pot();
+            let side_pots_vec: Vec<SidePotMessage> = hand
+                .state
+                .side_pots()
+                .into_iter()
+                .map(|sp| {
+                    let eligible_users: Vec<UserId> = sp
+                        .eligible_players
+                        .iter()
+                        .filter_map(|pid| hand.user_by_player_id.get(pid).copied())
+                        .collect();
+                    SidePotMessage {
+                        amount: sp.amount.as_i64() as u64,
+                        eligible_players: eligible_users,
+                    }
+                })
+                .collect();
+            (pot.as_i64() as u64, side_pots_vec)
+        } else {
+            (0, vec![])
+        };
+
+        let msg = RoomMessage::TableState(TableStateUpdate {
             table_id: self.table_id,
             players: players_state,
             current_hand_in_progress: self.current_hand.is_some(),
             community_cards: community,
+            current_turn_user_id,
+            current_turn_expires_at,
+            current_turn_timeout_ms,
+            street,
+            pot,
+            side_pots,
         });
         if let Err(e) = self.broadcast_tx.send(msg) {
             error!(error = %e, "Failed to broadcast");
         }
     }
 
-    async fn send_error(&self, user_id: &UserId, msg: &str) {
+    async fn send_error_to(&self, user_id: &UserId, msg: &str) {
         warn!(%user_id, "Error: {}", msg);
-        // In production, send via dedicated user channel
+        let _ = self.broadcast_tx.send(RoomMessage::Error {
+            target_user_id: Some(*user_id),
+            message: msg.to_string(),
+        });
     }
 
     fn start_timer(&mut self, player_id: PlayerId, duration_ms: u64) {
-        let sleep = Box::pin(sleep(Duration::from_millis(duration_ms)));
-        self.current_timer = Some(sleep);
+        let s = Box::pin(sleep(Duration::from_millis(duration_ms)));
+        self.current_timer = Some(s);
         self.current_timer_player = Some(player_id);
         self.current_main_timer_remaining_ms = Some(duration_ms);
-        info!(?player_id, duration_ms, "Timer started");
     }
 
     fn cancel_timer(&mut self) {
-        if let Some(player_id) = self.current_timer_player {
-            info!(?player_id, "Timer cancelled");
-        }
         self.current_timer = None;
         self.current_timer_player = None;
         self.current_main_timer_remaining_ms = None;
@@ -493,8 +1631,6 @@ impl TableActor {
         };
         self.current_timer = None;
 
-        info!(?player_id, "Timer expired for player");
-
         let user_id = *self
             .player_user_map
             .get(&player_id)
@@ -506,21 +1642,13 @@ impl TableActor {
 
         if player_state.time_bank_remaining_seconds > 0 {
             player_state.time_bank_remaining_seconds -= 1;
-            info!(
-                ?player_id,
-                bank_remaining = player_state.time_bank_remaining_seconds,
-                "Consumed 1s from bank, resetting timer"
-            );
-            self.start_timer(player_id, DEFAULT_TIMER_MS);
-            // TODO: broadcast ActionRequired with remaining_ms after #001
+            self.start_timer(player_id, self.config.turn_time_limit_ms);
         } else {
-            warn!(?player_id, "Time bank exhausted, auto‑folding");
             self.process_action(user_id, ActionType::Fold, None).await;
         }
         Ok(())
     }
 
-    /// Removes a player from the actor state, cleaning up the player_user_map.
     pub fn remove_player(&mut self, user_id: &UserId) {
         if let Some(player_id) = self
             .player_user_map
@@ -529,18 +1657,35 @@ impl TableActor {
         {
             self.player_user_map.remove(&player_id);
             self.players.remove(user_id);
-            info!(?player_id, ?user_id, "Player removed from table");
         }
+    }
+}
+
+fn community_cards_to_array(hand: &ActiveHand) -> Option<[sb_shared_types::Card; 5]> {
+    let cc = hand.state.community_cards();
+    if cc.len() >= 5 {
+        Some(cc[..5].try_into().ok()?)
+    } else {
+        None
     }
 }
 
 pub fn spawn_table_actor(
     table_id: TableId,
     config: TableConfig,
-    broadcast_tx: BroadcastSender<ServerMessage>,
+    broadcast_tx: BroadcastSender,
+    event_tx: tokio::sync::broadcast::Sender<HandCompletedEvent>,
+    stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
 ) -> (mpsc::Sender<InternalCommand>, tokio::task::JoinHandle<()>) {
     let (tx, rx) = mpsc::channel(32);
-    let actor = TableActor::new(table_id, config, broadcast_tx, tx.clone());
+    let actor = TableActor::new(
+        table_id,
+        config,
+        broadcast_tx,
+        tx.clone(),
+        event_tx,
+        stats_repo,
+    );
     let handle = tokio::spawn(actor.run(rx));
     (tx, handle)
 }

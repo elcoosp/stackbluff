@@ -18,6 +18,7 @@ pub struct Model {
     #[sea_orm(column_type = "Json")]
     pub result_json: HandResult,
     pub is_archived: bool,
+    pub participants: String, // NEW: comma-separated user IDs with leading/trailing commas
 }
 
 impl ActiveModelBehavior for ActiveModel {}

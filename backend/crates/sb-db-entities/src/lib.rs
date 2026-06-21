@@ -19,6 +19,7 @@ pub mod session;
 pub mod subscription_event;
 pub mod table;
 pub mod user;
+pub mod user_statistics;
 
 pub use referral::Entity as Referral;
 pub use system_counter::Entity as SystemCounter;

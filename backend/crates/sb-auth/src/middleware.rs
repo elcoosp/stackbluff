@@ -6,6 +6,9 @@ use axum::{
 };
 use jsonwebtoken::{DecodingKey, Validation, decode};
 use serde::{Deserialize, Serialize};
+use tower_cookies::Cookies;
+use once_cell::sync::Lazy;
+use std::env;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Claims {
@@ -18,32 +21,51 @@ pub struct AuthUser {
     pub user_id: String,
 }
 
-pub async fn auth_middleware(mut req: Request, next: Next) -> Result<Response, impl IntoResponse> {
-    let auth_header = req
+static DECODING_KEY: Lazy<DecodingKey> = Lazy::new(|| {
+    let secret = env::var("JWT_SECRET").unwrap_or_else(|_| "your-secret-key".to_string());
+    DecodingKey::from_secret(secret.as_bytes())
+});
+
+pub async fn auth_middleware(mut req: Request, next: Next) -> Response {
+    // Try to get token from Authorization header first
+    let token = req
         .headers()
         .get("Authorization")
-        .and_then(|h| h.to_str().ok());
+        .and_then(|h| h.to_str().ok())
+        .and_then(|h| h.strip_prefix("Bearer "))
+        .map(|t| t.to_string());
 
-    let token = match auth_header {
-        Some(t) if t.starts_with("Bearer ") => &t[7..],
-        _ => {
-            return Err((
-                StatusCode::UNAUTHORIZED,
-                "Missing or invalid Authorization header",
-            ));
+    // If not found, try to get from cookie
+    let token = if let Some(t) = token {
+        Some(t)
+    } else {
+        req.extensions()
+            .get::<Cookies>()
+            .and_then(|cookies| cookies.get("token").map(|c| c.value().to_string()))
+    };
+
+    let token = match token {
+        Some(t) => t,
+        None => {
+            return (StatusCode::UNAUTHORIZED, "Missing token").into_response();
         }
     };
 
-    let decoding_key = DecodingKey::from_secret(b"your-secret-key");
+    let decoding_key = DECODING_KEY.clone();
     let validation = Validation::default();
-    let token_data = decode::<Claims>(token, &decoding_key, &validation)
-        .map_err(|_| (StatusCode::UNAUTHORIZED, "Invalid token"))?;
+    let token_data = match decode::<Claims>(&token, &decoding_key, &validation) {
+        Ok(data) => data,
+        Err(e) => {
+            eprintln!("Token validation error: {:?}", e);
+            return (StatusCode::UNAUTHORIZED, "Invalid token").into_response();
+        }
+    };
 
     let auth_user = AuthUser {
         user_id: token_data.claims.sub,
     };
     req.extensions_mut().insert(auth_user);
-    Ok(next.run(req).await)
+    next.run(req).await
 }
 
 impl<S> axum::extract::FromRequest<S> for AuthUser

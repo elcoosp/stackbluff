@@ -1,3 +1,4 @@
+pub mod analytics;
 pub mod deck;
 pub mod evaluate;
 pub mod game_state;

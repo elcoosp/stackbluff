@@ -1,8 +1,11 @@
 use crate::service_api::ReferralStats;
-use sb_shared_types::{AppError, UserId};
-
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
+use sb_shared_types::TableId;
+use sb_shared_types::{AppError, UserId};
 use sb_shared_types::{ClubId, RequestContext};
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 pub use crate::club_error::ClubError;
 pub use crate::persistence_error::{PersistenceError, PersistenceResult};
@@ -16,6 +19,14 @@ pub struct UserCreate {
     pub platform: String,
 }
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct UserProfile {
+    pub id: UserId,
+    pub display_name: String,
+    pub email: Option<String>,
+    pub chip_balance: i64,
+}
+
 #[async_trait]
 pub trait UserRepository: Send + Sync {
     async fn create_user(
@@ -24,12 +35,19 @@ pub trait UserRepository: Send + Sync {
         create: UserCreate,
     ) -> PersistenceResult<UserId>;
     async fn get_user(&self, ctx: RequestContext, id: UserId) -> PersistenceResult<String>;
+    async fn get_user_profile(
+        &self,
+        ctx: RequestContext,
+        id: UserId,
+    ) -> PersistenceResult<UserProfile>;
+
+    /// Updates the user's chip balance by `delta`. Returns the new balance.
     async fn update_chip_balance(
         &self,
         ctx: RequestContext,
         user_id: UserId,
         delta: i64,
-    ) -> PersistenceResult<()>;
+    ) -> PersistenceResult<i64>;
 
     async fn find_or_create_by_telegram(
         &self,
@@ -42,7 +60,7 @@ pub trait UserRepository: Send + Sync {
         ctx: RequestContext,
         username: &str,
         email: &str,
-        password_hash: &str, // Add this argument
+        password_hash: &str,
     ) -> PersistenceResult<UserId>;
 
     async fn find_by_email(
@@ -54,11 +72,36 @@ pub trait UserRepository: Send + Sync {
 
 #[async_trait]
 pub trait HandHistoryRepository: Send + Sync {
+    /// Store a hand. The `participants` column is auto-populated from players JSON.
     async fn store_hand(
         &self,
         ctx: RequestContext,
         hand_data: serde_json::Value,
     ) -> PersistenceResult<()>;
+
+    /// Keyset-based pagination. Returns (page, next_cursor).
+    async fn list_hand_summaries(
+        &self,
+        ctx: RequestContext,
+        table_id: TableId,
+        limit: u64,
+        cursor: Option<(DateTime<Utc>, Uuid)>,
+    ) -> PersistenceResult<(Vec<HandSummary>, Option<(DateTime<Utc>, Uuid)>)>;
+
+    /// Total count of hands for a table.
+    async fn count_hand_histories(
+        &self,
+        ctx: RequestContext,
+        table_id: TableId,
+    ) -> PersistenceResult<u64>;
+
+    /// Count hands a user has played at a table (for authorization).
+    async fn count_user_hands(
+        &self,
+        ctx: RequestContext,
+        table_id: TableId,
+        user_id: UserId,
+    ) -> PersistenceResult<u64>;
 }
 
 // ── Club domain types ────────────────────────────────────────
@@ -98,19 +141,32 @@ pub struct LeaderboardPage {
     pub entries: Vec<LeaderboardEntry>,
 }
 
+// ── Hand Summary (UPDATED) ──
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HandSummary {
+    pub id: Uuid,
+    pub table_id: TableId,
+    pub played_at: DateTime<Utc>,
+    pub pot: i64,
+    pub winners: Vec<WinnerSummary>,
+    // 🆕 New fields
+    pub community_cards: Vec<String>, // e.g. ["As", "Kh", "Qd"]
+    pub winner_hole_cards: Option<Vec<String>>, // only for the top winner
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WinnerSummary {
+    pub user_id: UserId,
+    pub amount: i64,
+    pub hand_rank: String,
+}
+
 /// Division size constant: 500 members per division.
 pub const DIVISION_SIZE: u32 = 500;
 
 /// Result type for club operations.
 pub type ClubResult<T> = Result<T, ClubError>;
 
-/// Repository interface for club persistence.
-///
-/// ## Contracts
-/// - `join_club`: If the user is already a member (UNIQUE constraint),
-///   returns `ClubError::AlreadyMember`. Callers need NOT check `is_member` first.
-/// - `increment_weekly_xp`: Must be atomic (single SQL statement).
-/// - `refresh_leaderboard`: Must run inside a transaction for atomicity.
 #[async_trait]
 pub trait ClubRepo: Send + Sync {
     async fn create_club(
@@ -122,9 +178,6 @@ pub trait ClubRepo: Send + Sync {
 
     async fn find_club_by_id(&self, club_id: ClubId) -> ClubResult<Option<Club>>;
 
-    /// Join a club. Returns `ClubError::AlreadyMember` on duplicate.
-    /// Does NOT require a prior `is_member` check — the UNIQUE constraint
-    /// is the authoritative guard.
     async fn join_club(&self, club_id: ClubId, user_id: UserId) -> ClubResult<()>;
 
     async fn is_member(&self, club_id: ClubId, user_id: UserId) -> ClubResult<bool>;
@@ -137,7 +190,6 @@ pub trait ClubRepo: Send + Sync {
         division: u32,
     ) -> ClubResult<LeaderboardPage>;
 
-    /// Atomically add XP. Must use a single SQL UPDATE statement.
     async fn increment_weekly_xp(
         &self,
         club_id: ClubId,
@@ -145,10 +197,8 @@ pub trait ClubRepo: Send + Sync {
         xp: i64,
     ) -> ClubResult<()>;
 
-    /// Materialise the leaderboard snapshot. Must run in a transaction.
     async fn refresh_leaderboard(&self, club_id: ClubId) -> ClubResult<()>;
 
-    /// Return all club ids for the scheduled refresh job.
     async fn get_all_club_ids(&self) -> ClubResult<Vec<ClubId>>;
 }
 

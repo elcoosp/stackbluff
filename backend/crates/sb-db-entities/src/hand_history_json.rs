@@ -1,10 +1,11 @@
-use sb_shared_types::PlayerId;
+use sb_shared_types::{PlayerId, UserId};
 use sea_orm::FromJsonQueryResult;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, FromJsonQueryResult)]
 pub struct HandPlayer {
     pub player_id: PlayerId,
+    pub user_id: Option<UserId>, // NEW: actual user identifier
     pub seat: u8,
     pub hole_cards: Option<[String; 2]>,
     pub stack_before: i64,

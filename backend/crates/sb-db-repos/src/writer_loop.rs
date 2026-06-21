@@ -1,4 +1,4 @@
-use sb_contracts::repo_api::PersistenceError;
+use sb_contracts::repo_api::{PersistenceError, UserProfile};
 use sb_shared_types::UserId;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseConnection, EntityTrait, QueryFilter,
@@ -12,6 +12,7 @@ use tracing::{Instrument, error, info, info_span};
 use crate::commands::DbCommand;
 
 const DEFAULT_BATCH_SIZE: usize = 50;
+const INITIAL_CHIP_BALANCE: i64 = 100_000;
 
 pub struct WriterLoopHandle {
     pub sender: mpsc::UnboundedSender<DbCommand>,
@@ -38,7 +39,6 @@ async fn writer_loop(
     batch_size: usize,
 ) {
     let mut batch = Vec::with_capacity(batch_size);
-    // Flush interval ensures we don't hang indefinitely waiting for the batch to fill
     let mut flush_interval = interval(Duration::from_millis(100));
 
     loop {
@@ -60,7 +60,6 @@ async fn writer_loop(
                 }
             }
             _ = flush_interval.tick() => {
-                // If the batch has items but isn't full, flush it anyway after 100ms
                 if !batch.is_empty() {
                     process_batch(&mut batch, &db).await;
                 }
@@ -121,6 +120,7 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
     let ctx = match cmd {
         DbCommand::CreateUser { ctx, .. } => ctx,
         DbCommand::GetUser { ctx, .. } => ctx,
+        DbCommand::GetUserProfile { ctx, .. } => ctx,
         DbCommand::UpdateChipBalance { ctx, .. } => ctx,
         DbCommand::StoreHandHistory { ctx, .. } => ctx,
         DbCommand::ExecuteRaw { ctx, .. } => ctx,
@@ -152,9 +152,10 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                     telegram_id: Set(Some(*telegram_id)),
                     email: Set(Some(email.clone())),
                     display_name: Set(display_name.clone()),
+                    chip_balance: Set(INITIAL_CHIP_BALANCE),
                     streak_count: Set(0),
                     created_at: Set(chrono::Utc::now()),
-                    platform: Set(Platform::Telegram), // FIXED: Added missing platform field
+                    platform: Set(Platform::Telegram),
                     ..Default::default()
                 };
                 let model = new_user.insert(conn).await.map_err(map_db_error)?;
@@ -170,6 +171,27 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                     .ok_or(PersistenceError::NotFound)?;
                 Ok(Some(model.display_name))
             }
+            DbCommand::GetUserProfile { id, .. } => {
+                use sb_db_entities::user;
+                let user_id = id.as_uuid();
+                let model = user::Entity::find_by_id(user_id)
+                    .one(conn)
+                    .await
+                    .map_err(map_db_error)?
+                    .ok_or(PersistenceError::NotFound)?;
+
+                let profile = UserProfile {
+                    id: UserId::new(model.id),
+                    display_name: model.display_name,
+                    email: model.email,
+                    chip_balance: model.chip_balance,
+                };
+
+                Ok(Some(
+                    serde_json::to_string(&profile)
+                        .map_err(|e| PersistenceError::Database(e.to_string()))?,
+                ))
+            }
             DbCommand::UpdateChipBalance { user_id, delta, .. } => {
                 use sb_db_entities::user;
                 use sea_orm::Set;
@@ -184,7 +206,7 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                 let new_balance = current + *delta;
                 active.chip_balance = Set(new_balance);
                 active.update(conn).await.map_err(map_db_error)?;
-                Ok(None)
+                Ok(Some(new_balance.to_string()))
             }
             DbCommand::StoreHandHistory {
                 table_id,
@@ -209,6 +231,16 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                     serde_json::from_value(result_json.clone()).map_err(|e| {
                         PersistenceError::Database(format!("Invalid result_json: {}", e))
                     })?;
+                // Compute participants from players' user_ids
+                let participants = {
+                    let user_ids: Vec<String> = players
+                        .seats
+                        .iter()
+                        .filter_map(|p| p.user_id.as_ref().map(|u| u.to_string()))
+                        .collect();
+                    format!(",{},", user_ids.join(","))
+                };
+
                 let new_history = hand_history::ActiveModel {
                     id: Set(uuid::Uuid::new_v4()),
                     table_id: Set(*table_id),
@@ -217,6 +249,7 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                     actions_json: Set(actions),
                     result_json: Set(result),
                     is_archived: Set(false),
+                    participants: Set(participants), // NEW
                 };
                 new_history.insert(conn).await.map_err(map_db_error)?;
                 Ok(None)
@@ -242,11 +275,11 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                         telegram_id: Set(Some(*tg_id)),
                         email: Set(Some(format!("telegram_{}@temp.local", tg_id))),
                         display_name: Set(format!("tg_user_{}", tg_id)),
-                        chip_balance: Set(0),
+                        chip_balance: Set(INITIAL_CHIP_BALANCE),
                         streak_count: Set(0),
                         created_at: Set(chrono::Utc::now()),
                         updated_at: Set(chrono::Utc::now()),
-                        platform: Set(Platform::Telegram), // FIXED: Added missing platform field
+                        platform: Set(Platform::Telegram),
                         ..Default::default()
                     };
                     let model = new_user.insert(conn).await.map_err(map_db_error)?;
@@ -267,8 +300,8 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                     id: Set(uuid::Uuid::new_v4()),
                     email: Set(Some(email.clone())),
                     display_name: Set(username.clone()),
-                    password_hash: Set(Some(password_hash.clone())), // SAVE IT HERE
-                    chip_balance: Set(0),
+                    password_hash: Set(Some(password_hash.clone())),
+                    chip_balance: Set(INITIAL_CHIP_BALANCE),
                     streak_count: Set(0),
                     created_at: Set(chrono::Utc::now()),
                     updated_at: Set(chrono::Utc::now()),
@@ -352,9 +385,24 @@ fn respond_ok(cmd: DbCommand, value: Option<String>) {
         DbCommand::GetUser { respond, .. } => {
             let _ = respond.send(Ok(value.unwrap_or_default()));
         }
-        DbCommand::UpdateChipBalance { respond, .. }
-        | DbCommand::StoreHandHistory { respond, .. }
-        | DbCommand::ExecuteRaw { respond, .. } => {
+        DbCommand::GetUserProfile { respond, .. } => {
+            let profile = value.and_then(|s| serde_json::from_str(&s).ok());
+            match profile {
+                Some(p) => {
+                    let _ = respond.send(Ok(p));
+                }
+                None => {
+                    let _ = respond.send(Err(PersistenceError::Database(
+                        "Failed to parse profile".to_string(),
+                    )));
+                }
+            }
+        }
+        DbCommand::UpdateChipBalance { respond, .. } => {
+            let balance = value.and_then(|s| s.parse::<i64>().ok()).unwrap_or(0);
+            let _ = respond.send(Ok(balance));
+        }
+        DbCommand::StoreHandHistory { respond, .. } | DbCommand::ExecuteRaw { respond, .. } => {
             let _ = respond.send(Ok(()));
         }
     }
@@ -366,6 +414,9 @@ fn respond_err(cmd: DbCommand, err: PersistenceError) {
             let _ = respond.send(Err(err));
         }
         DbCommand::GetUser { respond, .. } => {
+            let _ = respond.send(Err(err));
+        }
+        DbCommand::GetUserProfile { respond, .. } => {
             let _ = respond.send(Err(err));
         }
         DbCommand::UpdateChipBalance { respond, .. } => {

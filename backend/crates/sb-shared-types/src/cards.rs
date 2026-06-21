@@ -50,6 +50,33 @@ impl Card {
     pub fn new(suit: Suit, rank: Rank) -> Self {
         Self { suit, rank }
     }
+
+    /// Returns a short string representation like "As", "Kh", "10d" (rank then suit).
+    /// Suits are mapped to single letters: s, h, d, c.
+    pub fn to_string_short(&self) -> String {
+        let rank_str = match self.rank {
+            Rank::Two => "2",
+            Rank::Three => "3",
+            Rank::Four => "4",
+            Rank::Five => "5",
+            Rank::Six => "6",
+            Rank::Seven => "7",
+            Rank::Eight => "8",
+            Rank::Nine => "9",
+            Rank::Ten => "10",
+            Rank::Jack => "J",
+            Rank::Queen => "Q",
+            Rank::King => "K",
+            Rank::Ace => "A",
+        };
+        let suit_str = match self.suit {
+            Suit::Spades => "s",
+            Suit::Hearts => "h",
+            Suit::Diamonds => "d",
+            Suit::Clubs => "c",
+        };
+        format!("{}{}", rank_str, suit_str)
+    }
 }
 
 // Simple hand evaluator stub – returns HighCard for now

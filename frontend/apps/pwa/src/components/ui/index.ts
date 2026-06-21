@@ -4,3 +4,5 @@ export * from './avatar'
 export * from './dialog'
 export * from './slider'
 export * from './progress'
+
+export * from './skeleton'

@@ -10,6 +10,12 @@ pub struct TableConfig {
     pub max_players: u8,
     pub is_tournament: bool,
     pub tournament_config: Option<TournamentConfig>,
+    #[serde(default = "default_turn_time_ms")]
+    pub turn_time_limit_ms: u64, // <-- ADDED
+}
+
+fn default_turn_time_ms() -> u64 {
+    30000
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -33,6 +39,7 @@ pub struct BlindLevel {
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
+    pub name: String,
     pub created_by: Uuid,
     #[sea_orm(column_type = "Json")]
     pub config_json: TableConfig,

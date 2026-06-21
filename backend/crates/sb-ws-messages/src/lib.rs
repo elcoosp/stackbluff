@@ -1,3 +1,4 @@
+//! DEPRECATED USE TABLE-REGISTRY MESSAGES
 //! WebSocket message types shared between frontend and backend.
 
 use sb_shared_types::{ChipAmount, TableId, UserId};
@@ -18,7 +19,13 @@ pub struct TableStateUpdate {
     pub current_hand_in_progress: bool,
     pub community_cards: Vec<Card>,
 }
-
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AnalyticsPayload {
+    pub win_prob: u8,
+    pub pot_odds: f32,
+    pub best_hand: String,
+    pub strength: u8,
+}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ActionRequired {
     pub user_id: UserId,
@@ -26,6 +33,7 @@ pub struct ActionRequired {
     pub min_raise: ChipAmount,
     pub can_check: bool,
     pub remaining_ms: u64,
+    pub analytics: Option<AnalyticsPayload>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

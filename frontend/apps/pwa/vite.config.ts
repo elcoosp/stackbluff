@@ -22,8 +22,13 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,
-        rewrite: (p) => p.replace(/^\/api/, ''), // /api/auth/register -> /auth/register
-      }
+        rewrite: (p) => p.replace(/^\/api/, ''),
+      },
+      '/ws': {
+        target: 'ws://localhost:3000',
+        ws: true,
+        changeOrigin: true,
+      },
     },
   },
 })

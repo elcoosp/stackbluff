@@ -3,35 +3,30 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from '@tanstack/react-router';
 import { Swords, Trophy, BookOpen } from 'lucide-react';
-import { motion } from 'motion/react'; // Updated import!
+import { motion } from 'motion/react';
 
 export const Route = createFileRoute('/')({
   component: IndexPage,
 });
 
-// Animation variants for the grid container
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.15, // Time between each card appearing
-      delayChildren: 0.3,   // Delay before the first card appears
+      staggerChildren: 0.15,
+      delayChildren: 0.3,
     },
   },
 };
 
-// Animation variants for each individual card
 const cardVariants = {
-  hidden: { opacity: 0, y: 40, scale: 0.95 }, // Start invisible, slightly down and scaled
+  hidden: { opacity: 0, y: 40, scale: 0.95 },
   visible: {
     opacity: 1,
     y: 0,
     scale: 1,
-    transition: {
-      duration: 0.6,
-      ease: [0.22, 1, 0.36, 1], // Premium cubic-bezier ease out
-    },
+    transition: { duration: 0.6, ease: 'easeOut' as const },
   },
 };
 
@@ -52,7 +47,7 @@ function IndexPage() {
         <motion.div variants={cardVariants}>
           <Card className="flex flex-col h-full">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-on-surface">
                 <Swords className="w-5 h-5" />
                 Play Now
               </CardTitle>
@@ -60,7 +55,9 @@ function IndexPage() {
             <CardContent className="flex-1 flex flex-col">
               <p className="text-on-surface-variant text-sm mb-4">Join a table and test your skills against other players.</p>
               <Link to="/lobby" className="mt-auto">
-                <Button variant="default" className="w-full">JOIN TABLE</Button>
+                <Button className="w-full bg-tertiary text-on-tertiary hover:bg-tertiary-fixed font-data-mono tracking-wider uppercase">
+                  JOIN TABLE
+                </Button>
               </Link>
             </CardContent>
           </Card>
@@ -69,7 +66,7 @@ function IndexPage() {
         <motion.div variants={cardVariants}>
           <Card className="flex flex-col h-full">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-on-surface">
                 <Trophy className="w-5 h-5" />
                 Leaderboard
               </CardTitle>
@@ -77,7 +74,12 @@ function IndexPage() {
             <CardContent className="flex-1 flex flex-col">
               <p className="text-on-surface-variant text-sm mb-4">See who's on top. Rankings update in real-time.</p>
               <Link to="/leaderboard" className="mt-auto">
-                <Button variant="outline" className="w-full">VIEW RANKS</Button>
+                <Button
+                  variant="outline"
+                  className="w-full text-on-surface border-outline-variant hover:border-tertiary hover:text-tertiary hover:bg-tertiary/10 font-data-mono tracking-wider uppercase"
+                >
+                  VIEW RANKS
+                </Button>
               </Link>
             </CardContent>
           </Card>
@@ -86,7 +88,7 @@ function IndexPage() {
         <motion.div variants={cardVariants}>
           <Card className="flex flex-col h-full">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-on-surface">
                 <BookOpen className="w-5 h-5" />
                 Learn
               </CardTitle>
@@ -94,7 +96,12 @@ function IndexPage() {
             <CardContent className="flex-1 flex flex-col">
               <p className="text-on-surface-variant text-sm mb-4">New to poker? Start with the basics.</p>
               <Link to="/guide" className="mt-auto">
-                <Button variant="outline" className="w-full">GUIDE</Button>
+                <Button
+                  variant="outline"
+                  className="w-full text-on-surface border-outline-variant hover:border-tertiary hover:text-tertiary hover:bg-tertiary/10 font-data-mono tracking-wider uppercase"
+                >
+                  GUIDE
+                </Button>
               </Link>
             </CardContent>
           </Card>

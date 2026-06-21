@@ -4,11 +4,11 @@ use sha2::Sha256;
 use url::form_urlencoded;
 use uuid::Uuid;
 
-use argon2::PasswordHasher; // Only this import is needed for hashing
+use argon2::PasswordHasher;
 
 use crate::config::AuthConfig;
 use crate::jwt::{create_jwt, verify_jwt};
-use sb_contracts::repo_api::{PersistenceError, UserRepo};
+use sb_contracts::repo_api::{PersistenceError, UserProfile, UserRepo};
 use sb_contracts::service_api::{AuthResult, AuthService, TokenClaims};
 use sb_shared_types::{AppError, RequestContext, UserId};
 
@@ -130,7 +130,6 @@ impl AuthService for AuthServiceImpl {
             return Err(AppError::InvalidInput("Password too short".into()));
         }
 
-        // The new password-hash 0.6 API generates the salt automatically!
         let hash = crate::config::argon2_instance()
             .hash_password(password.as_bytes())
             .map_err(|e| AppError::Internal(format!("Failed to hash password: {}", e)))?
@@ -170,7 +169,6 @@ impl AuthService for AuthServiceImpl {
             .map_err(map_persistence_error)?
             .ok_or_else(|| AppError::Unauthorized("Invalid email or password".into()))?;
 
-        // For now, no password verification (stored password not checked)
         let token = create_jwt(
             user_id.0,
             "email",
@@ -186,6 +184,11 @@ impl AuthService for AuthServiceImpl {
         })
     }
 
+    async fn validate_token(&self, token: &str) -> Result<UserId, AppError> {
+        let claims = self.verify_token(token).await?;
+        Ok(claims.user_id)
+    }
+
     async fn verify_token(&self, token: &str) -> Result<TokenClaims, AppError> {
         let claims = verify_jwt(token, self.config.jwt_secret_str())
             .map_err(|e| AppError::Unauthorized(format!("Invalid token: {}", e)))?;
@@ -194,12 +197,25 @@ impl AuthService for AuthServiceImpl {
             platform: claims.platform,
         })
     }
+
+    async fn get_user_profile(
+        &self,
+        ctx: &RequestContext,
+        user_id: UserId,
+    ) -> Result<UserProfile, AppError> {
+        self.user_repo
+            .get_user_profile(ctx.clone(), user_id)
+            .await
+            .map_err(map_persistence_error)
+    }
 }
 
 fn map_persistence_error(e: PersistenceError) -> AppError {
     match e {
-        PersistenceError::UniqueViolation => AppError::Conflict("Resource already exists".into()),
-        PersistenceError::NotFound => AppError::NotFound("User not found".into()),
+        PersistenceError::UniqueViolation => {
+            AppError::Conflict("Resource already exists".to_string())
+        }
+        PersistenceError::NotFound => AppError::NotFound("User not found".to_string()),
         _ => AppError::Internal(e.to_string()),
     }
 }

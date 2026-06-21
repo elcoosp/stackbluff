@@ -1,4 +1,4 @@
-use crate::chips::ChipAmount;
+use crate::{PlayerId, chips::ChipAmount};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -8,9 +8,16 @@ pub struct TableConfig {
     pub variant: GameVariant,
     pub min_buy_in: ChipAmount,
     pub max_buy_in: ChipAmount,
+    pub turn_time_limit_ms: u64, // <-- ADDED
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SidePot {
+    pub amount: ChipAmount,
+    pub eligible_players: Vec<PlayerId>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, derive_more::Display)]
 pub enum StakeLevel {
     Micro,
     Low,
@@ -19,14 +26,14 @@ pub enum StakeLevel {
     VeryHigh,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, derive_more::Display)]
 pub enum GameVariant {
     Holdem,
     Omaha,
     OmahaHiLo,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, derive_more::Display)]
 pub enum ActionType {
     Fold,
     Check,

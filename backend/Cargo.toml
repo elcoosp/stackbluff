@@ -25,6 +25,7 @@ edition = "2024"
 rust-version = "1.94"
 
 [workspace.dependencies]
+axum-extra = { version = "0.10", features = ["cookie"] }
     lazy_static = "1.4"
     prometheus = { version = "0.14", features = ["process"] }
     dotenvy = "0.15"

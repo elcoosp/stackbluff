@@ -1,41 +1,109 @@
-import { Seat } from '@stackbluff/shared/stores/gameStore';
+import { useState, useEffect, useMemo } from 'react';
+import { LayoutGroup } from 'framer-motion';
 import { PlayerSpot } from './PlayerSpot';
+import {
+  desktopPositions,
+  getMobilePositions,
+  MAX_SEATS,
+} from '@/lib/seatPositions';
+import { cn } from '@/lib/utils';
 
-type Position = { top?: string; left?: string; right?: string; bottom?: string; transform: string };
+const seatTransition = 'left 0.4s ease, top 0.4s ease, bottom 0.4s ease, transform 0.4s ease';
 
-const desktopPositions: Record<number, Position> = {
-  1: { top: '10%', left: '15%', transform: 'translate(-50%, -50%)' },
-  2: { top: '50%', left: '2%', transform: 'translate(-50%, -50%)' },
-  3: { bottom: '10%', left: '20%', transform: 'translate(-50%, 50%)' },
-  4: { top: '10%', right: '15%', transform: 'translate(50%, -50%)' },
-  5: { top: '40%', right: '2%', transform: 'translate(50%, -50%)' },
-  6: { top: '82%', right: '5%', transform: 'translate(50%, -50%)' },
-  7: { bottom: '-45px', left: '50%', transform: 'translateX(-50%)' },
-};
+export const SeatGrid = ({
+  seats,
+  heroSeat,
+  isDesktop,
+  currentTurnUserId,
+  heroTimerRemainingMs,
+  heroTimerTotalMs,
+  opponentTurnUserId,
+  opponentTimerRemainingMs,
+  opponentTimerTotalMs,
+  isDealing,
+  onShowStats,
+}: any) => {
+  const [vw, setVw] = useState(typeof window !== 'undefined' ? window.innerWidth : 500);
 
-const mobilePositions: Record<number, Position> = {
-  1: { top: '5%', left: '50%', transform: 'translateX(-50%)' },
-  2: { top: '35%', left: '5%', transform: 'translateX(0)' },
-  3: { top: '65%', left: '5%', transform: 'translateX(0)' },
-  4: { top: '35%', right: '5%', transform: 'translateX(0)' },
-  5: { top: '65%', right: '5%', transform: 'translateX(0)' },
-  6: { top: '90%', right: '5%', transform: 'translateX(0)' },
-  7: { bottom: '20px', left: '50%', transform: 'translateX(-50%)' },
-};
+  useEffect(() => {
+    const onResize = () => setVw(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
-export const SeatGrid = ({ seats, heroSeat, isDesktop }: { seats: Record<number, any>; heroSeat: number | null; isDesktop: boolean }) => {
-  const positions = isDesktop ? desktopPositions : mobilePositions;
+  const isNarrowMobile = !isDesktop && vw < 390;
+
+  const positions = useMemo(
+    () => (isDesktop ? desktopPositions : getMobilePositions(isNarrowMobile)),
+    [isDesktop, isNarrowMobile]
+  );
+
+  let currentDealerSeat: number | null = null;
+  for (const [index, seat] of Object.entries(seats)) {
+    if ((seat as any).position_badge === 'BTN') {
+      currentDealerSeat = Number(index);
+      break;
+    }
+  }
+
+  const [lastDealerSeat, setLastDealerSeat] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (currentDealerSeat !== null) {
+      setLastDealerSeat(currentDealerSeat);
+    }
+  }, [currentDealerSeat]);
+
   return (
-    <>
+    <LayoutGroup>
       {Object.entries(seats).map(([index, seat]: [string, any]) => {
-        const pos = positions[Number(index)];
+        const seatIndex = Number(index);
+        const posIndex =
+          heroSeat !== null
+            ? ((seatIndex - heroSeat) % MAX_SEATS + MAX_SEATS) % MAX_SEATS
+            : seatIndex;
+        const pos = positions[posIndex];
         if (!pos) return null;
+
+        const isDealer = seatIndex === lastDealerSeat;
+        const isHero = seatIndex === heroSeat;
+
+        let timerRemainingMs: number | null = null;
+        let timerTotalMs: number | null = null;
+        if (isHero) {
+          timerRemainingMs = heroTimerRemainingMs ?? null;
+          timerTotalMs = heroTimerTotalMs ?? null;
+        } else if (opponentTurnUserId && seat.user_id === opponentTurnUserId) {
+          timerRemainingMs = opponentTimerRemainingMs ?? null;
+          timerTotalMs = opponentTimerTotalMs ?? null;
+        }
+
         return (
-          <div key={index} className="absolute" style={pos}>
-            <PlayerSpot seat={seat} isHero={Number(index) === heroSeat} />
+          <div
+            key={index}
+            className={cn("absolute overflow-visible", isHero ? "z-[445]" : "z-[440]")}
+            style={{
+              left: pos.left,
+              top: pos.top,
+              bottom: pos.bottom, // Added bottom support
+              transform: pos.transform,
+              transition: seatTransition,
+            }}
+          >
+            <PlayerSpot
+              seat={seat}
+              isHero={isHero}
+              isMobile={!isDesktop}
+              isDealer={isDealer}
+              seatPosition={pos}
+              timerRemainingMs={timerRemainingMs}
+              timerTotalMs={timerTotalMs}
+              isDealing={isDealing}
+              onShowStats={onShowStats}
+            />
           </div>
         );
       })}
-    </>
+    </LayoutGroup>
   );
 };
