@@ -508,6 +508,9 @@ const DesktopActionBar = ({
 }) => {
   const [raiseOpen, setRaiseOpen] = useState(false);
   const [preActionOpen, setPreActionOpen] = useState(false);
+  const [actionSent, setActionSent] = useState(false);
+  const actionSentTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const isCheck = toCall === 0;
   const isAllInCall = heroStack > 0 && heroStack < toCall;
   const callLabel = isCheck
@@ -518,9 +521,21 @@ const DesktopActionBar = ({
 
   const allInDisabled = !actionRequired || heroStack === 0;
 
+  const handleAction = useCallback((action: string, amount?: number) => {
+    onAction(action, amount);
+    setActionSent(true);
+    if (actionSentTimerRef.current) clearTimeout(actionSentTimerRef.current);
+    actionSentTimerRef.current = setTimeout(() => setActionSent(false), 2500);
+  }, [onAction]);
+
   const toggleRaise = useCallback(() => setRaiseOpen((p) => !p), []);
   const visibleAction = useVisibleAction(executingAction, toCall);
-  useActionKeys(onAction, toggleRaise, actionRequired, toCall);
+
+  // Prevent layout flashing when waiting for backend to process an action
+  const isActing = !!visibleAction || actionSent;
+  const layoutActionRequired = actionRequired || isActing;
+
+  useActionKeys(handleAction, toggleRaise, actionRequired, toCall);
 
   const sparkIndex = useRandomSparkle(!actionRequired && !raiseOpen);
 
@@ -558,7 +573,7 @@ const DesktopActionBar = ({
               pot={pot || 0}
               bigBlind={bigBlind || 10}
               onConfirm={(amt) => {
-                onAction('raise', amt);
+                handleAction('raise', amt);
                 setRaiseOpen(false);
               }}
               onCancel={() => setRaiseOpen(false)}
@@ -570,7 +585,7 @@ const DesktopActionBar = ({
         </AnimatePresence>
 
         <AnimatePresence initial={false}>
-          {preActionOpen && !actionRequired && (
+          {preActionOpen && !layoutActionRequired && (
             <motion.div
               key="desktop-preaction"
               initial={{ height: 0, opacity: 0, marginBottom: 0 }}
@@ -592,7 +607,7 @@ const DesktopActionBar = ({
         </AnimatePresence>
 
         <div className="flex items-center gap-2.5 px-3.5 py-3.5">
-          {!actionRequired && (
+          {!layoutActionRequired && (
             <motion.button
               type="button"
               onClick={() => setPreActionOpen(!preActionOpen)}
@@ -610,16 +625,16 @@ const DesktopActionBar = ({
             </motion.button>
           )}
 
-          <ActionBtn variant="fold" onClick={() => onAction('fold')} disabled={!actionRequired} shortcut="F" isMobile={false} sparkId={0} currentSpark={sparkIndex}>
+          <ActionBtn variant="fold" onClick={() => handleAction('fold')} disabled={!actionRequired} shortcut="F" isMobile={false} sparkId={0} currentSpark={sparkIndex}>
             Fold
           </ActionBtn>
-          <ActionBtn variant="call" onClick={() => onAction(isCheck ? 'check' : 'call')} disabled={!actionRequired} shortcut="C" isMobile={false} IconOverride={isCheck ? Check : undefined} sparkId={1} currentSpark={sparkIndex}>
+          <ActionBtn variant="call" onClick={() => handleAction(isCheck ? 'check' : 'call')} disabled={!actionRequired} shortcut="C" isMobile={false} IconOverride={isCheck ? Check : undefined} sparkId={1} currentSpark={sparkIndex}>
             {callLabel}
           </ActionBtn>
           <ActionBtn variant="raise" onClick={toggleRaise} disabled={!actionRequired || !canRaise} shortcut="R" isMobile={false} sparkId={2} currentSpark={sparkIndex}>
             {raiseOpen ? 'Close' : 'Raise'}
           </ActionBtn>
-          <ActionBtn variant="all-in" onClick={() => onAction('all-in')} disabled={allInDisabled} shortcut="A" isMobile={false} sparkId={3} currentSpark={sparkIndex}>
+          <ActionBtn variant="all-in" onClick={() => handleAction('all-in')} disabled={allInDisabled} shortcut="A" isMobile={false} sparkId={3} currentSpark={sparkIndex}>
             All-in
           </ActionBtn>
         </div>
@@ -664,6 +679,9 @@ const MobileActionBar = ({
 }) => {
   const [raiseOpen, setRaiseOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [actionSent, setActionSent] = useState(false);
+  const actionSentTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const isCheck = toCall === 0;
   const isAllInCall = heroStack > 0 && heroStack < toCall;
   const callLabel = isCheck
@@ -674,12 +692,23 @@ const MobileActionBar = ({
 
   const allInDisabled = !actionRequired || heroStack === 0;
 
+  const handleAction = useCallback((action: string, amount?: number) => {
+    onAction(action, amount);
+    setActionSent(true);
+    if (actionSentTimerRef.current) clearTimeout(actionSentTimerRef.current);
+    actionSentTimerRef.current = setTimeout(() => setActionSent(false), 2500);
+  }, [onAction]);
+
   const vw = useViewportWidth();
   const isNarrow = vw < MOBILE_BREAK;
   const toggleRaise = useCallback(() => setRaiseOpen((p) => !p), []);
   const visibleAction = useVisibleAction(executingAction, toCall);
 
-  useActionKeys(onAction, toggleRaise, actionRequired, toCall);
+  // Prevent layout flashing when waiting for backend to process an action
+  const isActing = !!visibleAction || actionSent;
+  const layoutActionRequired = actionRequired || isActing;
+
+  useActionKeys(handleAction, toggleRaise, actionRequired, toCall);
 
   const sparkIndex = useRandomSparkle(!actionRequired && !raiseOpen);
 
@@ -689,12 +718,12 @@ const MobileActionBar = ({
   };
 
   const foldBtn = (
-    <ActionBtn variant="fold" onClick={() => onAction('fold')} disabled={!actionRequired} isMobile sparkId={0} currentSpark={sparkIndex}>
+    <ActionBtn variant="fold" onClick={() => handleAction('fold')} disabled={!actionRequired} isMobile sparkId={0} currentSpark={sparkIndex}>
       Fold
     </ActionBtn>
   );
   const callBtn = (
-    <ActionBtn variant="call" onClick={() => onAction(isCheck ? 'check' : 'call')} disabled={!actionRequired} isMobile IconOverride={isCheck ? Check : undefined} sparkId={1} currentSpark={sparkIndex}>
+    <ActionBtn variant="call" onClick={() => handleAction(isCheck ? 'check' : 'call')} disabled={!actionRequired} isMobile IconOverride={isCheck ? Check : undefined} sparkId={1} currentSpark={sparkIndex}>
       {callLabel}
     </ActionBtn>
   );
@@ -704,7 +733,7 @@ const MobileActionBar = ({
     </ActionBtn>
   );
   const allInBtn = (
-    <ActionBtn variant="all-in" onClick={() => onAction('all-in')} disabled={allInDisabled} isMobile sparkId={3} currentSpark={sparkIndex}>
+    <ActionBtn variant="all-in" onClick={() => handleAction('all-in')} disabled={allInDisabled} isMobile sparkId={3} currentSpark={sparkIndex}>
       All-in
     </ActionBtn>
   );
@@ -728,7 +757,7 @@ const MobileActionBar = ({
         <ExecutionBanner visibleAction={visibleAction} />
 
         <AnimatePresence initial={false}>
-          {drawerOpen && !actionRequired && (
+          {drawerOpen && !layoutActionRequired && (
             <motion.div
               key="mobile-preaction"
               initial={{ height: 0, opacity: 0 }}
@@ -760,7 +789,7 @@ const MobileActionBar = ({
               pot={pot || 0}
               bigBlind={bigBlind || 10}
               onConfirm={(amt) => {
-                onAction('raise', amt);
+                handleAction('raise', amt);
                 setRaiseOpen(false);
               }}
               onCancel={() => setRaiseOpen(false)}
@@ -790,7 +819,7 @@ const MobileActionBar = ({
                 </div>
               )}
 
-              {!actionRequired && (
+              {!layoutActionRequired && (
                 <motion.button
                   type="button"
                   onClick={() => setDrawerOpen(!drawerOpen)}

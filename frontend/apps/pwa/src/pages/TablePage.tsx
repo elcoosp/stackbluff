@@ -474,7 +474,7 @@ export function TablePage() {
   const handleLeaveTable = useCallback(() => {
     sendLeave();
     navigate({ to: '/lobby' });
-  }, [sendAction, navigate]);
+  }, [sendLeave, navigate]);
 
   const isAnyAllIn = Object.values(seatsWithShowdown).some(
     (s: any) => s.is_all_in && !s.is_folded
@@ -539,7 +539,13 @@ export function TablePage() {
         )}
 
         <FeedbackSettingsDialog open={showSettings} onClose={() => setShowSettings(false)} />
-        <LeaveTableDialog open={showLeaveDialog} onClose={() => setShowLeaveDialog(false)} onConfirm={handleLeaveTable} stackAmount={heroStack} isHandInProgress={!!game.handInProgress} />
+        <LeaveTableDialog
+          open={showLeaveDialog}
+          onClose={() => setShowLeaveDialog(false)}
+          onConfirm={handleLeaveTable}
+          stackAmount={heroStack}
+          isHandInProgress={!!game.handInProgress}
+        />
         <HistoryDialog open={showHistory} onClose={() => setShowHistory(false)} tableId={tableId} />
         <BuyInDialog
           open={showRebuyDialog}
