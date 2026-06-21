@@ -357,6 +357,10 @@ export function useGameWebSocket(tableId: string) {
     },
     [clearActionRequired]
   );
-
-  return { sendJoin, sendAction, sendRebuy, connectionStatus, myUserId, notSeated };
+  const sendLeave = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'leave_table' }));
+    }
+  }, []);
+  return { sendLeave, sendJoin, sendAction, sendRebuy, connectionStatus, myUserId, notSeated };
 }

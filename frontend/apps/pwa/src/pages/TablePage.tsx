@@ -206,7 +206,7 @@ export function TablePage() {
   const { tableId } = useParams({ from: '/table/$tableId' });
   const search = useSearch({ from: '/table/$tableId' });
   const navigate = useNavigate();
-  const { sendJoin, sendAction, sendRebuy, connectionStatus, myUserId, notSeated } = useGameWebSocket(tableId);
+  const { sendJoin, sendAction, sendRebuy, connectionStatus, myUserId, notSeated, sendLeave } = useGameWebSocket(tableId);
   const isDesktop = useResponsiveLayout();
   const showAnalytics = useMediaQuery('(min-width: 980px)');
   const game = useGameStore();
@@ -472,7 +472,7 @@ export function TablePage() {
   );
 
   const handleLeaveTable = useCallback(() => {
-    sendAction('leave');
+    sendLeave();
     navigate({ to: '/lobby' });
   }, [sendAction, navigate]);
 
