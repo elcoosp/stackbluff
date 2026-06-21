@@ -28,7 +28,7 @@ use sb_shared_types::{GameVariant, StakeLevel, TableConfig};
 use sb_table_registry::buy_in_limits_for_stake;
 use sb_table_registry::registry::Registry;
 use sb_table_registry::spawn_history_recorder;
-use sb_table_registry::stats_aggregator::spawn_stats_aggregator; // Added this import
+use sb_table_registry::stats_aggregator::spawn_stats_aggregator;
 use sb_table_registry::table_service::TableServiceImpl;
 use sb_ws_handler::ws_route;
 
@@ -96,9 +96,12 @@ async fn main() {
             turn_time_limit_ms: 30_000,
         };
         registry.register_existing_table(t.table_id, config).await;
-        tracing::info!(table_id = %t.table_id, "Hydrated table from DB");
+        tracing::info!(table_id = %t.table_id, "Hydrated table config from DB");
     }
     tracing::info!(count = db_tables.len(), "Registry hydrated from DB");
+
+    // Spawn Room Reaper
+    Registry::spawn_room_reaper(registry.clone()).await;
 
     // ── Create TableService (coordinates DB + Registry) ──────────
     let table_service: Arc<dyn sb_contracts::lobby_api::TableService> =

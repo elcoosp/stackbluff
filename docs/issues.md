@@ -1,3 +1,3 @@
 
 - "It's unknown turn" sometimes
-- When i disconnect i don't get back my bankroll amount
+- Protected/unprotected routes missing

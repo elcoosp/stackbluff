@@ -134,7 +134,7 @@ pub fn create_router(
 }
 
 async fn list_tables_public(State(state): State<Arc<AppState>>) -> Json<PublicTableList> {
-    let tables = state.registry.list_active_tables().await;
+    let tables = state.table_repo.list_tables().await.unwrap_or_default();
     Json(PublicTableList {
         tables: tables
             .into_iter()
@@ -157,14 +157,20 @@ async fn lobby_handler(
         .list_tables()
         .await
         .map_err(internal_error)?;
-    let active = state.registry.list_active_tables().await;
 
-    let mut merged: Vec<LobbyTableInfo> = persistent.into_iter().map(Into::into).collect();
-    for a in active {
-        if !merged.iter().any(|m| m.table_id == a.table_id) {
-            merged.push(a.into());
-        }
+    let mut merged: Vec<LobbyTableInfo> = Vec::new();
+    for t in persistent {
+        let active_players = state.registry.get_total_active_players(t.table_id).await;
+        merged.push(LobbyTableInfo {
+            table_id: t.table_id,
+            name: t.name,
+            stake_level: t.stake_level,
+            current_players: active_players,
+            max_players: t.max_players,
+            status: t.status,
+        });
     }
+
     Ok(Json(merged))
 }
 

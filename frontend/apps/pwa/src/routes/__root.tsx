@@ -12,8 +12,6 @@ function RootLayout() {
   const { isAuthenticated, user, loadUser } = useAuthStore();
 
   useEffect(() => {
-    // If we have a token in localStorage but no user object (e.g., on page refresh),
-    // fetch the user profile.
     if (isAuthenticated && !user) {
       loadUser();
     }

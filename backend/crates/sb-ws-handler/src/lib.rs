@@ -7,7 +7,6 @@ use axum::{
     routing::get,
 };
 use axum_extra::extract::CookieJar;
-use dashmap::DashMap;
 use futures::{SinkExt, StreamExt};
 use sb_auth::Authenticator;
 use sb_contracts::repo_api::UserRepo;
@@ -15,8 +14,9 @@ use sb_shared_types::{ChipAmount, RequestContext, TableId, UserId};
 use sb_table_registry::game_room::RoomMessage;
 use sb_table_registry::registry::Registry;
 use serde::Deserialize;
+use std::collections::HashSet;
 use std::sync::Arc;
-use tokio::sync::broadcast;
+use tokio::sync::mpsc;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
@@ -29,8 +29,6 @@ struct AppState {
     auth: Arc<dyn Authenticator + Send + Sync>,
     registry: Arc<Registry>,
     user_repo: Arc<dyn UserRepo>,
-    // Tracks active WebSocket connections per user per table
-    connection_counts: Arc<DashMap<(TableId, UserId), u32>>,
 }
 
 pub fn ws_route(
@@ -42,7 +40,6 @@ pub fn ws_route(
         auth,
         registry,
         user_repo,
-        connection_counts: Arc::new(DashMap::new()),
     });
     Router::new()
         .route("/ws/game", get(ws_handler))
@@ -59,7 +56,6 @@ async fn ws_handler(
         .get("token")
         .map(|c| c.value().to_string())
         .or(query.token);
-
     let token = match token {
         Some(t) => t,
         None => {
@@ -78,6 +74,20 @@ async fn ws_handler(
 
     info!(%user_id, "WebSocket upgrade authenticated");
     ws.on_upgrade(move |socket| handle_websocket(socket, state, user_id))
+}
+
+/// Send a JSON value to the client via the unbounded channel.
+///
+/// Returns `true` if the message was enqueued successfully.
+/// Returns `false` if the send task is dead (receiver dropped) — the caller
+/// **must** treat this as a fatal error and close the WebSocket immediately.
+fn send_json_to_client(
+    client_tx: &tokio::sync::mpsc::UnboundedSender<axum::extract::ws::Message>,
+    json: serde_json::Value,
+) -> bool {
+    client_tx
+        .send(axum::extract::ws::Message::Text(json.to_string().into()))
+        .is_ok()
 }
 
 async fn handle_websocket(
@@ -101,68 +111,24 @@ async fn handle_websocket(
         info!("WebSocket send task finished");
     });
 
-    let mut broadcast_rx: Option<broadcast::Receiver<RoomMessage>> = None;
-    let mut current_table_id: Option<TableId> = None;
+    let (actor_msg_tx, mut actor_msg_rx) = mpsc::unbounded_channel::<RoomMessage>();
+    let mut active_rooms: HashSet<TableId> = HashSet::new();
+    const MAX_TABLES: usize = 4;
 
     let mut ping_interval = tokio::time::interval(std::time::Duration::from_secs(30));
 
     loop {
         tokio::select! {
-            msg = async {
-                if let Some(rx) = broadcast_rx.as_mut() {
-                    rx.recv().await
-                } else {
-                    std::future::pending().await
-                }
-            } => {
-                match msg {
-                    Ok(room_msg) => {
-                        let skip = match &room_msg {
-                            RoomMessage::Error { target_user_id, .. } => {
-                                if let Some(target) = target_user_id {
-                                    *target != user_id
-                                } else {
-                                    false
-                                }
-                            }
-                            RoomMessage::PrivateMessage { target_user_id, .. } => {
-                                *target_user_id != user_id
-                            }
-                            _ => false,
-                        };
-                        if skip {
-                            debug!(%user_id, "Skipping message not for this user");
-                            continue;
+            Some(room_msg) = actor_msg_rx.recv() => {
+                match serde_json::to_string(&room_msg) {
+                    Ok(json) => {
+                        if client_tx.send(axum::extract::ws::Message::Text(json.into())).is_err() {
+                            warn!("Failed to send broadcast to client_tx (send task dead)");
+                            break;
                         }
-                        match serde_json::to_string(&room_msg) {
-                            Ok(json) => {
-                                let msg_type = match &room_msg {
-                                    RoomMessage::TableState(_) => "TableState",
-                                    RoomMessage::ActionRequired(_) => "ActionRequired",
-                                    RoomMessage::ActionBroadcast(_) => "ActionBroadcast",
-                                    RoomMessage::HandResult(_) => "HandResult",
-                                    RoomMessage::ShowdownReveal(_) => "ShowdownReveal",
-                                    RoomMessage::Error { .. } => "Error",
-                                    RoomMessage::Connected { .. } => "Connected",
-                                    RoomMessage::PrivateMessage { .. } => "PrivateMessage",
-                                };
-                                debug!(%user_id, msg_type, "Sending broadcast message");
-                                if client_tx.send(axum::extract::ws::Message::Text(json.into())).is_err() {
-                                    warn!("Failed to send broadcast to client_tx (send task dead)");
-                                    break;
-                                }
-                            }
-                            Err(e) => {
-                                error!(%user_id, error = %e, "Failed to serialize RoomMessage");
-                            }
-                        }
-                    }
-                    Err(broadcast::error::RecvError::Lagged(n)) => {
-                        warn!(%user_id, n, "Broadcast lagged, skipping messages");
                     }
                     Err(e) => {
-                        warn!(%user_id, error = %e, "Broadcast receiver error, exiting loop");
-                        break;
+                        error!(%user_id, error = %e, "Failed to serialize RoomMessage");
                     }
                 }
             }
@@ -171,7 +137,20 @@ async fn handle_websocket(
                 match msg {
                     Some(Ok(axum::extract::ws::Message::Text(text))) => {
                         debug!(%user_id, text = %text, "Received client message");
-                        handle_client_message(&state, &user_id, &text, &client_tx, &mut broadcast_rx, &mut current_table_id).await;
+                        if !handle_client_message(
+                            &state,
+                            &user_id,
+                            &text,
+                            &client_tx,
+                            &actor_msg_tx,
+                            &mut active_rooms,
+                            MAX_TABLES,
+                        )
+                        .await
+                        {
+                            warn!(%user_id, "Terminating WebSocket — send task is dead");
+                            break;
+                        }
                     }
                     Some(Ok(axum::extract::ws::Message::Pong(_))) => {
                         debug!(%user_id, "Received pong");
@@ -201,7 +180,10 @@ async fn handle_websocket(
 
             _ = ping_interval.tick() => {
                 debug!(%user_id, "Sending ping");
-                if client_tx.send(axum::extract::ws::Message::Ping(Bytes::new())).is_err() {
+                if client_tx
+                    .send(axum::extract::ws::Message::Ping(Bytes::new()))
+                    .is_err()
+                {
                     warn!("Failed to send ping (send task dead)");
                     break;
                 }
@@ -211,57 +193,57 @@ async fn handle_websocket(
 
     info!(%user_id, "WebSocket handler loop exited");
 
-    // ── Multi-Tab Disconnect Logic ──
-    if let Some(table_id) = current_table_id {
-        let key = (table_id, user_id);
-        let mut should_leave = false;
-
-        // Decrement the connection counter for this user/table
-        if let Some(mut count) = state.connection_counts.get_mut(&key) {
-            *count = count.saturating_sub(1);
-            if *count == 0 {
-                should_leave = true;
-            }
-        }
-
-        // If this was the last connection, remove the player from the table
-        if should_leave {
-            state.connection_counts.remove(&key);
-            info!(%user_id, %table_id, "Last tab closed, sending leave to table actor");
-            if let Ok(remaining_stack) = state.registry.send_leave(table_id, user_id).await {
-                if remaining_stack > ChipAmount::new(0).unwrap() {
-                    let ctx = RequestContext::new(Uuid::new_v4(), Some(user_id));
-                    if let Err(e) = state
-                        .user_repo
-                        .update_chip_balance(ctx, user_id, remaining_stack.as_i64())
-                        .await
-                    {
-                        error!(%user_id, error = ?e, "Failed to credit remaining stack on disconnect");
+    for room_id in active_rooms {
+        let registry = state.registry.clone();
+        let user_repo = state.user_repo.clone();
+        let user_id = user_id;
+        tokio::spawn(async move {
+            info!(%user_id, %room_id, "Disconnect cleanup: sending leave");
+            // FIX: Use force=true to ensure immediate removal and prevent zombie state
+            match registry.send_leave(room_id, user_id, true).await {
+                Ok(remaining_stack) => {
+                    if remaining_stack > ChipAmount::new(0).unwrap() {
+                        let ctx = RequestContext::new(Uuid::new_v4(), Some(user_id));
+                        if let Err(e) = user_repo
+                            .update_chip_balance(ctx, user_id, remaining_stack.as_i64())
+                            .await
+                        {
+                            error!(%user_id, error = ?e, "Failed to credit remaining stack on disconnect");
+                        }
                     }
+                    info!(%user_id, %room_id, "Disconnect cleanup: leave successful");
+                }
+                Err(e) => {
+                    error!(%user_id, %room_id, error = ?e, "Failed to leave room on disconnect");
                 }
             }
-        } else {
-            info!(%user_id, %table_id, "Tab closed, but other tabs still active. Keeping player seated.");
-        }
+        });
     }
-
     send_task.abort();
     info!(%user_id, "WebSocket handler finished");
 }
 
+/// Process a single client message.
+///
+/// # Returns
+/// - `true`  — the connection is still healthy; keep the event loop running.
+/// - `false` — a **critical** `client_tx.send()` failed, meaning the WebSocket
+///   send task has exited. The caller must `break` out of the main loop
+///   immediately so the socket is closed and the client can reconnect.
 async fn handle_client_message(
     state: &Arc<AppState>,
     user_id: &UserId,
     text: &str,
     client_tx: &tokio::sync::mpsc::UnboundedSender<axum::extract::ws::Message>,
-    broadcast_rx: &mut Option<broadcast::Receiver<RoomMessage>>,
-    current_table_id: &mut Option<TableId>,
-) {
+    actor_msg_tx: &tokio::sync::mpsc::UnboundedSender<RoomMessage>,
+    active_rooms: &mut HashSet<TableId>,
+    max_tables: usize,
+) -> bool {
     let parsed: serde_json::Value = match serde_json::from_str(text) {
         Ok(v) => v,
         Err(e) => {
             warn!(%user_id, error = %e, "Invalid JSON from client");
-            return;
+            return true; // non-fatal: skip this message
         }
     };
 
@@ -269,52 +251,63 @@ async fn handle_client_message(
 
     match msg_type {
         "reconnect" => {
-            let table_id_str = parsed
-                .get("table_id")
-                .and_then(|t| t.as_str())
-                .unwrap_or("");
-            let table_id = match table_id_str.parse::<TableId>() {
-                Ok(id) => id,
-                Err(e) => {
-                    let err = serde_json::json!({"type": "Error", "message": format!("Invalid table_id: {}", e)});
-                    let _ =
-                        client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
-                    return;
-                }
-            };
-
-            // Increment connection counter
-            let key = (table_id, *user_id);
-            let mut count = state.connection_counts.entry(key).or_insert(0);
-            *count += 1;
-
-            // Attempt to reconnect. The actor will resync if seated, or send an error if not.
-            if let Err(e) = state.registry.send_reconnect(table_id, *user_id).await {
-                // Table not found or actor dropped. Decrement counter because this connection is invalid.
-                *count = count.saturating_sub(1);
-                if *count == 0 {
-                    state.connection_counts.remove(&key);
-                }
-                let err = serde_json::json!({"type": "Error", "message": format!("Reconnect failed: {:?}", e)});
-                let _ = client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
-                return;
+            debug!(%user_id, "Processing reconnect");
+            let user_rooms = state.registry.find_all_user_rooms(*user_id).await;
+            if user_rooms.is_empty() {
+                debug!(%user_id, "Reconnect failed: no active rooms found");
+                let err = serde_json::json!({
+                    "type": "Error",
+                    "room_id": null,
+                    "message": "Not seated at table. Please buy in."
+                });
+                return send_json_to_client(client_tx, err);
             }
-
-            // Subscribe to broadcasts
-            match state.registry.subscribe_to_table(table_id).await {
-                Some(bcast_tx) => {
-                    *broadcast_rx = Some(bcast_tx.subscribe());
-                    *current_table_id = Some(table_id);
-                }
-                None => {
-                    let err = serde_json::json!({"type": "Error", "message": "Table broadcast unavailable"});
-                    let _ =
-                        client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
+            for room_id in user_rooms {
+                debug!(%user_id, %room_id, "Attempting to reconnect to room");
+                match state
+                    .registry
+                    .send_reconnect(room_id, *user_id, actor_msg_tx.clone())
+                    .await
+                {
+                    Ok(true) => {
+                        active_rooms.insert(room_id);
+                    }
+                    Ok(false) => {
+                        let err = serde_json::json!({
+                            "type": "Error",
+                            "room_id": room_id,
+                            "message": "Not seated at table. Please buy in."
+                        });
+                        if !send_json_to_client(client_tx, err) {
+                            return false;
+                        }
+                    }
+                    Err(e) => {
+                        error!(%user_id, %room_id, error = ?e, "Reconnect failed, treating as not seated");
+                        let err = serde_json::json!({
+                            "type": "Error",
+                            "room_id": room_id,
+                            "message": "Not seated at table. Please buy in."
+                        });
+                        if !send_json_to_client(client_tx, err) {
+                            return false;
+                        }
+                    }
                 }
             }
         }
 
         "join_table" => {
+            info!(%user_id, "join_table: start processing");
+            if active_rooms.len() >= max_tables {
+                let err = serde_json::json!({
+                    "type": "Error",
+                    "room_id": null,
+                    "message": "Maximum table limit reached."
+                });
+                return send_json_to_client(client_tx, err);
+            }
+
             let table_id_str = parsed
                 .get("table_id")
                 .and_then(|t| t.as_str())
@@ -322,19 +315,29 @@ async fn handle_client_message(
             let table_id = match table_id_str.parse::<TableId>() {
                 Ok(id) => id,
                 Err(e) => {
-                    let err = serde_json::json!({"type": "Error", "message": format!("Invalid table_id: {}", e)});
-                    let _ =
-                        client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
-                    return;
+                    let err = serde_json::json!({
+                        "type": "Error",
+                        "room_id": null,
+                        "message": format!("Invalid table_id: {}", e)
+                    });
+                    return send_json_to_client(client_tx, err);
                 }
             };
 
-            // Ensure connection counter is at least 1
-            let key = (table_id, *user_id);
-            let mut count = state.connection_counts.entry(key).or_insert(0);
-            if *count == 0 {
-                *count = 1;
-            }
+            info!(%user_id, %table_id, "join_table: assigning room");
+            let room_id = match state.registry.assign_room(table_id).await {
+                Ok(id) => id,
+                Err(e) => {
+                    error!(%user_id, %table_id, error = ?e, "join_table: failed to assign room");
+                    let err = serde_json::json!({
+                        "type": "Error",
+                        "room_id": null,
+                        "message": format!("Failed to assign room: {:?}", e)
+                    });
+                    return send_json_to_client(client_tx, err);
+                }
+            };
+            info!(%user_id, %table_id, %room_id, "join_table: room assigned");
 
             let seat_opt = parsed.get("seat").and_then(|s| s.as_u64()).map(|s| s as u8);
             let buy_in: i64 = parsed
@@ -345,26 +348,41 @@ async fn handle_client_message(
             let stack = match ChipAmount::new(buy_in) {
                 Some(s) => s,
                 None => {
-                    let err = serde_json::json!({"type": "Error", "message": format!("Invalid buy_in amount: {}. Must be a non-negative integer.", buy_in)});
-                    let _ =
-                        client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
-                    return;
+                    let err = serde_json::json!({
+                        "type": "Error",
+                        "room_id": null,
+                        "message": format!(
+                            "Invalid buy_in amount: {}. Must be a non-negative integer.",
+                            buy_in
+                        )
+                    });
+                    return send_json_to_client(client_tx, err);
                 }
             };
 
+            info!(%user_id, %room_id, "join_table: getting table config");
             match state.registry.get_table_config(table_id).await {
                 Some(cfg) => {
                     if stack < cfg.min_buy_in || stack > cfg.max_buy_in {
-                        let err = serde_json::json!({"type": "Error", "message": format!("Buy-in of {} is outside the allowed range ({}–{}).", stack.as_i64(), cfg.min_buy_in.as_i64(), cfg.max_buy_in.as_i64())});
-                        let _ = client_tx
-                            .send(axum::extract::ws::Message::Text(err.to_string().into()));
-                        return;
+                        let err = serde_json::json!({
+                            "type": "Error",
+                            "room_id": null,
+                            "message": format!(
+                                "Buy-in of {} is outside the allowed range ({}–{}).",
+                                stack.as_i64(),
+                                cfg.min_buy_in.as_i64(),
+                                cfg.max_buy_in.as_i64()
+                            )
+                        });
+                        return send_json_to_client(client_tx, err);
                     }
                 }
                 None => {}
             }
+            info!(%user_id, %room_id, "join_table: got table config");
 
             let ctx = RequestContext::new(Uuid::new_v4(), Some(*user_id));
+            info!(%user_id, %room_id, "join_table: getting user profile");
             let display_name = match state
                 .user_repo
                 .get_user_profile(ctx.clone(), *user_id)
@@ -373,75 +391,95 @@ async fn handle_client_message(
                 Ok(profile) => profile.display_name,
                 Err(_) => "Player".to_string(),
             };
+            info!(%user_id, %room_id, "join_table: got user profile");
 
-            match state
-                .user_repo
-                .update_chip_balance(ctx.clone(), *user_id, -buy_in)
-                .await
-            {
-                Ok(new_balance) => {
-                    let balance_msg =
-                        serde_json::json!({"type": "BalanceUpdated", "balance": new_balance});
-                    let _ = client_tx.send(axum::extract::ws::Message::Text(
-                        balance_msg.to_string().into(),
-                    ));
-                }
-                Err(e) => {
-                    error!(%user_id, error = ?e, "Insufficient balance for buy-in");
-                    let err = serde_json::json!({"type": "Error", "message": "Insufficient balance for buy-in"});
-                    let _ =
-                        client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
-                    return;
-                }
+            active_rooms.insert(room_id);
+            let assigned_msg = serde_json::json!({
+                "type": "RoomAssigned",
+                "table_id": table_id,
+                "room_id": room_id
+            });
+            info!(%user_id, %room_id, "join_table: sending RoomAssigned");
+            if !send_json_to_client(client_tx, assigned_msg) {
+                warn!(%user_id, "Failed to send RoomAssigned — send task dead");
+                return false;
             }
+            info!(%user_id, %room_id, "join_table: sent RoomAssigned");
 
-            info!(%user_id, %table_id, buy_in = buy_in, "Attempting to join table");
+            info!(%user_id, %room_id, buy_in = buy_in, "join_table: calling join_room_full");
             match state
                 .registry
-                .join_table_full(table_id, *user_id, display_name, seat_opt, stack)
+                .join_room_full(
+                    room_id,
+                    *user_id,
+                    display_name,
+                    seat_opt,
+                    stack,
+                    actor_msg_tx.clone(),
+                )
                 .await
             {
-                Ok(()) => {
-                    info!(%user_id, %table_id, "Successfully joined table");
-                    match state.registry.subscribe_to_table(table_id).await {
-                        Some(bcast_tx) => {
-                            *broadcast_rx = Some(bcast_tx.subscribe());
-                            *current_table_id = Some(table_id);
+                Ok(is_new_join) => {
+                    info!(%user_id, %room_id, is_new_join, "join_table: join_room_full success");
+
+                    if is_new_join {
+                        info!(%user_id, %room_id, "join_table: debiting chips");
+                        match state
+                            .user_repo
+                            .update_chip_balance(ctx.clone(), *user_id, -buy_in)
+                            .await
+                        {
+                            Ok(new_balance) => {
+                                let balance_msg = serde_json::json!({
+                                    "type": "BalanceUpdated",
+                                    "balance": new_balance
+                                });
+                                if !send_json_to_client(client_tx, balance_msg) {
+                                    return false;
+                                }
+                            }
+                            Err(e) => {
+                                error!(%user_id, error = ?e, "Insufficient balance for buy-in");
+                                let err = serde_json::json!({
+                                    "type": "Error",
+                                    "room_id": null,
+                                    "message": "Insufficient balance for buy-in"
+                                });
+                                if !send_json_to_client(client_tx, err) {
+                                    return false;
+                                }
+                                // Remove player from actor since debit failed
+                                let _ = state.registry.send_leave(room_id, *user_id, true).await;
+                                return true;
+                            }
                         }
-                        None => {
-                            warn!(%user_id, %table_id, "Failed to subscribe to table broadcast (no broadcast sender)");
-                            let err = serde_json::json!({"type": "Error", "message": "Table broadcast unavailable"});
-                            let _ = client_tx
-                                .send(axum::extract::ws::Message::Text(err.to_string().into()));
-                            let _ = state
-                                .user_repo
-                                .update_chip_balance(ctx, *user_id, buy_in)
-                                .await;
-                            return;
-                        }
+                        info!(%user_id, %room_id, "join_table: chips debited");
                     }
                 }
                 Err(e) => {
-                    error!(%user_id, %table_id, error = ?e, "Failed to join table");
-                    let err = serde_json::json!({"type": "Error", "message": format!("Failed to join: {:?}", e)});
-                    let _ =
-                        client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
-                    let _ = state
-                        .user_repo
-                        .update_chip_balance(ctx, *user_id, buy_in)
-                        .await;
+                    error!(%user_id, %table_id, %room_id, error = ?e, "Failed to join table");
+                    let err = serde_json::json!({
+                        "type": "Error",
+                        "room_id": null,
+                        "message": format!("Failed to join: {:?}", e)
+                    });
+                    return send_json_to_client(client_tx, err);
                 }
             }
+            info!(%user_id, %room_id, "join_table: end processing");
         }
 
         "rebuy" => {
-            let table_id = match current_table_id {
-                Some(id) => *id,
-                None => {
-                    let err = serde_json::json!({"type": "Error", "message": "Not at a table"});
-                    let _ =
-                        client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
-                    return;
+            let room_id_str = parsed.get("room_id").and_then(|t| t.as_str()).unwrap_or("");
+            let room_id = match room_id_str.parse::<TableId>() {
+                Ok(id) => id,
+                Err(e) => {
+                    let err = serde_json::json!({
+                        "type": "Error",
+                        "room_id": null,
+                        "message": format!("Invalid room_id: {}", e)
+                    });
+                    return send_json_to_client(client_tx, err);
                 }
             };
 
@@ -452,11 +490,12 @@ async fn handle_client_message(
             let stack = match ChipAmount::new(amount) {
                 Some(s) => s,
                 None => {
-                    let err =
-                        serde_json::json!({"type": "Error", "message": "Invalid rebuy amount"});
-                    let _ =
-                        client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
-                    return;
+                    let err = serde_json::json!({
+                        "type": "Error",
+                        "room_id": room_id,
+                        "message": "Invalid rebuy amount"
+                    });
+                    return send_json_to_client(client_tx, err);
                 }
             };
 
@@ -469,23 +508,31 @@ async fn handle_client_message(
                 Ok(new_balance) => {
                     let balance_msg =
                         serde_json::json!({"type": "BalanceUpdated", "balance": new_balance});
-                    let _ = client_tx.send(axum::extract::ws::Message::Text(
-                        balance_msg.to_string().into(),
-                    ));
+                    if !send_json_to_client(client_tx, balance_msg) {
+                        return false;
+                    }
                 }
                 Err(e) => {
                     error!(%user_id, error = ?e, "Insufficient balance for rebuy");
-                    let err = serde_json::json!({"type": "Error", "message": "Insufficient balance for rebuy"});
-                    let _ =
-                        client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
-                    return;
+                    let err = serde_json::json!({
+                        "type": "Error",
+                        "room_id": room_id,
+                        "message": "Insufficient balance for rebuy"
+                    });
+                    return send_json_to_client(client_tx, err);
                 }
             }
 
-            if let Err(e) = state.registry.send_rebuy(table_id, *user_id, stack).await {
-                error!(%user_id, %table_id, error = ?e, "Rebuy failed");
-                let err = serde_json::json!({"type": "Error", "message": format!("Rebuy failed: {:?}", e)});
-                let _ = client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
+            if let Err(e) = state.registry.send_rebuy(room_id, *user_id, stack).await {
+                error!(%user_id, %room_id, error = ?e, "Rebuy failed");
+                let err = serde_json::json!({
+                    "type": "Error",
+                    "room_id": room_id,
+                    "message": format!("Rebuy failed: {:?}", e)
+                });
+                if !send_json_to_client(client_tx, err) {
+                    return false;
+                }
                 let _ = state
                     .user_repo
                     .update_chip_balance(ctx, *user_id, amount)
@@ -494,55 +541,82 @@ async fn handle_client_message(
         }
 
         "leave_table" => {
-            let table_id = match current_table_id {
-                Some(id) => *id,
-                None => {
-                    let err = serde_json::json!({"type": "Error", "message": "Not at a table"});
-                    let _ =
-                        client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
-                    return;
+            let room_id_str = parsed.get("room_id").and_then(|t| t.as_str()).unwrap_or("");
+            let room_id = match room_id_str.parse::<TableId>() {
+                Ok(id) => id,
+                Err(e) => {
+                    let err = serde_json::json!({
+                        "type": "Error",
+                        "room_id": null,
+                        "message": format!("Invalid room_id: {}", e)
+                    });
+                    return send_json_to_client(client_tx, err);
                 }
             };
 
-            let ctx = RequestContext::new(Uuid::new_v4(), Some(*user_id));
+            if !active_rooms.remove(&room_id) {
+                let err = serde_json::json!({
+                    "type": "Error",
+                    "room_id": room_id,
+                    "message": "Not at this table"
+                });
+                return send_json_to_client(client_tx, err);
+            }
 
-            match state.registry.send_leave(table_id, *user_id).await {
-                Ok(remaining_stack) => {
-                    if remaining_stack > ChipAmount::new(0).unwrap() {
-                        match state
-                            .user_repo
-                            .update_chip_balance(ctx.clone(), *user_id, remaining_stack.as_i64())
-                            .await
-                        {
-                            Ok(new_balance) => {
-                                let balance_msg = serde_json::json!({"type": "BalanceUpdated", "balance": new_balance});
-                                let _ = client_tx.send(axum::extract::ws::Message::Text(
-                                    balance_msg.to_string().into(),
-                                ));
-                            }
-                            Err(e) => {
-                                error!(%user_id, error = ?e, "Failed to credit remaining stack");
+            let registry = state.registry.clone();
+            let user_repo = state.user_repo.clone();
+            let user_id = *user_id;
+            let client_tx = client_tx.clone();
+
+            tokio::spawn(async move {
+                info!(%user_id, %room_id, "leave_table: sending leave to registry");
+                match registry.send_leave(room_id, user_id, true).await {
+                    Ok(remaining_stack) => {
+                        if remaining_stack > ChipAmount::new(0).unwrap() {
+                            let ctx = RequestContext::new(Uuid::new_v4(), Some(user_id));
+                            match user_repo
+                                .update_chip_balance(ctx, user_id, remaining_stack.as_i64())
+                                .await
+                            {
+                                Ok(new_balance) => {
+                                    let balance_msg = serde_json::json!({
+                                        "type": "BalanceUpdated",
+                                        "balance": new_balance
+                                    });
+                                    let _ = client_tx.send(axum::extract::ws::Message::Text(
+                                        balance_msg.to_string().into(),
+                                    ));
+                                }
+                                Err(e) => {
+                                    error!(%user_id, error = ?e, "Failed to credit remaining stack on leave");
+                                }
                             }
                         }
                     }
-                    *current_table_id = None;
+                    Err(e) => {
+                        error!(%user_id, %room_id, error = ?e, "Leave failed");
+                        let err = serde_json::json!({
+                            "type": "Error",
+                            "room_id": room_id,
+                            "message": format!("Failed to leave: {:?}", e)
+                        });
+                        let _ = client_tx
+                            .send(axum::extract::ws::Message::Text(err.to_string().into()));
+                    }
                 }
-                Err(e) => {
-                    let err = serde_json::json!({"type": "Error", "message": format!("Failed to leave: {:?}", e)});
-                    let _ =
-                        client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
-                }
-            }
+            });
         }
-
         "player_action" => {
-            let table_id = match current_table_id {
-                Some(id) => *id,
-                None => {
-                    let err = serde_json::json!({"type": "Error", "message": "Not at a table"});
-                    let _ =
-                        client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
-                    return;
+            let room_id_str = parsed.get("room_id").and_then(|t| t.as_str()).unwrap_or("");
+            let room_id = match room_id_str.parse::<TableId>() {
+                Ok(id) => id,
+                Err(e) => {
+                    let err = serde_json::json!({
+                        "type": "Error",
+                        "room_id": null,
+                        "message": format!("Invalid room_id: {}", e)
+                    });
+                    return send_json_to_client(client_tx, err);
                 }
             };
 
@@ -558,10 +632,12 @@ async fn handle_client_message(
                 "allin" => sb_shared_types::ActionType::AllIn,
                 "bet" => sb_shared_types::ActionType::Bet,
                 _ => {
-                    let err = serde_json::json!({"type": "Error", "message": format!("Unknown action: {}", action_str)});
-                    let _ =
-                        client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
-                    return;
+                    let err = serde_json::json!({
+                        "type": "Error",
+                        "room_id": room_id,
+                        "message": format!("Unknown action: {}", action_str)
+                    });
+                    return send_json_to_client(client_tx, err);
                 }
             };
 
@@ -572,40 +648,59 @@ async fn handle_client_message(
 
             if let Err(e) = state
                 .registry
-                .send_player_action(table_id, *user_id, action_type, amount)
+                .send_player_action(room_id, *user_id, action_type, amount)
                 .await
             {
-                error!(%user_id, %table_id, error = ?e, "Player action failed");
-                let err = serde_json::json!({"type": "Error", "message": format!("Action failed: {:?}", e)});
-                let _ = client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
+                error!(%user_id, %room_id, error = ?e, "Player action failed");
+                let err = serde_json::json!({
+                    "type": "Error",
+                    "room_id": room_id,
+                    "message": format!("Action failed: {:?}", e)
+                });
+                if !send_json_to_client(client_tx, err) {
+                    return false;
+                }
             }
         }
 
         "start_hand" => {
-            let table_id = match current_table_id {
-                Some(id) => *id,
-                None => {
-                    let err = serde_json::json!({"type": "Error", "message": "Not at a table"});
-                    let _ =
-                        client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
-                    return;
+            let room_id_str = parsed.get("room_id").and_then(|t| t.as_str()).unwrap_or("");
+            let room_id = match room_id_str.parse::<TableId>() {
+                Ok(id) => id,
+                Err(e) => {
+                    let err = serde_json::json!({
+                        "type": "Error",
+                        "room_id": null,
+                        "message": format!("Invalid room_id: {}", e)
+                    });
+                    return send_json_to_client(client_tx, err);
                 }
             };
-            if let Err(e) = state.registry.start_hand(table_id).await {
-                error!(%user_id, %table_id, error = ?e, "Start hand failed");
-                let err = serde_json::json!({"type": "Error", "message": format!("Start hand failed: {:?}", e)});
-                let _ = client_tx.send(axum::extract::ws::Message::Text(err.to_string().into()));
+            if let Err(e) = state.registry.start_hand(room_id).await {
+                error!(%user_id, %room_id, error = ?e, "Start hand failed");
+                let err = serde_json::json!({
+                    "type": "Error",
+                    "room_id": room_id,
+                    "message": format!("Start hand failed: {:?}", e)
+                });
+                if !send_json_to_client(client_tx, err) {
+                    return false;
+                }
             }
         }
 
         "ping" => {
             debug!(%user_id, "Received ping, sending pong");
             let pong = serde_json::json!({"type": "pong"});
-            let _ = client_tx.send(axum::extract::ws::Message::Text(pong.to_string().into()));
+            if !send_json_to_client(client_tx, pong) {
+                return false;
+            }
         }
 
         _ => {
             warn!(%user_id, msg_type, "Unknown message type from client");
         }
     }
+
+    true
 }
