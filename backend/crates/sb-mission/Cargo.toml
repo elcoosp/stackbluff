@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+uuid = { workspace = true }
 sb-shared-types = { workspace = true }
 sb-contracts = { workspace = true }
 sea-orm = { workspace = true }
