@@ -1,3 +1,4 @@
+pub mod leaderboard;
 pub mod lobby_api;
 
 pub mod async_hooks;
@@ -63,3 +64,4 @@ pub enum TableCommand {
     },
 }
 pub use lobby_api::TableInfo;
+pub mod notification;
