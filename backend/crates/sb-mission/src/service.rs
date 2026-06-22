@@ -3,10 +3,9 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use chrono::{NaiveDate, Utc};
 use rand::rngs::StdRng;
-use rand::Rng;                       // required for gen_range
+use rand::Rng;
 use rand::SeedableRng;
 use sea_orm::*;
-use uuid::Uuid;
 use sb_shared_types::missions::*;
 use sb_shared_types::game_types::HandResult;
 use sb_shared_types::chips::ChipAmount;
@@ -15,7 +14,7 @@ use sb_shared_types::request_context::RequestContext;
 use sb_shared_types::ids::UserId;
 use sb_contracts::service_api::{MissionApi, ClaimResult, UserService};
 
-use crate::entities::{daily_mission, streak, users};
+use crate::entities::{daily_mission, streak};
 
 pub struct MissionServiceImpl {
     db: Arc<DatabaseConnection>,
