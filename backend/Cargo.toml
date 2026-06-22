@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "crates/sb-payment",
+    "crates/sb-mission",
     "crates/sb-anti-cheat",
     "crates/sb-viral",
     "crates/sb-oracle",
