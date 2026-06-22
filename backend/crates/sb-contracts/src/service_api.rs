@@ -255,7 +255,6 @@ pub trait AuthService: Send + Sync {
 
 // ── Missions ──────────────────────────────────────────────────────────────
 use sb_shared_types::missions::{Mission, MissionId};
-use sb_shared_types::chips::ChipAmount;
 
 #[derive(Debug, serde::Serialize)]
 pub struct ClaimResult {
