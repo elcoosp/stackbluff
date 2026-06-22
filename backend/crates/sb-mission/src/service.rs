@@ -248,7 +248,8 @@ impl MissionApi for MissionServiceImpl {
         }
         ActiveModelTrait::update(streak_active, &txn).await.map_err(|e| AppError::from(e.to_string()))?;
 
-        let chip_amount: ChipAmount = ChipAmount::new(total_chips);
+        let chip_amount = ChipAmount::new(total_chips)
+            .ok_or_else(|| AppError::from("Invalid chip amount"))?;
         self.user_service.award_chips(user_id, chip_amount).await?;
 
         txn.commit().await.map_err(|e| AppError::from(e.to_string()))?;
