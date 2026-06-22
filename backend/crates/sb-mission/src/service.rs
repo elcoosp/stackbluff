@@ -26,14 +26,13 @@ impl MissionServiceImpl {
         Self { db, user_service }
     }
 
-    fn extract_user_id(&self, ctx: &RequestContext) -> Result<Uuid, AppError> {
-        let user_id: UserId = ctx.user_id.ok_or_else(|| AppError::from("No user id"))?;
-        Ok(user_id.0)
+    fn extract_user_id(&self, ctx: &RequestContext) -> Result<UserId, AppError> {
+        ctx.user_id.ok_or_else(|| AppError::from("No user id"))
     }
 
-    fn select_daily_missions(&self, user_id: Uuid, date: NaiveDate) -> [usize; 3] {
+    fn select_daily_missions(&self, user_id: UserId, date: NaiveDate) -> [usize; 3] {
         let pool = all_mission_definitions();
-        let seed = format!("{}-{}", date, user_id);
+        let seed = format!("{}-{}", date, user_id.0);
         let mut hasher = std::hash::DefaultHasher::new();
         std::hash::Hash::hash(&seed, &mut hasher);
         let hash = std::hash::Hasher::finish(&hasher);
@@ -47,9 +46,9 @@ impl MissionServiceImpl {
         [v[0], v[1], v[2]]
     }
 
-    async fn ensure_daily_assignments(&self, user_id: Uuid, date: NaiveDate) -> Result<Vec<daily_mission::Model>, AppError> {
+    async fn ensure_daily_assignments(&self, user_id: UserId, date: NaiveDate) -> Result<Vec<daily_mission::Model>, AppError> {
         let existing = daily_mission::Entity::find()
-            .filter(daily_mission::Column::UserId.eq(user_id))
+            .filter(daily_mission::Column::UserId.eq(user_id.0))
             .filter(daily_mission::Column::AssignedDate.eq(date))
             .all(self.db.as_ref())
             .await
@@ -65,7 +64,7 @@ impl MissionServiceImpl {
         for &idx in &indices {
             let (type_key, _, _, _, _) = &pool[idx];
             let active = daily_mission::ActiveModel {
-                user_id: Set(user_id),
+                user_id: Set(user_id.0),
                 assigned_date: Set(date),
                 mission_type: Set(type_key.clone()),
                 progress: Set(0),
@@ -105,7 +104,7 @@ impl MissionApi for MissionServiceImpl {
             if new_progress != assignment.progress {
                 let mut active: daily_mission::ActiveModel = assignment.clone().into();
                 active.progress = Set(new_progress);
-                if new_progress >= *target {
+                if new_progress >= *target as i32 {
                     active.completed = Set(true);
                 }
                 ActiveModelTrait::update(active, self.db.as_ref())
@@ -158,7 +157,7 @@ impl MissionApi for MissionServiceImpl {
     async fn reroll_mission(&self, ctx: &RequestContext, mission_id: MissionId) -> Result<Mission, AppError> {
         let user_id = self.extract_user_id(ctx)?;
         let today = Utc::now().date_naive();
-        let mut assignments = self.ensure_daily_assignments(user_id, today).await?;
+        let assignments = self.ensure_daily_assignments(user_id, today).await?;
         let idx = mission_id.0 as usize;
         if idx >= assignments.len() { return Err(AppError::from("Invalid mission id")); }
         if assignments[idx].rerolled { return Err(AppError::from("Already rerolled")); }
@@ -210,12 +209,12 @@ impl MissionApi for MissionServiceImpl {
 
         total_chips += 2000;
 
-        let streak_model = streak::Entity::find_by_id(user_id)
+        let streak_model = streak::Entity::find_by_id(user_id.0)
             .one(&txn)
             .await
             .map_err(|e| AppError::from(e.to_string()))?
             .unwrap_or_else(|| streak::Model {
-                user_id,
+                user_id: user_id.0,
                 current_streak: 0,
                 longest_streak: 0,
                 last_completion_date: None,
@@ -224,7 +223,7 @@ impl MissionApi for MissionServiceImpl {
             });
 
         let last_date = streak_model.last_completion_date;
-        let today_streak = if let Some(last) = last_date {
+        let today_streak: i32 = if let Some(last) = last_date {
             if today == last.succ_opt().unwrap_or(last) { streak_model.current_streak + 1 }
             else if today.succ_opt() == Some(last) { streak_model.current_streak }
             else { 1 }
@@ -249,10 +248,8 @@ impl MissionApi for MissionServiceImpl {
         }
         ActiveModelTrait::update(streak_active, &txn).await.map_err(|e| AppError::from(e.to_string()))?;
 
-        let chip_amount = ChipAmount::from(total_chips);
-        // use ctx.user_id directly (we know it's Some because extract worked)
-        let uid = ctx.user_id.unwrap();
-        self.user_service.award_chips(uid, chip_amount).await?;
+        let chip_amount: ChipAmount = ChipAmount::new(total_chips);
+        self.user_service.award_chips(user_id, chip_amount).await?;
 
         txn.commit().await.map_err(|e| AppError::from(e.to_string()))?;
 
