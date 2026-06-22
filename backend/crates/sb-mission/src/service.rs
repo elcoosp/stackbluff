@@ -3,7 +3,8 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use chrono::{NaiveDate, Utc};
 use rand::rngs::StdRng;
-use rand::{Rng, SeedableRng};
+use rand::Rng;                       // required for gen_range
+use rand::SeedableRng;
 use sea_orm::*;
 use uuid::Uuid;
 use sb_shared_types::missions::*;

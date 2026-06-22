@@ -1,8 +1,13 @@
-use axum::{extract::State, Json, Router, routing::{get, post}};
+use axum::{
+    extract::State,
+    http::StatusCode,
+    response::IntoResponse,
+    Json, Router,
+    routing::{get, post},
+};
 use std::sync::Arc;
 use sb_contracts::service_api::MissionApi;
 use sb_shared_types::request_context::RequestContext;
-use sb_shared_types::errors::AppError;
 use sb_shared_types::missions::{Mission, MissionId};
 
 pub fn mission_routes(service: Arc<dyn MissionApi>) -> Router {
@@ -15,26 +20,32 @@ pub fn mission_routes(service: Arc<dyn MissionApi>) -> Router {
 
 async fn get_today(
     State(svc): State<Arc<dyn MissionApi>>,
-) -> Result<Json<Vec<Mission>>, AppError> {
-    let ctx = RequestContext { user_id: None }; // placeholder
-    let missions = svc.get_today_missions(&ctx).await?;
+) -> Result<Json<Vec<Mission>>, (StatusCode, String)> {
+    let ctx = RequestContext { user_id: None };
+    let missions = svc.get_today_missions(&ctx).await.map_err(|e| {
+        (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    })?;
     Ok(Json(missions))
 }
 
 async fn claim(
     State(svc): State<Arc<dyn MissionApi>>,
-) -> Result<Json<sb_contracts::service_api::ClaimResult>, AppError> {
+) -> Result<Json<sb_contracts::service_api::ClaimResult>, (StatusCode, String)> {
     let ctx = RequestContext { user_id: None };
-    let res = svc.claim_daily_reward(&ctx).await?;
+    let res = svc.claim_daily_reward(&ctx).await.map_err(|e| {
+        (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    })?;
     Ok(Json(res))
 }
 
 async fn reroll(
     State(svc): State<Arc<dyn MissionApi>>,
     Json(payload): Json<RerollPayload>,
-) -> Result<Json<Mission>, AppError> {
+) -> Result<Json<Mission>, (StatusCode, String)> {
     let ctx = RequestContext { user_id: None };
-    let mission = svc.reroll_mission(&ctx, payload.mission_id).await?;
+    let mission = svc.reroll_mission(&ctx, payload.mission_id).await.map_err(|e| {
+        (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    })?;
     Ok(Json(mission))
 }
 
