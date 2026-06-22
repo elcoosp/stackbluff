@@ -1,41 +1,15 @@
-use sb_contracts::ClubRepo;
-use std::sync::Arc;
+use sea_orm::DatabaseConnection;
 use std::time::Duration;
-use tokio::time::interval;
 
-/// Spawns a background task that refreshes all club leaderboards every 5 minutes.
-#[allow(dead_code)]
-pub fn spawn_leaderboard_refresh_job(repo: Arc<dyn ClubRepo>) {
+pub async fn spawn_leaderboard_refresh_task(db: DatabaseConnection) {
     tokio::spawn(async move {
-        let mut ticker = interval(Duration::from_secs(300));
+        let mut interval = tokio::time::interval(Duration::from_secs(300));
+        interval.tick().await; // skip immediate tick
         loop {
-            ticker.tick().await;
-            tracing::info!("leaderboard refresh job: starting");
-            let start = std::time::Instant::now();
-            match repo.get_all_club_ids().await {
-                Ok(club_ids) => {
-                    for club_id in &club_ids {
-                        if let Err(e) = repo.refresh_leaderboard(*club_id).await {
-                            tracing::warn!(
-                                club_id = %club_id,
-                                error = %e,
-                                "leaderboard refresh job: failed for club"
-                            );
-                        }
-                    }
-                    let elapsed = start.elapsed();
-                    tracing::info!(
-                        count = club_ids.len(),
-                        elapsed_ms = elapsed.as_millis(),
-                        "leaderboard refresh job: completed"
-                    );
-                }
-                Err(e) => {
-                    tracing::error!(
-                        error = %e,
-                        "leaderboard refresh job: failed to list clubs"
-                    );
-                }
+            interval.tick().await;
+            match sb_db_repos::refresh_leaderboard_mv(&db).await {
+                Ok(()) => tracing::info!("Leaderboard materialised view refreshed"),
+                Err(e) => tracing::error!("Failed to refresh leaderboard MV: {:?}", e),
             }
         }
     });

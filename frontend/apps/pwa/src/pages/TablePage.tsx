@@ -20,17 +20,17 @@ import {
   HistoryDialog,
   PlayerStatsDialog,
 } from '../components/game';
-import { useGameStore } from '@stackbluff/shared/stores/gameStore';
+import { useGameStore, useActiveRoom } from '@stackbluff/shared/stores/gameStore';
 import { useDealStore } from '@stackbluff/shared/stores/dealStore';
 import { useFeedback } from '@stackbluff/shared/hooks/useFeedback';
 import { FeedbackSettingsDialog } from '@stackbluff/shared/components/feedback/FeedbackSettingsDialog';
 import { VisualFeedbackOverlay } from '@stackbluff/shared/components/feedback/VisualFeedbackOverlay';
 import type { FeedbackEvent } from '@stackbluff/shared/services/feedback/types';
 import { ErrorBoundary } from 'react-error-boundary';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
-import { Settings, LogOut, History } from 'lucide-react';
+import { Settings, LogOut, History, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from '@tanstack/react-router';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
@@ -60,7 +60,8 @@ function useMediaQuery(query: string): boolean {
    useGameFeedback – with seat‑aware triggers
    ═══════════════════════════════════════════════════════════════════ */
 function useGameFeedback(
-  game: ReturnType<typeof useGameStore>,
+  game: ReturnType<typeof useActiveRoom>,
+  activeRoomId: string | null,
   resolvedHeroSeat: number,
   isMyTurn: boolean,
   heroTimerRemainingMs: number | null,
@@ -74,6 +75,18 @@ function useGameFeedback(
   const prevSeatActions = useRef<Record<number, string>>({});
   const prevPot = useRef(game.pot);
   const prevActionRequired = useRef(!!game.actionRequired);
+  const prevRoomId = useRef(activeRoomId);
+
+  // Reset all refs when active room changes to prevent false triggers
+  if (prevRoomId.current !== activeRoomId) {
+    prevCommunityLen.current = game.communityCards?.length ?? 0;
+    prevShowdown.current = game.showdownReveal;
+    prevCurrentTurn.current = game.currentTurnUserId;
+    prevSeatActions.current = {};
+    prevPot.current = game.pot;
+    prevActionRequired.current = !!game.actionRequired;
+    prevRoomId.current = activeRoomId;
+  }
 
   const getSeatByUserId = useCallback(
     (userId: string): number | undefined => {
@@ -206,10 +219,21 @@ export function TablePage() {
   const { tableId } = useParams({ from: '/table/$tableId' });
   const search = useSearch({ from: '/table/$tableId' });
   const navigate = useNavigate();
+
+  // FIX: urlBuyIn and isObserving declared early to be available to all hooks
+  const isObserving = (search as any)?.observe === 'true' || (search as any)?.observe === true;
+  const urlBuyIn = (search as any)?.buyIn as number | undefined;
+
   const { sendJoin, sendAction, sendRebuy, connectionStatus, myUserId, notSeated, sendLeave } = useGameWebSocket(tableId);
   const isDesktop = useResponsiveLayout();
   const showAnalytics = useMediaQuery('(min-width: 980px)');
-  const game = useGameStore();
+
+  const game = useActiveRoom();
+  const activeRoomId = useGameStore(s => s.activeRoomId);
+
+  const rooms = useGameStore(s => s.rooms);
+  const roomIds = useMemo(() => Object.keys(rooms), [rooms]);
+
   const { trigger } = useFeedback();
   const [showSettings, setShowSettings] = useState(false);
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
@@ -217,12 +241,34 @@ export function TablePage() {
   const [showHistory, setShowHistory] = useState(false);
   const [hasJoined, setHasJoined] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
+  const [isAddingTable, setIsAddingTable] = useState(false);
   const [statsUserId, setStatsUserId] = useState<string | null>(null);
   const { isDealing } = useDealStore();
   const balance = useAuthStore((s) => s.balance);
 
-  // Check if user is explicitly observing
-  const isObserving = (search as any)?.observe === 'true' || (search as any)?.observe === true;
+  // Clear stale rooms only when urlBuyIn actually changes
+  useEffect(() => {
+    if (urlBuyIn && urlBuyIn > 0) {
+      useGameStore.setState({ rooms: {}, activeRoomId: null });
+    }
+  }, [urlBuyIn]);
+
+  // Sync activeRoomId with the tableId from the URL
+  useEffect(() => {
+    if (!tableId) return;
+    const matchingEntry = Object.entries(rooms).find(([, r]: [string, any]) => r.tableId === tableId);
+    if (matchingEntry) {
+      const [rId] = matchingEntry;
+      if (activeRoomId !== rId) {
+        useGameStore.getState().setActiveRoom(rId);
+      }
+    }
+  }, [rooms, tableId, activeRoomId]);
+
+  // Reset dealing state when switching tables to prevent replaying the deal animation
+  useEffect(() => {
+    useDealStore.setState({ isDealing: false });
+  }, [activeRoomId]);
 
   const {
     seats,
@@ -236,6 +282,7 @@ export function TablePage() {
     currentTurnTimeoutMs,
     analytics,
     showdownReveal,
+    lastAction,
   } = game;
 
   const potRef = useRef<HTMLDivElement>(null);
@@ -313,34 +360,48 @@ export function TablePage() {
   const maxRaiseAmount = heroStack > 0 ? heroStack : minRaiseAmount;
   const finalMinRaise = canRaise ? minRaiseAmount : maxRaiseAmount;
 
-  // Check if hero is actually seated in the game
   const isHeroSeated = Object.values(seatsWithShowdown).some((s: any) => s.user_id === myUserId);
 
-  // Initial Join Logic
+  // Hard reset state if backend says we are not seated anywhere
   useEffect(() => {
-    if (connectionStatus !== 'connected' || hasJoined) return;
+    if (notSeated && !isJoining) {
+      setHasJoined(false);
+      setShowRebuyDialog(false);
+      if (!isObserving) {
+        useGameStore.setState({ rooms: {}, activeRoomId: null });
+        setShowRebuyDialog(true);
+      }
+    }
+  }, [notSeated, isJoining, isObserving]);
 
-    if (myUserId && isHeroSeated) {
+  // Join / Rejoin Logic
+  useEffect(() => {
+    if (connectionStatus !== 'connected') return;
+
+    if (isObserving && !isHeroSeated && !hasJoined) {
       setHasJoined(true);
       return;
     }
 
-    if (notSeated) {
-      const urlBuyIn = (search as any)?.buyIn as number | undefined;
+    if (!isHeroSeated && !hasJoined) {
       if (urlBuyIn && urlBuyIn > 0) {
         sendJoin(urlBuyIn);
         setHasJoined(true);
         setIsJoining(true);
         setShowRebuyDialog(false);
       } else if (!isObserving) {
-        // Only prompt to buy in if they didn't click "Observe"
         setShowRebuyDialog(true);
-      } else {
-        // They are observing, let them in without a buy-in prompt
-        setHasJoined(true);
       }
+      return;
     }
-  }, [connectionStatus, hasJoined, search, sendJoin, notSeated, myUserId, isObserving, isHeroSeated]);
+
+    if (isHeroSeated && !hasJoined) {
+      setHasJoined(true);
+    }
+    if (isHeroSeated && showRebuyDialog && !isAddingTable) {
+      setShowRebuyDialog(false);
+    }
+  }, [connectionStatus, isHeroSeated, isObserving, hasJoined, urlBuyIn, sendJoin, showRebuyDialog, isAddingTable]);
 
   // Show Rebuy Dialog if hero runs out of chips
   useEffect(() => {
@@ -348,13 +409,12 @@ export function TablePage() {
       setIsJoining(false);
     }
 
-    // Prevent rebuy dialog if they are explicitly observing
     if (hasJoined && heroStack === 0 && !isJoining && connectionStatus === 'connected' && !game.handInProgress && !isObserving) {
       setShowRebuyDialog(true);
-    } else if (heroStack > 0) {
+    } else if (heroStack > 0 && !isAddingTable) {
       setShowRebuyDialog(false);
     }
-  }, [heroStack, connectionStatus, hasJoined, isJoining, game.handInProgress, isObserving]);
+  }, [heroStack, connectionStatus, hasJoined, isJoining, game.handInProgress, isObserving, isAddingTable]);
 
   // Prevent "Disconnected" flash on initial mount
   const [showDisconnect, setShowDisconnect] = useState(false);
@@ -370,7 +430,7 @@ export function TablePage() {
   const { preAction, togglePreAction, executingAction } = usePreAction({
     isMyTurn,
     toCall,
-    sendAction,
+    sendAction: (action: string, amount?: number) => activeRoomId ? sendAction(activeRoomId, action, amount) : undefined,
   });
 
   const showdownMorphComplete = useDelayedBoolean(!!showdownReveal, 400);
@@ -452,6 +512,7 @@ export function TablePage() {
 
   useGameFeedback(
     game,
+    activeRoomId,
     resolvedHeroSeat,
     isMyTurn,
     heroTimerRemainingMs ?? 0,
@@ -460,39 +521,49 @@ export function TablePage() {
 
   const sendActionWithFeedback = useCallback(
     (action: string, amount?: number) => {
-      sendAction(action, amount);
-      const actionToEvent: Record<string, FeedbackEvent> = {
-        fold: 'fold', check: 'check', call: 'call',
-        bet: 'bet', raise: 'raise', 'all-in': 'allIn',
-      };
-      const eventType = actionToEvent[action];
-      if (eventType) trigger(eventType, { seatIndex: resolvedHeroSeat });
+      if (activeRoomId) {
+        sendAction(activeRoomId, action, amount);
+        const actionToEvent: Record<string, FeedbackEvent> = {
+          fold: 'fold', check: 'check', call: 'call',
+          bet: 'bet', raise: 'raise', 'all-in': 'allIn',
+        };
+        const eventType = actionToEvent[action];
+        if (eventType) trigger(eventType, { seatIndex: resolvedHeroSeat });
+      }
     },
-    [sendAction, trigger, resolvedHeroSeat],
+    [sendAction, trigger, resolvedHeroSeat, activeRoomId],
   );
 
   const handleLeaveTable = useCallback(() => {
-    sendLeave();
-    navigate({ to: '/lobby' });
-  }, [sendLeave, navigate]);
+    const roomIdToLeave = activeRoomId || roomIds[0];
+    if (roomIdToLeave) {
+      sendLeave(roomIdToLeave);
+      setHasJoined(false);
+      if (roomIds.length <= 1) {
+        navigate({ to: '/lobby' });
+      }
+    }
+  }, [sendLeave, navigate, activeRoomId, roomIds]);
+
+  const handleAddTable = useCallback(() => {
+    setIsAddingTable(true);
+    setShowRebuyDialog(true);
+  }, []);
 
   const isAnyAllIn = Object.values(seatsWithShowdown).some(
     (s: any) => s.is_all_in && !s.is_folded
   );
 
-  // Portal target for header actions
   const headerActionsEl = typeof document !== 'undefined' ? document.getElementById('header-portal-actions') : null;
 
   return (
     <ErrorBoundary FallbackComponent={Fallback}>
-      {/* ROOT CONTAINER: fixed inset-0 prevents scrollbars. */}
       <div
         className="fixed inset-0 w-full overflow-hidden select-none"
         style={{
           background: 'radial-gradient(ellipse at 50% 40%, #1a1c1b 0%, #111 40%, #0a0a0a 100%)',
         }}
       >
-        {/* ─── FOCUS OVERLAY ─── */}
         <AnimatePresence>
           {isMyTurn && !showdownReveal && (
             <motion.div
@@ -510,7 +581,6 @@ export function TablePage() {
 
         <VisualFeedbackOverlay />
 
-        {/* ═══ PORTALED HEADER ACTIONS ═══ */}
         {headerActionsEl && createPortal(
           <div className="flex items-center gap-1 md:gap-2 h-full pr-2 md:pr-4 border-r border-white/5 mr-2 md:mr-4">
             <button
@@ -538,6 +608,34 @@ export function TablePage() {
           headerActionsEl
         )}
 
+        {/* Vertical Glass Morphism Multi-table Rail */}
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 z-[1000] flex flex-col items-center gap-3">
+          {roomIds.map((rId) => (
+            <motion.button
+              key={rId}
+              onClick={() => useGameStore.getState().setActiveRoom(rId)}
+              whileTap={{ x: -6, scale: 1.3 }}
+              whileHover={{ x: -2 }}
+              className={cn(
+                "rounded-full backdrop-blur-md border transition-all duration-200",
+                rId === activeRoomId
+                  ? "w-4 h-4 bg-emerald-500/80 border-white/60 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+                  : "w-3 h-3 bg-white/15 border-white/30 hover:bg-white/30"
+              )}
+              aria-label={`Switch to table ${rId.slice(0, 4)}`}
+            />
+          ))}
+          <motion.button
+            onClick={handleAddTable}
+            whileTap={{ x: -6, scale: 1.2 }}
+            whileHover={{ x: -2 }}
+            className="w-5 h-5 rounded-full bg-black/40 backdrop-blur-md border border-white/20 text-white/80 hover:text-white flex items-center justify-center transition-colors"
+            aria-label="Add table"
+          >
+            <Plus className="w-3 h-3" />
+          </motion.button>
+        </div>
+
         <FeedbackSettingsDialog open={showSettings} onClose={() => setShowSettings(false)} />
         <LeaveTableDialog
           open={showLeaveDialog}
@@ -549,29 +647,38 @@ export function TablePage() {
         <HistoryDialog open={showHistory} onClose={() => setShowHistory(false)} tableId={tableId} />
         <BuyInDialog
           open={showRebuyDialog}
-          onClose={() => { if (!hasJoined && !isHeroSeated) { navigate({ to: '/lobby' }); } else { setShowRebuyDialog(false); } }}
+          onClose={() => {
+            if (isAddingTable) {
+              setIsAddingTable(false);
+              setShowRebuyDialog(false);
+            } else if (!hasJoined && !isHeroSeated) {
+              navigate({ to: '/lobby' });
+            } else {
+              setShowRebuyDialog(false);
+            }
+          }}
           onConfirm={(amount) => {
-            // Use isHeroSeated to determine if it's a rebuy or initial join
-            if (!isHeroSeated) {
+            if (isAddingTable) {
+              sendJoin(amount);
+              setIsAddingTable(false);
+            } else if (!isHeroSeated) {
               sendJoin(amount);
               setHasJoined(true);
               setIsJoining(true);
-            } else {
-              sendRebuy(amount);
+            } else if (activeRoomId) {
+              sendRebuy(activeRoomId, amount);
             }
             setShowRebuyDialog(false);
           }}
           minBuyIn={100}
           maxBuyIn={200000}
           defaultBuyIn={1000}
-          isRebuy={isHeroSeated}
+          isRebuy={isHeroSeated && !isAddingTable}
           currentBalance={balance}
         />
         <PlayerStatsDialog userId={statsUserId} onOpenChange={(open) => !open && setStatsUserId(null)} />
 
-        {/* MAIN TABLE AREA - pt-16 exactly matches the h-16 (64px) global header. */}
         <div className="absolute inset-0 flex items-center justify-center pt-16 px-3 pb-28 md:pt-16 md:px-4 md:pb-24 z-10">
-          {/* Table Wrapper */}
           <div
             className="relative w-full h-full transform-gpu [will-change:transform]"
             style={{ maxWidth: isDesktop ? '1000px' : '500px', transition: 'max-width 0.4s ease' }}
@@ -579,13 +686,11 @@ export function TablePage() {
             <TableRail isMobile={!isDesktop} />
 
             <div className="absolute inset-3 md:inset-10" style={{ transition: 'inset 0.4s ease' }}>
-              {/* ═══ ALL-IN TENSION AURA ═══ */}
               <AnimatePresence>
                 {isAnyAllIn && !showdownReveal && (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: [0.3, 0.7, 0.3] }}
-                    // Added explicit transition here to break the infinite loop on exit
                     exit={{ opacity: 0, transition: { duration: 0.3, repeat: 0 } }}
                     transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
                     className="absolute inset-0 pointer-events-none z-20"
@@ -597,7 +702,6 @@ export function TablePage() {
                 )}
               </AnimatePresence>
 
-              {/* ═══ HERO CARD SPOTLIGHT (Premium Subtle Breathing) ═══ */}
               <AnimatePresence>
                 {isMyTurn && !showdownReveal && (
                   <motion.div
@@ -615,7 +719,6 @@ export function TablePage() {
 
               <TableFelt isMobile={!isDesktop} />
 
-              {/* Community Cards */}
               <div className="absolute top-[42%] md:top-[40%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
                 <CommunityCards
                   cards={displayCommunityCards}
@@ -626,14 +729,12 @@ export function TablePage() {
               </div>
             </div>
 
-            {/* Analytics strip set to z-30 so it overlays the top of the table perfectly right below the header */}
             <div className="absolute top-0 left-0 right-0 z-30 pointer-events-none">
               {!showAnalytics && (
                 <MobileAnalyticsStrip winProb={winProb} potOdds={potOdds} bestHand={bestHand} strength={strength} />
               )}
             </div>
 
-            {/* POT BADGE - z-30 (Moved down slightly to clear the analytics strip) */}
             <div className={cn(
               "absolute left-1/2 -translate-x-1/2 z-30 transition-[top] duration-700 ease-in-out pointer-events-none",
               showdownReveal
@@ -647,6 +748,7 @@ export function TablePage() {
                   isMobile={!isDesktop}
                   showdownReveal={showdownReveal}
                   potRef={potRef}
+                  lastAction={lastAction}
                 />
               </div>
             </div>
@@ -665,11 +767,31 @@ export function TablePage() {
               onShowStats={setStatsUserId}
             />
 
-            <DealAnimationLayer isDesktop={isDesktop} heroSeat={resolvedHeroSeat} />
-            <BetAnimationLayer isDesktop={isDesktop} heroSeat={resolvedHeroSeat} />
+            {/* FIX: Added keys to force remount on table switch to prevent animation replay */}
+            <DealAnimationLayer
+              key={`deal-${activeRoomId}`}
+              isDesktop={isDesktop}
+              heroSeat={resolvedHeroSeat}
+              heroHoleCards={heroHoleCards}
+              communityCards={displayCommunityCards}
+              seats={seatsWithShowdown}
+            />
+            <BetAnimationLayer
+              key={`bet-${activeRoomId}`}
+              isDesktop={isDesktop}
+              heroSeat={resolvedHeroSeat}
+              lastAction={lastAction}
+              seats={seatsWithShowdown}
+            />
 
             {showdownMorphComplete && (
-              <ChipAnimationLayer isDesktop={isDesktop} heroSeat={resolvedHeroSeat} potRef={potRef} />
+              <ChipAnimationLayer
+                key={`chip-${activeRoomId}`}
+                isDesktop={isDesktop}
+                heroSeat={resolvedHeroSeat}
+                potRef={potRef}
+                showdownReveal={showdownReveal}
+              />
             )}
           </div>
         </div>
@@ -681,7 +803,6 @@ export function TablePage() {
           </>
         )}
 
-        {/* ACTION BAR / OBSERVER CONTROLS */}
         {isObserving && !isHeroSeated ? (
           <div className="absolute bottom-0 left-0 right-0 z-[450] pb-[env(safe-area-inset-bottom)] flex justify-center">
             <button

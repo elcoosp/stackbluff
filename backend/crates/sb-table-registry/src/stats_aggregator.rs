@@ -64,14 +64,13 @@ pub fn spawn_stats_aggregator(
                     _ => {}
                 }
 
-                if let Some(amount) = action.amount {
-                    if amount > 0
-                        && (action_type_lower.contains("bet")
-                            || action_type_lower.contains("raise")
-                            || action_type_lower.contains("call"))
-                    {
-                        *total_wagered_map.entry(*pid).or_insert(0) += amount;
-                    }
+                if let Some(amount) = action.amount
+                    && amount > 0
+                    && (action_type_lower.contains("bet")
+                        || action_type_lower.contains("raise")
+                        || action_type_lower.contains("call"))
+                {
+                    *total_wagered_map.entry(*pid).or_insert(0) += amount;
                 }
 
                 // VPIP / PFR Logic (Best effort based on action strings)
@@ -104,12 +103,12 @@ pub fn spawn_stats_aggregator(
             let mut winner_pids: HashSet<PlayerId> = HashSet::new();
             for winner in &event.result.winners {
                 winner_pids.insert(winner.player_id);
-                if let Some(uid_str) = player_to_user.get(&winner.player_id) {
-                    if let Some(delta) = deltas.get_mut(uid_str) {
-                        delta.hands_won = 1;
-                        if delta.biggest_pot_won < winner.amount_won {
-                            delta.biggest_pot_won = winner.amount_won;
-                        }
+                if let Some(uid_str) = player_to_user.get(&winner.player_id)
+                    && let Some(delta) = deltas.get_mut(uid_str)
+                {
+                    delta.hands_won = 1;
+                    if delta.biggest_pot_won < winner.amount_won {
+                        delta.biggest_pot_won = winner.amount_won;
                     }
                 }
             }

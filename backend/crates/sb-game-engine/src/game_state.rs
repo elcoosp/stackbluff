@@ -115,6 +115,44 @@ impl GameState {
             .and_then(|p| p.hole_cards)
     }
 
+    /// Forcefully folds a player, bypassing turn checks.
+    /// Useful for disconnection/timeout scenarios.
+    pub fn force_fold(&mut self, player_id: PlayerId) -> Result<(), ActionError> {
+        if self.hand_complete {
+            return Err(ActionError::HandComplete);
+        }
+        let idx = self
+            .players
+            .iter()
+            .position(|p| p.player_id == player_id)
+            .ok_or(ActionError::NotYourTurn)?; // using NotYourTurn for "not found"
+
+        let p = &mut self.players[idx];
+        if p.has_folded {
+            return Err(ActionError::AlreadyFolded);
+        }
+        if p.is_all_in {
+            return Err(ActionError::AlreadyAllIn);
+        }
+
+        // Mark folded
+        p.has_folded = true;
+        p.acted_this_round = true;
+
+        // If the folded player was the current player, advance the turn
+        if idx == self.current_player_index {
+            self.advance_turn();
+        }
+
+        // Check if the hand is now complete (only one active player left)
+        let active_count = self.players.iter().filter(|p| !p.has_folded).count();
+        if active_count <= 1 {
+            self.hand_complete = true;
+        }
+
+        Ok(())
+    }
+
     pub fn new_hand(
         table_id: TableId,
         players: Vec<(PlayerId, ChipAmount)>,

@@ -1,5 +1,4 @@
 import { useState, useLayoutEffect } from 'react';
-import { useGameStore } from '@stackbluff/shared/stores/gameStore';
 import {
   desktopPositions,
   getMobilePositions,
@@ -24,10 +23,10 @@ interface ChipAnimationLayerProps {
   isDesktop: boolean;
   heroSeat: number;
   potRef: React.RefObject<HTMLDivElement>;
+  showdownReveal: any;
 }
 
-export const ChipAnimationLayer = ({ isDesktop, heroSeat }: ChipAnimationLayerProps) => {
-  const showdownReveal = useGameStore((s) => s.showdownReveal);
+export const ChipAnimationLayer = ({ isDesktop, heroSeat, potRef, showdownReveal }: ChipAnimationLayerProps) => {
   const vw = useViewportWidth();
 
   const isNarrow = !isDesktop && vw < 362;

@@ -45,7 +45,7 @@ export interface ActionRequired {
 }
 
 export interface TableState {
-  table_id: string;
+  room_id: string;
   seats: Seat[];
   community_cards: Card[];
   pot: number;
@@ -74,7 +74,7 @@ export interface ShowdownRevealData {
   pot: number;
 }
 
-interface GameState {
+export interface GameRoomState {
   tableId: string | null;
   seats: Record<number, Seat>;
   communityCards: Card[];
@@ -92,27 +92,9 @@ interface GameState {
   winners: { name: string; amount: number }[] | null;
   handInProgress: boolean;
   lastAction: { player_id: string; action: string; amount: number | null } | null;
-
-  // --- METHODS ---
-  setTableState: (state: TableState) => void;
-  setHeroSeat: (seat: number) => void;
-  setHeroHoleCards: (cards: Card[]) => void;
-  setActionRequired: (req: ActionRequired) => void;
-  clearActionRequired: () => void;
-  setAnalytics: (analytics: Analytics | null) => void;
-  setShowdownReveal: (data: ShowdownRevealData | null) => void;
-  applyActionBroadcast: (broadcast: {
-    player_id: string;
-    action: string;
-    amount: number | null;
-    new_stack: number;
-    new_pot: number;
-  }) => void;
-  setHandResult: (result: { winners: { name: string; amount: number }[]; pot: number }) => void;
-  reset: () => void;
 }
 
-export const useGameStore = create<GameState>((set, get) => ({
+const createInitialRoomState = (): GameRoomState => ({
   tableId: null,
   seats: {},
   communityCards: [],
@@ -130,93 +112,163 @@ export const useGameStore = create<GameState>((set, get) => ({
   winners: null,
   handInProgress: false,
   lastAction: null,
+});
 
-  setTableState: (state) => {
+// CRITICAL FIX: Cache a single instance of the empty state to prevent
+// infinite re-render loops in Zustand when returning default values.
+const EMPTY_ROOM_STATE = createInitialRoomState();
+
+interface GameState {
+  rooms: Record<string, GameRoomState>;
+  activeRoomId: string | null;
+
+  ensureRoom: (roomId: string) => void;
+  setRoomState: (roomId: string, state: TableState) => void;
+  setHeroSeat: (roomId: string, seat: number) => void;
+  setHeroHoleCards: (roomId: string, cards: Card[]) => void;
+  setActionRequired: (roomId: string, req: ActionRequired) => void;
+  clearActionRequired: (roomId: string) => void;
+  setAnalytics: (roomId: string, analytics: Analytics | null) => void;
+  setShowdownReveal: (roomId: string, data: ShowdownRevealData | null) => void;
+  applyActionBroadcast: (roomId: string, broadcast: any) => void;
+  setHandResult: (roomId: string, result: { winners: any[]; pot: number }) => void;
+  removeRoom: (roomId: string) => void;
+  setActiveRoom: (roomId: string) => void;
+}
+
+export const useGameStore = create<GameState>((set, get) => ({
+  rooms: {},
+  activeRoomId: null,
+
+  ensureRoom: (roomId) => set((state) => {
+    if (state.rooms[roomId]) return {};
+    return { rooms: { ...state.rooms, [roomId]: createInitialRoomState() } };
+  }),
+
+  setRoomState: (roomId, tableState) => set((state) => {
+    if (!state.rooms[roomId]) return {};
     const seatsMap: Record<number, Seat> = {};
-    state.seats.forEach((seat) => {
+    tableState.seats.forEach((seat) => {
       seatsMap[seat.seat] = {
         ...seat,
         is_active: !seat.is_folded && !seat.is_all_in,
       };
     });
 
-    set({
-      tableId: state.table_id,
-      seats: seatsMap,
-      communityCards: state.community_cards || [],
-      pot: state.pot || 0,
-      sidePots: state.side_pots || [],
-      street: state.street || '',
-      currentTurnUserId: state.current_turn_user_id || null,
-      currentTurnExpiresAt: state.current_turn_expires_at || null,
-      currentTurnTimeoutMs: state.current_turn_timeout_ms || null,
-      handInProgress: state.current_hand_in_progress || false,
-    });
-  },
-
-  setHeroSeat: (seat) => set({ heroSeat: seat }),
-
-  setHeroHoleCards: (cards) => {
-    if (cards && cards.length === 2) {
-      set({ heroHoleCards: cards as [Card, Card] });
-    }
-  },
-
-  setActionRequired: (req) => set({ actionRequired: req }),
-  clearActionRequired: () => set({ actionRequired: null }),
-
-  setAnalytics: (analytics) => set({ analytics }),
-
-  setShowdownReveal: (data) => set({ showdownReveal: data }),
-
-  applyActionBroadcast: (broadcast) => {
-    const { player_id, action, amount, new_stack, new_pot } = broadcast;
-    set((state) => {
-      const seatNum = Object.keys(state.seats).find(
-        (key) => state.seats[Number(key)].user_id === player_id
-      );
-      if (seatNum === undefined) return state;
-
-      const newSeats = { ...state.seats };
-      const seat = newSeats[Number(seatNum)];
-      if (seat) {
-        seat.stack = new_stack;
+    return {
+      rooms: {
+        ...state.rooms,
+        [roomId]: {
+          ...state.rooms[roomId],
+          tableId: tableState.room_id,
+          seats: seatsMap,
+          communityCards: tableState.community_cards || [],
+          pot: tableState.pot || 0,
+          sidePots: tableState.side_pots || [],
+          street: tableState.street || '',
+          currentTurnUserId: tableState.current_turn_user_id || null,
+          currentTurnExpiresAt: tableState.current_turn_expires_at || null,
+          currentTurnTimeoutMs: tableState.current_turn_timeout_ms || null,
+          handInProgress: tableState.current_hand_in_progress || false,
+        }
       }
-      return {
-        seats: newSeats,
-        pot: new_pot,
-        lastAction: { player_id, action, amount },
-      };
-    });
-  },
+    };
+  }),
 
-  setHandResult: (result) => {
-    set({
-      winners: result.winners,
-      actionRequired: null,
-      showdownReveal: null,
-    });
-  },
+  setHeroSeat: (roomId, seat) => set((state) => {
+    if (!state.rooms[roomId]) return {};
+    return { rooms: { ...state.rooms, [roomId]: { ...state.rooms[roomId], heroSeat: seat } } };
+  }),
 
-  reset: () => {
-    set({
-      tableId: null,
-      seats: {},
-      communityCards: [],
-      pot: 0,
-      sidePots: [],
-      street: '',
-      currentTurnUserId: null,
-      currentTurnExpiresAt: null,
-      currentTurnTimeoutMs: null,
-      heroSeat: null,
-      heroHoleCards: null,
-      actionRequired: null,
-      analytics: null,
-      showdownReveal: null,
-      winners: null,
-      handInProgress: false,
-      lastAction: null,
-    });
-  },
+  setHeroHoleCards: (roomId, cards) => set((state) => {
+    if (!state.rooms[roomId]) return {};
+    if (cards && cards.length === 2) {
+      return { rooms: { ...state.rooms, [roomId]: { ...state.rooms[roomId], heroHoleCards: cards as [Card, Card] } } };
+    }
+    return {};
+  }),
+
+  setActionRequired: (roomId, req) => set((state) => {
+    if (!state.rooms[roomId]) return {};
+    return { rooms: { ...state.rooms, [roomId]: { ...state.rooms[roomId], actionRequired: req } } };
+  }),
+
+  clearActionRequired: (roomId) => set((state) => {
+    if (!state.rooms[roomId]) return {};
+    return { rooms: { ...state.rooms, [roomId]: { ...state.rooms[roomId], actionRequired: null } } };
+  }),
+
+  setAnalytics: (roomId, analytics) => set((state) => {
+    if (!state.rooms[roomId]) return {};
+    return { rooms: { ...state.rooms, [roomId]: { ...state.rooms[roomId], analytics } } };
+  }),
+
+  setShowdownReveal: (roomId, data) => set((state) => {
+    if (!state.rooms[roomId]) return {};
+    return { rooms: { ...state.rooms, [roomId]: { ...state.rooms[roomId], showdownReveal: data } } };
+  }),
+
+  applyActionBroadcast: (roomId, broadcast) => set((state) => {
+    if (!state.rooms[roomId]) return {};
+    const { player_id, action, amount, new_stack, new_pot } = broadcast;
+    const roomState = state.rooms[roomId];
+
+    const seatNum = Object.keys(roomState.seats).find(
+      (key) => roomState.seats[Number(key)].user_id === player_id
+    );
+    if (seatNum === undefined) return {};
+
+    const newSeats = { ...roomState.seats };
+    const seat = newSeats[Number(seatNum)];
+    if (seat) {
+      seat.stack = new_stack;
+    }
+
+    return {
+      rooms: {
+        ...state.rooms,
+        [roomId]: {
+          ...roomState,
+          seats: newSeats,
+          pot: new_pot,
+          lastAction: { player_id, action, amount },
+        }
+      }
+    };
+  }),
+
+  setHandResult: (roomId, result) => set((state) => {
+    if (!state.rooms[roomId]) return {};
+    return {
+      rooms: {
+        ...state.rooms,
+        [roomId]: {
+          ...state.rooms[roomId],
+          winners: result.winners,
+          actionRequired: null,
+          showdownReveal: null,
+        }
+      }
+    };
+  }),
+
+  removeRoom: (roomId) => set((state) => {
+    const newRooms = { ...state.rooms };
+    delete newRooms[roomId];
+    return {
+      rooms: newRooms,
+      activeRoomId: state.activeRoomId === roomId
+        ? Object.keys(newRooms)[0] || null
+        : state.activeRoomId
+    };
+  }),
+
+  setActiveRoom: (roomId) => set({ activeRoomId: roomId }),
 }));
+
+export const useActiveRoom = () => {
+  return useGameStore((state) => {
+    if (!state.activeRoomId) return EMPTY_ROOM_STATE;
+    return state.rooms[state.activeRoomId] || EMPTY_ROOM_STATE;
+  });
+};

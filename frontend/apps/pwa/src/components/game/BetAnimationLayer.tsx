@@ -1,6 +1,5 @@
 import { useState, useLayoutEffect, useEffect, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { useGameStore } from '@stackbluff/shared/stores/gameStore';
 import {
   desktopPositions,
   getMobilePositions,
@@ -24,11 +23,11 @@ function useViewportWidth() {
 interface BetAnimationLayerProps {
   isDesktop: boolean;
   heroSeat: number;
+  lastAction: any;
+  seats: Record<number, any>;
 }
 
-export const BetAnimationLayer = ({ isDesktop, heroSeat }: BetAnimationLayerProps) => {
-  const lastAction = useGameStore((s) => s.lastAction);
-  const seats = useGameStore((s) => s.seats);
+export const BetAnimationLayer = ({ isDesktop, heroSeat, lastAction, seats }: BetAnimationLayerProps) => {
   const vw = useViewportWidth();
 
   const isNarrow = !isDesktop && vw < 362;

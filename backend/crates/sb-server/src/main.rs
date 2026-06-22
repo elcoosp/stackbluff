@@ -28,7 +28,7 @@ use sb_shared_types::{GameVariant, StakeLevel, TableConfig};
 use sb_table_registry::buy_in_limits_for_stake;
 use sb_table_registry::registry::Registry;
 use sb_table_registry::spawn_history_recorder;
-use sb_table_registry::stats_aggregator::spawn_stats_aggregator; // Added this import
+use sb_table_registry::stats_aggregator::spawn_stats_aggregator;
 use sb_table_registry::table_service::TableServiceImpl;
 use sb_ws_handler::ws_route;
 
@@ -54,6 +54,8 @@ async fn main() {
     migration::Migrator::up(&db, None)
         .await
         .expect("failed to run migrations");
+
+    leaderboard_refresh::spawn_leaderboard_refresh_task(db.clone()).await;
 
     // ── Initialize DB Writer Loop & Repos ─────────────────
     let writer_handle = init_writer_loop(db.clone(), None);
@@ -96,9 +98,12 @@ async fn main() {
             turn_time_limit_ms: 30_000,
         };
         registry.register_existing_table(t.table_id, config).await;
-        tracing::info!(table_id = %t.table_id, "Hydrated table from DB");
+        tracing::info!(table_id = %t.table_id, "Hydrated table config from DB");
     }
     tracing::info!(count = db_tables.len(), "Registry hydrated from DB");
+
+    // Spawn Room Reaper
+    Registry::spawn_room_reaper(registry.clone()).await;
 
     // ── Create TableService (coordinates DB + Registry) ──────────
     let table_service: Arc<dyn sb_contracts::lobby_api::TableService> =
@@ -114,6 +119,8 @@ async fn main() {
     }
 
     // ── Initialize Hand History Repository ───────────────────────
+    let leaderboard_repo = Arc::new(sb_db_repos::LeaderboardRepo::new(db.clone()));
+
     let hand_history_repo: Arc<dyn HandHistoryRepository + Send + Sync> = Arc::new(
         HandHistoryRepoImpl::new(writer_handle.sender.clone(), db.clone()),
     );
@@ -135,6 +142,7 @@ async fn main() {
         table_repo.clone(),
         registry.clone(),
         hand_history_repo.clone(),
+        leaderboard_repo.clone(),
     )
     .merge(player_stats_routes(stats_repo.clone(), user_repo.clone()));
 

@@ -3,12 +3,13 @@ use sb_contracts::repo_api::HandHistoryRepository;
 use sb_db_entities::hand_history_json::{HandActions, HandPlayers, HandResult};
 use sb_shared_types::{RequestContext, TableId};
 use std::sync::Arc;
-use tracing::{error, warn};
+use tracing::{error, info, warn};
 use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub struct HandCompletedEvent {
-    pub table_id: TableId,
+    pub table_id: TableId, // The parent lobby blueprint
+    pub room_id: TableId,  // The specific actor instance
     pub played_at: DateTime<Utc>,
     pub players: HandPlayers,
     pub actions: HandActions,
@@ -26,11 +27,11 @@ pub fn spawn_history_recorder(
             match rx.recv().await {
                 Ok(event) => {
                     let hand_data = serde_json::json!({
-                        "table_id": event.table_id.as_uuid(),
+                        "table_id": event.table_id.as_uuid(), // Group history by parent table_id
                         "played_at": event.played_at,
                         "players": event.players,
                         "actions": event.actions,
-                        "result": event.result,
+                        "result": event.result
                     });
                     let ctx = RequestContext::new(Uuid::new_v4(), None);
                     if let Err(e) = repo.store_hand(ctx, hand_data).await {
@@ -48,5 +49,3 @@ pub fn spawn_history_recorder(
         }
     })
 }
-
-use tracing::info;

@@ -3,14 +3,6 @@ use serde::Serialize;
 use std::collections::HashMap;
 use tokio::sync::mpsc;
 
-// === Broadcast types ===
-pub type BroadcastSender = tokio::sync::broadcast::Sender<RoomMessage>;
-
-pub fn broadcast_channel(capacity: usize) -> BroadcastSender {
-    let (tx, _) = tokio::sync::broadcast::channel(capacity);
-    tx
-}
-
 // === WebSocket message types ===
 
 #[derive(Debug, Clone, Serialize)]
@@ -24,6 +16,7 @@ pub struct SidePotMessage {
     pub amount: u64,
     pub eligible_players: Vec<UserId>,
 }
+
 #[derive(Debug, Clone, Serialize)]
 pub struct ActionInfo {
     pub text: String,
@@ -39,6 +32,7 @@ pub struct PlayerStateInfo {
     pub current_bet: ChipAmount,
     pub is_all_in: bool,
     pub is_folded: bool,
+    pub is_leaving: bool, // CHANGED: Added to show "Away" state
     #[serde(skip_serializing_if = "Option::is_none")]
     pub position_badge: Option<String>,
     pub last_action: Option<ActionInfo>,
@@ -47,7 +41,7 @@ pub struct PlayerStateInfo {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct TableStateUpdate {
-    pub table_id: TableId,
+    pub room_id: TableId,
     pub players: Vec<PlayerStateInfo>,
     pub current_hand_in_progress: bool,
     pub community_cards: Vec<WsCard>,
@@ -69,6 +63,7 @@ pub struct AnalyticsPayload {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ActionRequired {
+    pub room_id: TableId,
     pub player_id: UserId,
     pub expires_at: u64,
     pub timeout_ms: u64,
@@ -80,6 +75,7 @@ pub struct ActionRequired {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ActionBroadcast {
+    pub room_id: TableId,
     pub player_id: UserId,
     pub action: String,
     pub amount: Option<u64>,
@@ -103,6 +99,7 @@ pub struct ShowdownPlayer {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ShowdownReveal {
+    pub room_id: TableId,
     pub players: Vec<ShowdownPlayer>,
     pub community_cards: Vec<WsCard>,
     pub pot: u64,
@@ -120,12 +117,12 @@ pub struct WinnerResult {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct HandResult {
+    pub room_id: TableId,
     pub winners: Vec<WinnerResult>,
     pub pot: u64,
 }
 
 // ── Room message enum ──
-
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type")]
 pub enum RoomMessage {
@@ -141,16 +138,24 @@ pub enum RoomMessage {
     HandResult(HandResult),
     #[serde(rename = "Error")]
     Error {
+        room_id: Option<TableId>,
         target_user_id: Option<UserId>,
         message: String,
     },
     #[serde(rename = "Connected")]
-    Connected { user_id: UserId, seat_index: u8 },
+    Connected {
+        room_id: TableId,
+        user_id: UserId,
+        seat_index: u8,
+    },
     #[serde(rename = "PrivateMessage")]
     PrivateMessage {
+        room_id: TableId,
         target_user_id: UserId,
         payload: PrivatePayload,
     },
+    #[serde(rename = "RoomAssigned")]
+    RoomAssigned { table_id: TableId, room_id: TableId },
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -160,8 +165,9 @@ pub enum PrivatePayload {
     Analytics { analytics: AnalyticsPayload },
 }
 
-// === Connection / GameRoom (kept for reference, but actual logic is in actor.rs) ===
+// === Connection / GameRoom ===
 
+#[allow(dead_code)]
 struct Connection {
     #[allow(dead_code)]
     user_id: UserId,
@@ -180,7 +186,6 @@ pub struct GameRoom {
     connections: HashMap<UserId, Connection>,
     game_state: Option<sb_game_engine::game_state::GameState>,
     dealer_index: usize,
-    broadcast_tx: BroadcastSender,
 }
 
 impl GameRoom {
@@ -193,7 +198,6 @@ impl GameRoom {
             connections: HashMap::new(),
             game_state: None,
             dealer_index: 0,
-            broadcast_tx: broadcast_channel(256),
         }
     }
 
@@ -224,12 +228,8 @@ impl GameRoom {
             .get_mut(&user_id)
             .ok_or("Player not connected")?;
         conn.seat_index = Some(seat);
-        conn.chip_stack = ChipAmount::new(buy_in as i64).unwrap_or(ChipAmount::default());
+        conn.chip_stack = ChipAmount::new(buy_in as i64).unwrap_or_default();
         Ok(())
-    }
-
-    pub fn subscribe(&self) -> tokio::sync::broadcast::Receiver<RoomMessage> {
-        self.broadcast_tx.subscribe()
     }
 
     pub fn apply_action(
@@ -258,16 +258,6 @@ impl GameRoom {
             }
             _ => return Err(format!("Unknown action: {}", action)),
         };
-
-        let _ = self
-            .broadcast_tx
-            .send(RoomMessage::ActionBroadcast(ActionBroadcast {
-                player_id: user_id,
-                action: action.to_string(),
-                amount,
-                new_stack: 0,
-                new_pot: 0,
-            }));
 
         let _ = parsed_action;
         Ok(())
@@ -301,28 +291,6 @@ impl GameRoom {
                 .map_err(|e| e.to_string())?,
         );
 
-        self.broadcast_table_state();
         Ok(())
-    }
-
-    fn broadcast_table_state(&self) {
-        let msg = RoomMessage::TableState(TableStateUpdate {
-            table_id: self.table_id,
-            players: vec![],
-            current_hand_in_progress: self.game_state.is_some(),
-            community_cards: vec![],
-            current_turn_user_id: None,
-            current_turn_expires_at: None,
-            current_turn_timeout_ms: None,
-            street: String::new(),
-            pot: 0,
-            side_pots: vec![],
-        });
-        let json = serde_json::to_string(&msg).unwrap_or_default();
-        for conn in self.connections.values() {
-            let _ = conn
-                .tx
-                .send(axum::extract::ws::Message::Text(json.clone().into()));
-        }
     }
 }

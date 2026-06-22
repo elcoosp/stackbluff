@@ -21,3 +21,5 @@ async-trait = { workspace = true }
 
 [dev-dependencies]
 mockall = { workspace = true }
+uuid = { workspace = true }
+sea-orm = { workspace = true, features = ["mock"] }
