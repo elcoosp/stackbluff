@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use strum::{Display, EnumIter, IntoEnumIterator};
+use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct MissionId(pub u32);
@@ -24,42 +24,101 @@ pub enum MissionCategory {
     Weekly,
 }
 
-#[derive(Debug, Clone, Display, EnumIter, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MissionType {
-    #[strum(to_string = "win_flush")]           WinFlush,
-    #[strum(to_string = "bluff_success_2")]      BluffSuccess2,
-    #[strum(to_string = "win_three_hands")]      WinThreeHands,
-    #[strum(to_string = "fold_preflop_5")]        FoldPreflop5,
-    #[strum(to_string = "call_bluff")]           CallBluff,
-    #[strum(to_string = "all_in_win")]           AllInWin,
-    #[strum(to_string = "high_card_win")]        HighCardWin,
-    #[strum(to_string = "pair_win")]             PairWin,
-    #[strum(to_string = "two_pair_win")]         TwoPairWin,
-    #[strum(to_string = "trips_win")]            TripsWin,
-    #[strum(to_string = "straight_win")]         StraightWin,
-    #[strum(to_string = "flush_win")]            FlushWin,
-    #[strum(to_string = "full_house_win")]       FullHouseWin,
-    #[strum(to_string = "quads_win")]            QuadsWin,
-    #[strum(to_string = "straight_flush_win")]   StraightFlushWin,
-    #[strum(to_string = "check_raise_success")]  CheckRaiseSuccess,
-    #[strum(to_string = "steal_blinds_2")]        StealBlinds2,
-    #[strum(to_string = "survive_all_in")]       SurviveAllIn,
-    #[strum(to_string = "win_no_showdown")]      WinNoShowdown,
-    #[strum(to_string = "play_10_hands")]        Play10Hands,
-    #[strum(to_string = "play_20_hands")]        Play20Hands,
-    #[strum(to_string = "win_two_consecutive")]  WinTwoConsecutive,
-    #[strum(to_string = "bust_1_player")]        Bust1Player,
-    #[strum(to_string = "river_win")]            RiverWin,
-    #[strum(to_string = "bad_beat_win")]         BadBeatWin,
-    #[strum(to_string = "raise_preflop_10")]      RaisePreflop10,
-    #[strum(to_string = "showdown_5")]           Showdown5,
-    #[strum(to_string = "button_win")]           ButtonWin,
-    #[strum(to_string = "all_in_3")]             AllIn3,
-    #[strum(to_string = "bluff_river_2folds")]   BluffRiver2Folds,
-    #[strum(to_string = "high_stake_5")]          HighStake5,
-    #[strum(to_string = "share_replay")]         ShareReplay,
-    #[strum(to_string = "referral_5_hands")]     Referral5Hands,
-    #[strum(to_string = "oracle_student")]       OracleStudent,
+    WinFlush,
+    BluffSuccess2,
+    WinThreeHands,
+    FoldPreflop5,
+    CallBluff,
+    AllInWin,
+    HighCardWin,
+    PairWin,
+    TwoPairWin,
+    TripsWin,
+    StraightWin,
+    FlushWin,
+    FullHouseWin,
+    QuadsWin,
+    StraightFlushWin,
+    CheckRaiseSuccess,
+    StealBlinds2,
+    SurviveAllIn,
+    WinNoShowdown,
+    Play10Hands,
+    Play20Hands,
+    WinTwoConsecutive,
+    Bust1Player,
+    RiverWin,
+    BadBeatWin,
+    RaisePreflop10,
+    Showdown5,
+    ButtonWin,
+    AllIn3,
+    BluffRiver2Folds,
+    HighStake5,
+    ShareReplay,
+    Referral5Hands,
+    OracleStudent,
+}
+
+impl fmt::Display for MissionType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            Self::WinFlush => "win_flush",
+            Self::BluffSuccess2 => "bluff_success_2",
+            Self::WinThreeHands => "win_three_hands",
+            Self::FoldPreflop5 => "fold_preflop_5",
+            Self::CallBluff => "call_bluff",
+            Self::AllInWin => "all_in_win",
+            Self::HighCardWin => "high_card_win",
+            Self::PairWin => "pair_win",
+            Self::TwoPairWin => "two_pair_win",
+            Self::TripsWin => "trips_win",
+            Self::StraightWin => "straight_win",
+            Self::FlushWin => "flush_win",
+            Self::FullHouseWin => "full_house_win",
+            Self::QuadsWin => "quads_win",
+            Self::StraightFlushWin => "straight_flush_win",
+            Self::CheckRaiseSuccess => "check_raise_success",
+            Self::StealBlinds2 => "steal_blinds_2",
+            Self::SurviveAllIn => "survive_all_in",
+            Self::WinNoShowdown => "win_no_showdown",
+            Self::Play10Hands => "play_10_hands",
+            Self::Play20Hands => "play_20_hands",
+            Self::WinTwoConsecutive => "win_two_consecutive",
+            Self::Bust1Player => "bust_1_player",
+            Self::RiverWin => "river_win",
+            Self::BadBeatWin => "bad_beat_win",
+            Self::RaisePreflop10 => "raise_preflop_10",
+            Self::Showdown5 => "showdown_5",
+            Self::ButtonWin => "button_win",
+            Self::AllIn3 => "all_in_3",
+            Self::BluffRiver2Folds => "bluff_river_2folds",
+            Self::HighStake5 => "high_stake_5",
+            Self::ShareReplay => "share_replay",
+            Self::Referral5Hands => "referral_5_hands",
+            Self::OracleStudent => "oracle_student",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl MissionType {
+    pub fn iter() -> std::slice::Iter<'static, MissionType> {
+        use MissionType::*;
+        static VARIANTS: &[MissionType] = &[
+            WinFlush, BluffSuccess2, WinThreeHands, FoldPreflop5, CallBluff,
+            AllInWin, HighCardWin, PairWin, TwoPairWin, TripsWin,
+            StraightWin, FlushWin, FullHouseWin, QuadsWin, StraightFlushWin,
+            CheckRaiseSuccess, StealBlinds2, SurviveAllIn, WinNoShowdown,
+            Play10Hands, Play20Hands, WinTwoConsecutive, Bust1Player,
+            RiverWin, BadBeatWin, RaisePreflop10, Showdown5, ButtonWin,
+            AllIn3, BluffRiver2Folds, HighStake5, ShareReplay,
+            Referral5Hands, OracleStudent,
+        ];
+        VARIANTS.iter()
+    }
 }
 
 pub fn all_mission_definitions() -> Vec<(String, String, i64, u32, MissionCategory)> {
