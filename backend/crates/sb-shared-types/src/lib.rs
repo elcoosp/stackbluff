@@ -1,3 +1,4 @@
+pub mod missions;
 pub mod cards;
 pub mod chips;
 pub mod errors;

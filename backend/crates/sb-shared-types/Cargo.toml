@@ -1,4 +1,5 @@
 [package]
+strum = { workspace = true }
 name = "sb-shared-types"
 version = "0.1.0"
 edition = "2024"
