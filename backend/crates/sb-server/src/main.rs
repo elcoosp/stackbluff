@@ -56,6 +56,8 @@ async fn main() {
         .await
         .expect("failed to run migrations");
 
+    leaderboard_refresh::spawn_leaderboard_refresh_task(db.clone()).await;
+
     // ── Initialize DB Writer Loop & Repos ─────────────────
     let writer_handle = init_writer_loop(db.clone(), None);
     let user_repo: Arc<dyn UserRepo> = Arc::new(UserRepoImpl::new(writer_handle.sender.clone()));
@@ -118,6 +120,8 @@ async fn main() {
     }
 
     // ── Initialize Hand History Repository ───────────────────────
+    let leaderboard_repo = Arc::new(sb_db_repos::LeaderboardRepo::new(db.clone()));
+
     let hand_history_repo: Arc<dyn HandHistoryRepository + Send + Sync> = Arc::new(
         HandHistoryRepoImpl::new(writer_handle.sender.clone(), db.clone()),
     );
@@ -139,6 +143,7 @@ async fn main() {
         table_repo.clone(),
         registry.clone(),
         hand_history_repo.clone(),
+        leaderboard_repo.clone(),
     )
     .merge(player_stats_routes(stats_repo.clone(), user_repo.clone()));
 

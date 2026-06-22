@@ -1,3 +1,4 @@
+pub mod leaderboard;
 pub mod lobby_api;
 
 pub mod async_hooks;

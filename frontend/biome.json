@@ -9,19 +9,49 @@
       "*.json",
       "*.js"
     ],
-    "ignore": ["**/*.css", "**/routeTree.gen.ts"],
+    "ignore": [
+      "**/*.css",
+      "**/routeTree.gen.ts"
+    ],
     "ignoreUnknown": true
   },
-  "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2, "lineWidth": 100 },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
   "linter": {
     "enabled": true,
     "rules": {
       "recommended": true,
-      "style": { "noNonNullAssertion": "off" },
-      "correctness": { "noUnusedVariables": "error" }
+      "style": {
+        "noNonNullAssertion": "off"
+      },
+      "correctness": {
+        "noUnusedVariables": "error"
+      }
     }
   },
-  "javascript": { "formatter": { "quoteStyle": "single", "semicolons": "always" } },
-  "css": { "linter": { "enabled": false }, "formatter": { "enabled": true } },
-  "assist": { "actions": { "source": { "organizeImports": "on" } } }
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "semicolons": "always"
+    }
+  },
+  "css": {
+    "linter": {
+      "enabled": false
+    },
+    "formatter": {
+      "enabled": true
+    }
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  }
 }

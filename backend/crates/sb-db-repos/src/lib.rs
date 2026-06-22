@@ -1,3 +1,5 @@
+#![allow(clippy::needless_update)]
+pub mod leaderboard_repo;
 pub mod referral_repo;
 
 pub mod commands;
@@ -12,3 +14,5 @@ pub use writer_loop::init_writer_loop;
 pub use table_repo::TableRepoImpl;
 
 pub use hand_history_repo::HandHistoryRepoImpl;
+
+pub use leaderboard_repo::{LeaderboardRepo, refresh_leaderboard_mv};

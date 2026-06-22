@@ -399,7 +399,7 @@ fn get_strength_score(strength: &sb_game_engine::evaluate::HandStrength) -> u8 {
     };
 
     if let Some(&kicker) = strength.kickers.first() {
-        let bonus = (kicker as u8 - 2) / 4;
+        let bonus = (kicker - 2) / 4;
         let total = base + bonus;
         if total > 100 { 100 } else { total }
     } else {
@@ -796,7 +796,7 @@ impl TableActor {
             return;
         }
 
-        let mut player = Player::new(user_id, display_name, seat, stack);
+        let player = Player::new(user_id, display_name, seat, stack);
 
         let stats_repo = self.stats_repo.clone();
         let cmd_tx = self.cmd_tx.clone();
@@ -903,19 +903,19 @@ impl TableActor {
                 return;
             }
 
-            if let Some(hand) = &self.current_hand {
-                if hand.player_by_user_id.contains_key(&user_id) {
-                    is_in_hand = true;
-                    player.is_leaving = true;
-                    player.force_leave = force;
-                    if let Some(rt) = responder_opt.take() {
-                        player.leave_responder = Some(rt);
-                    }
-                    if force {
-                        should_fold = true;
-                    }
-                    info!(%user_id, force, "Player left during hand. Deferring refund until hand completes.");
+            if let Some(hand) = &self.current_hand
+                && hand.player_by_user_id.contains_key(&user_id)
+            {
+                is_in_hand = true;
+                player.is_leaving = true;
+                player.force_leave = force;
+                if let Some(rt) = responder_opt.take() {
+                    player.leave_responder = Some(rt);
                 }
+                if force {
+                    should_fold = true;
+                }
+                info!(%user_id, force, "Player left during hand. Deferring refund until hand completes.");
             }
         }
 
@@ -923,12 +923,11 @@ impl TableActor {
             if should_fold {
                 debug!(%user_id, "Force folding player in hand");
                 if let Some(hand) = &mut self.current_hand {
-                    if let Some(pid) = hand.player_by_user_id.get(&user_id).copied() {
-                        if !hand.state.player_is_all_in(pid) {
-                            if let Err(e) = hand.state.force_fold(pid) {
-                                warn!(%user_id, error = ?e, "Failed to force fold player");
-                            }
-                        }
+                    if let Some(pid) = hand.player_by_user_id.get(&user_id).copied()
+                        && !hand.state.player_is_all_in(pid)
+                        && let Err(e) = hand.state.force_fold(pid)
+                    {
+                        warn!(%user_id, error = ?e, "Failed to force fold player");
                     }
                     hand.cancel_timeout();
 
@@ -1233,10 +1232,10 @@ impl TableActor {
             Ok(()) => {
                 hand.cancel_timeout();
 
-                if let Some(new_stack) = hand.player_stack(user_id) {
-                    if let Some(player) = self.players.get_mut(&user_id) {
-                        player.stack = new_stack;
-                    }
+                if let Some(new_stack) = hand.player_stack(user_id)
+                    && let Some(player) = self.players.get_mut(&user_id)
+                {
+                    player.stack = new_stack;
                 }
 
                 let new_pot = hand.state.current_pot();
@@ -1520,8 +1519,8 @@ impl TableActor {
 
         let final_stacks: HashMap<PlayerId, i64> = self
             .players
-            .iter()
-            .map(|(_, p)| (p.player_id, p.stack.as_i64()))
+            .values()
+            .map(|p| (p.player_id, p.stack.as_i64()))
             .collect();
         for hp in &mut self.hand_players {
             if let Some(stack) = final_stacks.get(&hp.player_id) {
@@ -1533,7 +1532,7 @@ impl TableActor {
         let event = HandCompletedEvent {
             table_id: self.table_id,
             room_id: self.room_id,
-            played_at: self.hand_started_at.unwrap_or_else(|| Utc::now()),
+            played_at: self.hand_started_at.unwrap_or_else(Utc::now),
             players: HandPlayers {
                 seats: self.hand_players.clone(),
             },
@@ -1720,23 +1719,23 @@ impl TableActor {
                 let mut hand_description = String::new();
                 let mut winning_cards_ws: Vec<WsCard> = vec![];
 
-                if is_showdown && community.len() >= 5 && is_winner {
-                    if let Some(cards) = hole_cards_opt {
-                        if cards.len() == 2 {
-                            if let Some(comm) = community_cards_to_array(hand) {
-                                let (strength, winning_cards_raw) =
-                                    sb_game_engine::evaluate::evaluate_hand_strength(&cards, &comm);
-                                hand_description = get_hand_description(&strength);
-                                winning_cards_ws = winning_cards_raw
-                                    .iter()
-                                    .map(|c| WsCard {
-                                        suit: format!("{:?}", c.suit).to_lowercase(),
-                                        rank: format!("{:?}", c.rank),
-                                    })
-                                    .collect();
-                            }
-                        }
-                    }
+                if is_showdown
+                    && community.len() >= 5
+                    && is_winner
+                    && let Some(cards) = hole_cards_opt
+                    && cards.len() == 2
+                    && let Some(comm) = community_cards_to_array(hand)
+                {
+                    let (strength, winning_cards_raw) =
+                        sb_game_engine::evaluate::evaluate_hand_strength(&cards, &comm);
+                    hand_description = get_hand_description(&strength);
+                    winning_cards_ws = winning_cards_raw
+                        .iter()
+                        .map(|c| WsCard {
+                            suit: format!("{:?}", c.suit).to_lowercase(),
+                            rank: format!("{:?}", c.rank),
+                        })
+                        .collect();
                 }
 
                 Some(ShowdownPlayer {

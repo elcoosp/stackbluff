@@ -167,6 +167,7 @@ pub enum PrivatePayload {
 
 // === Connection / GameRoom ===
 
+#[allow(dead_code)]
 struct Connection {
     #[allow(dead_code)]
     user_id: UserId,
@@ -227,7 +228,7 @@ impl GameRoom {
             .get_mut(&user_id)
             .ok_or("Player not connected")?;
         conn.seat_index = Some(seat);
-        conn.chip_stack = ChipAmount::new(buy_in as i64).unwrap_or(ChipAmount::default());
+        conn.chip_stack = ChipAmount::new(buy_in as i64).unwrap_or_default();
         Ok(())
     }
 

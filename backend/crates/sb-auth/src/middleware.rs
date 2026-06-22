@@ -5,10 +5,10 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use jsonwebtoken::{DecodingKey, Validation, decode};
-use serde::{Deserialize, Serialize};
-use tower_cookies::Cookies;
 use once_cell::sync::Lazy;
+use serde::{Deserialize, Serialize};
 use std::env;
+use tower_cookies::Cookies;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Claims {
