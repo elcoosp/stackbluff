@@ -16,4 +16,3 @@ tracing = { workspace = true }
 rand = { workspace = true }
 chrono = { workspace = true }
 axum = { workspace = true }
-strum = { workspace = true }
