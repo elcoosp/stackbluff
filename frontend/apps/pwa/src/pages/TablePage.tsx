@@ -61,6 +61,7 @@ function useMediaQuery(query: string): boolean {
    ═══════════════════════════════════════════════════════════════════ */
 function useGameFeedback(
   game: ReturnType<typeof useActiveRoom>,
+  activeRoomId: string | null,
   resolvedHeroSeat: number,
   isMyTurn: boolean,
   heroTimerRemainingMs: number | null,
@@ -74,6 +75,18 @@ function useGameFeedback(
   const prevSeatActions = useRef<Record<number, string>>({});
   const prevPot = useRef(game.pot);
   const prevActionRequired = useRef(!!game.actionRequired);
+  const prevRoomId = useRef(activeRoomId);
+
+  // Reset all refs when active room changes to prevent false triggers
+  if (prevRoomId.current !== activeRoomId) {
+    prevCommunityLen.current = game.communityCards?.length ?? 0;
+    prevShowdown.current = game.showdownReveal;
+    prevCurrentTurn.current = game.currentTurnUserId;
+    prevSeatActions.current = {};
+    prevPot.current = game.pot;
+    prevActionRequired.current = !!game.actionRequired;
+    prevRoomId.current = activeRoomId;
+  }
 
   const getSeatByUserId = useCallback(
     (userId: string): number | undefined => {
@@ -206,6 +219,11 @@ export function TablePage() {
   const { tableId } = useParams({ from: '/table/$tableId' });
   const search = useSearch({ from: '/table/$tableId' });
   const navigate = useNavigate();
+
+  // FIX: urlBuyIn and isObserving declared early to be available to all hooks
+  const isObserving = (search as any)?.observe === 'true' || (search as any)?.observe === true;
+  const urlBuyIn = (search as any)?.buyIn as number | undefined;
+
   const { sendJoin, sendAction, sendRebuy, connectionStatus, myUserId, notSeated, sendLeave } = useGameWebSocket(tableId);
   const isDesktop = useResponsiveLayout();
   const showAnalytics = useMediaQuery('(min-width: 980px)');
@@ -223,14 +241,12 @@ export function TablePage() {
   const [showHistory, setShowHistory] = useState(false);
   const [hasJoined, setHasJoined] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
+  const [isAddingTable, setIsAddingTable] = useState(false);
   const [statsUserId, setStatsUserId] = useState<string | null>(null);
   const { isDealing } = useDealStore();
   const balance = useAuthStore((s) => s.balance);
 
-  const isObserving = (search as any)?.observe === 'true' || (search as any)?.observe === true;
-  const urlBuyIn = (search as any)?.buyIn as number | undefined;
-
-  // FIX: Clear stale rooms only when urlBuyIn actually changes
+  // Clear stale rooms only when urlBuyIn actually changes
   useEffect(() => {
     if (urlBuyIn && urlBuyIn > 0) {
       useGameStore.setState({ rooms: {}, activeRoomId: null });
@@ -248,6 +264,11 @@ export function TablePage() {
       }
     }
   }, [rooms, tableId, activeRoomId]);
+
+  // Reset dealing state when switching tables to prevent replaying the deal animation
+  useEffect(() => {
+    useDealStore.setState({ isDealing: false });
+  }, [activeRoomId]);
 
   const {
     seats,
@@ -377,11 +398,10 @@ export function TablePage() {
     if (isHeroSeated && !hasJoined) {
       setHasJoined(true);
     }
-    if (isHeroSeated && showRebuyDialog) {
+    if (isHeroSeated && showRebuyDialog && !isAddingTable) {
       setShowRebuyDialog(false);
     }
-    // FIX: Depend on urlBuyIn instead of search object to prevent infinite loops
-  }, [connectionStatus, isHeroSeated, isObserving, hasJoined, urlBuyIn, sendJoin, showRebuyDialog]);
+  }, [connectionStatus, isHeroSeated, isObserving, hasJoined, urlBuyIn, sendJoin, showRebuyDialog, isAddingTable]);
 
   // Show Rebuy Dialog if hero runs out of chips
   useEffect(() => {
@@ -391,10 +411,10 @@ export function TablePage() {
 
     if (hasJoined && heroStack === 0 && !isJoining && connectionStatus === 'connected' && !game.handInProgress && !isObserving) {
       setShowRebuyDialog(true);
-    } else if (heroStack > 0) {
+    } else if (heroStack > 0 && !isAddingTable) {
       setShowRebuyDialog(false);
     }
-  }, [heroStack, connectionStatus, hasJoined, isJoining, game.handInProgress, isObserving]);
+  }, [heroStack, connectionStatus, hasJoined, isJoining, game.handInProgress, isObserving, isAddingTable]);
 
   // Prevent "Disconnected" flash on initial mount
   const [showDisconnect, setShowDisconnect] = useState(false);
@@ -492,6 +512,7 @@ export function TablePage() {
 
   useGameFeedback(
     game,
+    activeRoomId,
     resolvedHeroSeat,
     isMyTurn,
     heroTimerRemainingMs ?? 0,
@@ -523,6 +544,11 @@ export function TablePage() {
       }
     }
   }, [sendLeave, navigate, activeRoomId, roomIds]);
+
+  const handleAddTable = useCallback(() => {
+    setIsAddingTable(true);
+    setShowRebuyDialog(true);
+  }, []);
 
   const isAnyAllIn = Object.values(seatsWithShowdown).some(
     (s: any) => s.is_all_in && !s.is_folded
@@ -582,28 +608,33 @@ export function TablePage() {
           headerActionsEl
         )}
 
-        {roomIds.length > 0 && (
-          <div className="absolute top-16 left-1/2 -translate-x-1/2 z-[400] flex gap-2 bg-black/50 backdrop-blur-md p-1 rounded-b-lg border border-t-0 border-white/10">
-            {roomIds.map((rId) => (
-              <button
-                key={rId}
-                onClick={() => useGameStore.getState().setActiveRoom(rId)}
-                className={cn(
-                  "px-3 py-1 text-[10px] font-mono rounded-md transition-colors",
-                  rId === activeRoomId ? "bg-tertiary text-on-tertiary" : "text-on-surface-variant hover:bg-white/5"
-                )}
-              >
-                {rId.slice(0, 4)}
-              </button>
-            ))}
-            <button
-              onClick={() => navigate({ to: '/lobby' })}
-              className="px-2 py-1 text-[10px] font-mono rounded-md text-on-surface-variant hover:bg-white/5"
-            >
-              <Plus className="w-3 h-3" />
-            </button>
-          </div>
-        )}
+        {/* Vertical Glass Morphism Multi-table Rail */}
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 z-[1000] flex flex-col items-center gap-3">
+          {roomIds.map((rId) => (
+            <motion.button
+              key={rId}
+              onClick={() => useGameStore.getState().setActiveRoom(rId)}
+              whileTap={{ x: -6, scale: 1.3 }}
+              whileHover={{ x: -2 }}
+              className={cn(
+                "rounded-full backdrop-blur-md border transition-all duration-200",
+                rId === activeRoomId
+                  ? "w-4 h-4 bg-emerald-500/80 border-white/60 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+                  : "w-3 h-3 bg-white/15 border-white/30 hover:bg-white/30"
+              )}
+              aria-label={`Switch to table ${rId.slice(0, 4)}`}
+            />
+          ))}
+          <motion.button
+            onClick={handleAddTable}
+            whileTap={{ x: -6, scale: 1.2 }}
+            whileHover={{ x: -2 }}
+            className="w-5 h-5 rounded-full bg-black/40 backdrop-blur-md border border-white/20 text-white/80 hover:text-white flex items-center justify-center transition-colors"
+            aria-label="Add table"
+          >
+            <Plus className="w-3 h-3" />
+          </motion.button>
+        </div>
 
         <FeedbackSettingsDialog open={showSettings} onClose={() => setShowSettings(false)} />
         <LeaveTableDialog
@@ -616,9 +647,21 @@ export function TablePage() {
         <HistoryDialog open={showHistory} onClose={() => setShowHistory(false)} tableId={tableId} />
         <BuyInDialog
           open={showRebuyDialog}
-          onClose={() => { if (!hasJoined && !isHeroSeated) { navigate({ to: '/lobby' }); } else { setShowRebuyDialog(false); } }}
+          onClose={() => {
+            if (isAddingTable) {
+              setIsAddingTable(false);
+              setShowRebuyDialog(false);
+            } else if (!hasJoined && !isHeroSeated) {
+              navigate({ to: '/lobby' });
+            } else {
+              setShowRebuyDialog(false);
+            }
+          }}
           onConfirm={(amount) => {
-            if (!isHeroSeated) {
+            if (isAddingTable) {
+              sendJoin(amount);
+              setIsAddingTable(false);
+            } else if (!isHeroSeated) {
               sendJoin(amount);
               setHasJoined(true);
               setIsJoining(true);
@@ -630,7 +673,7 @@ export function TablePage() {
           minBuyIn={100}
           maxBuyIn={200000}
           defaultBuyIn={1000}
-          isRebuy={isHeroSeated}
+          isRebuy={isHeroSeated && !isAddingTable}
           currentBalance={balance}
         />
         <PlayerStatsDialog userId={statsUserId} onOpenChange={(open) => !open && setStatsUserId(null)} />
@@ -724,7 +767,9 @@ export function TablePage() {
               onShowStats={setStatsUserId}
             />
 
+            {/* FIX: Added keys to force remount on table switch to prevent animation replay */}
             <DealAnimationLayer
+              key={`deal-${activeRoomId}`}
               isDesktop={isDesktop}
               heroSeat={resolvedHeroSeat}
               heroHoleCards={heroHoleCards}
@@ -732,6 +777,7 @@ export function TablePage() {
               seats={seatsWithShowdown}
             />
             <BetAnimationLayer
+              key={`bet-${activeRoomId}`}
               isDesktop={isDesktop}
               heroSeat={resolvedHeroSeat}
               lastAction={lastAction}
@@ -740,6 +786,7 @@ export function TablePage() {
 
             {showdownMorphComplete && (
               <ChipAnimationLayer
+                key={`chip-${activeRoomId}`}
                 isDesktop={isDesktop}
                 heroSeat={resolvedHeroSeat}
                 potRef={potRef}
