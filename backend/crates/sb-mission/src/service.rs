@@ -5,6 +5,7 @@ use chrono::{NaiveDate, Utc};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use sea_orm::*;
+use uuid::Uuid;
 use sb_shared_types::missions::*;
 use sb_shared_types::game_types::HandResult;
 use sb_shared_types::chips::ChipAmount;
@@ -24,7 +25,7 @@ impl MissionServiceImpl {
         Self { db, user_service }
     }
 
-    fn select_daily_missions(&self, user_id: i32, date: NaiveDate) -> [usize; 3] {
+    fn select_daily_missions(&self, user_id: Uuid, date: NaiveDate) -> [usize; 3] {
         let pool = all_mission_definitions();
         let seed = format!("{}-{}", date, user_id);
         let mut hasher = std::hash::DefaultHasher::new();
@@ -40,7 +41,7 @@ impl MissionServiceImpl {
         [v[0], v[1], v[2]]
     }
 
-    async fn ensure_daily_assignments(&self, user_id: i32, date: NaiveDate) -> Result<Vec<daily_mission::Model>, AppError> {
+    async fn ensure_daily_assignments(&self, user_id: Uuid, date: NaiveDate) -> Result<Vec<daily_mission::Model>, AppError> {
         let existing = daily_mission::Entity::find()
             .filter(daily_mission::Column::UserId.eq(user_id))
             .filter(daily_mission::Column::AssignedDate.eq(date))
@@ -74,12 +75,16 @@ impl MissionServiceImpl {
         }
         Ok(new_assignments)
     }
+
+    fn extract_user_id(&self, ctx: &RequestContext) -> Result<Uuid, AppError> {
+        ctx.user_id.ok_or_else(|| AppError::from("No user id")).map(|id| id.0)
+    }
 }
 
 #[async_trait]
 impl MissionApi for MissionServiceImpl {
     async fn on_hand_completed(&self, ctx: &RequestContext, hand_result: &HandResult) -> Result<(), AppError> {
-        let user_id = ctx.user_id as i32;
+        let user_id = self.extract_user_id(ctx)?;
         let today = Utc::now().date_naive();
         let assignments = self.ensure_daily_assignments(user_id, today).await?;
         let pool = all_mission_definitions();
@@ -111,7 +116,7 @@ impl MissionApi for MissionServiceImpl {
 
     async fn on_share_created(&self, ctx: &RequestContext, share_type: &str) -> Result<(), AppError> {
         if share_type != "replay_card" && share_type != "referral" { return Ok(()); }
-        let user_id = ctx.user_id as i32;
+        let user_id = self.extract_user_id(ctx)?;
         let today = Utc::now().date_naive();
         let assignments = self.ensure_daily_assignments(user_id, today).await?;
         let share_types = vec!["share_replay", "referral_5_hands"];
@@ -126,7 +131,7 @@ impl MissionApi for MissionServiceImpl {
     }
 
     async fn get_today_missions(&self, ctx: &RequestContext) -> Result<Vec<Mission>, AppError> {
-        let user_id = ctx.user_id as i32;
+        let user_id = self.extract_user_id(ctx)?;
         let today = Utc::now().date_naive();
         let assignments = self.ensure_daily_assignments(user_id, today).await?;
         let pool = all_mission_definitions();
@@ -149,13 +154,13 @@ impl MissionApi for MissionServiceImpl {
     }
 
     async fn reroll_mission(&self, ctx: &RequestContext, mission_id: MissionId) -> Result<Mission, AppError> {
-        let user_id = ctx.user_id as i32;
+        let user_id = self.extract_user_id(ctx)?;
         let today = Utc::now().date_naive();
         let mut assignments = self.ensure_daily_assignments(user_id, today).await?;
         let idx = mission_id.0 as usize;
-        if idx >= assignments.len() { return Err(AppError::new("Invalid mission id")); }
-        if assignments[idx].rerolled { return Err(AppError::new("Already rerolled")); }
-        if assignments[idx].completed { return Err(AppError::new("Cannot reroll completed mission")); }
+        if idx >= assignments.len() { return Err(AppError::from("Invalid mission id")); }
+        if assignments[idx].rerolled { return Err(AppError::from("Already rerolled")); }
+        if assignments[idx].completed { return Err(AppError::from("Cannot reroll completed mission")); }
 
         let mut active: daily_mission::ActiveModel = assignments[idx].clone().into();
         active.mission_type = Set("play_10_hands".to_string());
@@ -180,16 +185,16 @@ impl MissionApi for MissionServiceImpl {
     }
 
     async fn claim_daily_reward(&self, ctx: &RequestContext) -> Result<ClaimResult, AppError> {
-        let user_id = ctx.user_id as i32;
+        let user_id = self.extract_user_id(ctx)?;
         let today = Utc::now().date_naive();
         let assignments = self.ensure_daily_assignments(user_id, today).await?;
 
         if assignments.iter().any(|a| !a.completed || a.reward_claimed) {
-            return Err(AppError::new("Not all missions completed or reward already claimed"));
+            return Err(AppError::from("Not all missions completed or reward already claimed"));
         }
 
         let pool = all_mission_definitions();
-        let mut total_chips = 0i64;
+        let mut total_chips: i64 = 0;
         let txn = self.db.begin().await.map_err(|e| AppError::from(e.to_string()))?;
 
         for a in assignments.iter() {
@@ -242,12 +247,13 @@ impl MissionApi for MissionServiceImpl {
         }
         ActiveModelTrait::update(streak_active, &txn).await.map_err(|e| AppError::from(e.to_string()))?;
 
-        self.user_service.award_chips(ctx, total_chips).await?;
+        let chip_amount = ChipAmount(total_chips);
+        self.user_service.award_chips(ctx, chip_amount).await?;
 
         txn.commit().await.map_err(|e| AppError::from(e.to_string()))?;
 
         Ok(ClaimResult {
-            chips_awarded: total_chips,
+            chips_awarded: chip_amount,
             streak_count: today_streak as u32,
             weekly_bonus_awarded: weekly_bonus,
         })
