@@ -39,7 +39,7 @@ impl MissionServiceImpl {
         let mut rng = StdRng::seed_from_u64(hash);
         let mut indices = HashSet::new();
         while indices.len() < 3 {
-            indices.insert(rng.gen_range(0..pool.len()));
+            indices.insert(rng.random_range(0..pool.len()));
         }
         let mut v: Vec<_> = indices.into_iter().collect();
         v.sort();
