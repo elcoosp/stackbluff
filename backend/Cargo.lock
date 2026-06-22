@@ -4141,6 +4141,7 @@ dependencies = [
  "sb-club",
  "sb-contracts",
  "sb-db-repos",
+ "sb-mission",
  "sb-oracle",
  "sb-rest-router",
  "sb-shared-types",
