@@ -120,7 +120,7 @@ impl MissionApi for MissionServiceImpl {
         let user_id = self.extract_user_id(ctx)?;
         let today = Utc::now().date_naive();
         let assignments = self.ensure_daily_assignments(user_id, today).await?;
-        let share_types = vec!["share_replay", "referral_5_hands"];
+        let share_types = ["share_replay", "referral_5_hands"];
         for a in assignments.iter().filter(|a| share_types.contains(&a.mission_type.as_str()) && !a.completed) {
             let mut active: daily_mission::ActiveModel = a.clone().into();
             active.completed = Set(true);
