@@ -3,9 +3,11 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU8, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
+use futures::future::join_all;
 use tokio::sync::mpsc;
 
 use sb_contracts::stats_api::PlayerStatsRepo;
@@ -21,12 +23,11 @@ use sb_db_entities::hand_history_json::{
 };
 
 use crate::game_room::{
-    ActionBroadcast, ActionInfo, ActionRequired, AnalyticsPayload, BroadcastSender,
-    HandResult as RoomHandResult, PlayerStateInfo, PrivatePayload, RoomMessage, ShowdownPlayer,
-    ShowdownReveal, SidePotMessage, TableStateUpdate, WinnerResult, WsCard,
+    ActionBroadcast, ActionInfo, ActionRequired, AnalyticsPayload, HandResult as RoomHandResult,
+    PlayerStateInfo, PrivatePayload, RoomMessage, ShowdownPlayer, ShowdownReveal, SidePotMessage,
+    TableStateUpdate, WinnerResult, WsCard,
 };
-use std::pin::Pin;
-use tokio::time::{Duration, Sleep, sleep};
+use tokio::time::{Duration, sleep};
 use tracing::{Instrument, Level, debug, error, info, span, warn};
 
 fn zero() -> ChipAmount {
@@ -157,19 +158,30 @@ fn get_hand_description(strength: &sb_game_engine::evaluate::HandStrength) -> St
 }
 
 #[derive(Debug)]
+pub enum LeaveResult {
+    Refunded(ChipAmount),
+    Cancelled,
+}
+
+#[derive(Debug)]
 pub enum InternalCommand {
     Join {
         user_id: UserId,
         display_name: String,
         seat: Option<u8>,
         stack: ChipAmount,
+        msg_tx: mpsc::UnboundedSender<RoomMessage>,
+        respond_to: tokio::sync::oneshot::Sender<bool>,
     },
     Reconnect {
         user_id: UserId,
+        msg_tx: mpsc::UnboundedSender<RoomMessage>,
+        respond_to: tokio::sync::oneshot::Sender<bool>,
     },
     Leave {
         user_id: UserId,
-        respond_to: tokio::sync::oneshot::Sender<ChipAmount>,
+        respond_to: tokio::sync::oneshot::Sender<LeaveResult>,
+        force: bool,
     },
     Rebuy {
         user_id: UserId,
@@ -186,6 +198,11 @@ pub enum InternalCommand {
     },
     ShowdownComplete,
     ClearLastActions,
+    Shutdown,
+    UpdatePlayerStats {
+        user_id: UserId,
+        stats: PlayerStatsDto,
+    },
 }
 
 #[derive(Debug)]
@@ -198,7 +215,8 @@ struct Player {
     pub time_bank_remaining_seconds: u32,
     pub stats: Option<PlayerStatsDto>,
     pub is_leaving: bool,
-    pub leave_responder: Option<tokio::sync::oneshot::Sender<ChipAmount>>,
+    pub force_leave: bool,
+    pub leave_responder: Option<tokio::sync::oneshot::Sender<LeaveResult>>,
 }
 
 impl Player {
@@ -212,6 +230,7 @@ impl Player {
             time_bank_remaining_seconds: 0,
             stats: None,
             is_leaving: false,
+            force_leave: false,
             leave_responder: None,
         }
     }
@@ -307,7 +326,7 @@ impl ActiveHand {
     }
 }
 
-fn build_action_required(hand: &ActiveHand, user_id: UserId) -> ActionRequired {
+fn build_action_required(room_id: TableId, hand: &ActiveHand, user_id: UserId) -> ActionRequired {
     let to_call = hand.state.current_call_amount();
     let min_raise = hand.state.min_raise_amount();
     let can_check = to_call == ChipAmount::new(0).unwrap();
@@ -322,6 +341,7 @@ fn build_action_required(hand: &ActiveHand, user_id: UserId) -> ActionRequired {
     });
 
     ActionRequired {
+        room_id,
         player_id: user_id,
         expires_at,
         timeout_ms: hand.timeout_duration_ms,
@@ -455,16 +475,13 @@ fn run_monte_carlo(
 }
 
 pub struct TableActor {
+    room_id: TableId,
     table_id: TableId,
     config: TableConfig,
     players: HashMap<UserId, Player>,
     current_hand: Option<ActiveHand>,
-    broadcast_tx: BroadcastSender,
+    user_senders: HashMap<UserId, mpsc::UnboundedSender<RoomMessage>>,
     cmd_tx: mpsc::Sender<InternalCommand>,
-    current_timer: Option<Pin<Box<Sleep>>>,
-    current_timer_player: Option<PlayerId>,
-    current_main_timer_remaining_ms: Option<u64>,
-    player_user_map: HashMap<PlayerId, UserId>,
     last_dealer_index: Option<usize>,
     event_tx: tokio::sync::broadcast::Sender<HandCompletedEvent>,
     hand_players: Vec<HandPlayer>,
@@ -472,28 +489,27 @@ pub struct TableActor {
     hand_started_at: Option<chrono::DateTime<chrono::Utc>>,
     last_actions: HashMap<UserId, ActionInfo>,
     stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
+    active_players: Arc<AtomicU8>,
 }
 
 impl TableActor {
     pub fn new(
+        room_id: TableId,
         table_id: TableId,
         config: TableConfig,
-        broadcast_tx: BroadcastSender,
         cmd_tx: mpsc::Sender<InternalCommand>,
         event_tx: tokio::sync::broadcast::Sender<HandCompletedEvent>,
         stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
+        active_players: Arc<AtomicU8>,
     ) -> Self {
         Self {
+            room_id,
             table_id,
             config,
             players: HashMap::new(),
             current_hand: None,
-            broadcast_tx,
+            user_senders: HashMap::new(),
             cmd_tx,
-            current_timer: None,
-            current_timer_player: None,
-            current_main_timer_remaining_ms: None,
-            player_user_map: HashMap::new(),
             last_dealer_index: None,
             event_tx,
             hand_players: Vec::new(),
@@ -501,15 +517,38 @@ impl TableActor {
             hand_started_at: None,
             last_actions: HashMap::new(),
             stats_repo,
+            active_players,
+        }
+    }
+
+    fn send_to_all(
+        user_senders: &HashMap<UserId, mpsc::UnboundedSender<RoomMessage>>,
+        msg: RoomMessage,
+    ) {
+        for tx in user_senders.values() {
+            let _ = tx.send(msg.clone());
+        }
+    }
+
+    fn send_to_user(
+        user_senders: &HashMap<UserId, mpsc::UnboundedSender<RoomMessage>>,
+        user_id: &UserId,
+        msg: RoomMessage,
+    ) {
+        if let Some(tx) = user_senders.get(user_id) {
+            let _ = tx.send(msg);
         }
     }
 
     pub async fn run(mut self, mut rx: mpsc::Receiver<InternalCommand>) {
-        let span = span!(Level::INFO, "table_actor", table_id = %self.table_id);
+        let span =
+            span!(Level::INFO, "table_actor", room_id = %self.room_id, table_id = %self.table_id);
         async move {
             info!("Table actor started");
             while let Some(cmd) = rx.recv().await {
-                self.handle_command(cmd).await;
+                if !self.handle_command(cmd).await {
+                    break;
+                }
             }
             info!("Table actor terminated");
         }
@@ -517,20 +556,34 @@ impl TableActor {
         .await;
     }
 
-    async fn handle_command(&mut self, cmd: InternalCommand) {
-        debug!(?cmd);
+    async fn handle_command(&mut self, cmd: InternalCommand) -> bool {
+        debug!(?cmd, "Handling command");
         match cmd {
             InternalCommand::Join {
                 user_id,
                 display_name,
                 seat,
                 stack,
-            } => self.join_player(user_id, display_name, seat, stack).await,
-            InternalCommand::Reconnect { user_id } => self.handle_reconnect(user_id).await,
+                msg_tx,
+                respond_to,
+            } => {
+                self.join_player(user_id, display_name, seat, stack, msg_tx, respond_to)
+                    .await
+            }
+            InternalCommand::Reconnect {
+                user_id,
+                msg_tx,
+                respond_to,
+            } => {
+                debug!(%user_id, "Handling reconnect");
+                let found = self.handle_reconnect(user_id, msg_tx).await;
+                let _ = respond_to.send(found);
+            }
             InternalCommand::Leave {
                 user_id,
                 respond_to,
-            } => self.leave_player(user_id, respond_to).await,
+                force,
+            } => self.leave_player(user_id, respond_to, force).await,
             InternalCommand::Rebuy { user_id, stack } => self.process_rebuy(user_id, stack).await,
             InternalCommand::Action {
                 user_id,
@@ -542,21 +595,41 @@ impl TableActor {
             InternalCommand::ShowdownComplete => self.finalize_hand_after_reveal().await,
             InternalCommand::ClearLastActions => {
                 self.last_actions.clear();
-                self.broadcast_table_state().await;
+                self.broadcast_table_state();
+            }
+            InternalCommand::UpdatePlayerStats { user_id, stats } => {
+                if let Some(player) = self.players.get_mut(&user_id) {
+                    player.stats = Some(stats);
+                    self.broadcast_table_state();
+                }
+            }
+            InternalCommand::Shutdown => {
+                if let Some(hand) = &mut self.current_hand {
+                    hand.cancel_timeout();
+                }
+                return false;
             }
         }
+        true
     }
 
-    async fn handle_reconnect(&mut self, user_id: UserId) {
+    async fn handle_reconnect(
+        &mut self,
+        user_id: UserId,
+        msg_tx: mpsc::UnboundedSender<RoomMessage>,
+    ) -> bool {
+        self.user_senders.insert(user_id, msg_tx);
+
         let player_info = if let Some(player) = self.players.get_mut(&user_id) {
             if player.is_leaving {
+                debug!(%user_id, "Player was leaving, canceling leave.");
                 player.is_leaving = false;
+                player.force_leave = false;
                 if let Some(responder) = player.leave_responder.take() {
-                    let _ = responder.send(zero());
+                    let _ = responder.send(LeaveResult::Cancelled);
                 }
-                info!(%user_id, "Player reconnected. Canceling pending leave.");
             }
-            info!(%user_id, "Player already at table, resyncing state for reconnect");
+            debug!(%user_id, "Player already at table, resyncing state for reconnect");
             Some(player.player_id)
         } else {
             None
@@ -564,11 +637,16 @@ impl TableActor {
 
         if let Some(player_id) = player_info {
             let seat = self.players.get(&user_id).map(|p| p.seat).unwrap_or(0);
-            let _ = self.broadcast_tx.send(RoomMessage::Connected {
-                user_id,
-                seat_index: seat,
-            });
-            self.broadcast_table_state().await;
+            Self::send_to_user(
+                &self.user_senders,
+                &user_id,
+                RoomMessage::Connected {
+                    room_id: self.room_id,
+                    user_id,
+                    seat_index: seat,
+                },
+            );
+            self.broadcast_table_state();
             if let Some(hand) = &self.current_hand {
                 if let Some(hole_cards) = hand.state.player_hole_cards(player_id) {
                     let ws_cards: Vec<WsCard> = hole_cards
@@ -578,29 +656,42 @@ impl TableActor {
                             rank: format!("{:?}", c.rank),
                         })
                         .collect();
-                    let _ = self.broadcast_tx.send(RoomMessage::PrivateMessage {
-                        target_user_id: user_id,
-                        payload: PrivatePayload::YourHoleCards {
-                            hole_cards: ws_cards,
+                    Self::send_to_user(
+                        &self.user_senders,
+                        &user_id,
+                        RoomMessage::PrivateMessage {
+                            room_id: self.room_id,
+                            target_user_id: user_id,
+                            payload: PrivatePayload::YourHoleCards {
+                                hole_cards: ws_cards,
+                            },
                         },
-                    });
+                    );
                 }
                 if hand.current_player_user() == Some(user_id) {
-                    let action_req = build_action_required(hand, user_id);
-                    let _ = self
-                        .broadcast_tx
-                        .send(RoomMessage::ActionRequired(action_req));
+                    let action_req = build_action_required(self.room_id, hand, user_id);
+                    Self::send_to_user(
+                        &self.user_senders,
+                        &user_id,
+                        RoomMessage::ActionRequired(action_req),
+                    );
                 }
                 if let Some(analytics) = build_analytics(hand, user_id) {
-                    let _ = self.broadcast_tx.send(RoomMessage::PrivateMessage {
-                        target_user_id: user_id,
-                        payload: PrivatePayload::Analytics { analytics },
-                    });
+                    Self::send_to_user(
+                        &self.user_senders,
+                        &user_id,
+                        RoomMessage::PrivateMessage {
+                            room_id: self.room_id,
+                            target_user_id: user_id,
+                            payload: PrivatePayload::Analytics { analytics },
+                        },
+                    );
                 }
             }
+            true
         } else {
-            self.send_error_to(&user_id, "Not seated at table. Please buy in.")
-                .await;
+            self.send_error_to(&user_id, "Not seated at table. Please buy in.");
+            false
         }
     }
 
@@ -610,7 +701,43 @@ impl TableActor {
         display_name: String,
         seat: Option<u8>,
         stack: ChipAmount,
+        msg_tx: mpsc::UnboundedSender<RoomMessage>,
+        respond_to: tokio::sync::oneshot::Sender<bool>,
     ) {
+        debug!(%user_id, stack = stack.as_i64(), "Attempting to join player");
+
+        if let Some(player) = self.players.get_mut(&user_id) {
+            if player.is_leaving {
+                debug!(%user_id, "Player is rejoining while leave is pending. Converting to new join.");
+                player.is_leaving = false;
+                player.force_leave = false;
+                player.stack = stack;
+                if let Some(rt) = player.leave_responder.take() {
+                    let _ = rt.send(LeaveResult::Cancelled);
+                }
+
+                self.user_senders.insert(user_id, msg_tx);
+                Self::send_to_user(
+                    &self.user_senders,
+                    &user_id,
+                    RoomMessage::Connected {
+                        room_id: self.room_id,
+                        user_id,
+                        seat_index: player.seat,
+                    },
+                );
+                self.broadcast_table_state();
+
+                let _ = respond_to.send(false);
+                return;
+            }
+
+            debug!(%user_id, "Player already exists, treating as reconnect");
+            self.handle_reconnect(user_id, msg_tx).await;
+            let _ = respond_to.send(false);
+            return;
+        }
+
         if stack < self.config.min_buy_in {
             self.send_error_to(
                 &user_id,
@@ -619,8 +746,8 @@ impl TableActor {
                     stack.as_i64(),
                     self.config.min_buy_in.as_i64()
                 ),
-            )
-            .await;
+            );
+            let _ = respond_to.send(false);
             return;
         }
         if stack > self.config.max_buy_in {
@@ -631,8 +758,8 @@ impl TableActor {
                     stack.as_i64(),
                     self.config.max_buy_in.as_i64()
                 ),
-            )
-            .await;
+            );
+            let _ = respond_to.send(false);
             return;
         }
 
@@ -651,52 +778,72 @@ impl TableActor {
                 match free {
                     Some(s) => s,
                     None => {
-                        self.send_error_to(&user_id, "Table is full").await;
+                        self.send_error_to(&user_id, "Table is full");
+                        let _ = respond_to.send(false);
                         return;
                     }
                 }
             }
         };
         if self.players.values().any(|p| p.seat == seat) {
-            self.send_error_to(&user_id, &format!("Seat {} taken", seat))
-                .await;
+            self.send_error_to(&user_id, &format!("Seat {} taken", seat));
+            let _ = respond_to.send(false);
             return;
         }
         if seat >= self.config.max_players {
-            self.send_error_to(&user_id, "Seat out of range").await;
+            self.send_error_to(&user_id, "Seat out of range");
+            let _ = respond_to.send(false);
             return;
         }
 
         let mut player = Player::new(user_id, display_name, seat, stack);
 
-        if let Ok(stats_dto) = self.stats_repo.get(&user_id.0.to_string()).await {
-            player.stats = Some(stats_dto);
-        }
+        let stats_repo = self.stats_repo.clone();
+        let cmd_tx = self.cmd_tx.clone();
+        let uid = user_id;
+        tokio::spawn(async move {
+            if let Ok(stats_dto) = stats_repo.get(&uid.0.to_string()).await {
+                let _ = cmd_tx
+                    .send(InternalCommand::UpdatePlayerStats {
+                        user_id: uid,
+                        stats: stats_dto,
+                    })
+                    .await;
+            }
+        });
 
         self.players.insert(player.user_id, player);
-        let _ = self.broadcast_tx.send(RoomMessage::Connected {
-            user_id,
-            seat_index: seat,
-        });
-        self.broadcast_table_state().await;
+        self.user_senders.insert(user_id, msg_tx);
+        self.active_players.fetch_add(1, Ordering::Relaxed);
+
+        Self::send_to_user(
+            &self.user_senders,
+            &user_id,
+            RoomMessage::Connected {
+                room_id: self.room_id,
+                user_id,
+                seat_index: seat,
+            },
+        );
+        self.broadcast_table_state();
         info!(%user_id, seat, stack = stack.as_i64(), "Joined");
 
         if self.players.len() >= 2 && self.current_hand.is_none() {
             info!("2+ players seated and no hand in progress, auto-starting hand");
             self.start_new_hand().await;
         }
+
+        let _ = respond_to.send(true);
     }
 
     async fn process_rebuy(&mut self, user_id: UserId, stack: ChipAmount) {
         if let Some(player) = self.players.get_mut(&user_id) {
             if player.is_leaving {
-                self.send_error_to(&user_id, "You are in the process of leaving the table")
-                    .await;
+                self.send_error_to(&user_id, "You are in the process of leaving the table");
                 return;
             }
             if player.stack > zero() {
-                self.send_error_to(&user_id, "You still have chips, cannot rebuy")
-                    .await;
+                self.send_error_to(&user_id, "You still have chips, cannot rebuy");
                 return;
             }
             if stack < self.config.min_buy_in || stack > self.config.max_buy_in {
@@ -708,67 +855,129 @@ impl TableActor {
                         self.config.min_buy_in.as_i64(),
                         self.config.max_buy_in.as_i64()
                     ),
-                )
-                .await;
+                );
                 return;
             }
             player.stack = stack;
-            self.broadcast_table_state().await;
+            self.broadcast_table_state();
             info!(%user_id, stack = stack.as_i64(), "Player rebought");
             if self.players.len() >= 2 && self.current_hand.is_none() {
                 info!("2+ players seated and no hand in progress, auto-starting hand after rebuy");
                 self.start_new_hand().await;
             }
         } else {
-            self.send_error_to(&user_id, "Not at table").await;
+            self.send_error_to(&user_id, "Not at table");
         }
     }
 
     async fn leave_player(
         &mut self,
         user_id: UserId,
-        respond_to: tokio::sync::oneshot::Sender<ChipAmount>,
+        respond_to: tokio::sync::oneshot::Sender<LeaveResult>,
+        force: bool,
     ) {
+        debug!(%user_id, force, "Handling leave_player");
+
+        if !self.players.contains_key(&user_id) {
+            debug!(%user_id, "Leave failed: player not found");
+            let _ = respond_to.send(LeaveResult::Refunded(zero()));
+            return;
+        }
+
         let mut should_fold = false;
         let mut is_in_hand = false;
         let mut responder_opt = Some(respond_to);
 
         if let Some(player) = self.players.get_mut(&user_id) {
+            if player.is_leaving {
+                debug!(%user_id, "Player already leaving. Updating force flag.");
+                if force {
+                    player.force_leave = true;
+                }
+                if let Some(old_rt) = player.leave_responder.take() {
+                    let _ = old_rt.send(LeaveResult::Cancelled);
+                }
+                if let Some(rt) = responder_opt.take() {
+                    player.leave_responder = Some(rt);
+                }
+                return;
+            }
+
             if let Some(hand) = &self.current_hand {
                 if hand.player_by_user_id.contains_key(&user_id) {
                     is_in_hand = true;
                     player.is_leaving = true;
+                    player.force_leave = force;
                     if let Some(rt) = responder_opt.take() {
                         player.leave_responder = Some(rt);
                     }
-
-                    if hand.current_player_user() == Some(user_id) {
+                    if force {
                         should_fold = true;
                     }
-                    info!(%user_id, "Player left during hand. Deferring refund until hand completes.");
+                    info!(%user_id, force, "Player left during hand. Deferring refund until hand completes.");
                 }
             }
         }
 
         if is_in_hand {
             if should_fold {
+                debug!(%user_id, "Force folding player in hand");
                 if let Some(hand) = &mut self.current_hand {
                     if let Some(pid) = hand.player_by_user_id.get(&user_id).copied() {
-                        let _ = hand.state.apply_action(pid, Action::Fold);
+                        if !hand.state.player_is_all_in(pid) {
+                            if let Err(e) = hand.state.force_fold(pid) {
+                                warn!(%user_id, error = ?e, "Failed to force fold player");
+                            }
+                        }
                     }
                     hand.cancel_timeout();
+
+                    let new_stack = self
+                        .players
+                        .get(&user_id)
+                        .map(|p| p.stack)
+                        .unwrap_or_else(zero)
+                        .as_i64() as u64;
+                    let new_pot = hand.state.current_pot().as_i64() as u64;
+
+                    self.last_actions.insert(
+                        user_id,
+                        ActionInfo {
+                            text: "FOLD".to_string(),
+                            amount: None,
+                        },
+                    );
+
+                    Self::send_to_all(
+                        &self.user_senders,
+                        RoomMessage::ActionBroadcast(ActionBroadcast {
+                            room_id: self.room_id,
+                            player_id: user_id,
+                            action: "fold".to_string(),
+                            amount: None,
+                            new_stack,
+                            new_pot,
+                        }),
+                    );
+
                     self.check_hand_completion().await;
+                    self.broadcast_table_state();
+                }
+            } else {
+                self.broadcast_table_state();
+            }
+        } else {
+            debug!(%user_id, "Force leaving player not in hand");
+            if let Some(player) = self.players.remove(&user_id) {
+                self.user_senders.remove(&user_id);
+                self.active_players.fetch_sub(1, Ordering::Relaxed);
+                let remaining_stack = player.stack;
+                self.broadcast_table_state();
+                info!(%user_id, stack = remaining_stack.as_i64(), "Player left and refunded.");
+                if let Some(rt) = responder_opt.take() {
+                    let _ = rt.send(LeaveResult::Refunded(remaining_stack));
                 }
             }
-        } else if let Some(player) = self.players.remove(&user_id) {
-            let remaining_stack = player.stack;
-            self.broadcast_table_state().await;
-            info!(%user_id, stack = remaining_stack.as_i64(), "Player left and refunded.");
-            if let Some(rt) = responder_opt.take() {
-                let _ = rt.send(remaining_stack);
-            }
-        } else if let Some(rt) = responder_opt.take() {
-            let _ = rt.send(zero());
         }
     }
 
@@ -778,7 +987,11 @@ impl TableActor {
             return;
         }
 
-        let active_players_count = self.players.values().filter(|p| p.stack > zero()).count();
+        let active_players_count = self
+            .players
+            .values()
+            .filter(|p| p.stack > zero() && !p.is_leaving)
+            .count();
         if active_players_count < 2 {
             warn!("Not enough players with chips");
             return;
@@ -786,10 +999,20 @@ impl TableActor {
 
         self.last_actions.clear();
 
-        for player in self.players.values_mut() {
-            if let Ok(stats_dto) = self.stats_repo.get(&player.user_id.0.to_string()).await {
-                player.stats = Some(stats_dto);
-            }
+        let user_ids: Vec<UserId> = self.players.keys().copied().collect();
+        for uid in user_ids {
+            let stats_repo = self.stats_repo.clone();
+            let cmd_tx = self.cmd_tx.clone();
+            tokio::spawn(async move {
+                if let Ok(stats_dto) = stats_repo.get(&uid.0.to_string()).await {
+                    let _ = cmd_tx
+                        .send(InternalCommand::UpdatePlayerStats {
+                            user_id: uid,
+                            stats: stats_dto,
+                        })
+                        .await;
+                }
+            });
         }
 
         let dealer_index = match self.last_dealer_index {
@@ -808,7 +1031,7 @@ impl TableActor {
         let mut player_infos: Vec<PlayerInfo> = self
             .players
             .values()
-            .filter(|p| p.stack > zero())
+            .filter(|p| p.stack > zero() && !p.is_leaving)
             .map(|p| PlayerInfo {
                 player_id: p.player_id,
                 user_id: p.user_id,
@@ -884,7 +1107,7 @@ impl TableActor {
         }
 
         for player in self.players.values() {
-            if player.stack == zero() {
+            if player.stack == zero() || player.is_leaving {
                 continue;
             }
             if let Some(hole_cards) = active.state.player_hole_cards(player.player_id) {
@@ -895,31 +1118,48 @@ impl TableActor {
                         rank: format!("{:?}", c.rank),
                     })
                     .collect();
-                let _ = self.broadcast_tx.send(RoomMessage::PrivateMessage {
-                    target_user_id: player.user_id,
-                    payload: PrivatePayload::YourHoleCards {
-                        hole_cards: ws_cards,
+                Self::send_to_user(
+                    &self.user_senders,
+                    &player.user_id,
+                    RoomMessage::PrivateMessage {
+                        room_id: self.room_id,
+                        target_user_id: player.user_id,
+                        payload: PrivatePayload::YourHoleCards {
+                            hole_cards: ws_cards,
+                        },
                     },
-                });
+                );
             }
         }
 
         if let Some(user) = active.current_player_user() {
-            active.schedule_timeout(user, self.cmd_tx.clone(), self.config.turn_time_limit_ms);
-            let action_req = build_action_required(&active, user);
-            let _ = self
-                .broadcast_tx
-                .send(RoomMessage::ActionRequired(action_req));
+            let is_leaving = self
+                .players
+                .get(&user)
+                .map(|p| p.is_leaving)
+                .unwrap_or(false);
+            if is_leaving {
+                let cmd_tx = self.cmd_tx.clone();
+                tokio::spawn(async move {
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                    let _ = cmd_tx
+                        .send(InternalCommand::Timeout { user_id: user })
+                        .await;
+                });
+            } else {
+                active.schedule_timeout(user, self.cmd_tx.clone(), self.config.turn_time_limit_ms);
+            }
+            let action_req = build_action_required(self.room_id, &active, user);
+            Self::send_to_all(&self.user_senders, RoomMessage::ActionRequired(action_req));
         }
 
         self.last_dealer_index = Some(dealer_index);
         self.current_hand = Some(active);
 
         if let Some(hand) = &self.current_hand {
-            self.broadcast_analytics(hand).await;
+            self.broadcast_analytics(hand);
         }
-
-        self.broadcast_table_state().await;
+        self.broadcast_table_state();
         info!(dealer_index, "Hand started");
     }
 
@@ -932,7 +1172,7 @@ impl TableActor {
         let hand = match &mut self.current_hand {
             Some(h) => h,
             None => {
-                self.send_error_to(&user_id, "No active hand").await;
+                self.send_error_to(&user_id, "No active hand");
                 return;
             }
         };
@@ -947,15 +1187,14 @@ impl TableActor {
                         .map(|u| u.to_string())
                         .unwrap_or_else(|| "unknown".into())
                 ),
-            )
-            .await;
+            );
             return;
         }
 
         let player_id = match hand.player_by_user_id.get(&user_id) {
             Some(pid) => *pid,
             None => {
-                self.send_error_to(&user_id, "Not in hand").await;
+                self.send_error_to(&user_id, "Not in hand");
                 return;
             }
         };
@@ -968,8 +1207,7 @@ impl TableActor {
                 let raise = amount.unwrap_or_else(zero);
                 let min_raise = hand.state.min_raise_amount();
                 if raise < min_raise {
-                    self.send_error_to(&user_id, &format!("Minimum raise is {}", min_raise))
-                        .await;
+                    self.send_error_to(&user_id, &format!("Minimum raise is {}", min_raise));
                     return;
                 }
                 Action::Raise(raise)
@@ -1029,15 +1267,17 @@ impl TableActor {
                     },
                 );
 
-                let _ = self
-                    .broadcast_tx
-                    .send(RoomMessage::ActionBroadcast(ActionBroadcast {
+                Self::send_to_all(
+                    &self.user_senders,
+                    RoomMessage::ActionBroadcast(ActionBroadcast {
+                        room_id: self.room_id,
                         player_id: user_id,
                         action: action_str_lower,
                         amount: amount_u64,
                         new_stack: new_stack.as_i64() as u64,
                         new_pot: new_pot.as_i64() as u64,
-                    }));
+                    }),
+                );
 
                 if let Some(started_at) = self.hand_started_at {
                     let elapsed_ms = (Utc::now() - started_at).num_milliseconds().max(0) as u64;
@@ -1058,27 +1298,45 @@ impl TableActor {
                 }
 
                 if let Some(next) = hand.current_player_user() {
-                    hand.schedule_timeout(
-                        next,
-                        self.cmd_tx.clone(),
-                        self.config.turn_time_limit_ms,
-                    );
-                    let action_req = build_action_required(hand, next);
-                    let _ = self
-                        .broadcast_tx
-                        .send(RoomMessage::ActionRequired(action_req));
+                    let is_leaving = self
+                        .players
+                        .get(&next)
+                        .map(|p| p.is_leaving)
+                        .unwrap_or(false);
+                    if is_leaving {
+                        let cmd_tx = self.cmd_tx.clone();
+                        tokio::spawn(async move {
+                            tokio::time::sleep(Duration::from_millis(100)).await;
+                            let _ = cmd_tx
+                                .send(InternalCommand::Timeout { user_id: next })
+                                .await;
+                        });
+                    } else {
+                        hand.schedule_timeout(
+                            next,
+                            self.cmd_tx.clone(),
+                            self.config.turn_time_limit_ms,
+                        );
+                    }
+                    let action_req = build_action_required(self.room_id, hand, next);
+                    Self::send_to_all(&self.user_senders, RoomMessage::ActionRequired(action_req));
 
                     if hand.state.community_cards().len() > prev_comm_cards_len {
                         for player in self.players.values() {
                             if let Some(analytics) = build_analytics(hand, player.user_id) {
-                                let _ = self.broadcast_tx.send(RoomMessage::PrivateMessage {
-                                    target_user_id: player.user_id,
-                                    payload: PrivatePayload::Analytics { analytics },
-                                });
+                                Self::send_to_user(
+                                    &self.user_senders,
+                                    &player.user_id,
+                                    RoomMessage::PrivateMessage {
+                                        room_id: self.room_id,
+                                        target_user_id: player.user_id,
+                                        payload: PrivatePayload::Analytics { analytics },
+                                    },
+                                );
                             }
                         }
                     }
-                    self.broadcast_table_state().await;
+                    self.broadcast_table_state();
                 } else {
                     self.check_hand_completion().await;
                 }
@@ -1101,7 +1359,7 @@ impl TableActor {
                         format!("Insufficient stack to {}", action)
                     }
                 };
-                self.send_error_to(&user_id, &msg).await;
+                self.send_error_to(&user_id, &msg);
             }
         }
     }
@@ -1121,13 +1379,55 @@ impl TableActor {
         };
         let _ = hand.state.apply_action(pid, Action::Fold);
         hand.cancel_timeout();
+
+        let new_stack = self
+            .players
+            .get(&user_id)
+            .map(|p| p.stack)
+            .unwrap_or_else(zero)
+            .as_i64() as u64;
+        let new_pot = hand.state.current_pot().as_i64() as u64;
+
+        self.last_actions.insert(
+            user_id,
+            ActionInfo {
+                text: "FOLD".to_string(),
+                amount: None,
+            },
+        );
+
+        Self::send_to_all(
+            &self.user_senders,
+            RoomMessage::ActionBroadcast(ActionBroadcast {
+                room_id: self.room_id,
+                player_id: user_id,
+                action: "fold".to_string(),
+                amount: None,
+                new_stack,
+                new_pot,
+            }),
+        );
+
         if let Some(next) = hand.current_player_user() {
-            hand.schedule_timeout(next, self.cmd_tx.clone(), self.config.turn_time_limit_ms);
-            let action_req = build_action_required(hand, next);
-            let _ = self
-                .broadcast_tx
-                .send(RoomMessage::ActionRequired(action_req));
-            self.broadcast_table_state().await;
+            let is_leaving = self
+                .players
+                .get(&next)
+                .map(|p| p.is_leaving)
+                .unwrap_or(false);
+            if is_leaving {
+                let cmd_tx = self.cmd_tx.clone();
+                tokio::spawn(async move {
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                    let _ = cmd_tx
+                        .send(InternalCommand::Timeout { user_id: next })
+                        .await;
+                });
+            } else {
+                hand.schedule_timeout(next, self.cmd_tx.clone(), self.config.turn_time_limit_ms);
+            }
+            let action_req = build_action_required(self.room_id, hand, next);
+            Self::send_to_all(&self.user_senders, RoomMessage::ActionRequired(action_req));
+            self.broadcast_table_state();
         } else {
             self.check_hand_completion().await;
         }
@@ -1143,18 +1443,35 @@ impl TableActor {
         if !hand.state.is_hand_complete() {
             if let Some(next) = hand.current_player_user() {
                 info!(%next, street = %street_name(&hand.state), "New street, notifying next player");
-                hand.schedule_timeout(next, self.cmd_tx.clone(), self.config.turn_time_limit_ms);
-                let action_req = build_action_required(&hand, next);
-                let _ = self
-                    .broadcast_tx
-                    .send(RoomMessage::ActionRequired(action_req));
+                let is_leaving = self
+                    .players
+                    .get(&next)
+                    .map(|p| p.is_leaving)
+                    .unwrap_or(false);
+                if is_leaving {
+                    let cmd_tx = self.cmd_tx.clone();
+                    tokio::spawn(async move {
+                        tokio::time::sleep(Duration::from_millis(100)).await;
+                        let _ = cmd_tx
+                            .send(InternalCommand::Timeout { user_id: next })
+                            .await;
+                    });
+                } else {
+                    hand.schedule_timeout(
+                        next,
+                        self.cmd_tx.clone(),
+                        self.config.turn_time_limit_ms,
+                    );
+                }
+                let action_req = build_action_required(self.room_id, &hand, next);
+                Self::send_to_all(&self.user_senders, RoomMessage::ActionRequired(action_req));
             } else {
                 warn!("Hand not complete but no current player — engine issue");
             }
 
-            self.broadcast_analytics(&hand).await;
+            self.broadcast_analytics(&hand);
             self.current_hand = Some(hand);
-            self.broadcast_table_state().await;
+            self.broadcast_table_state();
             return;
         }
 
@@ -1166,9 +1483,11 @@ impl TableActor {
         let is_showdown = active_count > 1;
 
         let reveal = self.build_showdown_reveal(&hand, is_showdown);
-        let _ = self.broadcast_tx.send(RoomMessage::ShowdownReveal(reveal));
+        Self::send_to_all(&self.user_senders, RoomMessage::ShowdownReveal(reveal));
 
         self.current_hand = Some(hand);
+
+        self.broadcast_table_state();
 
         let cmd_tx = self.cmd_tx.clone();
         let delay = if is_showdown {
@@ -1213,6 +1532,7 @@ impl TableActor {
         let result = self.build_hand_result(&hand);
         let event = HandCompletedEvent {
             table_id: self.table_id,
+            room_id: self.room_id,
             played_at: self.hand_started_at.unwrap_or_else(|| Utc::now()),
             players: HandPlayers {
                 seats: self.hand_players.clone(),
@@ -1226,6 +1546,7 @@ impl TableActor {
         if let Err(e) = self.event_tx.send(event) {
             warn!(
                 table_id = %self.table_id,
+                room_id = %self.room_id,
                 error = %e,
                 "Failed to send hand completed event"
             );
@@ -1301,12 +1622,14 @@ impl TableActor {
             .collect();
 
         let total_pot = hand.state.current_pot().as_i64() as u64;
-        let _ = self
-            .broadcast_tx
-            .send(RoomMessage::HandResult(RoomHandResult {
+        Self::send_to_all(
+            &self.user_senders,
+            RoomMessage::HandResult(RoomHandResult {
+                room_id: self.room_id,
                 winners: winner_results,
                 pot: total_pot,
-            }));
+            }),
+        );
     }
 
     async fn clear_board_and_start_next(&mut self, hand: ActiveHand) {
@@ -1317,18 +1640,26 @@ impl TableActor {
         for (user_id, player) in &mut self.players {
             if player.is_leaving {
                 if let Some(responder) = player.leave_responder.take() {
-                    let _ = responder.send(player.stack);
+                    let _ = responder.send(LeaveResult::Refunded(player.stack));
                 }
                 users_to_remove.push(*user_id);
             }
         }
         for user_id in users_to_remove {
             self.players.remove(&user_id);
+            self.user_senders.remove(&user_id);
+            self.active_players.fetch_sub(1, Ordering::Relaxed);
         }
 
-        self.broadcast_table_state().await;
+        self.broadcast_table_state();
 
-        if self.players.values().filter(|p| p.stack > zero()).count() >= 2 {
+        if self
+            .players
+            .values()
+            .filter(|p| p.stack > zero() && !p.is_leaving)
+            .count()
+            >= 2
+        {
             info!("Hand complete, auto-starting next hand");
             self.start_new_hand().await;
         }
@@ -1422,27 +1753,33 @@ impl TableActor {
             .collect();
 
         ShowdownReveal {
+            room_id: self.room_id,
             players,
             community_cards: community,
             pot: hand.state.current_pot().as_i64() as u64,
         }
     }
 
-    async fn broadcast_analytics(&self, hand: &ActiveHand) {
+    fn broadcast_analytics(&self, hand: &ActiveHand) {
         for player in self.players.values() {
-            if player.stack == zero() {
+            if player.stack == zero() || player.is_leaving {
                 continue;
             }
             if let Some(analytics) = build_analytics(hand, player.user_id) {
-                let _ = self.broadcast_tx.send(RoomMessage::PrivateMessage {
-                    target_user_id: player.user_id,
-                    payload: PrivatePayload::Analytics { analytics },
-                });
+                Self::send_to_user(
+                    &self.user_senders,
+                    &player.user_id,
+                    RoomMessage::PrivateMessage {
+                        room_id: self.room_id,
+                        target_user_id: player.user_id,
+                        payload: PrivatePayload::Analytics { analytics },
+                    },
+                );
             }
         }
     }
 
-    async fn broadcast_table_state(&self) {
+    fn broadcast_table_state(&self) {
         let current_turn_user_id = self
             .current_hand
             .as_ref()
@@ -1524,6 +1861,7 @@ impl TableActor {
                         current_bet: bet,
                         is_all_in: all_in,
                         is_folded: folded,
+                        is_leaving: player.is_leaving,
                         position_badge: positions_map.get(&player.seat).cloned(),
                         last_action: self.last_actions.get(&uid).cloned(),
                         stats: player.stats.clone(),
@@ -1541,6 +1879,7 @@ impl TableActor {
                     current_bet: zero(),
                     is_all_in: false,
                     is_folded: false,
+                    is_leaving: player.is_leaving,
                     position_badge: None,
                     last_action: None,
                     stats: player.stats.clone(),
@@ -1587,7 +1926,7 @@ impl TableActor {
         };
 
         let msg = RoomMessage::TableState(TableStateUpdate {
-            table_id: self.table_id,
+            room_id: self.room_id,
             players: players_state,
             current_hand_in_progress: self.current_hand.is_some(),
             community_cards: community,
@@ -1598,66 +1937,20 @@ impl TableActor {
             pot,
             side_pots,
         });
-        if let Err(e) = self.broadcast_tx.send(msg) {
-            error!(error = %e, "Failed to broadcast");
-        }
+        Self::send_to_all(&self.user_senders, msg);
     }
 
-    async fn send_error_to(&self, user_id: &UserId, msg: &str) {
+    fn send_error_to(&self, user_id: &UserId, msg: &str) {
         warn!(%user_id, "Error: {}", msg);
-        let _ = self.broadcast_tx.send(RoomMessage::Error {
-            target_user_id: Some(*user_id),
-            message: msg.to_string(),
-        });
-    }
-
-    fn start_timer(&mut self, player_id: PlayerId, duration_ms: u64) {
-        let s = Box::pin(sleep(Duration::from_millis(duration_ms)));
-        self.current_timer = Some(s);
-        self.current_timer_player = Some(player_id);
-        self.current_main_timer_remaining_ms = Some(duration_ms);
-    }
-
-    fn cancel_timer(&mut self) {
-        self.current_timer = None;
-        self.current_timer_player = None;
-        self.current_main_timer_remaining_ms = None;
-    }
-
-    async fn on_timer_expiry(&mut self) -> Result<(), AppError> {
-        let player_id = match self.current_timer_player.take() {
-            Some(pid) => pid,
-            None => return Ok(()),
-        };
-        self.current_timer = None;
-
-        let user_id = *self
-            .player_user_map
-            .get(&player_id)
-            .ok_or_else(|| AppError::NotFound("player not found".to_string()))?;
-        let player_state = self
-            .players
-            .get_mut(&user_id)
-            .ok_or_else(|| AppError::NotFound("player not found".to_string()))?;
-
-        if player_state.time_bank_remaining_seconds > 0 {
-            player_state.time_bank_remaining_seconds -= 1;
-            self.start_timer(player_id, self.config.turn_time_limit_ms);
-        } else {
-            self.process_action(user_id, ActionType::Fold, None).await;
-        }
-        Ok(())
-    }
-
-    pub fn remove_player(&mut self, user_id: &UserId) {
-        if let Some(player_id) = self
-            .player_user_map
-            .iter()
-            .find_map(|(pid, uid)| if uid == user_id { Some(*pid) } else { None })
-        {
-            self.player_user_map.remove(&player_id);
-            self.players.remove(user_id);
-        }
+        Self::send_to_user(
+            &self.user_senders,
+            user_id,
+            RoomMessage::Error {
+                room_id: Some(self.room_id),
+                target_user_id: Some(*user_id),
+                message: msg.to_string(),
+            },
+        );
     }
 }
 
@@ -1671,20 +1964,22 @@ fn community_cards_to_array(hand: &ActiveHand) -> Option<[sb_shared_types::Card;
 }
 
 pub fn spawn_table_actor(
+    room_id: TableId,
     table_id: TableId,
     config: TableConfig,
-    broadcast_tx: BroadcastSender,
     event_tx: tokio::sync::broadcast::Sender<HandCompletedEvent>,
     stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
+    active_players: Arc<AtomicU8>,
 ) -> (mpsc::Sender<InternalCommand>, tokio::task::JoinHandle<()>) {
     let (tx, rx) = mpsc::channel(32);
     let actor = TableActor::new(
+        room_id,
         table_id,
         config,
-        broadcast_tx,
         tx.clone(),
         event_tx,
         stats_repo,
+        active_players,
     );
     let handle = tokio::spawn(actor.run(rx));
     (tx, handle)

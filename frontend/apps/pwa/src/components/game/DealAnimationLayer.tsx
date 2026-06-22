@@ -1,6 +1,5 @@
 import { useState, useLayoutEffect, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useGameStore } from '@stackbluff/shared/stores/gameStore';
 import { useDealStore } from '@stackbluff/shared/stores/dealStore';
 import { useFeedback } from '@stackbluff/shared/hooks/useFeedback';
 import {
@@ -36,12 +35,12 @@ interface FlyingCard {
 interface DealAnimationLayerProps {
   isDesktop: boolean;
   heroSeat: number;
+  heroHoleCards: any[];
+  communityCards: any[];
+  seats: Record<number, any>;
 }
 
-export const DealAnimationLayer = ({ isDesktop, heroSeat }: DealAnimationLayerProps) => {
-  const heroHoleCards = useGameStore((s) => s.heroHoleCards);
-  const communityCards = useGameStore((s) => s.communityCards);
-  const seats = useGameStore((s) => s.seats);
+export const DealAnimationLayer = ({ isDesktop, heroSeat, heroHoleCards, communityCards, seats }: DealAnimationLayerProps) => {
   const { isDealing, startDealing, finishDealing } = useDealStore();
   const { trigger } = useFeedback();
   const vw = useViewportWidth();

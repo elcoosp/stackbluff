@@ -2,7 +2,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Coins, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useEffect, useRef } from 'react';
-import { useGameStore } from '@stackbluff/shared/stores/gameStore';
 
 function useAnimatedCounter(target: number, duration = 500) {
   const [value, setValue] = useState(target);
@@ -37,15 +36,16 @@ function useAnimatedCounter(target: number, duration = 500) {
   return value;
 }
 
-interface PotShowdownBadgeProps {
+interface PotBadgeProps {
   amount: number;
   toCall?: number;
   isMobile?: boolean;
   showdownReveal: any;
   potRef: React.RefObject<HTMLDivElement>;
+  lastAction?: any; // Added prop
 }
 
-export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, potRef }: PotShowdownBadgeProps) => {
+export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, potRef, lastAction }: PotBadgeProps) => {
   const winners = (showdownReveal?.players ?? []).filter((p: any) => p.is_winner);
   const isShowdown = !!showdownReveal;
 
@@ -55,7 +55,6 @@ export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, pot
   const formatAmount = (n: number) =>
     n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k` : n.toString();
 
-  const lastAction = useGameStore((s) => s.lastAction);
   const [effectKey, setEffectKey] = useState(0);
 
   useEffect(() => {

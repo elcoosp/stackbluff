@@ -14,3 +14,6 @@ Cargo.lock
 *.png
 wr.sh
 dump.txt
+stackbluff.db
+stackbluff.db-shm
+stackbluff.db-wal
