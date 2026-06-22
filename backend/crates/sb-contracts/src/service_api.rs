@@ -68,7 +68,7 @@ pub struct ReferralStats {
 pub trait ViralService: Send + Sync {
     async fn generate_replay_card(
         &self,
-        hand_result: &HandResult,
+        hand_result: &sb_shared_types::game_types::HandResult,
         winner_id: UserId,
         table_id: TableId,
     ) -> Result<ReplayCard, AppError>;
@@ -265,7 +265,7 @@ pub struct ClaimResult {
 
 #[async_trait::async_trait]
 pub trait MissionApi: Send + Sync + 'static {
-    async fn on_hand_completed(&self, ctx: &RequestContext, hand_result: &HandResult) -> Result<(), AppError>;
+    async fn on_hand_completed(&self, ctx: &RequestContext, hand_result: &sb_shared_types::game_types::HandResult) -> Result<(), AppError>;
     async fn on_share_created(&self, ctx: &RequestContext, share_type: &str) -> Result<(), AppError>;
     async fn get_today_missions(&self, ctx: &RequestContext) -> Result<Vec<Mission>, AppError>;
     async fn reroll_mission(&self, ctx: &RequestContext, mission_id: MissionId) -> Result<Mission, AppError>;
