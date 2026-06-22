@@ -15,8 +15,9 @@ tower-cookies = "0.11"
 sb-anti-cheat = { path = "../sb-anti-cheat" }
 sb-bot-handler = { workspace = true }
 sb-rest-router = { workspace = true }
+sb-mission = { workspace = true }
 sb-oracle = { workspace = true }
-axum = { workspace = true }
+axum.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 tower-http = { version = "0.6", features = ["cors"] }
 tracing = { workspace = true }
@@ -26,11 +27,22 @@ sb-db-repos = { path = "../sb-db-repos" }
 sb-auth = { path = "../sb-auth" }
 sb-contracts = { path = "../sb-contracts" }
 sb-shared-types = { path = "../sb-shared-types" }
-sea-orm = { workspace = true }
+sea-orm.workspace = true
 migration = { path = "../../migration" }
-serde_json = { workspace = true }
-async-trait = { workspace = true }
+serde_json.workspace = true
+async-trait.workspace = true
 parking_lot = { workspace = true }
 uuid = { workspace = true }
 moka = { workspace = true }
 sea-orm-migration = { workspace = true }
+aws-sdk-s3 = "1.137.0"
+aws-config = "1.8.18"
+tokio-cron-scheduler = "0.15.1"
+chrono.workspace = true
+sb-db-entities.workspace = true
+serde.workspace = true
+
+[dev-dependencies]
+mockall.workspace = true
+sea-orm = { workspace = true, features = ["sqlx-sqlite"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }

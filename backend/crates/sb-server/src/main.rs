@@ -1,4 +1,3 @@
-use sb_mission;
 mod leaderboard_refresh;
 #[cfg(feature = "test-stubs")]
 mod test_utils;
@@ -39,6 +38,7 @@ use test_utils::notification_service::InMemoryNotificationService;
 use test_utils::table_service::InMemoryTableService;
 #[cfg(feature = "test-stubs")]
 use test_utils::user_resolution_service::InMemoryUserResolutionService;
+mod hand_archive;
 
 #[tokio::main]
 async fn main() {
@@ -160,6 +160,16 @@ async fn main() {
         .max_age(Duration::from_secs(86400));
 
     // Build the application router
+    let r2_config = aws_config::defaults(aws_config::BehaviorVersion::latest())
+        .endpoint_url(std::env::var("R2_ENDPOINT").expect("R2_ENDPOINT not set"))
+        .load()
+        .await;
+    let r2_client = aws_sdk_s3::Client::new(&r2_config);
+    let r2: std::sync::Arc<dyn hand_archive::R2Storage> = std::sync::Arc::new(hand_archive::RealR2::new(r2_client, std::env::var("R2_BUCKET").expect("R2_BUCKET not set")));
+    let archive_state = Arc::new(hand_archive::ArchiveState {
+        db: db.clone(),
+        r2,
+    });
     let app = Router::new()
         .merge(rest_router)
         .merge(ws_route(
@@ -170,6 +180,7 @@ async fn main() {
         .merge(auth_router(auth_service))
         .merge(sb_bot_handler::attach(bot_state))
         .merge(sb_rest_router::oracle_router(oracle_service))
+        .merge(hand_archive::router(archive_state.clone()))
         .layer(cors)
         .layer(CookieManagerLayer::new());
 
@@ -178,6 +189,12 @@ async fn main() {
         .expect("failed to bind port 3000");
 
     tracing::info!("server listening on {}", listener.local_addr().unwrap());
+    let scheduler_state = archive_state.clone();
+    tokio::spawn(async move {
+        if let Err(e) = hand_archive::start_archival_scheduler(scheduler_state).await {
+            eprintln!("Scheduler error: {e}");
+        }
+    });
     axum::serve(listener, app).await.expect("server error");
 }
 
