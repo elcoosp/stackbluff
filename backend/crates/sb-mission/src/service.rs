@@ -6,6 +6,7 @@ use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use sea_orm::*;
 use sb_shared_types::missions::*;
+use sb_shared_types::game_types::HandResult;
 use sb_shared_types::chips::ChipAmount;
 use sb_shared_types::errors::AppError;
 use sb_shared_types::request_context::RequestContext;
@@ -54,7 +55,7 @@ impl MissionServiceImpl {
         let pool = all_mission_definitions();
         let indices = self.select_daily_missions(user_id, date);
         let mut new_assignments = Vec::new();
-        for (_i, &idx) in indices.iter().enumerate() {
+        for &idx in &indices {
             let (type_key, _, _, _, _) = &pool[idx];
             let active = daily_mission::ActiveModel {
                 user_id: Set(user_id),
