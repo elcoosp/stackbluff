@@ -42,3 +42,6 @@ pub enum ActionType {
     Raise,
     AllIn,
 }
+
+/// Placeholder until full implementation (issue #021)
+pub type HandResult = ();
