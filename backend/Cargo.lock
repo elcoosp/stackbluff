@@ -4025,6 +4025,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "sb-mission"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "axum",
+ "chrono",
+ "rand 0.10.1",
+ "sb-contracts",
+ "sb-db-entities",
+ "sb-shared-types",
+ "sea-orm",
+ "serde",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "sb-oracle"
 version = "0.1.0"
 dependencies = [
