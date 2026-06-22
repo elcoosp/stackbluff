@@ -1,5 +1,5 @@
 [package]
-strum = { workspace = true }
+strum = { version = "0.28.0", features = ["derive"] }
 name = "sb-shared-types"
 version = "0.1.0"
 edition = "2024"
