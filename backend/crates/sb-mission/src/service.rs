@@ -3,8 +3,8 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use chrono::{NaiveDate, Utc};
 use rand::rngs::StdRng;
-use rand::Rng;
 use rand::SeedableRng;
+use rand::Rng;       // for gen_range
 use sea_orm::*;
 use sb_shared_types::missions::*;
 use sb_shared_types::game_types::HandResult;

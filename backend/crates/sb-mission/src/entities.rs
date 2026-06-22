@@ -38,7 +38,3 @@ pub mod streak {
     pub enum Relation {}
     impl ActiveModelBehavior for ActiveModel {}
 }
-
-pub mod users {
-    pub use sb_db_entities::users::{Entity, Model, ActiveModel, Column};
-}
