@@ -68,7 +68,7 @@ pub struct ReferralStats {
 pub trait ViralService: Send + Sync {
     async fn generate_replay_card(
         &self,
-        hand_result: &HandResult,
+        hand_result: &sb_shared_types::game_types::HandResult,
         winner_id: UserId,
         table_id: TableId,
     ) -> Result<ReplayCard, AppError>;
@@ -251,4 +251,23 @@ pub trait AuthService: Send + Sync {
         ctx: &sb_shared_types::RequestContext,
         user_id: sb_shared_types::UserId,
     ) -> Result<UserProfile, sb_shared_types::AppError>;
+}
+
+// ── Missions ──────────────────────────────────────────────────────────────
+use sb_shared_types::missions::{Mission, MissionId};
+
+#[derive(Debug, serde::Serialize)]
+pub struct ClaimResult {
+    pub chips_awarded: ChipAmount,
+    pub streak_count: u32,
+    pub weekly_bonus_awarded: bool,
+}
+
+#[async_trait::async_trait]
+pub trait MissionApi: Send + Sync + 'static {
+    async fn on_hand_completed(&self, ctx: &RequestContext, hand_result: &sb_shared_types::game_types::HandResult) -> Result<(), AppError>;
+    async fn on_share_created(&self, ctx: &RequestContext, share_type: &str) -> Result<(), AppError>;
+    async fn get_today_missions(&self, ctx: &RequestContext) -> Result<Vec<Mission>, AppError>;
+    async fn reroll_mission(&self, ctx: &RequestContext, mission_id: MissionId) -> Result<Mission, AppError>;
+    async fn claim_daily_reward(&self, ctx: &RequestContext) -> Result<ClaimResult, AppError>;
 }
