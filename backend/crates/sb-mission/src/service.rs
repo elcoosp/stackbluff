@@ -11,6 +11,7 @@ use sb_shared_types::game_types::HandResult;
 use sb_shared_types::chips::ChipAmount;
 use sb_shared_types::errors::AppError;
 use sb_shared_types::request_context::RequestContext;
+use sb_shared_types::ids::UserId;
 use sb_contracts::service_api::{MissionApi, ClaimResult, UserService};
 
 use crate::entities::{daily_mission, streak, users};
@@ -23,6 +24,11 @@ pub struct MissionServiceImpl {
 impl MissionServiceImpl {
     pub fn new(db: Arc<DatabaseConnection>, user_service: Arc<dyn UserService>) -> Self {
         Self { db, user_service }
+    }
+
+    fn extract_user_id(&self, ctx: &RequestContext) -> Result<Uuid, AppError> {
+        let user_id: UserId = ctx.user_id.ok_or_else(|| AppError::from("No user id"))?;
+        Ok(user_id.0)
     }
 
     fn select_daily_missions(&self, user_id: Uuid, date: NaiveDate) -> [usize; 3] {
@@ -74,10 +80,6 @@ impl MissionServiceImpl {
             new_assignments.push(model);
         }
         Ok(new_assignments)
-    }
-
-    fn extract_user_id(&self, ctx: &RequestContext) -> Result<Uuid, AppError> {
-        ctx.user_id.ok_or_else(|| AppError::from("No user id")).map(|id| id.0)
     }
 }
 
@@ -247,8 +249,10 @@ impl MissionApi for MissionServiceImpl {
         }
         ActiveModelTrait::update(streak_active, &txn).await.map_err(|e| AppError::from(e.to_string()))?;
 
-        let chip_amount = ChipAmount(total_chips);
-        self.user_service.award_chips(ctx, chip_amount).await?;
+        let chip_amount = ChipAmount::from(total_chips);
+        // use ctx.user_id directly (we know it's Some because extract worked)
+        let uid = ctx.user_id.unwrap();
+        self.user_service.award_chips(uid, chip_amount).await?;
 
         txn.commit().await.map_err(|e| AppError::from(e.to_string()))?;
 
