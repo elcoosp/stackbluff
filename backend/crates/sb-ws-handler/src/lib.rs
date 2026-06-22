@@ -76,11 +76,6 @@ async fn ws_handler(
     ws.on_upgrade(move |socket| handle_websocket(socket, state, user_id))
 }
 
-/// Send a JSON value to the client via the unbounded channel.
-///
-/// Returns `true` if the message was enqueued successfully.
-/// Returns `false` if the send task is dead (receiver dropped) — the caller
-/// **must** treat this as a fatal error and close the WebSocket immediately.
 fn send_json_to_client(
     client_tx: &tokio::sync::mpsc::UnboundedSender<axum::extract::ws::Message>,
     json: serde_json::Value,
@@ -199,7 +194,7 @@ async fn handle_websocket(
         let user_id = user_id;
         tokio::spawn(async move {
             info!(%user_id, %room_id, "Disconnect cleanup: sending leave");
-            // FIX: Use force=true to ensure immediate removal and prevent zombie state
+            // FORCE = TRUE pour éviter l'état zombie
             match registry.send_leave(room_id, user_id, true).await {
                 Ok(remaining_stack) => {
                     if remaining_stack > ChipAmount::new(0).unwrap() {
@@ -219,17 +214,11 @@ async fn handle_websocket(
             }
         });
     }
+
     send_task.abort();
     info!(%user_id, "WebSocket handler finished");
 }
 
-/// Process a single client message.
-///
-/// # Returns
-/// - `true`  — the connection is still healthy; keep the event loop running.
-/// - `false` — a **critical** `client_tx.send()` failed, meaning the WebSocket
-///   send task has exited. The caller must `break` out of the main loop
-///   immediately so the socket is closed and the client can reconnect.
 async fn handle_client_message(
     state: &Arc<AppState>,
     user_id: &UserId,
@@ -243,7 +232,7 @@ async fn handle_client_message(
         Ok(v) => v,
         Err(e) => {
             warn!(%user_id, error = %e, "Invalid JSON from client");
-            return true; // non-fatal: skip this message
+            return true;
         }
     };
 
@@ -298,7 +287,7 @@ async fn handle_client_message(
         }
 
         "join_table" => {
-            info!(%user_id, "join_table: start processing");
+            debug!(%user_id, "Processing join_table");
             if active_rooms.len() >= max_tables {
                 let err = serde_json::json!({
                     "type": "Error",
@@ -324,11 +313,12 @@ async fn handle_client_message(
                 }
             };
 
-            info!(%user_id, %table_id, "join_table: assigning room");
-            let room_id = match state.registry.assign_room(table_id).await {
+            // NOUVEAU : Récupère les rooms du joueur pour les exclure lors de l'assignation
+            let user_rooms = state.registry.find_all_user_rooms(*user_id).await;
+
+            let room_id = match state.registry.assign_room(table_id, user_rooms).await {
                 Ok(id) => id,
                 Err(e) => {
-                    error!(%user_id, %table_id, error = ?e, "join_table: failed to assign room");
                     let err = serde_json::json!({
                         "type": "Error",
                         "room_id": null,
@@ -337,7 +327,6 @@ async fn handle_client_message(
                     return send_json_to_client(client_tx, err);
                 }
             };
-            info!(%user_id, %table_id, %room_id, "join_table: room assigned");
 
             let seat_opt = parsed.get("seat").and_then(|s| s.as_u64()).map(|s| s as u8);
             let buy_in: i64 = parsed
@@ -360,7 +349,6 @@ async fn handle_client_message(
                 }
             };
 
-            info!(%user_id, %room_id, "join_table: getting table config");
             match state.registry.get_table_config(table_id).await {
                 Some(cfg) => {
                     if stack < cfg.min_buy_in || stack > cfg.max_buy_in {
@@ -379,10 +367,8 @@ async fn handle_client_message(
                 }
                 None => {}
             }
-            info!(%user_id, %room_id, "join_table: got table config");
 
             let ctx = RequestContext::new(Uuid::new_v4(), Some(*user_id));
-            info!(%user_id, %room_id, "join_table: getting user profile");
             let display_name = match state
                 .user_repo
                 .get_user_profile(ctx.clone(), *user_id)
@@ -391,7 +377,6 @@ async fn handle_client_message(
                 Ok(profile) => profile.display_name,
                 Err(_) => "Player".to_string(),
             };
-            info!(%user_id, %room_id, "join_table: got user profile");
 
             active_rooms.insert(room_id);
             let assigned_msg = serde_json::json!({
@@ -399,14 +384,12 @@ async fn handle_client_message(
                 "table_id": table_id,
                 "room_id": room_id
             });
-            info!(%user_id, %room_id, "join_table: sending RoomAssigned");
             if !send_json_to_client(client_tx, assigned_msg) {
                 warn!(%user_id, "Failed to send RoomAssigned — send task dead");
                 return false;
             }
-            info!(%user_id, %room_id, "join_table: sent RoomAssigned");
 
-            info!(%user_id, %room_id, buy_in = buy_in, "join_table: calling join_room_full");
+            info!(%user_id, %table_id, %room_id, buy_in = buy_in, "Attempting to join table");
             match state
                 .registry
                 .join_room_full(
@@ -420,10 +403,9 @@ async fn handle_client_message(
                 .await
             {
                 Ok(is_new_join) => {
-                    info!(%user_id, %room_id, is_new_join, "join_table: join_room_full success");
+                    info!(%user_id, %table_id, %room_id, is_new_join, "Successfully joined table");
 
                     if is_new_join {
-                        info!(%user_id, %room_id, "join_table: debiting chips");
                         match state
                             .user_repo
                             .update_chip_balance(ctx.clone(), *user_id, -buy_in)
@@ -448,12 +430,10 @@ async fn handle_client_message(
                                 if !send_json_to_client(client_tx, err) {
                                     return false;
                                 }
-                                // Remove player from actor since debit failed
                                 let _ = state.registry.send_leave(room_id, *user_id, true).await;
                                 return true;
                             }
                         }
-                        info!(%user_id, %room_id, "join_table: chips debited");
                     }
                 }
                 Err(e) => {
@@ -466,7 +446,6 @@ async fn handle_client_message(
                     return send_json_to_client(client_tx, err);
                 }
             }
-            info!(%user_id, %room_id, "join_table: end processing");
         }
 
         "rebuy" => {
@@ -569,7 +548,6 @@ async fn handle_client_message(
             let client_tx = client_tx.clone();
 
             tokio::spawn(async move {
-                info!(%user_id, %room_id, "leave_table: sending leave to registry");
                 match registry.send_leave(room_id, user_id, true).await {
                     Ok(remaining_stack) => {
                         if remaining_stack > ChipAmount::new(0).unwrap() {
@@ -606,6 +584,7 @@ async fn handle_client_message(
                 }
             });
         }
+
         "player_action" => {
             let room_id_str = parsed.get("room_id").and_then(|t| t.as_str()).unwrap_or("");
             let room_id = match room_id_str.parse::<TableId>() {

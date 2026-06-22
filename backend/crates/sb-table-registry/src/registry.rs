@@ -61,7 +61,11 @@ impl Registry {
         info!(%table_id, "Registered table config in Registry");
     }
 
-    pub async fn assign_room(&self, table_id: TableId) -> Result<TableId, TableError> {
+    pub async fn assign_room(
+        &self,
+        table_id: TableId,
+        exclude_rooms: Vec<TableId>,
+    ) -> Result<TableId, TableError> {
         let config = self
             .table_configs
             .read()
@@ -75,9 +79,12 @@ impl Registry {
 
         if let Some(room_ids) = table_rooms.get(&table_id) {
             for room_id in room_ids {
-                if let Some(room) = rooms.get(room_id) {
-                    if room.active_players.load(Ordering::Relaxed) < config.max_players {
-                        return Ok(*room_id);
+                // Ignore les rooms dans lesquelles le joueur est déjà
+                if !exclude_rooms.contains(room_id) {
+                    if let Some(room) = rooms.get(room_id) {
+                        if room.active_players.load(Ordering::Relaxed) < config.max_players {
+                            return Ok(*room_id);
+                        }
                     }
                 }
             }
@@ -135,22 +142,7 @@ impl Registry {
             entry.table_id
         };
 
-        {
-            let user_rooms = self.user_room_map.read().await;
-            if let Some(rooms) = user_rooms.get(&user_id) {
-                for r_id in rooms {
-                    if *r_id != room_id {
-                        if let Some(r_entry) = self.rooms.read().await.get(r_id) {
-                            if r_entry.table_id == table_id {
-                                return Err(TableError::Internal(
-                                    "Already seated at this table".into(),
-                                ));
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        // LA VERIFICATION "Already seated" A ÉTÉ COMPLÈTEMENT SUPPRIMÉE ICI POUR AUTORISER LE MULTI-TABLING
 
         let (tx, rx) = tokio::sync::oneshot::channel();
 
