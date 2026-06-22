@@ -2,7 +2,6 @@
 resolver = "2"
 members = [
     "crates/sb-payment",
-    "crates/sb-mission",
     "crates/sb-anti-cheat",
     "crates/sb-viral",
     "crates/sb-oracle",
@@ -58,12 +57,12 @@ sb-shared-types = { path = "crates/sb-shared-types" }
 sb-game-engine = { path = "crates/sb-game-engine" }
 sb-ws-messages = { path = "crates/sb-ws-messages" }
 sb-ws-handler = { path = "crates/sb-ws-handler" }
-async-trait = "0.1.89"
+async-trait = { version = "0.1.89" }
 anyhow = { version = "1.0.102" }
 thiserror = { version = "2.0.18" }
 serde_json = { version = "1.0.150" }
 tracing = { version = "0.1.44" }
-axum = "0.8.9"
+axum = { version = "0.8.9", features = ["ws", "macros"] }
 secrecy = "0.10"
 url = "2.5"
 once_cell = "1.21.4"
@@ -76,14 +75,14 @@ hmac = "0.13"
 jsonwebtoken = { version = "=10.3.0", features = ["rust_crypto"] }
 argon2 = "0.6.0-rc.8"
 sqlx = { version = "0.9.0", features = ["sqlite", "runtime-tokio", "tls-rustls"] }
-sea-orm = "2.0.0-rc.38"
+sea-orm = { version = "2.0.0-rc.38", features = ["sqlx-sqlite", "runtime-tokio-rustls", "macros"] }
 sea-orm-migration = { version = "2.0.0-rc.38" }
 serde = { version = "1.0.228", features = ["derive"] }
 uuid = { version = "1.23.0", features = ["v7", "serde"] }
-chrono = "0.4.45"
+chrono = { version = "0.4.45", features = ["serde"] }
 derive_more = "2.1.1"
-tokio = "1.52.3"
-rand = "0.10.0"
+tokio = { version = "1.52.3", features = ["rt", "macros"] }
+rand = { version = "0.10.0", features = ["std_rng"] }
 strum = { version = "0.28.0", features = ["derive"] }
 tower = { version = "0.5" }
 tower-http = { version = "0.6", features = ["auth"] }
