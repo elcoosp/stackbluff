@@ -18,7 +18,6 @@ members = [
     "migration",
     "crates/sb-club",
     "crates/sb-server",
-        "crates/sb-notification",
 ]
 
 [workspace.package]

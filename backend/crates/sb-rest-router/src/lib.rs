@@ -1,3 +1,4 @@
+pub mod leaderboard;
 use axum::{
     Router,
     extract::{Extension, Path, Query, State},
@@ -104,6 +105,7 @@ pub struct AppState {
     table_repo: Arc<dyn TableRepo + Send + Sync>,
     registry: Arc<Registry>,
     hand_history_repo: Arc<dyn HandHistoryRepository + Send + Sync>,
+    pub leaderboard_query: Arc<dyn sb_contracts::leaderboard::LeaderboardQuery + Send + Sync>,
 }
 
 pub fn create_router(
@@ -111,12 +113,14 @@ pub fn create_router(
     table_repo: Arc<dyn TableRepo + Send + Sync>,
     registry: Arc<Registry>,
     hand_history_repo: Arc<dyn HandHistoryRepository + Send + Sync>,
+    leaderboard_query: Arc<dyn sb_contracts::leaderboard::LeaderboardQuery + Send + Sync>,
 ) -> Router {
     let state = Arc::new(AppState {
         table_service,
         table_repo,
         registry,
         hand_history_repo,
+        leaderboard_query,
     });
 
     let public_routes = Router::new().route("/api/tables", get(list_tables_public));
@@ -129,6 +133,7 @@ pub fn create_router(
 
     Router::new()
         .merge(public_routes)
+        .merge(leaderboard::leaderboard_routes())
         .merge(protected_routes)
         .with_state(state)
 }
