@@ -18,6 +18,7 @@ import { CreateTableModal } from '../components/CreateTableModal';
 import { BuyInDialog } from '../components/game/BuyInDialog';
 import { apiClient } from '@stackbluff/shared';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
+import { Leaderboard } from "../components/Leaderboard";
 
 const STAKE_CONFIG = {
   Micro: { text: "$0.02/$0.05", bb: 5 },
@@ -96,6 +97,7 @@ function LobbyPage() {
       <aside className="hidden md:flex flex-col w-64 bg-surface-container-low border-r border-outline-variant py-gutter space-y-4 sticky top-0 h-screen">
         <div className="px-6 pt-6 mb-8">
           <div className="p-4 rounded-lg bg-surface-container-highest razor-highlight border border-outline-variant">
+        <Leaderboard />
             <h3 className="font-headline-md text-headline-md text-on-surface mb-1">StackBluff Elite</h3>
             <p className="font-label-caps text-[10px] text-tertiary">Tier: Obsidian</p>
           </div>

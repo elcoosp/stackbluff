@@ -1,1 +1,50 @@
-// Pre-existing tests commented out due to unrelated compilation errors.
+use chrono::Utc;
+use migration::{Migrator, MigratorTrait};
+use sb_db_entities::*;
+use sea_orm::{ActiveModelTrait, Database, EntityTrait, IntoActiveModel, ModelTrait};
+use uuid::Uuid;
+
+#[tokio::test]
+async fn test_migration_and_basic_ops() {
+    let db = Database::connect("sqlite::memory:").await.unwrap();
+    Migrator::up(&db, None).await.unwrap();
+
+    let user_active = user::ActiveModel {
+        id: sea_orm::ActiveValue::Set(Uuid::now_v7()),
+        telegram_id: sea_orm::ActiveValue::Set(Some(123456789)),
+        email: sea_orm::ActiveValue::Set(None),
+        display_name: sea_orm::ActiveValue::Set("tester".to_string()),
+        chip_balance: sea_orm::ActiveValue::Set(1000),
+        streak_count: sea_orm::ActiveValue::Set(0),
+        created_at: sea_orm::ActiveValue::Set(Utc::now()),
+        updated_at: sea_orm::ActiveValue::Set(Utc::now()),
+        platform: sea_orm::ActiveValue::Set(Platform::Telegram),
+        email_verified_at: sea_orm::ActiveValue::Set(None),
+    };
+    let user = user_active.insert(&db).await.unwrap();
+
+    let mut bad_user = user.clone().into_active_model();
+    bad_user.chip_balance = sea_orm::ActiveValue::Set(-1);
+    let err = bad_user.update(&db).await;
+    assert!(err.is_err());
+
+    let season = season::ActiveModel {
+        id: sea_orm::ActiveValue::Set(1),
+        name: sea_orm::ActiveValue::Set("Season 1".to_string()),
+        starts_at: sea_orm::ActiveValue::Set(Utc::now()),
+        ends_at: sea_orm::ActiveValue::Set(Utc::now() + chrono::Duration::weeks(8)),
+    };
+    season.insert(&db).await.unwrap();
+
+    let rank = player_rank::ActiveModel {
+        user_id: sea_orm::ActiveValue::Set(user.id),
+        season_id: sea_orm::ActiveValue::Set(1),
+        rank_tier: sea_orm::ActiveValue::Set(RankTier::Gold),
+        rank_points: sea_orm::ActiveValue::Set(1200),
+    };
+    rank.insert(&db).await.unwrap();
+
+    user.delete(&db).await.unwrap();
+    let ranks = player_rank::Entity::find().all(&db).await.unwrap();
+    assert!(ranks.is_empty());
+}
