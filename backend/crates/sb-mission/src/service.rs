@@ -213,7 +213,7 @@ impl MissionApi for MissionServiceImpl {
             .one(&txn)
             .await
             .map_err(|e| AppError::from(e.to_string()))?
-            .unwrap_or_else(|| streak::Model {
+            .unwrap_or(streak::Model {
                 user_id: user_id.0,
                 current_streak: 0,
                 longest_streak: 0,
