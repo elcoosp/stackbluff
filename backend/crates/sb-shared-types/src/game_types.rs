@@ -50,4 +50,3 @@ pub struct HandResult {
     pub went_to_showdown: bool,
     pub hero_went_allin: bool,
 }
- origin/main
