@@ -4,7 +4,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU8, Ordering};
-use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration as StdDuration, Instant, SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
 use futures::future::join_all;
@@ -27,7 +27,7 @@ use crate::game_room::{
     PlayerStateInfo, PrivatePayload, RoomMessage, ShowdownPlayer, ShowdownReveal, SidePotMessage,
     TableStateUpdate, WinnerResult, WsCard,
 };
-use tokio::time::{Duration as TokioDuration, sleep};
+use tokio::time::{Duration, sleep};
 use tracing::{Instrument, Level, debug, error, info, span, warn};
 
 fn zero() -> ChipAmount {
@@ -223,7 +223,6 @@ pub enum InternalCommand {
 }
 
 #[derive(Debug)]
-
 #[derive(Debug, Clone)]
 struct KickVoteState {
     kick_vote_id: Uuid,
@@ -2006,40 +2005,6 @@ impl TableActor {
             },
         );
     }
-}
-
-fn community_cards_to_array(hand: &ActiveHand) -> Option<[sb_shared_types::Card; 5]> {
-    let cc = hand.state.community_cards();
-    if cc.len() >= 5 {
-        Some(cc[..5].try_into().ok()?)
-    } else {
-        None
-    }
-}
-
-pub fn spawn_table_actor(
-    room_id: TableId,
-    table_id: TableId,
-    config: TableConfig,
-    event_tx: tokio::sync::broadcast::Sender<HandCompletedEvent>,
-    stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
-    active_players: Arc<AtomicU8>,
-    kick_vote_state: Option<KickVoteState>,
-    kick_cooldowns: HashMap<UserId, Instant>,
-    kick_refund_responder: Option<tokio::sync::oneshot::Sender<ChipAmount>>,
-) -> (mpsc::Sender<InternalCommand>, tokio::task::JoinHandle<()>) {
-    let (tx, rx) = mpsc::channel(32);
-    let actor = TableActor::new(
-        room_id,
-        table_id,
-        config,
-        tx.clone(),
-        event_tx,
-        stats_repo,
-        active_players,
-    );
-    let handle = tokio::spawn(actor.run(rx));
-    (tx, handle)
 
     async fn set_sitting_out(&mut self, user_id: UserId, sitting_out: bool) {
         let player = match self.players.get_mut(&user_id) {
@@ -2055,7 +2020,7 @@ pub fn spawn_table_actor(
 
     async fn start_kick_vote(&mut self, initiator_id: UserId, target_id: UserId, respond_to: Option<tokio::sync::oneshot::Sender<ChipAmount>>) {
         if let Some(&last) = self.kick_cooldowns.get(&target_id) {
-            if last.elapsed() < std::time::Duration::from_secs(300) {
+            if last.elapsed() < StdDuration::from_secs(300) {
                 self.send_error_to(&initiator_id, "Target is on kick cooldown (5 minutes)");
                 return;
             }
@@ -2101,7 +2066,7 @@ pub fn spawn_table_actor(
         let tx = self.cmd_tx.clone();
         let vid = kick_vote_id;
         tokio::spawn(async move {
-            sleep(TokioDuration::from_secs(10)).await;
+            sleep(Duration::from_secs(10)).await;
             let _ = tx.send(InternalCommand::KickVoteTimeout { kick_vote_id: vid }).await;
         });
         self.kick_vote_state = Some(state);
@@ -2174,5 +2139,38 @@ pub fn spawn_table_actor(
             passed: false,
         });
     }
+}
 
+fn community_cards_to_array(hand: &ActiveHand) -> Option<[sb_shared_types::Card; 5]> {
+    let cc = hand.state.community_cards();
+    if cc.len() >= 5 {
+        Some(cc[..5].try_into().ok()?)
+    } else {
+        None
+    }
+}
+
+pub fn spawn_table_actor(
+    room_id: TableId,
+    table_id: TableId,
+    config: TableConfig,
+    event_tx: tokio::sync::broadcast::Sender<HandCompletedEvent>,
+    stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
+    active_players: Arc<AtomicU8>,
+    kick_vote_state: Option<KickVoteState>,
+    kick_cooldowns: HashMap<UserId, Instant>,
+    kick_refund_responder: Option<tokio::sync::oneshot::Sender<ChipAmount>>,
+) -> (mpsc::Sender<InternalCommand>, tokio::task::JoinHandle<()>) {
+    let (tx, rx) = mpsc::channel(32);
+    let actor = TableActor::new(
+        room_id,
+        table_id,
+        config,
+        tx.clone(),
+        event_tx,
+        stats_repo,
+        active_players,
+    );
+    let handle = tokio::spawn(actor.run(rx));
+    (tx, handle)
 }
