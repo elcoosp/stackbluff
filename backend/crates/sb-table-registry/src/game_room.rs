@@ -1,3 +1,4 @@
+use uuid::Uuid;
 use sb_shared_types::{ChipAmount, TableId, UserId};
 use serde::Serialize;
 use std::collections::HashMap;
@@ -32,7 +33,8 @@ pub struct PlayerStateInfo {
     pub current_bet: ChipAmount,
     pub is_all_in: bool,
     pub is_folded: bool,
-    pub is_leaving: bool, // CHANGED: Added to show "Away" state
+    pub is_leaving: bool,
+    pub sitting_out: bool, // CHANGED: Added to show "Away" state
     #[serde(skip_serializing_if = "Option::is_none")]
     pub position_badge: Option<String>,
     pub last_action: Option<ActionInfo>,
@@ -134,6 +136,26 @@ pub enum RoomMessage {
     ActionBroadcast(ActionBroadcast),
     #[serde(rename = "ShowdownReveal")]
     ShowdownReveal(ShowdownReveal),
+    KickVoteStarted {
+        room_id: TableId,
+        initiator_id: UserId,
+        target_id: UserId,
+        kick_vote_id: Uuid,
+        duration_secs: u32,
+        required_votes: u32,
+    },
+    KickVoteUpdate {
+        room_id: TableId,
+        kick_vote_id: Uuid,
+        yes_votes: u32,
+        required_votes: u32,
+        passed: bool,
+    },
+    PlayerRemoved {
+        room_id: TableId,
+        player_id: UserId,
+        reason: String,
+    },
     #[serde(rename = "HandResult")]
     HandResult(HandResult),
     #[serde(rename = "Error")]
