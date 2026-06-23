@@ -24,5 +24,3 @@ rand = { workspace = true }
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util"] }
 tokio-test = "0.4"
-sb-contracts = { path = "../sb-contracts" }
-sb-contracts = { path = "../sb-contracts" }

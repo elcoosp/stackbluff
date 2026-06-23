@@ -1,8 +1,8 @@
-use uuid::Uuid;
 use sb_shared_types::{ChipAmount, TableId, UserId};
 use serde::Serialize;
 use std::collections::HashMap;
 use tokio::sync::mpsc;
+use uuid::Uuid;
 
 // === WebSocket message types ===
 

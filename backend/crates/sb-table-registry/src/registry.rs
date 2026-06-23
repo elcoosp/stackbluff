@@ -1,4 +1,3 @@
-use uuid::Uuid;
 use crate::actor::{InternalCommand, LeaveResult, spawn_table_actor};
 use crate::events::HandCompletedEvent;
 use crate::game_room::RoomMessage;
@@ -6,6 +5,7 @@ use sb_contracts::stats_api::PlayerStatsRepo;
 use sb_contracts::{TableCommand, TableError, lobby_api::TableInfo};
 use sb_shared_types::AppError;
 use sb_shared_types::{ActionType, ChipAmount, TableConfig, TableId, UserId};
+use uuid::Uuid;
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -487,14 +487,18 @@ impl Registry {
         respond_to: Option<tokio::sync::oneshot::Sender<ChipAmount>>,
     ) -> Result<(), AppError> {
         let rooms = self.rooms.read().await;
-        let actor = rooms.get(&room_id).ok_or(AppError::Internal("table actor not found".to_string()))?;
-        actor.cmd_tx.send(InternalCommand::StartKickVote {
-            initiator_id,
-            target_id,
-            respond_to,
-        })
-        .await
-        .map_err(|_| AppError::Internal("table actor disconnected".to_string()))?;
+        let actor = rooms
+            .get(&room_id)
+            .ok_or(AppError::Internal("table actor not found".to_string()))?;
+        actor
+            .cmd_tx
+            .send(InternalCommand::StartKickVote {
+                initiator_id,
+                target_id,
+                respond_to,
+            })
+            .await
+            .map_err(|_| AppError::Internal("table actor disconnected".to_string()))?;
         Ok(())
     }
 
@@ -505,13 +509,17 @@ impl Registry {
         kick_vote_id: Uuid,
     ) -> Result<(), AppError> {
         let rooms = self.rooms.read().await;
-        let actor = rooms.get(&room_id).ok_or(AppError::Internal("table actor not found".to_string()))?;
-        actor.cmd_tx.send(InternalCommand::VoteKickYes {
-            voter_id,
-            kick_vote_id,
-        })
-        .await
-        .map_err(|_| AppError::Internal("table actor disconnected".to_string()))?;
+        let actor = rooms
+            .get(&room_id)
+            .ok_or(AppError::Internal("table actor not found".to_string()))?;
+        actor
+            .cmd_tx
+            .send(InternalCommand::VoteKickYes {
+                voter_id,
+                kick_vote_id,
+            })
+            .await
+            .map_err(|_| AppError::Internal("table actor disconnected".to_string()))?;
         Ok(())
     }
     pub async fn set_sitting_out(
@@ -521,25 +529,17 @@ impl Registry {
         sitting_out: bool,
     ) -> Result<(), AppError> {
         let rooms = self.rooms.read().await;
-        let actor = rooms.get(&room_id).ok_or(AppError::Internal("table actor not found".to_string()))?;
-        actor.cmd_tx.send(InternalCommand::SitOut { user_id, sitting_out })
+        let actor = rooms
+            .get(&room_id)
+            .ok_or(AppError::Internal("table actor not found".to_string()))?;
+        actor
+            .cmd_tx
+            .send(InternalCommand::SitOut {
+                user_id,
+                sitting_out,
+            })
             .await
             .map_err(|_| AppError::Internal("table actor disconnected".to_string()))?;
         Ok(())
     }
-
-    pub async fn set_sitting_out(
-        &self,
-        room_id: TableId,
-        user_id: UserId,
-        sitting_out: bool,
-    ) -> Result<(), AppError> {
-        let rooms = self.rooms.read().await;
-        let actor = rooms.get(&room_id).ok_or(AppError::Internal("table actor not found".to_string()))?;
-        actor.cmd_tx.send(InternalCommand::SitOut { user_id, sitting_out })
-            .await
-            .map_err(|_| AppError::Internal("table actor disconnected".to_string()))?;
-        Ok(())
-    }
-
 }
