@@ -514,4 +514,32 @@ impl Registry {
         .map_err(|_| AppError::Internal("table actor disconnected".to_string()))?;
         Ok(())
     }
+    pub async fn set_sitting_out(
+        &self,
+        room_id: TableId,
+        user_id: UserId,
+        sitting_out: bool,
+    ) -> Result<(), AppError> {
+        let rooms = self.rooms.read().await;
+        let actor = rooms.get(&room_id).ok_or(AppError::Internal("table actor not found".to_string()))?;
+        actor.cmd_tx.send(InternalCommand::SitOut { user_id, sitting_out })
+            .await
+            .map_err(|_| AppError::Internal("table actor disconnected".to_string()))?;
+        Ok(())
+    }
+
+    pub async fn set_sitting_out(
+        &self,
+        room_id: TableId,
+        user_id: UserId,
+        sitting_out: bool,
+    ) -> Result<(), AppError> {
+        let rooms = self.rooms.read().await;
+        let actor = rooms.get(&room_id).ok_or(AppError::Internal("table actor not found".to_string()))?;
+        actor.cmd_tx.send(InternalCommand::SitOut { user_id, sitting_out })
+            .await
+            .map_err(|_| AppError::Internal("table actor disconnected".to_string()))?;
+        Ok(())
+    }
+
 }

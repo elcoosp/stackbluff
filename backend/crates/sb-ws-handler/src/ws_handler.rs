@@ -10,7 +10,7 @@ use axum_extra::extract::CookieJar;
 use futures::{SinkExt, StreamExt};
 use sb_auth::Authenticator;
 use sb_contracts::repo_api::UserRepo;
-use sb_shared_types::{ChipAmount, RequestContext, TableId, UserId};
+use sb_shared_types::{ChipAmount, {ChipAmount, {ChipAmount, RequestContext, TableId, UserId};
 use sb_table_registry::game_room::RoomMessage;
 use sb_table_registry::registry::Registry;
 use serde::Deserialize;
@@ -85,6 +85,124 @@ async fn handle_client_message(
                 send_error(client_tx, None, None, &format!("Vote failed: {:?}", e));
             }
         }
+        "sit_out" => {
+            let room_id_str = parsed.get("room_id").and_then(|t| t.as_str()).unwrap_or("");
+            let room_id = match room_id_str.parse::<TableId>() {
+                Ok(id) => id,
+                Err(e) => { return send_json_to_client(client_tx, serde_json::json!({"type":"Error","room_id":null,"message":format!("Invalid room_id: {}", e)})); }
+            };
+            let sitting_out = parsed.get("sitting_out").and_then(|v| v.as_bool()).unwrap_or(true);
+            if let Err(e) = state.registry.set_sitting_out(room_id, *user_id, sitting_out).await {
+                let _ = send_json_to_client(client_tx, serde_json::json!({"type":"Error","room_id":room_id,"message":format!("Failed to set sitting_out: {:?}", e)}));
+            }
+        }
+        "kick_vote_start" => {
+            let room_id_str = parsed.get("room_id").and_then(|t| t.as_str()).unwrap_or("");
+            let room_id = match room_id_str.parse::<TableId>() {
+                Ok(id) => id,
+                Err(e) => { return send_json_to_client(client_tx, serde_json::json!({"type":"Error","room_id":null,"message":format!("Invalid room_id: {}", e)})); }
+            };
+            let target_id_str = parsed.get("target_player_id").and_then(|t| t.as_str()).unwrap_or("");
+            let target_id = match target_id_str.parse::<UserId>() {
+                Ok(id) => id,
+                Err(_) => { return send_json_to_client(client_tx, serde_json::json!({"type":"Error","room_id":room_id,"message":"Invalid target_player_id"})); }
+            };
+            let (refund_tx, mut refund_rx) = tokio::sync::oneshot::channel::<ChipAmount>();
+            match state.registry.start_kick_vote(room_id, *user_id, target_id, Some(refund_tx)).await {
+                Ok(()) => {
+                    tokio::spawn(async move {
+                        if let Ok(refund) = refund_rx.await {
+                            if refund > ChipAmount::new(0).unwrap() {
+                                let ctx = RequestContext::new(Uuid::new_v4(), Some(*user_id));
+                                if let Ok(new_balance) = state.user_repo.update_chip_balance(ctx, *user_id, refund.as_i64()).await {
+                                    let balance_msg = serde_json::json!({
+                                        "type": "BalanceUpdated",
+                                        "balance": new_balance
+                                    });
+                                    let _ = client_tx.send(axum::extract::ws::Message::Text(balance_msg.to_string().into()));
+                                }
+                            }
+                        }
+                    });
+                }
+                Err(e) => { let _ = send_json_to_client(client_tx, serde_json::json!({"type":"Error","room_id":room_id,"message":format!("Kick vote failed: {:?}", e)})); }
+            }
+        }
+        "kick_vote_yes" => {
+            let room_id_str = parsed.get("room_id").and_then(|t| t.as_str()).unwrap_or("");
+            let room_id = match room_id_str.parse::<TableId>() {
+                Ok(id) => id,
+                Err(e) => { return send_json_to_client(client_tx, serde_json::json!({"type":"Error","room_id":null,"message":format!("Invalid room_id: {}", e)})); }
+            };
+            let kick_vote_id_str = parsed.get("kick_vote_id").and_then(|t| t.as_str()).unwrap_or("");
+            let kick_vote_id = match Uuid::parse_str(kick_vote_id_str) {
+                Ok(id) => id,
+                Err(_) => { return send_json_to_client(client_tx, serde_json::json!({"type":"Error","room_id":room_id,"message":"Invalid kick_vote_id"})); }
+            };
+            if let Err(e) = state.registry.vote_kick_yes(room_id, *user_id, kick_vote_id).await {
+                let _ = send_json_to_client(client_tx, serde_json::json!({"type":"Error","room_id":room_id,"message":format!("Vote failed: {:?}", e)}));
+            }
+        }
+
+        "sit_out" => {
+            let room_id_str = parsed.get("room_id").and_then(|t| t.as_str()).unwrap_or("");
+            let room_id = match room_id_str.parse::<TableId>() {
+                Ok(id) => id,
+                Err(e) => { return send_json_to_client(client_tx, serde_json::json!({"type":"Error","room_id":null,"message":format!("Invalid room_id: {}", e)})); }
+            };
+            let sitting_out = parsed.get("sitting_out").and_then(|v| v.as_bool()).unwrap_or(true);
+            if let Err(e) = state.registry.set_sitting_out(room_id, *user_id, sitting_out).await {
+                let _ = send_json_to_client(client_tx, serde_json::json!({"type":"Error","room_id":room_id,"message":format!("Failed to set sitting_out: {:?}", e)}));
+            }
+        }
+        "kick_vote_start" => {
+            let room_id_str = parsed.get("room_id").and_then(|t| t.as_str()).unwrap_or("");
+            let room_id = match room_id_str.parse::<TableId>() {
+                Ok(id) => id,
+                Err(e) => { return send_json_to_client(client_tx, serde_json::json!({"type":"Error","room_id":null,"message":format!("Invalid room_id: {}", e)})); }
+            };
+            let target_id_str = parsed.get("target_player_id").and_then(|t| t.as_str()).unwrap_or("");
+            let target_id = match target_id_str.parse::<UserId>() {
+                Ok(id) => id,
+                Err(_) => { return send_json_to_client(client_tx, serde_json::json!({"type":"Error","room_id":room_id,"message":"Invalid target_player_id"})); }
+            };
+            let (refund_tx, mut refund_rx) = tokio::sync::oneshot::channel::<ChipAmount>();
+            match state.registry.start_kick_vote(room_id, *user_id, target_id, Some(refund_tx)).await {
+                Ok(()) => {
+                    tokio::spawn(async move {
+                        if let Ok(refund) = refund_rx.await {
+                            if refund > ChipAmount::new(0).unwrap() {
+                                let ctx = RequestContext::new(Uuid::new_v4(), Some(*user_id));
+                                if let Ok(new_balance) = state.user_repo.update_chip_balance(ctx, *user_id, refund.as_i64()).await {
+                                    let balance_msg = serde_json::json!({
+                                        "type": "BalanceUpdated",
+                                        "balance": new_balance
+                                    });
+                                    let _ = client_tx.send(axum::extract::ws::Message::Text(balance_msg.to_string().into()));
+                                }
+                            }
+                        }
+                    });
+                }
+                Err(e) => { let _ = send_json_to_client(client_tx, serde_json::json!({"type":"Error","room_id":room_id,"message":format!("Kick vote failed: {:?}", e)})); }
+            }
+        }
+        "kick_vote_yes" => {
+            let room_id_str = parsed.get("room_id").and_then(|t| t.as_str()).unwrap_or("");
+            let room_id = match room_id_str.parse::<TableId>() {
+                Ok(id) => id,
+                Err(e) => { return send_json_to_client(client_tx, serde_json::json!({"type":"Error","room_id":null,"message":format!("Invalid room_id: {}", e)})); }
+            };
+            let kick_vote_id_str = parsed.get("kick_vote_id").and_then(|t| t.as_str()).unwrap_or("");
+            let kick_vote_id = match Uuid::parse_str(kick_vote_id_str) {
+                Ok(id) => id,
+                Err(_) => { return send_json_to_client(client_tx, serde_json::json!({"type":"Error","room_id":room_id,"message":"Invalid kick_vote_id"})); }
+            };
+            if let Err(e) = state.registry.vote_kick_yes(room_id, *user_id, kick_vote_id).await {
+                let _ = send_json_to_client(client_tx, serde_json::json!({"type":"Error","room_id":room_id,"message":format!("Vote failed: {:?}", e)}));
+            }
+        }
+
         _ => {}
     }
     true

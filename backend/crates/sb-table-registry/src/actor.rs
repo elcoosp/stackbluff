@@ -222,7 +222,6 @@ pub enum InternalCommand {
     },
 }
 
-#[derive(Debug)]
 #[derive(Debug, Clone)]
 struct KickVoteState {
     kick_vote_id: Uuid,
@@ -534,9 +533,6 @@ impl TableActor {
         event_tx: tokio::sync::broadcast::Sender<HandCompletedEvent>,
         stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
         active_players: Arc<AtomicU8>,
-    kick_vote_state: Option<KickVoteState>,
-    kick_cooldowns: HashMap<UserId, Instant>,
-    kick_refund_responder: Option<tokio::sync::oneshot::Sender<ChipAmount>>,
     ) -> Self {
         Self {
             room_id,
@@ -677,11 +673,15 @@ impl TableActor {
                 debug!(%user_id, "Player was leaving, canceling leave.");
                 player.is_leaving = false;
                 player.force_leave = false;
+                player.sitting_out = false;
+                player.sitting_out = false;
                 if let Some(responder) = player.leave_responder.take() {
                     let _ = responder.send(LeaveResult::Cancelled);
                 }
             }
             debug!(%user_id, "Player already at table, resyncing state for reconnect");
+                player.sitting_out = false;
+                player.sitting_out = false;
             Some(player.player_id)
         } else {
             None
@@ -763,6 +763,8 @@ impl TableActor {
                 debug!(%user_id, "Player is rejoining while leave is pending. Converting to new join.");
                 player.is_leaving = false;
                 player.force_leave = false;
+                player.sitting_out = false;
+                player.sitting_out = false;
                 player.stack = stack;
                 if let Some(rt) = player.leave_responder.take() {
                     let _ = rt.send(LeaveResult::Cancelled);
@@ -1037,6 +1039,8 @@ impl TableActor {
             warn!("Hand already in progress");
             return;
         }
+        self.prune_cooldowns();
+        self.prune_cooldowns();
 
         let active_players_count = self
             .players
@@ -2019,11 +2023,11 @@ impl TableActor {
     }
 
     async fn start_kick_vote(&mut self, initiator_id: UserId, target_id: UserId, respond_to: Option<tokio::sync::oneshot::Sender<ChipAmount>>) {
-        if let Some(&last) = self.kick_cooldowns.get(&target_id) {
-            if last.elapsed() < StdDuration::from_secs(300) {
-                self.send_error_to(&initiator_id, "Target is on kick cooldown (5 minutes)");
-                return;
-            }
+        if let Some(&last) = self.kick_cooldowns.get(&target_id)
+            && last.elapsed() < StdDuration::from_secs(300)
+        {
+            self.send_error_to(&initiator_id, "Target is on kick cooldown (5 minutes)");
+            return;
         }
         if self.kick_vote_state.is_some() {
             self.send_error_to(&initiator_id, "A kick vote is already in progress");
@@ -2103,7 +2107,12 @@ impl TableActor {
     async fn timeout_kick_vote(&mut self, kick_vote_id: Uuid) {
         match &self.kick_vote_state {
             Some(s) if s.kick_vote_id == kick_vote_id => {
+                info!(%kick_vote_id, "Kick vote timed out");
+                info!(%kick_vote_id, "Kick vote timed out");
                 self.broadcast_kick_vote_failed(&kick_vote_id);
+                if let Some(responder) = self.kick_refund_responder.take() {
+                    let _ = responder.send(zero());
+                }
                 self.kick_vote_state = None;
             }
             _ => {}
@@ -2142,6 +2151,16 @@ impl TableActor {
             passed: false,
         });
     }
+
+    fn prune_cooldowns(&mut self) {
+        self.kick_cooldowns.retain(|_, instant| instant.elapsed() < StdDuration::from_secs(300));
+    }
+
+
+    fn prune_cooldowns(&mut self) {
+        self.kick_cooldowns.retain(|_, instant| instant.elapsed() < StdDuration::from_secs(300));
+    }
+
 }
 
 fn community_cards_to_array(hand: &ActiveHand) -> Option<[sb_shared_types::Card; 5]> {
@@ -2160,9 +2179,6 @@ pub fn spawn_table_actor(
     event_tx: tokio::sync::broadcast::Sender<HandCompletedEvent>,
     stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
     active_players: Arc<AtomicU8>,
-    kick_vote_state: Option<KickVoteState>,
-    kick_cooldowns: HashMap<UserId, Instant>,
-    kick_refund_responder: Option<tokio::sync::oneshot::Sender<ChipAmount>>,
 ) -> (mpsc::Sender<InternalCommand>, tokio::task::JoinHandle<()>) {
     let (tx, rx) = mpsc::channel(32);
     let actor = TableActor::new(
