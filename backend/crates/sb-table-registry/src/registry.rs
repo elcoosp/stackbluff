@@ -80,12 +80,11 @@ impl Registry {
         if let Some(room_ids) = table_rooms.get(&table_id) {
             for room_id in room_ids {
                 // Ignore les rooms dans lesquelles le joueur est déjà
-                if !exclude_rooms.contains(room_id) {
-                    if let Some(room) = rooms.get(room_id) {
-                        if room.active_players.load(Ordering::Relaxed) < config.max_players {
-                            return Ok(*room_id);
-                        }
-                    }
+                if !exclude_rooms.contains(room_id)
+                    && let Some(room) = rooms.get(room_id)
+                    && room.active_players.load(Ordering::Relaxed) < config.max_players
+                {
+                    return Ok(*room_id);
                 }
             }
         }

@@ -1,3 +1,165 @@
-/// Placeholder module for mission types (issue #021)
-pub struct Mission;
-pub type MissionId = u64;
+use serde::{Deserialize, Serialize};
+use std::fmt;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct MissionId(pub u32);
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Mission {
+    pub id: MissionId,
+    pub mission_type: String,
+    pub description: String,
+    pub reward_chips: i64,
+    pub completed: bool,
+    pub progress: u32,
+    pub target: u32,
+    pub category: MissionCategory,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum MissionCategory {
+    Easy,
+    Medium,
+    Viral,
+    Weekly,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MissionType {
+    WinFlush,
+    BluffSuccess2,
+    WinThreeHands,
+    FoldPreflop5,
+    CallBluff,
+    AllInWin,
+    HighCardWin,
+    PairWin,
+    TwoPairWin,
+    TripsWin,
+    StraightWin,
+    FlushWin,
+    FullHouseWin,
+    QuadsWin,
+    StraightFlushWin,
+    CheckRaiseSuccess,
+    StealBlinds2,
+    SurviveAllIn,
+    WinNoShowdown,
+    Play10Hands,
+    Play20Hands,
+    WinTwoConsecutive,
+    Bust1Player,
+    RiverWin,
+    BadBeatWin,
+    RaisePreflop10,
+    Showdown5,
+    ButtonWin,
+    AllIn3,
+    BluffRiver2Folds,
+    HighStake5,
+    ShareReplay,
+    Referral5Hands,
+    OracleStudent,
+}
+
+impl fmt::Display for MissionType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            Self::WinFlush => "win_flush",
+            Self::BluffSuccess2 => "bluff_success_2",
+            Self::WinThreeHands => "win_three_hands",
+            Self::FoldPreflop5 => "fold_preflop_5",
+            Self::CallBluff => "call_bluff",
+            Self::AllInWin => "all_in_win",
+            Self::HighCardWin => "high_card_win",
+            Self::PairWin => "pair_win",
+            Self::TwoPairWin => "two_pair_win",
+            Self::TripsWin => "trips_win",
+            Self::StraightWin => "straight_win",
+            Self::FlushWin => "flush_win",
+            Self::FullHouseWin => "full_house_win",
+            Self::QuadsWin => "quads_win",
+            Self::StraightFlushWin => "straight_flush_win",
+            Self::CheckRaiseSuccess => "check_raise_success",
+            Self::StealBlinds2 => "steal_blinds_2",
+            Self::SurviveAllIn => "survive_all_in",
+            Self::WinNoShowdown => "win_no_showdown",
+            Self::Play10Hands => "play_10_hands",
+            Self::Play20Hands => "play_20_hands",
+            Self::WinTwoConsecutive => "win_two_consecutive",
+            Self::Bust1Player => "bust_1_player",
+            Self::RiverWin => "river_win",
+            Self::BadBeatWin => "bad_beat_win",
+            Self::RaisePreflop10 => "raise_preflop_10",
+            Self::Showdown5 => "showdown_5",
+            Self::ButtonWin => "button_win",
+            Self::AllIn3 => "all_in_3",
+            Self::BluffRiver2Folds => "bluff_river_2folds",
+            Self::HighStake5 => "high_stake_5",
+            Self::ShareReplay => "share_replay",
+            Self::Referral5Hands => "referral_5_hands",
+            Self::OracleStudent => "oracle_student",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl MissionType {
+    pub fn iter() -> std::slice::Iter<'static, MissionType> {
+        use MissionType::*;
+        static VARIANTS: &[MissionType] = &[
+            WinFlush, BluffSuccess2, WinThreeHands, FoldPreflop5, CallBluff,
+            AllInWin, HighCardWin, PairWin, TwoPairWin, TripsWin,
+            StraightWin, FlushWin, FullHouseWin, QuadsWin, StraightFlushWin,
+            CheckRaiseSuccess, StealBlinds2, SurviveAllIn, WinNoShowdown,
+            Play10Hands, Play20Hands, WinTwoConsecutive, Bust1Player,
+            RiverWin, BadBeatWin, RaisePreflop10, Showdown5, ButtonWin,
+            AllIn3, BluffRiver2Folds, HighStake5, ShareReplay,
+            Referral5Hands, OracleStudent,
+        ];
+        VARIANTS.iter()
+    }
+}
+
+pub fn all_mission_definitions() -> Vec<(String, String, i64, u32, MissionCategory)> {
+    use MissionType::*;
+    use MissionCategory::*;
+    MissionType::iter().map(|mt| {
+        match mt {
+            WinFlush            => ("win_flush".into(), "Win a hand with a flush".into(), 500, 1u32, Medium),
+            BluffSuccess2       => ("bluff_success_2".into(), "Bluff successfully 2 times".into(), 400, 2u32, Medium),
+            WinThreeHands       => ("win_three_hands".into(), "Win 3 hands in a row".into(), 600, 3u32, Medium),
+            FoldPreflop5        => ("fold_preflop_5".into(), "Fold preflop 5 times".into(), 200, 5u32, Easy),
+            CallBluff           => ("call_bluff".into(), "Call a bluff correctly".into(), 350, 1u32, Medium),
+            AllInWin            => ("all_in_win".into(), "Win an all‑in confrontation".into(), 700, 1u32, Medium),
+            HighCardWin         => ("high_card_win".into(), "Win with high card".into(), 300, 1u32, Easy),
+            PairWin             => ("pair_win".into(), "Win with one pair".into(), 250, 1u32, Easy),
+            TwoPairWin          => ("two_pair_win".into(), "Win with two pair".into(), 300, 1u32, Easy),
+            TripsWin            => ("trips_win".into(), "Win with three of a kind".into(), 450, 1u32, Easy),
+            StraightWin         => ("straight_win".into(), "Win with a straight".into(), 500, 1u32, Medium),
+            FlushWin            => ("flush_win".into(), "Win with a flush".into(), 550, 1u32, Medium),
+            FullHouseWin        => ("full_house_win".into(), "Win with a full house".into(), 650, 1u32, Medium),
+            QuadsWin            => ("quads_win".into(), "Win with four of a kind".into(), 800, 1u32, Medium),
+            StraightFlushWin    => ("straight_flush_win".into(), "Win with a straight flush".into(), 1000, 1u32, Medium),
+            CheckRaiseSuccess   => ("check_raise_success".into(), "Successfully check‑raise".into(), 350, 1u32, Medium),
+            StealBlinds2        => ("steal_blinds_2".into(), "Steal blinds twice".into(), 300, 2u32, Medium),
+            SurviveAllIn        => ("survive_all_in".into(), "Survive an all‑in without winning".into(), 250, 1u32, Easy),
+            WinNoShowdown       => ("win_no_showdown".into(), "Win without showdown".into(), 200, 1u32, Easy),
+            Play10Hands         => ("play_10_hands".into(), "Play 10 hands".into(), 150, 10u32, Easy),
+            Play20Hands         => ("play_20_hands".into(), "Play 20 hands".into(), 300, 20u32, Easy),
+            WinTwoConsecutive   => ("win_two_consecutive".into(), "Win 2 consecutive hands".into(), 400, 2u32, Medium),
+            Bust1Player         => ("bust_1_player".into(), "Eliminate a player".into(), 500, 1u32, Medium),
+            RiverWin            => ("river_win".into(), "Win a hand on the river".into(), 400, 1u32, Medium),
+            BadBeatWin          => ("bad_beat_win".into(), "Win as an underdog".into(), 450, 1u32, Medium),
+            RaisePreflop10      => ("raise_preflop_10".into(), "Raise pre‑flop 10 times".into(), 250, 10u32, Easy),
+            Showdown5           => ("showdown_5".into(), "Go to showdown 5 times".into(), 200, 5u32, Easy),
+            ButtonWin           => ("button_win".into(), "Win a hand from the button".into(), 350, 1u32, Easy),
+            AllIn3              => ("all_in_3".into(), "Go all‑in 3 times".into(), 300, 3u32, Easy),
+            BluffRiver2Folds    => ("bluff_river_2folds".into(), "Make 2 players fold to your river bet".into(), 500, 2u32, Medium),
+            HighStake5          => ("high_stake_5".into(), "Play 5 hands at highest stake".into(), 400, 5u32, Medium),
+            ShareReplay         => ("share_replay".into(), "Share a replay card".into(), 300, 1u32, Viral),
+            Referral5Hands      => ("referral_5_hands".into(), "Refer a friend who plays 5 hands".into(), 500, 1u32, Viral),
+            OracleStudent       => ("oracle_student".into(), "Use The Oracle 2 times".into(), 250, 2u32, Easy),
+        }
+    }).collect()
+}

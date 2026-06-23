@@ -10,7 +10,12 @@ impl MigrationTrait for Migration {
             .alter_table(
                 Table::alter()
                     .table(Alias::new("tables"))
-                    .add_column(ColumnDef::new(Alias::new("name")).string().not_null().default(""))
+                    .add_column(
+                        ColumnDef::new(Alias::new("name"))
+                            .string()
+                            .not_null()
+                            .default(""),
+                    )
                     .to_owned(),
             )
             .await

@@ -191,7 +191,6 @@ async fn handle_websocket(
     for room_id in active_rooms {
         let registry = state.registry.clone();
         let user_repo = state.user_repo.clone();
-        let user_id = user_id;
         tokio::spawn(async move {
             info!(%user_id, %room_id, "Disconnect cleanup: sending leave");
             // FORCE = TRUE pour éviter l'état zombie
@@ -349,23 +348,21 @@ async fn handle_client_message(
                 }
             };
 
-            match state.registry.get_table_config(table_id).await {
-                Some(cfg) => {
-                    if stack < cfg.min_buy_in || stack > cfg.max_buy_in {
-                        let err = serde_json::json!({
-                            "type": "Error",
-                            "room_id": null,
-                            "message": format!(
-                                "Buy-in of {} is outside the allowed range ({}–{}).",
-                                stack.as_i64(),
-                                cfg.min_buy_in.as_i64(),
-                                cfg.max_buy_in.as_i64()
-                            )
-                        });
-                        return send_json_to_client(client_tx, err);
-                    }
+            #[allow(clippy::collapsible_if)]
+            if let Some(cfg) = state.registry.get_table_config(table_id).await {
+                if stack < cfg.min_buy_in || stack > cfg.max_buy_in {
+                    let err = serde_json::json!({
+                        "type": "Error",
+                        "room_id": null,
+                        "message": format!(
+                            "Buy-in of {} is outside the allowed range ({}–{}).",
+                            stack.as_i64(),
+                            cfg.min_buy_in.as_i64(),
+                            cfg.max_buy_in.as_i64()
+                        )
+                    });
+                    return send_json_to_client(client_tx, err);
                 }
-                None => {}
             }
 
             let ctx = RequestContext::new(Uuid::new_v4(), Some(*user_id));
@@ -623,7 +620,7 @@ async fn handle_client_message(
             let amount = parsed
                 .get("amount")
                 .and_then(|a| a.as_i64())
-                .and_then(|v| ChipAmount::new(v));
+                .and_then(ChipAmount::new);
 
             if let Err(e) = state
                 .registry

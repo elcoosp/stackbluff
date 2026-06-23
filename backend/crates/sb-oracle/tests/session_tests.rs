@@ -10,6 +10,7 @@ async fn session_resets_after_8_hours() {
     let oracle = OracleServiceImpl::new();
     let user_id = UserId(Uuid::new_v4());
     let ctx = RequestContext {
+        ip: String::new(),
         request_id: Uuid::new_v4(),
         user_id: Some(user_id),
     };
