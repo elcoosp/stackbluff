@@ -1,17 +1,14 @@
 //! Integration test against a temporary SQLite database.
 //! Tests actual SQL correctness, not mock behaviour.
-//!
-//! FK constraints remain ON — prerequisite user rows are inserted
-//! via the user entity's ActiveModel so all CHECK constraints
-//! (including the platform ENUM) are satisfied automatically.
 
-use migration::MigratorTrait;
+use migration::Migrator;
 use sb_club::ClubServiceImpl;
 use sb_contracts::{ClubError, ClubRepo, ClubService, DIVISION_SIZE};
 use sb_db_entities::user::ActiveModel as UserActiveModel;
 use sb_db_repos::club_repo::ClubRepoImpl;
 use sb_shared_types::{ClubId, RequestContext, UserId};
 use sea_orm::{ActiveModelTrait, Database};
+use sea_orm_migration::migrator::MigratorTrait;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -24,19 +21,14 @@ async fn setup_db() -> (
         .await
         .expect("db connect");
 
-    // Run migrations to create tables
-    migration::Migrator::up(&db, None)
-        .await
-        .expect("migrations");
+    // Run migrations
+    Migrator::up(&db, None).await.expect("migrations");
 
     let repo: Arc<dyn ClubRepo> = Arc::new(ClubRepoImpl::new(db.clone()));
     let service = Arc::new(ClubServiceImpl::new(repo.clone()));
     (service, repo, db)
 }
 
-/// Insert a user row via the entity's ActiveModel so all CHECK constraints
-/// (including the platform ENUM) are satisfied automatically.
-/// FK constraints remain ON — this proves they are correctly defined.
 async fn ensure_user(db: &sea_orm::DatabaseConnection, user_id: UserId) {
     use sea_orm::ActiveValue::Set;
 
@@ -47,6 +39,9 @@ async fn ensure_user(db: &sea_orm::DatabaseConnection, user_id: UserId) {
         streak_count: Set(0),
         created_at: Set(chrono::Utc::now()),
         updated_at: Set(chrono::Utc::now()),
+        platform: Set(sb_db_entities::enums::Platform::Telegram),
+        password_hash: Set(None),
+        registration_order: Set(Some(0)),
         ..Default::default()
     };
 
@@ -57,6 +52,7 @@ fn test_ctx() -> RequestContext {
     RequestContext {
         request_id: Uuid::new_v4(),
         user_id: Some(UserId(Uuid::new_v4())),
+        ip: "127.0.0.1".to_string(),
     }
 }
 
@@ -92,6 +88,7 @@ async fn test_join_club_and_duplicate() {
     let member_ctx = RequestContext {
         request_id: Uuid::new_v4(),
         user_id: Some(UserId(Uuid::new_v4())),
+        ip: "127.0.0.1".to_string(),
     };
     let member_id = member_ctx.user_id.unwrap();
     ensure_user(&db, member_id).await;
@@ -99,7 +96,6 @@ async fn test_join_club_and_duplicate() {
         .await
         .expect("join club");
 
-    // Second join should fail with AlreadyMember (UNIQUE constraint)
     let result = svc.join_club(&member_ctx, club_id, member_id).await;
     assert!(matches!(result, Err(ClubError::AlreadyMember { .. })));
 }
@@ -114,7 +110,6 @@ async fn test_add_xp_not_member() {
         .create_club(&ctx, "NoXP Club", None, owner_id)
         .await
         .expect("create");
-    // Don't join — add_xp should fail
     let result = svc.add_xp(&ctx, club_id, owner_id, 100).await;
     assert!(matches!(result, Err(ClubError::NotAMember { .. })));
 }
@@ -146,16 +141,15 @@ async fn test_leaderboard_divisions() {
         .await
         .expect("create");
 
-    // Owner joins the club too
     svc.join_club(&ctx, club_id, owner_id)
         .await
         .expect("owner join");
 
-    // Join and add XP for 599 additional members (total 600)
     for i in 0..599 {
         let member_ctx = RequestContext {
             request_id: Uuid::new_v4(),
             user_id: Some(UserId(Uuid::new_v4())),
+            ip: "127.0.0.1".to_string(),
         };
         let member_id = member_ctx.user_id.unwrap();
         ensure_user(&db, member_id).await;
@@ -167,10 +161,8 @@ async fn test_leaderboard_divisions() {
             .expect("add xp");
     }
 
-    // Refresh leaderboard
     repo.refresh_leaderboard(club_id).await.expect("refresh");
 
-    // Division 1 should have up to 500 rows
     let div1 = svc
         .get_leaderboard(&ctx, club_id, 1)
         .await
@@ -180,7 +172,6 @@ async fn test_leaderboard_divisions() {
     assert_eq!(div1.total_divisions, 2);
     assert!(div1.entries.len() <= DIVISION_SIZE as usize);
 
-    // Division 2 should have remaining rows
     let div2 = svc
         .get_leaderboard(&ctx, club_id, 2)
         .await

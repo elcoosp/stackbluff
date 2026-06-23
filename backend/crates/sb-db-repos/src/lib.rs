@@ -9,6 +9,7 @@ pub mod table_repo;
 pub mod user_repo;
 pub mod writer_loop;
 
+pub mod club_repo;
 pub use writer_loop::init_writer_loop;
 
 pub use table_repo::TableRepoImpl;

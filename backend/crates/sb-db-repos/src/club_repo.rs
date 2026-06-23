@@ -1,9 +1,7 @@
 use async_trait::async_trait;
 use chrono::Utc;
-use sb_contracts::repo_api::ClubResult;
-use sb_contracts::{
-    Club, ClubRepo, DIVISION_SIZE, LeaderboardEntry, LeaderboardPage, club_error::ClubError,
-};
+use sb_contracts::ClubError;
+use sb_contracts::repo_api::{Club, ClubRepo, DIVISION_SIZE, LeaderboardEntry, LeaderboardPage};
 use sb_db_entities::{club_leaderboard, club_memberships, clubs};
 use sb_shared_types::{ClubId, UserId};
 use sea_orm::sea_query::ExprTrait;
@@ -30,7 +28,7 @@ impl ClubRepo for ClubRepoImpl {
         name: &str,
         logo_url: Option<&str>,
         created_by: UserId,
-    ) -> ClubResult<ClubId> {
+    ) -> Result<ClubId, ClubError> {
         let id = Uuid::new_v4();
         let now = Utc::now();
         let active = clubs::ActiveModel {
@@ -47,16 +45,16 @@ impl ClubRepo for ClubRepoImpl {
         active
             .insert(&self.db)
             .await
-            .map_err(|e| ClubError::database_with_source("failed to create club", e))?;
+            .map_err(|e| ClubError::Database(e.to_string()))?;
 
         Ok(ClubId::new(id))
     }
 
-    async fn find_club_by_id(&self, club_id: ClubId) -> ClubResult<Option<Club>> {
+    async fn find_club_by_id(&self, club_id: ClubId) -> Result<Option<Club>, ClubError> {
         let model = clubs::Entity::find_by_id(club_id.as_uuid())
             .one(&self.db)
             .await
-            .map_err(|e| ClubError::database_with_source("failed to find club", e))?;
+            .map_err(|e| ClubError::Database(e.to_string()))?;
 
         Ok(model.map(|m| Club {
             id: ClubId::new(m.id),
@@ -66,7 +64,7 @@ impl ClubRepo for ClubRepoImpl {
         }))
     }
 
-    async fn join_club(&self, club_id: ClubId, user_id: UserId) -> ClubResult<()> {
+    async fn join_club(&self, club_id: ClubId, user_id: UserId) -> Result<(), ClubError> {
         let id = Uuid::new_v4();
         let now = Utc::now();
         let active = club_memberships::ActiveModel {
@@ -85,33 +83,33 @@ impl ClubRepo for ClubRepoImpl {
                     tracing::warn!(
                         club_id = %club_id,
                         user_id = %user_id,
-                        "join_club: already a member (UNIQUE constraint)"
+                        "join_club: already a member"
                     );
-                    Err(ClubError::already_member(club_id, user_id))
+                    Err(ClubError::AlreadyMember)
                 } else {
-                    Err(ClubError::database_with_source("failed to join club", e))
+                    Err(ClubError::Database(e.to_string()))
                 }
             }
         }
     }
 
-    async fn is_member(&self, club_id: ClubId, user_id: UserId) -> ClubResult<bool> {
+    async fn is_member(&self, club_id: ClubId, user_id: UserId) -> Result<bool, ClubError> {
         let count = club_memberships::Entity::find()
             .filter(club_memberships::Column::ClubId.eq(club_id.as_uuid()))
             .filter(club_memberships::Column::UserId.eq(user_id.as_uuid()))
             .count(&self.db)
             .await
-            .map_err(|e| ClubError::database_with_source("failed to check membership", e))?;
+            .map_err(|e| ClubError::Database(e.to_string()))?;
 
         Ok(count > 0)
     }
 
-    async fn get_member_count(&self, club_id: ClubId) -> ClubResult<u64> {
+    async fn get_member_count(&self, club_id: ClubId) -> Result<u64, ClubError> {
         let count = club_memberships::Entity::find()
             .filter(club_memberships::Column::ClubId.eq(club_id.as_uuid()))
             .count(&self.db)
             .await
-            .map_err(|e| ClubError::database_with_source("failed to count members", e))?;
+            .map_err(|e| ClubError::Database(e.to_string()))?;
 
         Ok(count)
     }
@@ -120,7 +118,7 @@ impl ClubRepo for ClubRepoImpl {
         &self,
         club_id: ClubId,
         division: u32,
-    ) -> ClubResult<LeaderboardPage> {
+    ) -> Result<LeaderboardPage, ClubError> {
         let total_members = self.get_member_count(club_id).await?;
         let total_divisions = if total_members == 0 {
             1
@@ -134,7 +132,7 @@ impl ClubRepo for ClubRepoImpl {
             .order_by_asc(club_leaderboard::Column::Rank)
             .all(&self.db)
             .await
-            .map_err(|e| ClubError::database_with_source("failed to read leaderboard", e))?;
+            .map_err(|e| ClubError::Database(e.to_string()))?;
 
         let leaderboard_entries: Vec<LeaderboardEntry> = entries
             .into_iter()
@@ -154,14 +152,12 @@ impl ClubRepo for ClubRepoImpl {
         })
     }
 
-    /// Atomic XP increment using a single SQL UPDATE via `Entity::update_many()`.
-    /// This eliminates the read-modify-write race condition — no TOCTOU gap.
     async fn increment_weekly_xp(
         &self,
         club_id: ClubId,
         user_id: UserId,
         xp: i64,
-    ) -> ClubResult<()> {
+    ) -> Result<(), ClubError> {
         use sea_orm::sea_query::Expr;
 
         let result = club_memberships::Entity::update_many()
@@ -174,19 +170,16 @@ impl ClubRepo for ClubRepoImpl {
             .filter(club_memberships::Column::UserId.eq(user_id.as_uuid()))
             .exec(&self.db)
             .await
-            .map_err(|e| ClubError::database_with_source("failed to increment weekly_xp", e))?;
+            .map_err(|e| ClubError::Database(e.to_string()))?;
 
         if result.rows_affected == 0 {
-            return Err(ClubError::not_a_member(club_id, user_id));
+            return Err(ClubError::NotAMember);
         }
 
         Ok(())
     }
 
-    /// Refresh leaderboard inside a transaction.
-    /// Uses `Entity::insert_many()` in chunks for true batch INSERT
-    /// (single SQL statement per chunk, not N individual round-trips).
-    async fn refresh_leaderboard(&self, club_id: ClubId) -> ClubResult<()> {
+    async fn refresh_leaderboard(&self, club_id: ClubId) -> Result<(), ClubError> {
         let start = std::time::Instant::now();
         let now = Utc::now();
 
@@ -194,26 +187,24 @@ impl ClubRepo for ClubRepoImpl {
             .db
             .begin()
             .await
-            .map_err(|e| ClubError::database_with_source("failed to begin transaction", e))?;
+            .map_err(|e| ClubError::Database(e.to_string()))?;
 
-        // 1. Delete existing leaderboard entries for this club
+        // Delete existing entries
         club_leaderboard::Entity::delete_many()
             .filter(club_leaderboard::Column::ClubId.eq(club_id.as_uuid()))
             .exec(&txn)
             .await
-            .map_err(|e| ClubError::database_with_source("failed to delete old leaderboard", e))?;
+            .map_err(|e| ClubError::Database(e.to_string()))?;
 
-        // 2. Read all members sorted by weekly_xp descending
+        // Read all members sorted by weekly_xp
         let members = club_memberships::Entity::find()
             .filter(club_memberships::Column::ClubId.eq(club_id.as_uuid()))
             .order_by_desc(club_memberships::Column::WeeklyXp)
             .all(&txn)
             .await
-            .map_err(|e| ClubError::database_with_source("failed to read members", e))?;
+            .map_err(|e| ClubError::Database(e.to_string()))?;
 
-        // 3. Batch insert new leaderboard rows using Entity::insert_many()
-        //    Chunked to stay under SQLite's SQLITE_MAX_VARIABLE_NUMBER limit
-        //    (999 variables default; each row has ~6 columns → ~160 rows per chunk).
+        // Batch insert new leaderboard rows (chunked for SQLite)
         const INSERT_CHUNK_SIZE: usize = 150;
         let active_models: Vec<club_leaderboard::ActiveModel> = members
             .iter()
@@ -237,14 +228,12 @@ impl ClubRepo for ClubRepoImpl {
             club_leaderboard::Entity::insert_many(chunk.to_vec())
                 .exec(&txn)
                 .await
-                .map_err(|e| {
-                    ClubError::database_with_source("failed to batch insert leaderboard rows", e)
-                })?;
+                .map_err(|e| ClubError::Database(e.to_string()))?;
         }
 
-        txn.commit().await.map_err(|e| {
-            ClubError::database_with_source("failed to commit leaderboard refresh", e)
-        })?;
+        txn.commit()
+            .await
+            .map_err(|e| ClubError::Database(e.to_string()))?;
 
         let elapsed = start.elapsed();
         tracing::info!(
@@ -257,11 +246,11 @@ impl ClubRepo for ClubRepoImpl {
         Ok(())
     }
 
-    async fn get_all_club_ids(&self) -> ClubResult<Vec<ClubId>> {
+    async fn get_all_club_ids(&self) -> Result<Vec<ClubId>, ClubError> {
         let all_clubs = clubs::Entity::find()
             .all(&self.db)
             .await
-            .map_err(|e| ClubError::database_with_source("failed to list clubs", e))?;
+            .map_err(|e| ClubError::Database(e.to_string()))?;
 
         Ok(all_clubs.into_iter().map(|c| ClubId::new(c.id)).collect())
     }

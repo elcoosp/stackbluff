@@ -1010,8 +1010,9 @@ mod tests {
         )
         .unwrap();
 
+        // Player 1 (SB) goes all-in for their remaining stack (1000 - 5 = 995)
         state
-            .apply_action(pid(1), Action::Raise(ChipAmount::new(1000).unwrap()))
+            .apply_action(pid(1), Action::Raise(ChipAmount::new(995).unwrap()))
             .unwrap();
         state.apply_action(pid(2), Action::Call).unwrap();
 
@@ -1019,7 +1020,6 @@ mod tests {
         assert_eq!(state.community_cards().len(), 5);
         assert!(state.current_pot().as_i64() > 0);
     }
-
     #[test]
     fn test_all_in_raise_below_minimum_is_allowed() {
         let players = vec![
@@ -1034,14 +1034,14 @@ mod tests {
         )
         .unwrap();
 
-        // SB calls
+        // SB calls (adds 5 to match BB's 10)
         state.apply_action(pid(1), Action::Call).unwrap();
         // BB raises to 100
         state
             .apply_action(pid(2), Action::Raise(ChipAmount::new(100).unwrap()))
             .unwrap();
-        // SB goes all-in with 50
-        let result = state.apply_action(pid(1), Action::Raise(ChipAmount::new(50).unwrap()));
+        // SB goes all-in with their remaining stack (50 - 5 - 5 = 40)
+        let result = state.apply_action(pid(1), Action::Raise(ChipAmount::new(40).unwrap()));
         assert!(result.is_ok());
         assert!(state.player_is_all_in(pid(1)));
     }

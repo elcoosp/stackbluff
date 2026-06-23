@@ -25,3 +25,4 @@ sb-db-entities = { path = "../sb-db-entities" }
 sea-orm = { workspace = true }
 migration = { path = "../../migration" }
 chrono = { workspace = true }
+sea-orm-migration = { workspace = true }

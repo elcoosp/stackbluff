@@ -5089,6 +5089,7 @@ dependencies = [
  "sb-db-repos",
  "sb-shared-types",
  "sea-orm",
+ "sea-orm-migration",
  "serde",
  "serde_json",
  "thiserror 2.0.18",
