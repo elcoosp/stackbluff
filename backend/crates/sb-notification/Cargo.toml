@@ -1,0 +1,22 @@
+[package]
+name = "sb-notification"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.94"
+
+[dependencies]
+tokio = { workspace = true, features = ["macros", "rt"] }
+reqwest = { workspace = true }
+web-push = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+figment = { workspace = true }
+sb-contracts = { workspace = true }
+sb-shared-types = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+async-trait = { workspace = true }
+
+[dev-dependencies]
+wiremock = { workspace = true }
+uuid = { workspace = true }

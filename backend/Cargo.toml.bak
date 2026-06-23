@@ -8,7 +8,6 @@ members = [
     "crates/sb-auth",
     "crates/sb-contracts",
     "crates/sb-db-entities",
-    "crates/sb-mission",
     "crates/sb-db-repos",
     "crates/sb-game-engine",
     "crates/sb-rest-router",
@@ -19,7 +18,6 @@ members = [
     "migration",
     "crates/sb-club",
     "crates/sb-server",
-        "crates/sb-notification",
 ]
 
 [workspace.package]
@@ -62,7 +60,6 @@ sb-auth = { path = "crates/sb-auth" }
 
 sb-shared-types = { path = "crates/sb-shared-types" }
 sb-game-engine = { path = "crates/sb-game-engine" }
-sb-mission = { path = "crates/sb-mission" }
 sb-ws-messages = { path = "crates/sb-ws-messages" }
 sb-ws-handler = { path = "crates/sb-ws-handler" }
 async-trait = { version = "0.1.89" }

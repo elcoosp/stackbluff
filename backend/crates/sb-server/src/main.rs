@@ -1,3 +1,4 @@
+use sb_mission;
 mod leaderboard_refresh;
 #[cfg(feature = "test-stubs")]
 mod test_utils;
