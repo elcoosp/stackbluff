@@ -281,6 +281,40 @@ impl Registry {
             Err(e) => Err(e),
         }
     }
+    pub async fn start_kick_vote(
+        &self,
+        room_id: TableId,
+        initiator_id: UserId,
+        target_id: UserId,
+        respond_to: Option<tokio::sync::oneshot::Sender<ChipAmount>>,
+    ) -> Result<(), AppError> {
+        let actor = self.rooms.get(&room_id).ok_or(AppError::Internal("table actor not found"))?;
+        actor.tx.send(InternalCommand::StartKickVote {
+            initiator_id,
+            target_id,
+            respond_to,
+        })
+        .await
+        .map_err(|_| AppError::Internal("table actor disconnected"))?;
+        Ok(())
+    }
+
+    pub async fn vote_kick_yes(
+        &self,
+        room_id: TableId,
+        voter_id: UserId,
+        kick_vote_id: Uuid,
+    ) -> Result<(), AppError> {
+        let actor = self.rooms.get(&room_id).ok_or(AppError::Internal("table actor not found"))?;
+        actor.tx.send(InternalCommand::VoteKickYes {
+            voter_id,
+            kick_vote_id,
+        })
+        .await
+        .map_err(|_| AppError::Internal("table actor disconnected"))?;
+        Ok(())
+    }
+
 
     pub async fn send_rebuy(
         &self,
