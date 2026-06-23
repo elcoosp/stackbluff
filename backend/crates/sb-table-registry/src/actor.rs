@@ -2029,7 +2029,7 @@ impl TableActor {
             self.send_error_to(&initiator_id, "A kick vote is already in progress");
             return;
         }
-        let target = match self.players.get(&target_id) {
+        let _target = match self.players.get(&target_id) {
             Some(p) if p.sitting_out => p,
             _ => { self.send_error_to(&initiator_id, "Target is not sitting out"); return; }
         };
@@ -2094,7 +2094,10 @@ impl TableActor {
             required_votes: state.required_votes,
             passed,
         });
-        if passed { self.finalize_kick_vote(state.kick_vote_id).await; }
+        if passed {
+            let vid = state.kick_vote_id;
+            self.finalize_kick_vote(vid).await;
+        }
     }
 
     async fn timeout_kick_vote(&mut self, kick_vote_id: Uuid) {
