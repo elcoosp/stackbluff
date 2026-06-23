@@ -1,4 +1,3 @@
-use sb_mission;
 mod leaderboard_refresh;
 #[cfg(feature = "test-stubs")]
 mod test_utils;
@@ -166,11 +165,12 @@ async fn main() {
         .load()
         .await;
     let r2_client = aws_sdk_s3::Client::new(&r2_config);
-    let r2: std::sync::Arc<dyn hand_archive::R2Storage> = std::sync::Arc::new(hand_archive::RealR2::new(r2_client, std::env::var("R2_BUCKET").expect("R2_BUCKET not set")));
-    let archive_state = Arc::new(hand_archive::ArchiveState {
-        db: db.clone(),
-        r2,
-    });
+    let r2: std::sync::Arc<dyn hand_archive::R2Storage> =
+        std::sync::Arc::new(hand_archive::RealR2::new(
+            r2_client,
+            std::env::var("R2_BUCKET").expect("R2_BUCKET not set"),
+        ));
+    let archive_state = Arc::new(hand_archive::ArchiveState { db: db.clone(), r2 });
     let app = Router::new()
         .merge(rest_router)
         .merge(ws_route(

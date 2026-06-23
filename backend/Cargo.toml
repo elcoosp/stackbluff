@@ -31,7 +31,7 @@ sb-notification = { path = "crates/sb-notification" }
 figment = { version = "0.10", features = ["toml", "env"] }
 wiremock = { version = "0.6",}
 reqwest = { version = "0.12", features = ["json"] }
-web-push = { version = "0.8",}
+web-push = { version = "0.11" }
 axum-extra = { version = "0.10", features = ["cookie"] }
     lazy_static = "1.4"
     prometheus = { version = "0.14", features = ["process"] }
