@@ -1,4 +1,5 @@
 use crate::actor::{InternalCommand, LeaveResult, spawn_table_actor};
+use crate::connection_broker::ConnectionBroker;
 use crate::events::HandCompletedEvent;
 use crate::game_room::RoomMessage;
 use sb_contracts::stats_api::PlayerStatsRepo;
@@ -21,6 +22,7 @@ struct RoomEntry {
     table_id: TableId,
     cmd_tx: ActorSender,
     active_players: Arc<AtomicU8>,
+    is_tournament: bool,
 }
 
 #[derive(Clone)]
@@ -107,6 +109,7 @@ impl Registry {
             table_id,
             cmd_tx,
             active_players,
+            is_tournament: false,
         };
 
         rooms.insert(new_room_id, room_entry);
@@ -444,6 +447,65 @@ impl Registry {
         self.event_tx.clone()
     }
 
+    /// Creates a tournament table and wires it into the registry.
+    pub async fn create_tournament_table(
+        &self,
+        config: TableConfig,
+        tournament_id: sb_shared_types::TournamentId,
+        broker: Arc<ConnectionBroker>,
+    ) -> Result<mpsc::Sender<InternalCommand>, AppError> {
+        let room_id = TableId::new(uuid::Uuid::new_v4());
+        let active_players = Arc::new(AtomicU8::new(0));
+
+        let (cmd_tx, _) = spawn_table_actor(
+            room_id,
+            room_id,
+            config.clone(),
+            self.event_tx.clone(),
+            self.stats_repo.clone(),
+            active_players.clone(),
+        );
+
+        // Enter tournament mode
+        cmd_tx
+            .send(InternalCommand::EnterTournamentMode {
+                parent: tournament_id,
+                broker: broker.clone(),
+            })
+            .await
+            .map_err(|_| AppError::Internal("table actor dropped".to_string()))?;
+
+        let room_entry = RoomEntry {
+            table_id: room_id,
+            cmd_tx: cmd_tx.clone(),
+            active_players,
+            is_tournament: true,
+        };
+
+        self.rooms.write().await.insert(room_id, room_entry);
+        self.table_rooms
+            .write()
+            .await
+            .entry(room_id)
+            .or_default()
+            .push(room_id);
+
+        info!(%room_id, %tournament_id, "Tournament table created");
+        Ok(cmd_tx)
+    }
+
+    /// Remove a room from the registry.
+    pub async fn remove_room(&self, room_id: TableId) {
+        if let Some(entry) = self.rooms.write().await.remove(&room_id) {
+            let _ = entry.cmd_tx.send(InternalCommand::Shutdown).await;
+        }
+        let mut table_rooms = self.table_rooms.write().await;
+        for room_ids in table_rooms.values_mut() {
+            room_ids.retain(|id| *id != room_id);
+        }
+        info!(%room_id, "Room removed from registry");
+    }
+
     pub async fn spawn_room_reaper(registry: Arc<Registry>) {
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(Duration::from_secs(60));
@@ -452,7 +514,7 @@ impl Registry {
                 let mut rooms_to_remove = Vec::new();
                 let rooms = registry.rooms.read().await;
                 for (room_id, entry) in rooms.iter() {
-                    if entry.active_players.load(Ordering::Relaxed) == 0 {
+                    if entry.active_players.load(Ordering::Relaxed) == 0 && !entry.is_tournament {
                         rooms_to_remove.push(*room_id);
                     }
                 }

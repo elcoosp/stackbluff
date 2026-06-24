@@ -13,6 +13,7 @@ mod m20260615_add_password_hash_to_users;
 mod m20260616_seed_base_tables;
 mod m20260617_add_table_name;
 mod m20260622_132958_mission_system;
+mod m20260624_create_tournament_tables;
 
 use sea_orm_migration::prelude::*;
 
