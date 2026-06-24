@@ -1,0 +1,71 @@
+asyncapi: 2.0.0
+info:
+  title: StackBluff WS
+  version: 1.0.0
+channels:
+  /action.kick_vote_start:
+    description: Start a kick vote against an inactive player
+    publish:
+      message:
+        payload:
+          type: object
+          properties:
+            target_player_id:
+              type: string
+    subscribe:
+      message:
+        $ref: '#/components/messages/kickVoteStarted'
+  /action.kick_vote_yes:
+    description: Vote yes on an active kick vote
+    publish:
+      message:
+        payload:
+          type: object
+          properties:
+            kick_vote_id:
+              type: string
+    subscribe:
+      message:
+        $ref: '#/components/messages/kickVoteUpdate'
+  /table.player_removed:
+    description: Player removed from table
+    publish:
+      message:
+        payload:
+          $ref: '#/components/schemas/PlayerRemovedPayload'
+components:
+  messages:
+    kickVoteStarted:
+      payload:
+        type: object
+        properties:
+          initiator_id:
+            type: string
+          target_id:
+            type: string
+          kick_vote_id:
+            type: string
+          duration_secs:
+            type: integer
+          required_votes:
+            type: integer
+    kickVoteUpdate:
+      payload:
+        type: object
+        properties:
+          kick_vote_id:
+            type: string
+          yes_votes:
+            type: integer
+          required_votes:
+            type: integer
+          passed:
+            type: boolean
+  schemas:
+    PlayerRemovedPayload:
+      type: object
+      properties:
+        player_id:
+          type: string
+        reason:
+          type: string

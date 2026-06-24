@@ -1,10 +1,10 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU8, Ordering};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration as StdDuration, Instant, SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
 use futures::future::join_all;
@@ -192,6 +192,23 @@ pub enum InternalCommand {
         action_type: ActionType,
         amount: Option<ChipAmount>,
     },
+    SitOut {
+        user_id: UserId,
+        sitting_out: bool,
+    },
+    StartKickVote {
+        initiator_id: UserId,
+        target_id: UserId,
+        respond_to: Option<tokio::sync::oneshot::Sender<ChipAmount>>,
+    },
+    VoteKickYes {
+        voter_id: UserId,
+        kick_vote_id: Uuid,
+    },
+    KickVoteTimeout {
+        kick_vote_id: Uuid,
+    },
+
     StartHand,
     Timeout {
         user_id: UserId,
@@ -205,7 +222,17 @@ pub enum InternalCommand {
     },
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+struct KickVoteState {
+    kick_vote_id: Uuid,
+    initiator: UserId,
+    target: UserId,
+    yes_votes: HashSet<UserId>,
+    started_at: Instant,
+    required_votes: u32,
+    active_players_count: u32,
+}
+
 struct Player {
     user_id: UserId,
     display_name: String,
@@ -215,6 +242,7 @@ struct Player {
     pub time_bank_remaining_seconds: u32,
     pub stats: Option<PlayerStatsDto>,
     pub is_leaving: bool,
+    pub sitting_out: bool,
     pub force_leave: bool,
     pub leave_responder: Option<tokio::sync::oneshot::Sender<LeaveResult>>,
 }
@@ -230,6 +258,7 @@ impl Player {
             time_bank_remaining_seconds: 0,
             stats: None,
             is_leaving: false,
+            sitting_out: false,
             force_leave: false,
             leave_responder: None,
         }
@@ -490,6 +519,9 @@ pub struct TableActor {
     last_actions: HashMap<UserId, ActionInfo>,
     stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
     active_players: Arc<AtomicU8>,
+    kick_vote_state: Option<KickVoteState>,
+    kick_cooldowns: HashMap<UserId, Instant>,
+    kick_refund_responder: Option<tokio::sync::oneshot::Sender<ChipAmount>>,
 }
 
 impl TableActor {
@@ -518,6 +550,9 @@ impl TableActor {
             last_actions: HashMap::new(),
             stats_repo,
             active_players,
+            kick_vote_state: None,
+            kick_cooldowns: HashMap::new(),
+            kick_refund_responder: None,
         }
     }
 
@@ -603,6 +638,30 @@ impl TableActor {
                     self.broadcast_table_state();
                 }
             }
+            InternalCommand::SitOut {
+                user_id,
+                sitting_out,
+            } => {
+                self.set_sitting_out(user_id, sitting_out).await;
+            }
+            InternalCommand::StartKickVote {
+                initiator_id,
+                target_id,
+                respond_to,
+            } => {
+                self.start_kick_vote(initiator_id, target_id, respond_to)
+                    .await;
+            }
+            InternalCommand::VoteKickYes {
+                voter_id,
+                kick_vote_id,
+            } => {
+                self.cast_kick_vote_yes(voter_id, kick_vote_id).await;
+            }
+            InternalCommand::KickVoteTimeout { kick_vote_id } => {
+                self.timeout_kick_vote(kick_vote_id).await;
+            }
+
             InternalCommand::Shutdown => {
                 if let Some(hand) = &mut self.current_hand {
                     hand.cancel_timeout();
@@ -625,11 +684,15 @@ impl TableActor {
                 debug!(%user_id, "Player was leaving, canceling leave.");
                 player.is_leaving = false;
                 player.force_leave = false;
+                player.sitting_out = false;
+                player.sitting_out = false;
                 if let Some(responder) = player.leave_responder.take() {
                     let _ = responder.send(LeaveResult::Cancelled);
                 }
             }
             debug!(%user_id, "Player already at table, resyncing state for reconnect");
+            player.sitting_out = false;
+            player.sitting_out = false;
             Some(player.player_id)
         } else {
             None
@@ -711,6 +774,8 @@ impl TableActor {
                 debug!(%user_id, "Player is rejoining while leave is pending. Converting to new join.");
                 player.is_leaving = false;
                 player.force_leave = false;
+                player.sitting_out = false;
+                player.sitting_out = false;
                 player.stack = stack;
                 if let Some(rt) = player.leave_responder.take() {
                     let _ = rt.send(LeaveResult::Cancelled);
@@ -985,6 +1050,8 @@ impl TableActor {
             warn!("Hand already in progress");
             return;
         }
+        self.prune_cooldowns();
+        self.prune_cooldowns();
 
         let active_players_count = self
             .players
@@ -1861,6 +1928,7 @@ impl TableActor {
                         is_all_in: all_in,
                         is_folded: folded,
                         is_leaving: player.is_leaving,
+                        sitting_out: player.sitting_out,
                         position_badge: positions_map.get(&player.seat).cloned(),
                         last_action: self.last_actions.get(&uid).cloned(),
                         stats: player.stats.clone(),
@@ -1879,6 +1947,7 @@ impl TableActor {
                     is_all_in: false,
                     is_folded: false,
                     is_leaving: player.is_leaving,
+                    sitting_out: player.sitting_out,
                     position_badge: None,
                     last_action: None,
                     stats: player.stats.clone(),
@@ -1950,6 +2019,206 @@ impl TableActor {
                 message: msg.to_string(),
             },
         );
+    }
+
+    async fn set_sitting_out(&mut self, user_id: UserId, sitting_out: bool) {
+        let player = match self.players.get_mut(&user_id) {
+            Some(p) => p,
+            None => {
+                self.send_error_to(&user_id, "Not at table");
+                return;
+            }
+        };
+        if player.sitting_out == sitting_out {
+            return;
+        }
+        player.sitting_out = sitting_out;
+        self.broadcast_table_state();
+        if sitting_out {
+            info!(%user_id, "Player sitting out");
+        } else {
+            info!(%user_id, "Player sitting in");
+        }
+    }
+
+    async fn start_kick_vote(
+        &mut self,
+        initiator_id: UserId,
+        target_id: UserId,
+        respond_to: Option<tokio::sync::oneshot::Sender<ChipAmount>>,
+    ) {
+        if let Some(&last) = self.kick_cooldowns.get(&target_id)
+            && last.elapsed() < StdDuration::from_secs(300)
+        {
+            self.send_error_to(&initiator_id, "Target is on kick cooldown (5 minutes)");
+            return;
+        }
+        if self.kick_vote_state.is_some() {
+            self.send_error_to(&initiator_id, "A kick vote is already in progress");
+            return;
+        }
+        let _target = match self.players.get(&target_id) {
+            Some(p) if p.sitting_out => p,
+            _ => {
+                self.send_error_to(&initiator_id, "Target is not sitting out");
+                return;
+            }
+        };
+        if !self
+            .players
+            .get(&initiator_id)
+            .map(|p| !p.sitting_out)
+            .unwrap_or(false)
+        {
+            self.send_error_to(&initiator_id, "You are not an active player");
+            return;
+        }
+        let active_players_count: u32 = self
+            .players
+            .values()
+            .filter(|p| p.user_id != target_id && !p.sitting_out)
+            .count() as u32;
+        if active_players_count < 2 {
+            self.send_error_to(&initiator_id, "Not enough active players to vote");
+            return;
+        }
+        let required_votes = ((active_players_count / 2) + 1).max(2);
+        let kick_vote_id = Uuid::new_v4();
+        let state = KickVoteState {
+            kick_vote_id,
+            initiator: initiator_id,
+            target: target_id,
+            yes_votes: HashSet::new(),
+            started_at: Instant::now(),
+            required_votes,
+            active_players_count,
+        };
+        Self::send_to_all(
+            &self.user_senders,
+            RoomMessage::KickVoteStarted {
+                room_id: self.room_id,
+                initiator_id,
+                target_id,
+                kick_vote_id,
+                duration_secs: 10,
+                required_votes,
+            },
+        );
+        let tx = self.cmd_tx.clone();
+        let vid = kick_vote_id;
+        tokio::spawn(async move {
+            sleep(Duration::from_secs(10)).await;
+            let _ = tx
+                .send(InternalCommand::KickVoteTimeout { kick_vote_id: vid })
+                .await;
+        });
+        self.kick_vote_state = Some(state);
+        self.kick_refund_responder = respond_to;
+    }
+
+    async fn cast_kick_vote_yes(&mut self, voter_id: UserId, kick_vote_id: Uuid) {
+        let state = match &mut self.kick_vote_state {
+            Some(s) if s.kick_vote_id == kick_vote_id => s,
+            _ => {
+                self.send_error_to(&voter_id, "No matching kick vote");
+                return;
+            }
+        };
+        if voter_id == state.target {
+            self.send_error_to(&voter_id, "You cannot vote for yourself");
+            return;
+        }
+        if !self
+            .players
+            .get(&voter_id)
+            .map(|p| !p.sitting_out)
+            .unwrap_or(false)
+        {
+            self.send_error_to(&voter_id, "Only active players can vote");
+            return;
+        }
+        if state.yes_votes.contains(&voter_id) {
+            self.send_error_to(&voter_id, "You have already voted");
+            return;
+        }
+        state.yes_votes.insert(voter_id);
+        let yes_count = state.yes_votes.len() as u32;
+        let passed = yes_count >= state.required_votes;
+        Self::send_to_all(
+            &self.user_senders,
+            RoomMessage::KickVoteUpdate {
+                room_id: self.room_id,
+                kick_vote_id,
+                yes_votes: yes_count,
+                required_votes: state.required_votes,
+                passed,
+            },
+        );
+        if passed {
+            let vid = state.kick_vote_id;
+            self.finalize_kick_vote(vid).await;
+        }
+    }
+
+    async fn timeout_kick_vote(&mut self, kick_vote_id: Uuid) {
+        match &self.kick_vote_state {
+            Some(s) if s.kick_vote_id == kick_vote_id => {
+                info!(%kick_vote_id, "Kick vote timed out");
+                info!(%kick_vote_id, "Kick vote timed out");
+                self.broadcast_kick_vote_failed(&kick_vote_id);
+                if let Some(responder) = self.kick_refund_responder.take() {
+                    let _ = responder.send(zero());
+                }
+                self.kick_vote_state = None;
+            }
+            _ => {}
+        }
+    }
+
+    async fn finalize_kick_vote(&mut self, kick_vote_id: Uuid) {
+        let state = match self.kick_vote_state.take() {
+            Some(s) if s.kick_vote_id == kick_vote_id => s,
+            _ => return,
+        };
+        let refund_responder = self.kick_refund_responder.take();
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        self.leave_player(state.target, tx, true).await;
+        tokio::spawn(async move {
+            let stack = match rx.await {
+                Ok(LeaveResult::Refunded(stack)) => stack,
+                _ => zero(),
+            };
+            if let Some(rt) = refund_responder {
+                let _ = rt.send(stack);
+            }
+        });
+        Self::send_to_all(
+            &self.user_senders,
+            RoomMessage::PlayerRemoved {
+                room_id: self.room_id,
+                player_id: state.target,
+                reason: format!("Kicked by vote ({} yes votes)", state.yes_votes.len()),
+            },
+        );
+        self.broadcast_table_state();
+    }
+
+    fn broadcast_kick_vote_failed(&self, kick_vote_id: &Uuid) {
+        Self::send_to_all(
+            &self.user_senders,
+            RoomMessage::KickVoteUpdate {
+                room_id: self.room_id,
+                kick_vote_id: *kick_vote_id,
+                yes_votes: 0,
+                required_votes: 0,
+                passed: false,
+            },
+        );
+    }
+
+    fn prune_cooldowns(&mut self) {
+        self.kick_cooldowns
+            .retain(|_, instant| instant.elapsed() < StdDuration::from_secs(300));
     }
 }
 
