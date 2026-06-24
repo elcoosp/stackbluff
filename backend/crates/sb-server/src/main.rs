@@ -62,6 +62,22 @@ async fn main() {
     let writer_handle = init_writer_loop(db.clone(), None);
     let user_repo: Arc<dyn UserRepo> = Arc::new(UserRepoImpl::new(writer_handle.sender.clone()));
 
+    // ── Crash recovery: settle any tournaments left in Running state ──
+    {
+        let tournament_repo = sb_db_repos::tournament_repo::TournamentRepoImpl::new(db.clone());
+        if let Err(e) = sb_tournament::crash_recovery::settle_crashed_tournaments(
+            &tournament_repo,
+            user_repo.as_ref(),
+        )
+        .await
+        {
+            tracing::error!(
+                error = ?e,
+                "Failed to settle crashed tournaments on startup"
+            );
+        }
+    }
+
     // ── Wire up Auth Service ──────────────────────────────
     let auth_config = AuthConfig::from_env();
     let auth_impl = Arc::new(AuthServiceImpl::new(user_repo.clone(), auth_config));
@@ -182,7 +198,6 @@ async fn main() {
         .merge(sb_bot_handler::attach(bot_state))
         .merge(sb_rest_router::oracle_router(oracle_service))
         .merge(hand_archive::router(archive_state.clone()))
-        .merge(sb_rest_router::tournament_routes::tournament_routes())
         .layer(cors)
         .layer(CookieManagerLayer::new());
 

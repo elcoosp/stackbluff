@@ -1,4 +1,5 @@
 pub mod blind_scheduler;
+pub mod crash_recovery;
 pub mod mtt_director;
 pub mod payout_calculator;
 pub mod rebalancer;

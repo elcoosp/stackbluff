@@ -584,6 +584,27 @@ impl Registry {
             .map_err(|_| AppError::Internal("table actor disconnected".to_string()))?;
         Ok(())
     }
+
+    /// Subscribe a user to a room's broadcast (for spectating).
+    /// Remove a user from a room's broadcast.
+    pub async fn unsubscribe_from_room(&self, room_id: TableId, user_id: UserId) {
+        if let Some(set) = self.user_room_map.write().await.get_mut(&user_id) {
+            set.remove(&room_id);
+            if set.is_empty() {
+                self.user_room_map.write().await.remove(&user_id);
+            }
+        }
+    }
+
+    pub async fn subscribe_to_room(&self, room_id: TableId, user_id: UserId) {
+        self.user_room_map
+            .write()
+            .await
+            .entry(user_id)
+            .or_default()
+            .insert(room_id);
+    }
+
     pub async fn set_sitting_out(
         &self,
         room_id: TableId,

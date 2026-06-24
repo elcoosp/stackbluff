@@ -52,6 +52,16 @@ pub trait UserRepository: Send + Sync {
         delta: i64,
     ) -> PersistenceResult<i64>;
 
+    /// Transactional variant: uses the given connection instead of the writer loop.
+    /// Used by tournament registration to keep everything in one ACID transaction.
+    async fn update_chip_balance_with_conn(
+        &self,
+        conn: &sea_orm::DatabaseConnection,
+        ctx: RequestContext,
+        user_id: UserId,
+        delta: i64,
+    ) -> PersistenceResult<i64>;
+
     async fn find_or_create_by_telegram(
         &self,
         ctx: RequestContext,
