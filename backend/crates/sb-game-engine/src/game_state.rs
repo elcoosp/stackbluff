@@ -791,6 +791,28 @@ impl GameState {
         }
         winners
     }
+
+    /// Returns busted players (stack == 0) with their starting stack at the
+    /// beginning of the hand, sorted descending by starting stack (larger
+    /// starting stack => better finishing position).
+    pub fn get_busted_players(&self) -> Vec<(PlayerId, ChipAmount)> {
+        let mut busted: Vec<_> = self
+            .players
+            .iter()
+            .filter(|p| p.stack == ChipAmount::new(0).unwrap())
+            .map(|p| {
+                (
+                    p.player_id,
+                    *self
+                        .hand_start_stacks
+                        .get(&p.player_id)
+                        .unwrap_or(&ChipAmount::new(0).unwrap()),
+                )
+            })
+            .collect();
+        busted.sort_by(|a, b| b.1.cmp(&a.1));
+        busted
+    }
 }
 
 #[cfg(test)]
