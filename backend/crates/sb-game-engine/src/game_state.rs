@@ -7,6 +7,7 @@ use sb_shared_types::game_types::SidePot;
 use sb_shared_types::{Card, ChipAmount, PlayerId, TableId};
 
 use sb_ws_messages::ActionRequired as WsActionRequired;
+use std::collections::HashMap;
 use tracing::{debug, warn};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -84,6 +85,10 @@ pub struct GameState {
     last_aggressor_index: Option<usize>,
     round_bets: Vec<ChipAmount>,
     hand_complete: bool,
+    /// Player stacks at the start of the hand, for tie-breaking busted players.
+    /// Player stacks at the start of the hand, for tie-breaking busted players.
+    #[allow(dead_code)] // used by get_busted_players(), called from tournament actors
+    hand_start_stacks: HashMap<PlayerId, ChipAmount>,
 }
 
 impl GameState {
@@ -187,6 +192,11 @@ impl GameState {
         let mut deck = Deck::new();
         deck.shuffle();
 
+        let mut hand_start_stacks = HashMap::new();
+        for (pid, stack) in &players {
+            hand_start_stacks.insert(*pid, *stack);
+        }
+
         let mut player_states: Vec<PlayerHandState> = players
             .into_iter()
             .map(|(pid, stack)| PlayerHandState {
@@ -251,6 +261,7 @@ impl GameState {
             last_aggressor_index: Some(big_blind_index),
             round_bets,
             hand_complete: false,
+            hand_start_stacks,
         })
     }
 
