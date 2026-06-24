@@ -40,6 +40,7 @@ aws-config = "1.8.18"
 tokio-cron-scheduler = "0.15.1"
 chrono.workspace = true
 sb-db-entities.workspace = true
+sb-tournament = { path = "../sb-tournament" }
 serde.workspace = true
 
 [dev-dependencies]

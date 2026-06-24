@@ -18,6 +18,9 @@ pub mod season;
 pub mod session;
 pub mod subscription_event;
 pub mod table;
+pub mod tournament;
+pub mod tournament_registration;
+pub mod tournament_result;
 pub mod user;
 pub mod user_statistics;
 

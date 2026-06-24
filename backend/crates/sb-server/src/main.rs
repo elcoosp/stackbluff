@@ -182,6 +182,7 @@ async fn main() {
         .merge(sb_bot_handler::attach(bot_state))
         .merge(sb_rest_router::oracle_router(oracle_service))
         .merge(hand_archive::router(archive_state.clone()))
+        .merge(sb_rest_router::tournament_routes::tournament_routes())
         .layer(cors)
         .layer(CookieManagerLayer::new());
 

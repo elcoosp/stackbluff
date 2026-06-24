@@ -3,9 +3,8 @@ use axum::{
     http::StatusCode,
     routing::{get, post},
 };
-use std::sync::Arc;
 
-pub fn tournament_routes() -> Router<Arc<crate::AppState>> {
+pub fn tournament_routes() -> Router {
     Router::new()
         .route("/tournaments", post(create_tournament))
         .route("/tournaments", get(list_tournaments))

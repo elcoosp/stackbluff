@@ -10,6 +10,7 @@ pub mod user_repo;
 pub mod writer_loop;
 
 pub mod club_repo;
+pub mod tournament_repo;
 pub use writer_loop::init_writer_loop;
 
 pub use table_repo::TableRepoImpl;
@@ -17,3 +18,4 @@ pub use table_repo::TableRepoImpl;
 pub use hand_history_repo::HandHistoryRepoImpl;
 
 pub use leaderboard_repo::{LeaderboardRepo, refresh_leaderboard_mv};
+pub use tournament_repo::TournamentRepoImpl;

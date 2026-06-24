@@ -5470,6 +5470,7 @@ dependencies = [
  "sb-rest-router",
  "sb-shared-types",
  "sb-table-registry",
+ "sb-tournament",
  "sb-ws-handler",
  "sea-orm",
  "sea-orm-migration",
@@ -5523,6 +5524,7 @@ dependencies = [
 name = "sb-tournament"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "chrono",
  "dashmap",
  "rand 0.10.1",

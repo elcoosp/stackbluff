@@ -74,6 +74,7 @@ pub struct SitGoTournament {
     // Persistence
     tournament_repo: Option<Arc<dyn sb_contracts::tournament_api::TournamentRepo>>,
     user_repo: Option<Arc<dyn sb_contracts::repo_api::UserRepo>>,
+    pending_start: bool,
 }
 
 impl SitGoTournament {
@@ -106,12 +107,19 @@ impl SitGoTournament {
             player_info: HashMap::new(),
             tournament_repo: None,
             user_repo: None,
+            pending_start: false,
         }
     }
 
     pub async fn run(mut self) {
         info!(tournament_id = %self.tournament_id, "SitGoTournament started");
         loop {
+            if self.pending_start {
+                self.pending_start = false;
+                if let Err(e) = self.start_tournament().await {
+                    error!(tournament_id = %self.tournament_id, error = ?e, "Failed to start tournament");
+                }
+            }
             tokio::select! {
                 Some(cmd) = self.cmd_rx.recv() => {
                     self.handle_command(cmd).await;
@@ -125,7 +133,7 @@ impl SitGoTournament {
         info!(tournament_id = %self.tournament_id, "SitGoTournament terminated");
     }
 
-    async fn handle_command(&mut self, cmd: SitGoCommand) {
+    pub(crate) async fn handle_command(&mut self, cmd: SitGoCommand) {
         match cmd {
             SitGoCommand::Register {
                 user_id,
@@ -196,7 +204,7 @@ impl SitGoTournament {
         self.broadcast_state();
 
         if self.players.len() as u32 >= self.config.max_players {
-            self.start_tournament().await?;
+            self.pending_start = true;
         }
 
         Ok(())
@@ -330,7 +338,7 @@ impl SitGoTournament {
         Ok(())
     }
 
-    async fn handle_hand_completed(&mut self, event: HandCompletedEvent) {
+    pub(crate) async fn handle_hand_completed(&mut self, event: HandCompletedEvent) {
         if self.status != TournamentStatus::Running {
             return;
         }
