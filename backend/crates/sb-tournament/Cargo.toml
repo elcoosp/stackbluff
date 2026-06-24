@@ -13,5 +13,12 @@ tracing = { workspace = true }
 thiserror = { workspace = true }
 chrono = { workspace = true }
 
+sb-table-registry = { path = "../sb-table-registry" }
+sb-db-repos = { path = "../sb-db-repos" }
+sea-orm = { workspace = true }
+dashmap = { workspace = true }
+rand = { workspace = true }
+uuid = { workspace = true }
+
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt", "macros"] }

@@ -5524,12 +5524,18 @@ name = "sb-tournament"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "dashmap",
+ "rand 0.10.1",
  "sb-contracts",
+ "sb-db-repos",
  "sb-shared-types",
+ "sb-table-registry",
+ "sea-orm",
  "serde",
  "thiserror 2.0.18",
  "tokio",
  "tracing",
+ "uuid",
 ]
 
 [[package]]

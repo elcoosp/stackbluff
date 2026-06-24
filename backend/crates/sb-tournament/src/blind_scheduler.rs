@@ -1,6 +1,8 @@
 use sb_contracts::tournament_api::BlindLevel;
 use sb_shared_types::ChipAmount;
-use std::time::Instant;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::{Duration, Instant};
 
 /// Tracks blind level progression for tournaments.
 ///
@@ -11,7 +13,8 @@ pub struct BlindScheduler {
     levels: Vec<BlindLevel>,
     current_level_index: usize,
     level_start: Instant,
-    pending_advance: bool,
+    pending_advance: Arc<AtomicBool>,
+    _timer: Option<tokio::task::JoinHandle<()>>,
 }
 
 impl BlindScheduler {
@@ -24,7 +27,8 @@ impl BlindScheduler {
             levels,
             current_level_index: 0,
             level_start: Instant::now(),
-            pending_advance: false,
+            pending_advance: Arc::new(AtomicBool::new(false)),
+            _timer: None,
         }
     }
 
@@ -32,8 +36,8 @@ impl BlindScheduler {
     /// Returns `Some(new_level, small_blind, big_blind, ante)` if blinds advanced,
     /// or `None` if the current level continues.
     pub fn on_hand_completed(&mut self) -> Option<(u32, ChipAmount, ChipAmount, i64)> {
-        if self.pending_advance {
-            self.pending_advance = false;
+        if self.pending_advance.load(Ordering::SeqCst) {
+            self.pending_advance.store(false, Ordering::SeqCst);
             self.advance_level()
         } else {
             // Check if we should advance based on elapsed time
@@ -48,7 +52,6 @@ impl BlindScheduler {
 
     /// Force immediate level advance (for testing). Returns new blinds info.
     pub fn force_advance(&mut self) -> Option<(u32, ChipAmount, ChipAmount, i64)> {
-        self.pending_advance = false;
         self.advance_level()
     }
 
@@ -68,20 +71,27 @@ impl BlindScheduler {
         (level.level, level.duration_seconds)
     }
 
-    /// Start the real-time timer. Returns a JoinHandle that sets
-    /// `pending_advance = true` every `level.duration_seconds`.
-    /// In tests, this is not used; instead, `force_advance` is called manually.
+    /// Start the real-time timer. Sets `pending_advance = true` every
+    /// `level.duration_seconds`. Returns the JoinHandle for the background task.
     pub fn start_timer(&mut self) -> tokio::task::JoinHandle<()> {
-        let level = self.levels[self.current_level_index].clone();
-        let duration = std::time::Duration::from_secs(level.duration_seconds as u64);
-        // We can't set pending_advance from here without Arc<Mutex<>>,
-        // so the timer is managed externally by the tournament actor.
-        // This returns a no-op handle for now; the actor will call
-        // on_hand_completed with time-based logic.
+        let pending = self.pending_advance.clone();
+        let levels = self.levels.clone();
+        let handle = tokio::spawn(async move {
+            for level in &levels {
+                let dur = Duration::from_secs(level.duration_seconds as u64);
+                tokio::time::sleep(dur).await;
+                pending.store(true, Ordering::SeqCst);
+            }
+        });
+        self._timer = Some(handle);
+        // Return a new handle for the caller (the original is stored in self._timer)
+        let pending = self.pending_advance.clone();
+        let levels = self.levels.clone();
         tokio::spawn(async move {
-            loop {
-                tokio::time::sleep(duration).await;
-                // The tournament actor checks elapsed time in on_hand_completed
+            for level in &levels {
+                let dur = Duration::from_secs(level.duration_seconds as u64);
+                tokio::time::sleep(dur).await;
+                pending.store(true, Ordering::SeqCst);
             }
         })
     }
@@ -148,5 +158,23 @@ mod tests {
         let mut scheduler = BlindScheduler::new(levels);
         assert!(scheduler.force_advance().is_none());
         assert!(scheduler.force_advance().is_none());
+    }
+
+    #[tokio::test]
+    async fn test_timer_sets_pending_advance() {
+        let levels = vec![
+            make_level(1, 10, 20, 1), // 1 second
+            make_level(2, 20, 40, 10),
+        ];
+        let mut scheduler = BlindScheduler::new(levels);
+        let _handle = scheduler.start_timer();
+        tokio::time::sleep(Duration::from_millis(1100)).await;
+        assert!(scheduler.pending_advance.load(Ordering::SeqCst));
+        let advance = scheduler.on_hand_completed();
+        assert!(advance.is_some());
+        let (level, sb, bb, _) = advance.unwrap();
+        assert_eq!(level, 2);
+        assert_eq!(sb.as_i64(), 20);
+        assert_eq!(bb.as_i64(), 40);
     }
 }
