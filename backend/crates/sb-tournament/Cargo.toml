@@ -5,6 +5,7 @@ edition = { workspace = true }
 rust-version = { workspace = true }
 
 [dependencies]
+async-trait = { workspace = true }
 sb-contracts = { workspace = true }
 sb-shared-types = { workspace = true }
 serde = { workspace = true }
@@ -21,5 +22,4 @@ rand = { workspace = true }
 uuid = { workspace = true }
 
 [dev-dependencies]
-async-trait = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros"] }

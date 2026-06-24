@@ -1,37 +1,48 @@
-use std::sync::Arc;
-
+use crate::mtt_director::MttCommand;
+use crate::sit_go_tournament::SitGoCommand;
 use dashmap::DashMap;
+use sb_contracts::tournament_api::{
+    TournamentConfig, TournamentRepo, TournamentResult, TournamentService, TournamentSummary,
+    TournamentType,
+};
+use sb_shared_types::{AppError, RequestContext, TournamentId, UserId};
+use std::sync::Arc;
 use tokio::sync::mpsc;
 use tracing::info;
 
-use sb_contracts::tournament_api::{
-    TournamentConfig, TournamentId, TournamentRepo, TournamentResult, TournamentService,
-    TournamentSummary, TournamentType,
-};
-use sb_shared_types::{AppError, RequestContext, UserId};
-
-use crate::sit_go_tournament::SitGoCommand;
-
-/// Service that manages tournament actors and routes API calls.
 pub struct TournamentServiceImpl {
     repo: Arc<dyn TournamentRepo>,
-    actors: Arc<DashMap<TournamentId, mpsc::Sender<SitGoCommand>>>,
+    sit_go_actors: Arc<DashMap<TournamentId, mpsc::Sender<SitGoCommand>>>,
+    mtt_actors: Arc<DashMap<TournamentId, mpsc::Sender<MttCommand>>>,
 }
 
 impl TournamentServiceImpl {
     pub fn new(repo: Arc<dyn TournamentRepo>) -> Self {
         Self {
             repo,
-            actors: Arc::new(DashMap::new()),
+            sit_go_actors: Arc::new(DashMap::new()),
+            mtt_actors: Arc::new(DashMap::new()),
         }
     }
 
-    pub fn register_actor(&self, id: TournamentId, tx: mpsc::Sender<SitGoCommand>) {
-        self.actors.insert(id, tx);
+    pub fn register_sit_go(&self, id: TournamentId, tx: mpsc::Sender<SitGoCommand>) {
+        self.sit_go_actors.insert(id, tx);
+    }
+
+    pub fn register_mtt(&self, id: TournamentId, tx: mpsc::Sender<MttCommand>) {
+        self.mtt_actors.insert(id, tx);
     }
 
     pub fn remove_actor(&self, id: TournamentId) {
-        self.actors.remove(&id);
+        self.sit_go_actors.remove(&id);
+        self.mtt_actors.remove(&id);
+    }
+
+    fn sit_go_tx(&self, id: TournamentId) -> Result<mpsc::Sender<SitGoCommand>, AppError> {
+        self.sit_go_actors
+            .get(&id)
+            .map(|r| r.value().clone())
+            .ok_or_else(|| AppError::NotFound("Tournament not found".into()))
     }
 }
 
@@ -53,19 +64,16 @@ impl TournamentService for TournamentServiceImpl {
         tournament_id: TournamentId,
         user_id: UserId,
     ) -> Result<(), AppError> {
-        if let Some(tx) = self.actors.get(&tournament_id) {
-            let (rtx, rrx) = tokio::sync::oneshot::channel();
-            tx.send(SitGoCommand::Register {
-                user_id,
-                respond_to: rtx,
-            })
-            .await
-            .map_err(|_| AppError::Internal("tournament actor dropped".into()))?;
-            rrx.await
-                .map_err(|_| AppError::Internal("actor response dropped".into()))?
-        } else {
-            Err(AppError::NotFound("Tournament not found".into()))
-        }
+        let tx = self.sit_go_tx(tournament_id)?;
+        let (rtx, rrx) = tokio::sync::oneshot::channel();
+        tx.send(SitGoCommand::Register {
+            user_id,
+            respond_to: rtx,
+        })
+        .await
+        .map_err(|_| AppError::Internal("actor dropped".into()))?;
+        rrx.await
+            .map_err(|_| AppError::Internal("response dropped".into()))?
     }
 
     async fn unregister(
@@ -74,19 +82,16 @@ impl TournamentService for TournamentServiceImpl {
         tournament_id: TournamentId,
         user_id: UserId,
     ) -> Result<(), AppError> {
-        if let Some(tx) = self.actors.get(&tournament_id) {
-            let (rtx, rrx) = tokio::sync::oneshot::channel();
-            tx.send(SitGoCommand::Unregister {
-                user_id,
-                respond_to: rtx,
-            })
-            .await
-            .map_err(|_| AppError::Internal("tournament actor dropped".into()))?;
-            rrx.await
-                .map_err(|_| AppError::Internal("actor response dropped".into()))?
-        } else {
-            Err(AppError::NotFound("Tournament not found".into()))
-        }
+        let tx = self.sit_go_tx(tournament_id)?;
+        let (rtx, rrx) = tokio::sync::oneshot::channel();
+        tx.send(SitGoCommand::Unregister {
+            user_id,
+            respond_to: rtx,
+        })
+        .await
+        .map_err(|_| AppError::Internal("actor dropped".into()))?;
+        rrx.await
+            .map_err(|_| AppError::Internal("response dropped".into()))?
     }
 
     async fn get_tournament(
@@ -94,16 +99,13 @@ impl TournamentService for TournamentServiceImpl {
         _ctx: &RequestContext,
         tournament_id: TournamentId,
     ) -> Result<TournamentSummary, AppError> {
-        if let Some(tx) = self.actors.get(&tournament_id) {
-            let (rtx, rrx) = tokio::sync::oneshot::channel();
-            tx.send(SitGoCommand::GetSummary { respond_to: rtx })
-                .await
-                .map_err(|_| AppError::Internal("tournament actor dropped".into()))?;
-            rrx.await
-                .map_err(|_| AppError::Internal("actor response dropped".into()))
-        } else {
-            Err(AppError::NotFound("Tournament not found".into()))
-        }
+        let tx = self.sit_go_tx(tournament_id)?;
+        let (rtx, rrx) = tokio::sync::oneshot::channel();
+        tx.send(SitGoCommand::GetSummary { respond_to: rtx })
+            .await
+            .map_err(|_| AppError::Internal("actor dropped".into()))?;
+        rrx.await
+            .map_err(|_| AppError::Internal("response dropped".into()))
     }
 
     async fn list_tournaments(
