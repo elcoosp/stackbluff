@@ -99,6 +99,26 @@ pub struct ShowdownPlayer {
     pub winning_cards: Vec<WsCard>,
 }
 
+// ── Tournament payload types ────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize)]
+pub struct TournamentStateUpdate {
+    pub tournament_id: sb_shared_types::TournamentId,
+    pub status: String,
+    pub registered_count: u32,
+    pub max_players: u32,
+    pub prize_pool: u64,
+    pub blind_level: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct TournamentResultPayload {
+    pub tournament_id: sb_shared_types::TournamentId,
+    pub user_id: UserId,
+    pub position: u32,
+    pub prize: u64,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct ShowdownReveal {
     pub room_id: TableId,
@@ -178,6 +198,43 @@ pub enum RoomMessage {
     },
     #[serde(rename = "RoomAssigned")]
     RoomAssigned { table_id: TableId, room_id: TableId },
+    #[serde(rename = "TournamentState")]
+    TournamentState(TournamentStateUpdate),
+    #[serde(rename = "TournamentRegistered")]
+    TournamentRegistered {
+        tournament_id: sb_shared_types::TournamentId,
+        user_id: UserId,
+    },
+    #[serde(rename = "TournamentStarting")]
+    TournamentStarting {
+        tournament_id: sb_shared_types::TournamentId,
+        starts_in_seconds: u32,
+    },
+    #[serde(rename = "TournamentBlindLevel")]
+    TournamentBlindLevel {
+        tournament_id: sb_shared_types::TournamentId,
+        level: u32,
+        small_blind: i64,
+        big_blind: i64,
+        ante: i64,
+    },
+    #[serde(rename = "TournamentElimination")]
+    TournamentElimination {
+        tournament_id: sb_shared_types::TournamentId,
+        user_id: UserId,
+        position: u32,
+    },
+    #[serde(rename = "TournamentResult")]
+    TournamentResult {
+        tournament_id: sb_shared_types::TournamentId,
+        results: Vec<TournamentResultPayload>,
+    },
+    #[serde(rename = "TournamentTableChanged")]
+    TournamentTableChanged {
+        tournament_id: sb_shared_types::TournamentId,
+        new_room_id: TableId,
+        new_seat: u8,
+    },
 }
 
 #[derive(Debug, Clone, Serialize)]
