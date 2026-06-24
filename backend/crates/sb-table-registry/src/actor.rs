@@ -57,6 +57,23 @@ pub fn buy_in_limits_for_stake(stake: StakeLevel) -> (ChipAmount, ChipAmount) {
     (min, max)
 }
 
+/// Whether the table is a cash game or part of a tournament.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TableMode {
+    Cash,
+    Tournament {
+        parent: sb_shared_types::TournamentId,
+        no_rebuy: bool,
+    },
+}
+
+/// Result returned from TransferPlayerOut.
+#[derive(Debug)]
+pub struct TransferOutResult {
+    pub player_id: PlayerId,
+    pub stack: ChipAmount,
+}
+
 fn street_name(state: &GameState) -> String {
     let cards = state.community_cards();
     match cards.len() {
@@ -207,6 +224,33 @@ pub enum InternalCommand {
     },
     KickVoteTimeout {
         kick_vote_id: Uuid,
+    },
+
+    EnterTournamentMode {
+        parent: sb_shared_types::TournamentId,
+        broker: Arc<crate::connection_broker::ConnectionBroker>,
+    },
+    SetBlinds {
+        small: ChipAmount,
+        big: ChipAmount,
+    },
+    PauseHand {
+        respond_to: tokio::sync::oneshot::Sender<()>,
+    },
+    ResumeHand {
+        force_dealer_seat: Option<u8>,
+        respond_to: tokio::sync::oneshot::Sender<Result<(), AppError>>,
+    },
+    TransferPlayerIn {
+        user_id: UserId,
+        player_id: PlayerId,
+        stack: ChipAmount,
+        seat: Option<u8>,
+        respond_to: tokio::sync::oneshot::Sender<Result<u8, AppError>>,
+    },
+    TransferPlayerOut {
+        user_id: UserId,
+        respond_to: tokio::sync::oneshot::Sender<TransferOutResult>,
     },
 
     StartHand,
@@ -522,6 +566,16 @@ pub struct TableActor {
     kick_vote_state: Option<KickVoteState>,
     kick_cooldowns: HashMap<UserId, Instant>,
     kick_refund_responder: Option<tokio::sync::oneshot::Sender<ChipAmount>>,
+
+    // ── Tournament extensions ───────────────────────────────────────────
+    mode: TableMode,
+    #[allow(dead_code)]
+    broker: Option<Arc<crate::connection_broker::ConnectionBroker>>,
+    current_blinds: Option<(ChipAmount, ChipAmount)>,
+    paused: bool,
+    #[allow(dead_code)]
+    timeout_handle: Option<tokio::task::JoinHandle<()>>,
+    busted_players_cache: Option<Vec<(UserId, ChipAmount)>>,
 }
 
 impl TableActor {
@@ -553,6 +607,12 @@ impl TableActor {
             kick_vote_state: None,
             kick_cooldowns: HashMap::new(),
             kick_refund_responder: None,
+            mode: TableMode::Cash,
+            broker: None,
+            current_blinds: None,
+            paused: false,
+            timeout_handle: None,
+            busted_players_cache: None,
         }
     }
 
@@ -660,6 +720,106 @@ impl TableActor {
             }
             InternalCommand::KickVoteTimeout { kick_vote_id } => {
                 self.timeout_kick_vote(kick_vote_id).await;
+            }
+
+            InternalCommand::EnterTournamentMode { parent, broker } => {
+                self.mode = TableMode::Tournament {
+                    parent,
+                    no_rebuy: true,
+                };
+                self.broker = Some(broker);
+            }
+            InternalCommand::SetBlinds { small, big } => {
+                self.current_blinds = Some((small, big));
+            }
+            InternalCommand::PauseHand { respond_to } => {
+                self.paused = true;
+                if let Some(handle) = self.timeout_handle.take() {
+                    handle.abort();
+                }
+                let _ = respond_to.send(());
+            }
+            InternalCommand::ResumeHand {
+                force_dealer_seat,
+                respond_to,
+            } => {
+                if let Some(seat) = force_dealer_seat {
+                    let valid = seat < self.config.max_players
+                        && self
+                            .players
+                            .values()
+                            .any(|p| p.seat == seat && p.stack > zero());
+                    if !valid {
+                        let _ = respond_to.send(Err(AppError::InvalidSeat));
+                        return true;
+                    }
+                    self.last_dealer_index = Some(seat as usize);
+                }
+                self.paused = false;
+                let _ = respond_to.send(Ok(()));
+            }
+            InternalCommand::TransferPlayerIn {
+                user_id,
+                player_id,
+                stack,
+                seat,
+                respond_to,
+            } => {
+                let seat = match seat {
+                    Some(s) => {
+                        if s >= self.config.max_players
+                            || self.players.values().any(|p| p.seat == s)
+                        {
+                            let _ = respond_to.send(Err(AppError::InvalidSeat));
+                            return true;
+                        }
+                        s
+                    }
+                    None => {
+                        let occupied: std::collections::HashSet<u8> =
+                            self.players.values().map(|p| p.seat).collect();
+                        let mut free = None;
+                        for s in 0..self.config.max_players {
+                            if !occupied.contains(&s) {
+                                free = Some(s);
+                                break;
+                            }
+                        }
+                        match free {
+                            Some(s) => s,
+                            None => {
+                                let _ = respond_to.send(Err(AppError::TournamentFull));
+                                return true;
+                            }
+                        }
+                    }
+                };
+                let player = Player::new(user_id, "".to_string(), seat, stack);
+                self.players.insert(
+                    user_id,
+                    Player {
+                        player_id,
+                        stack,
+                        ..player
+                    },
+                );
+                let _ = respond_to.send(Ok(seat));
+            }
+            InternalCommand::TransferPlayerOut {
+                user_id,
+                respond_to,
+            } => {
+                if let Some(player) = self.players.remove(&user_id) {
+                    let _ = respond_to.send(TransferOutResult {
+                        player_id: player.player_id,
+                        stack: player.stack,
+                    });
+                } else {
+                    let _ = respond_to.send(TransferOutResult {
+                        player_id: PlayerId::new(uuid::Uuid::nil()),
+                        stack: zero(),
+                    });
+                }
             }
 
             InternalCommand::Shutdown => {
@@ -1596,6 +1756,7 @@ impl TableActor {
         }
 
         let result = self.build_hand_result(&hand);
+        let busted = self.busted_players_cache.take().unwrap_or_default();
         let event = HandCompletedEvent {
             table_id: self.table_id,
             room_id: self.room_id,
@@ -1607,6 +1768,7 @@ impl TableActor {
                 actions: self.hand_actions.clone(),
             },
             result,
+            busted_players: busted,
         };
 
         if let Err(e) = self.event_tx.send(event) {

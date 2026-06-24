@@ -7,6 +7,7 @@ use crate::game_room::RoomMessage;
 
 /// Global message router. Users register their sender on connect; tournament
 /// actors subscribe users to room broadcasts (identified by TableId).
+#[derive(Debug)]
 pub struct ConnectionBroker {
     senders: Arc<DashMap<UserId, mpsc::UnboundedSender<RoomMessage>>>,
     room_subscribers: Arc<DashMap<TableId, Vec<UserId>>>,
