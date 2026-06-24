@@ -19,6 +19,7 @@ members = [
     "migration",
     "crates/sb-club",
     "crates/sb-server",
+    "crates/sb-tournament",
         "crates/sb-notification",
 ]
 

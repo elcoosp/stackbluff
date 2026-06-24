@@ -5520,6 +5520,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "sb-tournament"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "sb-contracts",
+ "sb-shared-types",
+ "serde",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "sb-viral"
 version = "0.1.0"
 dependencies = [
