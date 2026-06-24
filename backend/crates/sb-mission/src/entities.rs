@@ -1,5 +1,5 @@
-use uuid::Uuid;
 use sea_orm::entity::prelude::*;
+use uuid::Uuid;
 
 pub mod daily_mission {
     use super::*;

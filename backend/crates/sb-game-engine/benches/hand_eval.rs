@@ -18,7 +18,7 @@ fn bench_evaluate(c: &mut Criterion) {
         card(Suit::Clubs, Rank::Two),
         card(Suit::Diamonds, Rank::King),
     ];
-    c.bench_function("evaluate_hand", |b| {
+    c.bench_function("evaluate_hand", |b: &mut criterion::Bencher| {
         b.iter(|| evaluate_hand(black_box(&hole), black_box(&community)))
     });
 }

@@ -1,9 +1,9 @@
 use axum::{
+    Router,
     extract::{Path, State},
     http::StatusCode,
     response::Json,
     routing::get,
-    Router,
 };
 use chrono::{DateTime, Duration, Utc};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, Set};
@@ -46,18 +46,15 @@ impl R2Storage for RealR2 {
     }
 
     async fn get_object(&self, key: &str) -> Result<Vec<u8>, String> {
-        let resp = self.client
+        let resp = self
+            .client
             .get_object()
             .bucket(&self.bucket)
             .key(key)
             .send()
             .await
             .map_err(|e| e.to_string())?;
-        let data = resp
-            .body
-            .collect()
-            .await
-            .map_err(|e| e.to_string())?;
+        let data = resp.body.collect().await.map_err(|e| e.to_string())?;
         Ok(data.into_bytes().to_vec())
     }
 }
@@ -73,7 +70,9 @@ pub fn router(state: Arc<ArchiveState>) -> Router {
         .with_state(state)
 }
 
-pub async fn start_archival_scheduler(state: Arc<ArchiveState>) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn start_archival_scheduler(
+    state: Arc<ArchiveState>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let sched = JobScheduler::new().await?;
     let db = state.db.clone();
     let r2 = state.r2.clone();
@@ -173,8 +172,13 @@ pub async fn get_hand(
         hand.id
     );
 
-    let data = state.r2.get_object(&key).await.map_err(|_| StatusCode::NOT_FOUND)?;
+    let data = state
+        .r2
+        .get_object(&key)
+        .await
+        .map_err(|_| StatusCode::NOT_FOUND)?;
     let json_str = String::from_utf8(data).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let json: Value = serde_json::from_str(&json_str).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let json: Value =
+        serde_json::from_str(&json_str).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(Json(json))
 }

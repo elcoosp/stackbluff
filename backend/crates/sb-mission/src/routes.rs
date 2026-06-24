@@ -1,9 +1,14 @@
-use axum::{extract::State, http::StatusCode, Json, Router, routing::{get, post}};
+use axum::{
+    Json, Router,
+    extract::State,
+    http::StatusCode,
+    routing::{get, post},
+};
+use sb_contracts::service_api::MissionApi;
+use sb_shared_types::missions::{Mission, MissionId};
+use sb_shared_types::request_context::RequestContext;
 use std::sync::Arc;
 use uuid::Uuid;
-use sb_contracts::service_api::MissionApi;
-use sb_shared_types::request_context::RequestContext;
-use sb_shared_types::missions::{Mission, MissionId};
 
 pub fn mission_routes(service: Arc<dyn MissionApi>) -> Router {
     Router::new()
@@ -25,9 +30,10 @@ async fn get_today(
     State(svc): State<Arc<dyn MissionApi>>,
 ) -> Result<Json<Vec<Mission>>, (StatusCode, String)> {
     let ctx = default_ctx();
-    let missions = svc.get_today_missions(&ctx).await.map_err(|e| {
-        (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
-    })?;
+    let missions = svc
+        .get_today_missions(&ctx)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
     Ok(Json(missions))
 }
 
@@ -35,9 +41,10 @@ async fn claim(
     State(svc): State<Arc<dyn MissionApi>>,
 ) -> Result<Json<sb_contracts::service_api::ClaimResult>, (StatusCode, String)> {
     let ctx = default_ctx();
-    let res = svc.claim_daily_reward(&ctx).await.map_err(|e| {
-        (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
-    })?;
+    let res = svc
+        .claim_daily_reward(&ctx)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
     Ok(Json(res))
 }
 
@@ -46,9 +53,10 @@ async fn reroll(
     Json(payload): Json<RerollPayload>,
 ) -> Result<Json<Mission>, (StatusCode, String)> {
     let ctx = default_ctx();
-    let mission = svc.reroll_mission(&ctx, payload.mission_id).await.map_err(|e| {
-        (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
-    })?;
+    let mission = svc
+        .reroll_mission(&ctx, payload.mission_id)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
     Ok(Json(mission))
 }
 

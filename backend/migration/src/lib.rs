@@ -1,4 +1,5 @@
 #![allow(clippy::needless_update)]
+#![allow(clippy::enum_variant_names)]
 mod m20250101_000001_add_participants_to_hand_history;
 mod m20250614_create_payment_intents;
 mod m20260101_000008_player_statistics;

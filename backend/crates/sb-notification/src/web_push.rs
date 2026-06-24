@@ -10,7 +10,10 @@ pub struct WebPushSender {
 
 impl WebPushSender {
     pub fn new(vapid_private_key: String, vapid_subject: String) -> Self {
-        Self { vapid_private_key, vapid_subject }
+        Self {
+            vapid_private_key,
+            vapid_subject,
+        }
     }
 
     #[tracing::instrument(skip_all)]

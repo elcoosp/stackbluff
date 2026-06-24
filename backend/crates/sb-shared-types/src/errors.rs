@@ -24,6 +24,21 @@ pub enum AppError {
 
     #[error("External service error: {0}")]
     External(String),
+
+    #[error("Tournament is full")]
+    TournamentFull,
+
+    #[error("Tournament already started")]
+    TournamentAlreadyStarted,
+
+    #[error("Tournament registration is closed")]
+    TournamentRegistrationClosed,
+
+    #[error("Tournament is not running")]
+    TournamentNotRunning,
+
+    #[error("Invalid seat")]
+    InvalidSeat,
 }
 
 impl From<&str> for AppError {

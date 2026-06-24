@@ -104,3 +104,33 @@ impl Default for TableId {
         Self::generate()
     }
 }
+/// Unique identifier for a tournament. Use TournamentId::new(uuid) to construct.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, PartialOrd)]
+pub struct TournamentId(pub Uuid);
+
+impl TournamentId {
+    pub fn new(uuid: Uuid) -> Self {
+        Self(uuid)
+    }
+
+    pub fn as_uuid(&self) -> Uuid {
+        self.0
+    }
+
+    pub fn generate() -> Self {
+        Self(Uuid::new_v4())
+    }
+}
+
+impl std::fmt::Display for TournamentId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl std::str::FromStr for TournamentId {
+    type Err = uuid::Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(TournamentId(Uuid::parse_str(s)?))
+    }
+}
