@@ -40,6 +40,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260622_132958_mission_system::Migration),
             // 4. Seed data (last)
             Box::new(m20260616_seed_base_tables::Migration),
+            Box::new(m20260624_create_tournament_tables::Migration),
         ]
     }
 }

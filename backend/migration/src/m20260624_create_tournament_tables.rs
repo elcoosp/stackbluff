@@ -1,7 +1,6 @@
 use sea_orm_migration::prelude::*;
 
 #[derive(DeriveMigrationName)]
-#[allow(dead_code)]
 pub struct Migration;
 
 #[async_trait::async_trait]
@@ -144,7 +143,6 @@ impl MigrationTrait for Migration {
 }
 
 #[derive(DeriveIden)]
-#[allow(dead_code)]
 enum Tournaments {
     Table,
     Id,
@@ -157,7 +155,6 @@ enum Tournaments {
 }
 
 #[derive(DeriveIden)]
-#[allow(dead_code)]
 enum TournamentRegistrations {
     Table,
     Id,
@@ -168,7 +165,6 @@ enum TournamentRegistrations {
 }
 
 #[derive(DeriveIden)]
-#[allow(dead_code)]
 enum TournamentResults {
     Table,
     Id,
