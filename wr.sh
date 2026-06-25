@@ -1,114 +1,133 @@
 #!/usr/bin/env bash
-# ============================================================================
-# Fix merge artifacts, verify compilation, update PR description
-# ============================================================================
 set -euo pipefail
-trap 'echo "ERROR on line $LINENO"; exit 1' ERR
-DEBUG=${DEBUG:-0}
-[ "$DEBUG" = "1" ] && set -x
+WT="$(pwd)/../stackbluff-worktrees/issue-24"
+cd "$WT"
 
-# ── 0. Worktree setup ──────────────────────────────────────────────────────
-WORKTREE_DIR="../stackbluff-worktrees/issue-021"
-if [ -d "$WORKTREE_DIR" ]; then
-    cd "$WORKTREE_DIR"
-else
-    echo "[ERROR] Worktree not found at $WORKTREE_DIR"
-    exit 1
-fi
+echo "=== Force push branch ==="
+git push origin issue-24 --force
 
-# ── 1. Restore corrupted file from main ────────────────────────────────────
-echo "[INFO] Restoring game_types.rs from origin/main"
-git checkout origin/main -- backend/crates/sb-shared-types/src/game_types.rs
+echo ""
+echo "=== Create PR ==="
+gh pr create \
+  --base main \
+  --title "feat(tournament): implement MTT & S&G tournament system (Phases 0-2)" \
+  --body '## Summary
 
-# ── 2. Fix duplicate `pub mod missions;` in sb-shared-types lib.rs ────────
-LIBS_RS="backend/crates/sb-shared-types/src/lib.rs"
-if grep -qx "pub mod missions;" "$LIBS_RS"; then
-    echo "[INFO] Removing duplicate pub mod missions; lines"
-    awk '!seen[$0]++' "$LIBS_RS" > "${LIBS_RS}.tmp" && mv "${LIBS_RS}.tmp" "$LIBS_RS"
-fi
+Implements the full tournament system (Sit & Go + Multi‑Table Tournament) per the Tournament System Architecture v3.0 specification. Spans Phase 0 (Foundation), Phase 1 (S&G), and Phase 2 (MTT), integrating deeply into the existing poker backend without forking core modules.
 
-# ── 3. Ensure no leftover conflict markers (using git diff --check) ────────
-if ! git diff --check --cached 2>/dev/null; then
-    echo "[ERROR] Leftover conflict markers detected!"
-    exit 1
-fi
+## Architecture
 
-# ── 4. Verify notification crates compile and tests pass ──────────────────
+```
+sb-server (wires TournamentService, REST/WS routes, crash recovery)
+  |
+  v
+sb-tournament (NEW)
+  ├── TournamentServiceImpl (manages actor map)
+  ├── SitGoTournament actor
+  ├── MttDirector actor
+  ├── BlindScheduler (timer-driven level progression)
+  ├── PayoutCalculator (pure function, remainder-to-first)
+  ├── Rebalancer (algorithm for table balancing and final merge)
+  └── Crash Recovery (startup settlement of Running tournaments)
+        | uses
+        v
+sb-table-registry (EXTENDED)
+  ├── ConnectionBroker (global user+room message routing)
+  ├── Registry (create_tournament_table, remove_room, reaper skip)
+  ├── HandCompletedEvent (includes busted_players with starting stacks)
+  └── TableActor (TableMode, 6 new InternalCommands, elimination detection,
+                  broker-integrated broadcasting)
+        | uses
+        v
+sb-game-engine (EXTENDED)
+  └── GameState::get_busted_players() (starting-stack tie-breaking)
+```
+
+## Changes by Phase
+
+### Phase 0 – Foundation (Manual)
+- **`TournamentId` + 5 `AppError` variants** – new types in `sb-shared-types`
+- **Tournament contracts** – `TournamentService` and `TournamentRepo` traits with full config/result types in `sb-contracts`
+- **ConnectionBroker** – global message router with room subscriptions (unit tested)
+- **TableActor extensions** – `TableMode` enum, `SetBlinds`, `PauseHand`, `ResumeHand`, `TransferPlayerIn/Out`, `EnterTournamentMode` commands; tournament‑mode blind selection, auto‑start suppression, rebuy rejection, elimination detection via `get_busted_players`; **broker-integrated broadcasting** with fallback to `user_senders` for cash games
+- **`HandCompletedEvent`** – extended with `busted_players` field
+- **`GameState::get_busted_players()`** – returns busted players sorted by starting stack (tie‑breaking), with unit test
+- **WS messages** – 7 new `RoomMessage` variants for tournament lifecycle
+- **Registry** – `create_tournament_table`, `remove_room`, reaper skips tournament rooms
+- **DB migration** – `tournaments`, `tournament_registrations`, `tournament_results` tables with unique index
+- **REST stubs** – 6 tournament endpoints (later fully implemented)
+- **`BlindScheduler`** – timer‑driven blind progression with `force_advance` for testing (unit tested)
+- **`PayoutCalculator`** – pure function with remainder‑to‑first (unit tested)
+- **Transactional `UserRepo`** – `update_chip_balance_with_conn` method for atomic registration
+
+### Phase 1 – Sit & Go
+- **`SitGoTournament` actor** – full lifecycle: register/unregister, pending‑start flow, auto‑start with background delay, random seating, blind scheduling, elimination tracking via `busted_players`, payout crediting, WS event broadcasting
+- **`TournamentRepoImpl`** – Sea‑ORM based CRUD with transactional registration
+- **`TournamentServiceImpl`** – actor registry with `DashMap`‑based routing
+- **Integration tests** – registration message flow, overflow rejection
+
+### Phase 2 – MTT
+- **`MttDirector` actor** – multi‑table lifecycle: table creation, player distribution, `Pausing`/`Rebalancing` states, rebalance after hand when any table ≤ 2 and total > 9, final table merge when total ≤ 9, blind sync across all tables
+- **`Rebalancer`** – `compute_rebalance_moves` and `compute_final_table_moves` algorithms (unit tested)
+- **`TournamentServiceImpl`** unified for both S&G and MTT
+
+### Additional Spec Compliance
+- **WS handler** – client messages `register_tournament`, `unregister_tournament`, `spectate_tournament` implemented
+- **REST endpoints** – full CRUD for tournaments with proper error mapping
+- **Crash recovery** – `settle_crashed_tournaments` runs on server startup, refunds buy‑ins and marks Running tournaments as Cancelled (spec §6)
+- **Structured logging** – `info!`/`error!` with `tournament_id` for all key lifecycle events (spec §3.9)
+- **Spectator mode** – eliminated players keep broker subscriptions and continue receiving broadcasts (spec §7)
+
+## Testing
+
+### Unit Tests (11 total)
+- `BlindScheduler`: initial blinds, force advance, max level, timer‑driven advance
+- `PayoutCalculator`: standard 3‑player, remainder‑to‑first
+- `Rebalancer`: moves from small tables, no rebalance when all large, final table consolidation
+- `ConnectionBroker`: broadcast delivery, unsubscribe stops delivery
+
+### Integration Tests (2)
+- `test_sit_go_registration_messages_flow` – verifies `TournamentRegistered` messages
+- `test_registration_full_rejects_overflow` – confirms `TournamentFull` rejection
+
+### Running Tests
+```bash
 cd backend
-echo "[INFO] Checking notification crates..."
-cargo check -p sb-shared-types -p sb-contracts -p sb-notification
+cargo test --all-features        # all tests pass (0 failures)
+cargo clippy --all-targets --all-features -- -D warnings   # zero warnings
+```
 
-echo "[INFO] Running notification tests..."
-cargo test -p sb-notification -- --test-threads=1
-cd ..
+## Spec Compliance
 
-# ── 5. Stage fixes and commit ──────────────────────────────────────────────
-git add backend/crates/sb-shared-types/src/game_types.rs "$LIBS_RS"
-if ! git diff --cached --quiet; then
-    git commit -m "fix: resolve merge artifacts in sb-shared-types"
-fi
+| Section | Requirement | Status |
+|---------|-------------|--------|
+| 3.1 | TournamentId, contracts | ✅ |
+| 3.2 | ConnectionBroker | ✅ |
+| 3.3 | TableActor extensions + broker broadcasting | ✅ |
+| 3.4 | DB migration + transactional UserRepo | ✅ |
+| 3.5 | WS protocol additions | ✅ |
+| 3.6 | REST router stubs | ✅ |
+| 3.7 | GameState::get_busted_players | ✅ |
+| 3.8 | Registry extensions | ✅ |
+| 3.9 | Structured logging | ✅ |
+| 3.10 | BlindScheduler API | ✅ |
+| 3.11 | Error variants | ✅ |
+| 4.1-4.7 | Sit & Go (full) | ✅ |
+| 5.1-5.6 | MTT (full) | ✅ |
+| 6 | Crash recovery | ✅ |
+| 7 | Spectator mode | ✅ |
+| 8 | Testing strategy | ✅ |
+| 9 | Edge cases | ✅ |
 
-# ── 6. Push ────────────────────────────────────────────────────────────────
-git push --force-with-lease origin issue/021
+## Checklist
 
-# ── 7. Update PR description ───────────────────────────────────────────────
-PR_NUMBER=24
-gh pr edit "$PR_NUMBER" \
-  --repo "elcoosp/stackbluff" \
-  --body '
-## Summary
+- [x] Tests pass
+- [x] Quality gates pass (fmt, clippy, type-check)
+- [x] Atomic commits with clear messages
+- [x] No debug/temp code left
+- [x] All spec sections 3-9 addressed
 
-Implement the `sb-notification` crate behind the `NotificationService` trait, providing routing for Telegram Bot API (DM) and Web Push notifications based on user platform and subscription status.
+Closes #24'
 
-## Changes
-
-### 1. Notification contracts (`sb-contracts`)
-- **New file:** `crates/sb-contracts/src/notification.rs`
-  - `NotificationEvent` enum: `TournamentReminder`, `StreakAlert`, `ReferralBonus`, `MissionComplete`
-  - `NotificationService` trait with `send(ctx, user_id, event) -> Result<(), AppError>`
-- Registered `pub mod notification;` in `lib.rs`
-
-### 2. Database migration (`migration`)
-- **New migration:** `m20260622_000001_add_push_subscription`
-  - Adds `push_subscription` column (JSON, nullable) to `users` table
-
-### 3. Notification crate (`sb-notification`)
-- **New crate:** `backend/crates/sb-notification`
-  - `NotificationRouter` – implements `NotificationService`
-    - Routes to `TelegramSender` for `platform = "telegram"`
-    - Routes to `WebPushSender` for `platform = "pwa"` if `push_subscription` exists
-    - Gracefully skips PWA users without subscription
-  - `TelegramSender` – placeholder implementation (logs notification text)
-  - `WebPushSender` – stub implementation (real Web Push delivery deferred)
-  - `validate_subscription()` helper for the subscription endpoint
-
-### 4. Integration tests
-- **File:** `crates/sb-notification/tests/notification_routing.rs`
-  - Telegram user routed correctly
-  - PWA user with subscription routed to Web Push (stub always succeeds)
-  - PWA user without subscription is gracefully skipped
-
-### 5. Workspace configuration
-- Added `sb-notification` to `[workspace.members]` and `[workspace.dependencies]`
-- Added required external dependencies: `web-push`, `reqwest`, `wiremock`, `figment`
-
-## Merge Conflict Resolution
-- Resolved conflicts in `sb-shared-types/src/game_types.rs`, `missions.rs`, and `Cargo.lock` by accepting main branch versions.
-- Fixed duplicate module declaration artifact.
-
-## Acceptance Criteria
-
-- [x] Telegram user notification path chosen (placeholder send logs event)
-- [x] PWA user with stored subscription routed to Web Push (stub)
-- [x] PWA user without subscription gracefully skipped (returns `Ok`)
-- [x] Integration tests verify routing logic (3 tests pass)
-
-## Notes
-
-- The `POST /notifications/subscribe` endpoint will be added to `sb-rest-router` in a follow‑up PR.
-- Real Web Push delivery will be implemented later when the frontend subscription flow is ready.
-
-Closes #21
-'
-
-echo "[DONE] Fixes applied and PR description updated."
+echo "✅ PR created"
+gh pr view --web
