@@ -5454,6 +5454,7 @@ dependencies = [
  "aws-sdk-s3",
  "axum",
  "chrono",
+ "dotenvy",
  "migration",
  "mockall",
  "moka",

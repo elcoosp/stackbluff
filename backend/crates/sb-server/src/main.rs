@@ -42,6 +42,7 @@ mod hand_archive;
 
 #[tokio::main]
 async fn main() {
+    dotenvy::dotenv().expect("Failed to load .env");
     tracing_subscriber::fmt().init();
 
     let db_url = std::env::var("DATABASE_URL")

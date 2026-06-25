@@ -66,7 +66,7 @@ pub struct ArchiveState {
 
 pub fn router(state: Arc<ArchiveState>) -> Router {
     Router::new()
-        .route("/hands/:id", get(get_hand))
+        .route("/hands/{id}", get(get_hand))
         .with_state(state)
 }
 
