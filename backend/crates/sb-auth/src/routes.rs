@@ -26,6 +26,11 @@ fn app_error_to_status(e: &AppError) -> StatusCode {
         AppError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
         AppError::Configuration(_) => StatusCode::INTERNAL_SERVER_ERROR,
         AppError::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        AppError::TournamentFull
+        | AppError::TournamentAlreadyStarted
+        | AppError::TournamentRegistrationClosed
+        | AppError::TournamentNotRunning
+        | AppError::InvalidSeat => StatusCode::BAD_REQUEST,
         AppError::External(_) => StatusCode::BAD_GATEWAY,
     }
 }

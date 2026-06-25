@@ -1,5 +1,6 @@
 //! 7‑card hand evaluation – returns comparable hand strength with correct kickers.
 
+#![allow(clippy::items_after_test_module)]
 use crate::hand_rank::HandRank;
 use sb_shared_types::{Card, Suit};
 use std::cmp::Ordering;

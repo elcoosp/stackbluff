@@ -1,4 +1,5 @@
 #![allow(clippy::needless_update)]
+#![allow(clippy::enum_variant_names)]
 mod m20250101_000001_add_participants_to_hand_history;
 mod m20250614_create_payment_intents;
 mod m20260101_000008_player_statistics;
@@ -12,6 +13,7 @@ mod m20260615_add_password_hash_to_users;
 mod m20260616_seed_base_tables;
 mod m20260617_add_table_name;
 mod m20260622_132958_mission_system;
+mod m20260624_create_tournament_tables;
 
 use sea_orm_migration::prelude::*;
 
@@ -38,6 +40,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260622_132958_mission_system::Migration),
             // 4. Seed data (last)
             Box::new(m20260616_seed_base_tables::Migration),
+            Box::new(m20260624_create_tournament_tables::Migration),
         ]
     }
 }

@@ -1,9 +1,9 @@
-use sea_orm::{ConnectionTrait, Database, DatabaseBackend, EntityTrait, Schema, Set};
-use sb_db_entities::hand_history::{ActiveModel, Entity as HandHistory};
-use sb_db_entities::hand_history_json::{HandPlayers, HandActions, HandResult};
-use sb_server::hand_archive::{run_archival_with_r2, R2Storage};
 use chrono::{DateTime, Duration, Utc};
 use mockall::mock;
+use sb_db_entities::hand_history::{ActiveModel, Entity as HandHistory};
+use sb_db_entities::hand_history_json::{HandActions, HandPlayers, HandResult};
+use sb_server::hand_archive::{R2Storage, run_archival_with_r2};
+use sea_orm::{ConnectionTrait, Database, DatabaseBackend, EntityTrait, Schema, Set};
 use uuid::Uuid;
 
 mock! {
@@ -42,13 +42,11 @@ async fn upload_success_marks_archived() {
             community_cards: vec![],
         }),
         is_archived: Set(false),
-        ..Default::default()
     };
     HandHistory::insert(hand).exec(&db).await.unwrap();
 
     let mut r2 = MockR2Mock::new();
-    r2.expect_put_object()
-        .returning(|_, _| Ok(()));
+    r2.expect_put_object().returning(|_, _| Ok(()));
 
     let cutoff = Utc::now() - Duration::days(30);
     run_archival_with_r2(&db, &r2, cutoff).await.unwrap();
@@ -76,7 +74,6 @@ async fn upload_failure_leaves_unarchived() {
             community_cards: vec![],
         }),
         is_archived: Set(false),
-        ..Default::default()
     };
     HandHistory::insert(hand).exec(&db).await.unwrap();
 

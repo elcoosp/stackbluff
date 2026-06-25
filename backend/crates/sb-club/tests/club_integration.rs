@@ -97,7 +97,7 @@ async fn test_join_club_and_duplicate() {
         .expect("join club");
 
     let result = svc.join_club(&member_ctx, club_id, member_id).await;
-    assert!(matches!(result, Err(ClubError::AlreadyMember { .. })));
+    assert!(matches!(result, Err(ClubError::AlreadyMember)));
 }
 
 #[tokio::test]
@@ -111,7 +111,7 @@ async fn test_add_xp_not_member() {
         .await
         .expect("create");
     let result = svc.add_xp(&ctx, club_id, owner_id, 100).await;
-    assert!(matches!(result, Err(ClubError::NotAMember { .. })));
+    assert!(matches!(result, Err(ClubError::NotAMember)));
 }
 
 #[tokio::test]
@@ -186,5 +186,5 @@ async fn test_club_not_found() {
     let ctx = test_ctx();
     let fake_club = ClubId::new(Uuid::new_v4());
     let result = svc.get_leaderboard(&ctx, fake_club, 1).await;
-    assert!(matches!(result, Err(ClubError::NotFound { .. })));
+    assert!(matches!(result, Err(ClubError::NotFound)));
 }

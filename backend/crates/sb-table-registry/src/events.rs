@@ -14,6 +14,8 @@ pub struct HandCompletedEvent {
     pub players: HandPlayers,
     pub actions: HandActions,
     pub result: HandResult,
+    /// Players eliminated this hand, with their starting stacks (sorted).
+    pub busted_players: Vec<(sb_shared_types::UserId, sb_shared_types::ChipAmount)>,
 }
 
 /// Spawns a background consumer that receives hand completion events

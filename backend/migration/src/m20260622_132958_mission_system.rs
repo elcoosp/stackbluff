@@ -116,13 +116,9 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Streak::CurrentStreak).integer().default(0))
                     .col(ColumnDef::new(Streak::LongestStreak).integer().default(0))
                     .col(ColumnDef::new(Streak::LastCompletionDate).date())
+                    .col(ColumnDef::new(Streak::ShieldAvailable).integer().default(0))
                     .col(
-                        ColumnDef::new(Streak::StreakShieldAvailable)
-                            .integer()
-                            .default(0),
-                    )
-                    .col(
-                        ColumnDef::new(Streak::WeeklyBonusAwardedStreak)
+                        ColumnDef::new(Streak::BonusAwardedStreak)
                             .integer()
                             .default(0),
                     )
@@ -156,7 +152,7 @@ impl MigrationTrait for Migration {
         add_column(
             manager,
             Alias::new("users"),
-            &mut ColumnDef::new(Alias::new("streak_count"))
+            ColumnDef::new(Alias::new("streak_count"))
                 .integer()
                 .default(0),
         )
@@ -165,14 +161,14 @@ impl MigrationTrait for Migration {
         add_column(
             manager,
             Alias::new("users"),
-            &mut ColumnDef::new(Alias::new("last_streak_date")).date(),
+            ColumnDef::new(Alias::new("last_streak_date")).date(),
         )
         .await?;
 
         add_column(
             manager,
             Alias::new("users"),
-            &mut ColumnDef::new(Alias::new("weekly_bonus_awarded_streak"))
+            ColumnDef::new(Alias::new("weekly_bonus_awarded_streak"))
                 .integer()
                 .default(0),
         )
@@ -255,6 +251,6 @@ enum Streak {
     CurrentStreak,
     LongestStreak,
     LastCompletionDate,
-    StreakShieldAvailable,
-    WeeklyBonusAwardedStreak,
+    ShieldAvailable,
+    BonusAwardedStreak,
 }

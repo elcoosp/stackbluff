@@ -21,6 +21,7 @@ use uuid::Uuid;
 pub mod oracle_routes;
 pub mod player_stats;
 pub mod rate_limit;
+pub mod tournament_routes;
 
 pub use oracle_routes::oracle_router;
 pub use rate_limit::rate_limit_middleware;

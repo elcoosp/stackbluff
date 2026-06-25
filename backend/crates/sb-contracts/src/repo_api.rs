@@ -12,6 +12,9 @@ pub use crate::persistence_error::{PersistenceError, PersistenceResult};
 
 // ── Existing repository types ──────────────────────────────────
 
+pub type HandCursor = (DateTime<Utc>, Uuid);
+pub type HandSummaryPage = (Vec<HandSummary>, Option<HandCursor>);
+
 pub struct UserCreate {
     pub telegram_id: i64,
     pub email: String,
@@ -44,6 +47,16 @@ pub trait UserRepository: Send + Sync {
     /// Updates the user's chip balance by `delta`. Returns the new balance.
     async fn update_chip_balance(
         &self,
+        ctx: RequestContext,
+        user_id: UserId,
+        delta: i64,
+    ) -> PersistenceResult<i64>;
+
+    /// Transactional variant: uses the given connection instead of the writer loop.
+    /// Used by tournament registration to keep everything in one ACID transaction.
+    async fn update_chip_balance_with_conn(
+        &self,
+        conn: &sea_orm::DatabaseConnection,
         ctx: RequestContext,
         user_id: UserId,
         delta: i64,
@@ -85,8 +98,8 @@ pub trait HandHistoryRepository: Send + Sync {
         ctx: RequestContext,
         table_id: TableId,
         limit: u64,
-        cursor: Option<(DateTime<Utc>, Uuid)>,
-    ) -> PersistenceResult<(Vec<HandSummary>, Option<(DateTime<Utc>, Uuid)>)>;
+        cursor: Option<HandCursor>,
+    ) -> PersistenceResult<HandSummaryPage>;
 
     /// Total count of hands for a table.
     async fn count_hand_histories(

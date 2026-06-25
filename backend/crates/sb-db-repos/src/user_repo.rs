@@ -146,4 +146,36 @@ impl UserRepository for UserRepoImpl {
         rx.await
             .map_err(|e| PersistenceError::Database(e.to_string()))?
     }
+
+    async fn update_chip_balance_with_conn(
+        &self,
+        conn: &sea_orm::DatabaseConnection,
+        _ctx: RequestContext,
+        user_id: UserId,
+        delta: i64,
+    ) -> PersistenceResult<i64> {
+        use sb_db_entities::user;
+        use sea_orm::{ActiveModelTrait, EntityTrait, Set};
+
+        let user_model = user::Entity::find_by_id(user_id.as_uuid())
+            .one(conn)
+            .await
+            .map_err(|e| PersistenceError::Database(e.to_string()))?
+            .ok_or(PersistenceError::NotFound)?;
+
+        let new_balance = user_model.chip_balance + delta;
+        if new_balance < 0 {
+            return Err(PersistenceError::Database("Insufficient balance".into()));
+        }
+
+        let mut active: user::ActiveModel = user_model.into();
+        active.chip_balance = Set(new_balance);
+        active.updated_at = Set(chrono::Utc::now());
+        active
+            .update(conn)
+            .await
+            .map_err(|e| PersistenceError::Database(e.to_string()))?;
+
+        Ok(new_balance)
+    }
 }

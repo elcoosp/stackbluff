@@ -1,6 +1,7 @@
 use crate::commands::DbCommand;
 use sb_contracts::repo_api::{
-    HandHistoryRepository, HandSummary, PersistenceError, PersistenceResult, WinnerSummary,
+    HandCursor, HandHistoryRepository, HandSummary, HandSummaryPage, PersistenceError,
+    PersistenceResult, WinnerSummary,
 };
 use sb_db_entities::hand_history::{self};
 use sb_db_entities::hand_history_json::{HandPlayers, HandResult};
@@ -68,11 +69,8 @@ impl HandHistoryRepository for HandHistoryRepoImpl {
         _ctx: RequestContext,
         table_id: TableId,
         limit: u64,
-        cursor: Option<(chrono::DateTime<chrono::Utc>, Uuid)>,
-    ) -> PersistenceResult<(
-        Vec<HandSummary>,
-        Option<(chrono::DateTime<chrono::Utc>, Uuid)>,
-    )> {
+        cursor: Option<HandCursor>,
+    ) -> PersistenceResult<HandSummaryPage> {
         use hand_history::Column;
         use sea_orm::Condition;
 

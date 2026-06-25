@@ -53,7 +53,7 @@ mockall::mock! {
         async fn store_hand(&self, _ctx: sb_shared_types::RequestContext, _hand_data: serde_json::Value) -> Result<(), sb_contracts::repo_api::PersistenceError> {
             Ok(())
         }
-        async fn list_hand_summaries(&self, _ctx: sb_shared_types::RequestContext, _table_id: TableId, _limit: u64, _cursor: Option<(chrono::DateTime<chrono::Utc>, uuid::Uuid)>) -> Result<(Vec<sb_contracts::repo_api::HandSummary>, Option<(chrono::DateTime<chrono::Utc>, uuid::Uuid)>), sb_contracts::repo_api::PersistenceError> {
+        async fn list_hand_summaries(&self, _ctx: sb_shared_types::RequestContext, _table_id: TableId, _limit: u64, _cursor: Option<sb_contracts::repo_api::HandCursor>) -> Result<sb_contracts::repo_api::HandSummaryPage, sb_contracts::repo_api::PersistenceError> {
             Ok((vec![], None))
         }
         async fn count_hand_histories(&self, _ctx: sb_shared_types::RequestContext, _table_id: TableId) -> Result<u64, sb_contracts::repo_api::PersistenceError> {

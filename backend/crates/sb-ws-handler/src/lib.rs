@@ -673,6 +673,58 @@ async fn handle_client_message(
             }
         }
 
+        "register_tournament" => {
+            let tournament_id_str = parsed
+                .get("tournament_id")
+                .and_then(|t| t.as_str())
+                .unwrap_or("");
+            if let Ok(tournament_id) = tournament_id_str.parse::<sb_shared_types::TournamentId>() {
+                let room_id = sb_shared_types::TableId::new(tournament_id.as_uuid());
+                state.registry.subscribe_to_room(room_id, *user_id).await;
+                let ack = serde_json::json!({
+                    "type": "TournamentRegistered",
+                    "tournament_id": tournament_id,
+                    "user_id": user_id
+                });
+                return send_json_to_client(client_tx, ack);
+            }
+        }
+        "unregister_tournament" => {
+            let tournament_id_str = parsed
+                .get("tournament_id")
+                .and_then(|t| t.as_str())
+                .unwrap_or("");
+            if let Ok(tournament_id) = tournament_id_str.parse::<sb_shared_types::TournamentId>() {
+                let room_id = sb_shared_types::TableId::new(tournament_id.as_uuid());
+                state
+                    .registry
+                    .unsubscribe_from_room(room_id, *user_id)
+                    .await;
+                let ack = serde_json::json!({
+                    "type": "TournamentUnregistered",
+                    "tournament_id": tournament_id,
+                    "user_id": user_id
+                });
+                return send_json_to_client(client_tx, ack);
+            }
+        }
+        "spectate_tournament" => {
+            let tournament_id_str = parsed
+                .get("tournament_id")
+                .and_then(|t| t.as_str())
+                .unwrap_or("");
+            if let Ok(tournament_id) = tournament_id_str.parse::<sb_shared_types::TournamentId>() {
+                let room_id = sb_shared_types::TableId::new(tournament_id.as_uuid());
+                state.registry.subscribe_to_room(room_id, *user_id).await;
+                let ack = serde_json::json!({
+                    "type": "TournamentSpectating",
+                    "tournament_id": tournament_id,
+                    "user_id": user_id
+                });
+                return send_json_to_client(client_tx, ack);
+            }
+        }
+
         _ => {
             warn!(%user_id, msg_type, "Unknown message type from client");
         }

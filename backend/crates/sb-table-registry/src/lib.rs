@@ -1,4 +1,5 @@
 pub mod actor;
+pub mod connection_broker;
 pub mod events;
 pub mod game_room;
 pub mod registry;
