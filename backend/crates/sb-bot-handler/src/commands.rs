@@ -76,8 +76,8 @@ pub async fn handle_poker_command(ctx: &RequestContext, state: &Arc<BotState>, m
     let ctx_with_user = RequestContext::new(ctx.request_id, Some(user_id));
 
     let input = CreateTableInput {
-            created_by: message.as_ref().and_then(|msg| msg.from.as_ref()).map(|user| user.id.into()).unwrap_or(0.into()),
-            telegram_chat_id: message.as_ref().map(|msg| msg.chat.id.to_string()),
+            created_by: msg.from.as_ref().map(|user| user.id.into()).unwrap_or(0.into()),
+            telegram_chat_id: Some(msg.chat.id.to_string()),
             created_by: update.message.as_ref().and_then(|msg| msg.from.as_ref()).map(|user| user.id.into()).unwrap_or(0.into()),
             telegram_chat_id: update.message.as_ref().map(|msg| msg.chat.id.to_string()),
             created_by: update.message.as_ref().and_then(|msg| msg.from.as_ref()).map(|user| user.id.into()).unwrap_or(0.into()),
