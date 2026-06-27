@@ -1,6 +1,6 @@
 use chrono::Utc;
 use sea_orm::{
-    ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set,
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set,
 };
 use std::sync::Arc;
 
@@ -80,7 +80,7 @@ pub async fn process_ended_seasons(
                 season_id: Set(season_id),
                 card_image_url: Set(None),
                 card_data: Set(Some(card_data)),
-                generated_at: Set(Utc::now()),
+                generated_at: Set(Utc::now().into()),
                 ..Default::default()
             };
 
