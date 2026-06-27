@@ -15,11 +15,11 @@ pub trait R2Storage: Send + Sync {
 pub use crate::hand_archive::RealR2;
 
 pub struct R2StorageAdapter {
-    inner: Arc<RealR2>,
+    inner: Arc<dyn crate::hand_archive::R2Storage>,
 }
 
 impl R2StorageAdapter {
-    pub fn new(inner: Arc<RealR2>) -> Self {
+    pub fn new(inner: Arc<dyn crate::hand_archive::R2Storage>) -> Self {
         Self { inner }
     }
 }
