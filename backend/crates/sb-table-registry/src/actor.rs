@@ -592,6 +592,35 @@ impl TableActor {
     fn emit_table_closed_event(&self) {
         use sb_shared_types::{UserId, TableId, ChipAmount};
         use crate::events::{TableClosedEvent, TableEvent};
+
+        // Try to retrieve final game result from the game engine.
+        // This is a placeholder; in a real implementation you would call
+        // self.game_state.last_hand_result() or similar.
+        // For now we log a warning and use defaults.
+        let (winner, hand_desc, pot) = if let Some(ref game) = self.game {
+            // In a complete implementation, you would get the data from the game.
+            // Example: let result = game.final_result();
+            // For now, we simulate.
+            tracing::warn!("Game data not fully retrieved; using placeholder");
+            (None, "Unknown".to_string(), ChipAmount(0))
+        } else {
+            (None, "Unknown".to_string(), ChipAmount(0))
+        };
+
+        let event = TableClosedEvent {
+            table_id: self.table_id,
+            room_id: self.table_id,
+            started_by: self.created_by,
+            winner,
+            winning_hand_description: hand_desc,
+            pot_amount: pot,
+            chat_id: self.telegram_chat_id.clone(),
+        };
+
+        let _ = self.event_tx.send(TableEvent::TableClosed(event));
+    }
+
+        use crate::events::{TableClosedEvent, TableEvent};
         let event = TableClosedEvent {
             table_id: self.table_id,
             room_id: self.table_id,
