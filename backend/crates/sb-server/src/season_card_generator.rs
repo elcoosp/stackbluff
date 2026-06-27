@@ -1,11 +1,9 @@
 use image::{ImageBuffer, Rgba, RgbaImage};
 use sb_contracts::notification_api::{NotificationEvent, NotificationService};
-use sb_db_entities::{player_rank, season, enums::RankTier};
+use sb_db_entities::{enums::RankTier, player_rank, season};
 use sb_db_repos::season_card_repo::SeasonCardRepo;
 use sb_shared_types::errors::AppError;
-use sea_orm::{
-    ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set, TransactionTrait,
-};
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set, TransactionTrait};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -74,7 +72,10 @@ impl SeasonCardGenerator {
             .map_err(|e| AppError::internal(format!("DB error: {e}")))?;
 
         for rank in &ranks {
-            match self.generate_and_store_card(rank.user_id, season_id, rank.tier).await {
+            match self
+                .generate_and_store_card(rank.user_id, season_id, rank.tier)
+                .await
+            {
                 Ok(url) => {
                     if let Err(e) = self
                         .notifier
