@@ -33,3 +33,4 @@ pub trait NotificationService: Send + Sync {
         callback_query_id: String,
         text: Option<String>,
     ) -> Result<(), NotificationError>;
+}
