@@ -10,6 +10,7 @@ thiserror = { workspace = true }
 derive_more = { workspace = true, features = ["display", "from", "into", "add"] }
 tracing = { workspace = true }
 
+
 chrono = { workspace = true }
 uuid = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
