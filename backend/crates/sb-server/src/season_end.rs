@@ -79,7 +79,7 @@ pub async fn process_ended_seasons(
                 user_id: Set(user_id),
                 season_id: Set(season_id),
                 card_image_url: Set(None),
-                card_data: Set(Some(card_data)),
+                card_data: Set(Some(sea_orm::Json(card_data))),
                 generated_at: Set(Utc::now().into()),
                 ..Default::default()
             };
