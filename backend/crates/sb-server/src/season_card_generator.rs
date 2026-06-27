@@ -19,7 +19,7 @@ impl SeasonCardGenerator {
     pub fn new(
         db: sea_orm::DatabaseConnection,
         r2: Arc<dyn R2Storage>,
-            season_card_repo: Arc<dyn SeasonCardRepo>,
+        season_card_repo: Arc<dyn SeasonCardRepo>,
     ) -> Self {
         Self {
             db,
@@ -70,12 +70,12 @@ impl SeasonCardGenerator {
 
         for rank in &ranks {
             match self
-                .generate_and_store_card(rank.user_id, season_id, rank.tier)
+                .generate_and_store_card(rank.user_id, season_id, rank.rank_tier)
                 .await
             {
                 Ok(url) => {
                     if let Err(e) = self
-                        .notifier
+                        /* notifier removed */
                         .send(NotificationEvent::SeasonCardReady {
                             season_id,
                             card_url: Some(url),
@@ -93,11 +93,11 @@ impl SeasonCardGenerator {
 
         let next_season_id = season_id + 1;
         for rank in &ranks {
-            let new_tier = rank.tier.reset_rank();
+            let new_tier = rank.rank_tier.reset_rank();
             let active = player_rank::ActiveModel {
                 user_id: Set(rank.user_id),
                 season_id: Set(next_season_id),
-                rank_rank_tier: Set(new_tier),
+                rank_rank_rank_tier: Set(new_tier),
                 rank_points: Set(0),
                 ..Default::default()
             };
@@ -111,7 +111,7 @@ impl SeasonCardGenerator {
             .one(&txn)
             .await
             .map_err(|e| AppError::Internal(format!("DB error: {e}")))?
-            .ok_or_else(|| AppError::Internal("Season not found"))?;
+            .ok_or_else(|| AppError::Internal("Season not found".to_string()))?;
         let mut season_active: season::ActiveModel = season_model.into();
         season_active.processed = Set(true);
         let _: season::Model = season_active
