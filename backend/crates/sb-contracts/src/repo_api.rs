@@ -244,6 +244,7 @@ pub trait GdprRepo: Send + Sync {
     async fn get_user_data(&self, user_id: Uuid) -> Result<UserDataExportDto, PersistenceError>;
     async fn anonymize_user(&self, user_id: Uuid) -> Result<(), PersistenceError>;
     async fn invalidate_sessions(&self, user_id: Uuid) -> Result<(), PersistenceError>;
+    async fn get_user_password_hash(&self, user_id: Uuid) -> Result<String, PersistenceError>;
 }
 
 #[derive(Clone, Debug)]
