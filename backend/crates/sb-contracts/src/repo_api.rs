@@ -232,3 +232,29 @@ pub trait ReferralRepository: Send + Sync {
 }
 
 pub use UserRepository as UserRepo;
+
+use uuid::Uuid;
+use chrono::NaiveDateTime;
+
+#[async_trait::async_trait]
+pub trait GdprRepo: Send + Sync {
+    async fn request_deletion(&self, user_id: Uuid) -> Result<(), PersistenceError>;
+    async fn get_pending_deletions(&self, older_than_days: i64) -> Result<Vec<DeletionRequestDto>, PersistenceError>;
+    async fn mark_deletion_completed(&self, user_id: Uuid) -> Result<(), PersistenceError>;
+    async fn get_user_data(&self, user_id: Uuid) -> Result<UserDataExportDto, PersistenceError>;
+    async fn anonymize_user(&self, user_id: Uuid) -> Result<(), PersistenceError>;
+    async fn invalidate_sessions(&self, user_id: Uuid) -> Result<(), PersistenceError>;
+}
+
+#[derive(Clone, Debug)]
+pub struct DeletionRequestDto {
+    pub user_id: Uuid,
+    pub requested_at: NaiveDateTime,
+}
+
+#[derive(Clone, Debug, serde::Serialize)]
+pub struct UserDataExportDto {
+    pub profile: serde_json::Value,
+    pub hand_history: serde_json::Value,
+    pub missions: serde_json::Value,
+}
