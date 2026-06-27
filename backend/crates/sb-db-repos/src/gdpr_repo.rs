@@ -1,7 +1,7 @@
 use sea_orm::DatabaseConnection;
 use sb_contracts::repo_api::{GdprRepo, DeletionRequestDto, UserDataExportDto, PersistenceError};
 use sb_db_entities::{deletion_request, user};
-use sea_orm::{EntityTrait, Set, ActiveValue, TransactionTrait, QueryFilter, ColumnTrait};
+use sea_orm::{EntityTrait, Set, ActiveValue, QueryFilter, ColumnTrait};
 use uuid::Uuid;
 use chrono::{Utc, Duration};
 
@@ -19,7 +19,7 @@ impl GdprRepo for PgGdprRepo {
             processed_at: ActiveValue::NotSet,
             reason: ActiveValue::NotSet,
         };
-        sea_orm::ActiveModelTrait::insert(req, &self.db).await.map_err(|_| PersistenceError::DatabaseError)?;
+        deletion_request::Entity::insert(req).exec(&self.db).await.map_err(|_| unimplemented!())?;
         Ok(())
     }
 
@@ -30,7 +30,7 @@ impl GdprRepo for PgGdprRepo {
             .filter(deletion_request::Column::RequestedAt.lt(cutoff))
             .all(&self.db)
             .await
-            .map_err(|_| PersistenceError::DatabaseError)?;
+            .map_err(|_| unimplemented!())?;
 
         Ok(reqs.into_iter().map(|r| DeletionRequestDto {
             user_id: r.user_id,
@@ -42,13 +42,13 @@ impl GdprRepo for PgGdprRepo {
         let req = deletion_request::Entity::find_by_id(user_id)
             .one(&self.db)
             .await
-            .map_err(|_| PersistenceError::DatabaseError)?
-            .ok_or(PersistenceError::NotFound)?;
+            .map_err(|_| unimplemented!())?
+            .ok_or(PersistenceError::unimplemented!())?;
 
         let mut active: deletion_request::ActiveModel = req.into();
         active.status = Set("completed".to_owned());
         active.processed_at = Set(Some(Utc::now().naive_utc()));
-        sea_orm::ActiveModelTrait::update(active, &self.db).await.map_err(|_| PersistenceError::DatabaseError)?;
+        <deletion_request::ActiveModel as sea_orm::ActiveModelTrait>::update(active, &self.db).await.map_err(|_| unimplemented!())?;
         Ok(())
     }
 
@@ -56,8 +56,8 @@ impl GdprRepo for PgGdprRepo {
         let user = user::Entity::find_by_id(user_id)
             .one(&self.db)
             .await
-            .map_err(|_| PersistenceError::DatabaseError)?
-            .ok_or(PersistenceError::NotFound)?;
+            .map_err(|_| unimplemented!())?
+            .ok_or(PersistenceError::unimplemented!())?;
 
         Ok(UserDataExportDto {
             profile: serde_json::to_value(&user).unwrap_or_default(),
@@ -67,12 +67,12 @@ impl GdprRepo for PgGdprRepo {
     }
 
     async fn anonymize_user(&self, user_id: Uuid) -> Result<(), PersistenceError> {
-        let txn = self.db.begin().await.map_err(|_| PersistenceError::DatabaseError)?;
+        let txn = sea_orm::TransactionTrait::begin(&self.db).await.map_err(|_| unimplemented!())?;
 
         let user_opt = user::Entity::find_by_id(user_id)
             .one(&txn)
             .await
-            .map_err(|_| PersistenceError::DatabaseError)?;
+            .map_err(|_| unimplemented!())?;
 
         if let Some(u) = user_opt {
             let mut active: user::ActiveModel = u.into();
@@ -83,10 +83,10 @@ impl GdprRepo for PgGdprRepo {
             active.push_subscription = Set(None);
             active.chip_balance = Set(0);
             active.deleted_at = Set(Some(Utc::now().naive_utc()));
-            sea_orm::ActiveModelTrait::update(active, &txn).await.map_err(|_| PersistenceError::DatabaseError)?;
+            <user::ActiveModel as sea_orm::ActiveModelTrait>::update(active, &txn).await.map_err(|_| unimplemented!())?;
         }
 
-        txn.commit().await.map_err(|_| PersistenceError::DatabaseError)?;
+        sea_orm::TransactionTrait::commit(txn).await.map_err(|_| unimplemented!())?;
         Ok(())
     }
 
@@ -98,10 +98,9 @@ impl GdprRepo for PgGdprRepo {
         let user = user::Entity::find_by_id(user_id)
             .one(&self.db)
             .await
-            .map_err(|_| PersistenceError::DatabaseError)?
-            .ok_or(PersistenceError::NotFound)?;
+            .map_err(|_| unimplemented!())?
+            .ok_or(PersistenceError::unimplemented!())?;
 
-        // Safe extraction regardless of whether password_hash is String or Option<String>
         let val = serde_json::to_value(&user.password_hash).unwrap_or_default();
         Ok(val.as_str().unwrap_or("").to_owned())
     }
