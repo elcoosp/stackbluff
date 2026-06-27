@@ -29,6 +29,7 @@ use sb_db_repos::player_stats_repo::PlayerStatsRepoImpl;
 use sb_db_repos::tournament_repo::TournamentRepoImpl;
 use sb_db_repos::user_repo::UserRepoImpl;
 use sb_rest_router::create_router;
+use sb_rest_router::season_card;
 use sb_rest_router::player_stats::player_stats_routes;
 use sb_rest_router::tournament_routes::{self, TournamentState};
 use sb_shared_types::{GameVariant, StakeLevel, TableConfig, TournamentId};
@@ -233,6 +234,7 @@ async fn main() {
         .merge(sb_rest_router::oracle_router(oracle_service))
         .merge(hand_archive::router(archive_state.clone()))
         .merge(tournament_router)
+        .merge(season_card::router(db.clone()))
         .layer(cors)
         .layer(CookieManagerLayer::new());
 
