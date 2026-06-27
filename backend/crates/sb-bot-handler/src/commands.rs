@@ -78,6 +78,8 @@ pub async fn handle_poker_command(ctx: &RequestContext, state: &Arc<BotState>, m
     let input = CreateTableInput {
             created_by: update.message.as_ref().and_then(|msg| msg.from.as_ref()).map(|user| user.id.into()).unwrap_or(0.into()),
             telegram_chat_id: update.message.as_ref().map(|msg| msg.chat.id.to_string()),
+            created_by: update.message.as_ref().and_then(|msg| msg.from.as_ref()).map(|user| user.id.into()).unwrap_or(0.into()),
+            telegram_chat_id: update.message.as_ref().map(|msg| msg.chat.id.to_string()),
         name: format!("Poker table from group {}", chat_id.0),
         club_id: None,
         stake_level: sb_shared_types::game_types::StakeLevel::Micro,
