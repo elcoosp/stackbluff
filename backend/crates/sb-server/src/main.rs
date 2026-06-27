@@ -198,11 +198,17 @@ async fn main() {
     let tournament_repo = Arc::new(TournamentRepoImpl::new(db.clone()));
     let broker = Arc::new(sb_table_registry::connection_broker::ConnectionBroker::new());
     #[cfg(feature = "test-stubs")]
-    let notification_service: Arc<dyn sb_contracts::notification::NotificationService> =
-        Arc::new(test_utils::notification_service::InMemoryNotificationService::new());
+    let in_memory_notif = Arc::new(test_utils::notification_service::InMemoryNotificationService::new());
+    #[cfg(feature = "test-stubs")]
+    let notification_service: Arc<dyn sb_contracts::notification::NotificationService> = in_memory_notif.clone();
+    #[cfg(feature = "test-stubs")]
+    let notification_api_service: Arc<dyn sb_contracts::notification_api::NotificationService> = in_memory_notif.clone();
     #[cfg(not(feature = "test-stubs"))]
     let notification_service: Arc<dyn sb_contracts::notification::NotificationService> =
         panic!("Production notification service not implemented");
+    #[cfg(not(feature = "test-stubs"))]
+    let notification_api_service: Arc<dyn sb_contracts::notification_api::NotificationService> =
+        panic!("Production notification_api service not implemented");
     let bot_handler: Option<Arc<dyn sb_contracts::notification_api::ClubNotifier>> = Some(bot_state.clone());
     let app_base_url = std::env::var("APP_BASE_URL").unwrap_or_else(|_| "https://app.stackbluff.com".to_string());
 
@@ -378,7 +384,7 @@ fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
 
     Arc::new(sb_bot_handler::BotState::new(
         table_service,
-        notification_service,
+        notification_api_service,
         user_resolution,
         std::env::var("TELEGRAM_BOT_TOKEN").unwrap_or_default(),
         std::env::var("MINI_APP_URL").unwrap_or_else(|_| "http://localhost:5173/".to_string()),
