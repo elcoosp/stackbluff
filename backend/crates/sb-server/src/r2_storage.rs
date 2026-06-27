@@ -38,6 +38,6 @@ impl R2Storage for R2StorageAdapter {
             .put_object(&full_key, data)
             .await
             .map_err(|e| AppError::Internal(format!("R2 error: {e}")))?;
-n        Ok(full_key)
+        Ok(full_key)
     }
 }
