@@ -1,31 +1,192 @@
+## Daily Hand Puzzle – shareable brainteaser
+
+**Title:** Daily Hand Puzzle – shareable brainteaser  
+**Labels:** `backend, frontend, viral, afk`  
+**Blocked by:** #003 (hand evaluator for correctness check), #006 (frontend share mechanism via PlatformAPI)
+
 ---
-title: Daily Hand Puzzle – shareable brainteaser
-labels: backend, frontend, viral, afk
-blocked_by: 003, 006
+
+### 📌 Summary
+
+Implement a **Daily Hand Puzzle** feature to increase engagement and virality. Every day at 00:00 UTC, a new poker hand puzzle is presented to all users. The puzzle shows:
+
+- Hero’s hole cards,
+- Community cards (flop, turn, river as applicable),
+- Current action (e.g., “Hero is facing a bet of 200 chips”),
+- Four possible actions: **Fold, Check/Call, Raise, All‑in** (or a subset depending on the puzzle).
+
+The user selects one action, and the system evaluates whether it was the **optimal** action (according to predefined correct answer). After submission, the user sees feedback (correct/incorrect) and an explanation. They can then share a **dynamic card** with their answer, the correct answer, and an invite link.
+
+Each user can submit only once per day (per UTC date). Puzzle completion and correctness are tracked for analytics.
+
 ---
 
-## What to build
+### 🧩 Context (where to find things)
 
-Implement Daily Hand Puzzle (REQ-FUNC-054):
+| Component | File(s) |
+|-----------|---------|
+| Hand evaluator (for correctness) | `backend/crates/sb-game-engine/src/evaluate.rs` (evaluate_hand_strength, compare_hands) |
+| Viral service (could extend) | `backend/crates/sb-viral/src/lib.rs` (currently handles referrals & replay cards) |
+| REST routes (backend) | `backend/crates/sb-rest-router/src/lib.rs` (add new puzzle routes) |
+| Database entities | `backend/crates/sb-db-entities/` (add `puzzle_submissions` table) |
+| Frontend share mechanism | `frontend/src/platform/PlatformAPI.ts` (already has `shareContent` from #006) |
+| Frontend UI | Likely a new component in `frontend/src/components/Puzzle/` |
+| Frontend API calls | `frontend/src/services/api.ts` (add puzzle endpoints) |
 
-- **Backend** (Agent 4 extension to `sb-viral`):
-  - Pre‑seed a set of 30+ puzzles in JSON (hole cards, community, action so far, correct action).
-  - `GET /puzzle/today` returns puzzle for current date (UTC). Same puzzle for all users.
-  - `POST /puzzle/submit` with user's chosen action. Evaluates correctness using hand evaluator (#003).
-  - Store submission in `puzzle_submissions` table (user_id, date, correct).
-  - After submission, return result (correct/incorrect) and correct answer explanation.
+---
 
-- **Frontend** (Agent 2):
-  - Puzzle component on lobby or separate page.
-  - After answer, show “Share my answer” button that calls `PlatformAPI.shareContent` with a card containing user's answer, correct answer, and invite link.
+### 🔧 Part 1 – Backend (extend `sb-viral` or create new crate)
 
-## Acceptance criteria
+#### 1. Puzzle data store
 
-- [ ] Puzzle changes at 00:00 UTC daily.
-- [ ] User can answer only once per day (checked by DB).
-- [ ] Share card includes both chosen answer and correct answer, driving discussion.
-- [ ] Metrics: puzzle completion rate tracked (store in DB).
+- Create a JSON file (e.g., `backend/crates/sb-viral/assets/puzzles.json`) containing at least **30 puzzles** (to have variety).  
+  Each puzzle has:
+  ```json
+  {
+    "id": 1,
+    "date": null, // not used; puzzles are selected based on date seed
+    "hole_cards": ["Ah", "Kh"],
+    "community_cards": ["Qd", "Jc", "Ts", "3s"],
+    "action_description": "Hero is on the button with 1000 chips. Blinds 10/20. Opponent raises to 100.",
+    "correct_action": "raise",   // one of: fold, check, call, raise, allin
+    "explanation": "You have a strong draw with a gutshot and overcards, raising is optimal."
+  }
+  ```
+- Puzzles are **pre‑seeded**; no admin UI needed for now.
+- The puzzle for a given date is selected deterministically: e.g., `puzzle_index = (date.to_days() % total_puzzles)` so everyone gets the same puzzle per day, but it changes daily.
 
-## Blocked by
+#### 2. Database table: `puzzle_submissions`
 
-#003 (hand evaluator for correctness check), #006 (frontend share mechanism via PlatformAPI)
+```sql
+CREATE TABLE puzzle_submissions (
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    puzzle_date DATE NOT NULL,  -- UTC date
+    selected_action TEXT NOT NULL,
+    is_correct BOOLEAN NOT NULL,
+    submitted_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, puzzle_date)
+);
+```
+
+Add migration `m20260628_create_puzzle_submissions.rs` and register it.
+
+#### 3. Endpoints
+
+- `GET /puzzle/today`  
+  - Returns the puzzle for the current UTC date (includes hole cards, community cards, action description, and possible actions – the client should display these).  
+  - Does **not** reveal the correct answer or explanation.  
+  - Response: `{ "puzzle_id": 1, "hole_cards": [...], "community_cards": [...], "action_description": "...", "possible_actions": ["fold", "check", "call", "raise", "allin"] }`
+
+- `POST /puzzle/submit`  
+  - Authentication required (via `AuthUser`).  
+  - Request body: `{ "selected_action": "raise" }`  
+  - Server checks if user already submitted today (query `puzzle_submissions` for `user_id` and `puzzle_date = today`). If so, return `409 Conflict` with the existing result.  
+  - Otherwise, evaluate correctness:
+    1. Compare `selected_action` to the puzzle's `correct_action`.  
+    2. Insert a record into `puzzle_submissions` with the result.  
+  - Return `{ "correct": true/false, "explanation": "..." }` (the explanation is stored in the puzzle data).  
+  - Track metrics: increment counters for completion and correctness (can use Prometheus metrics or store daily aggregates in a separate table).
+
+#### 4. Evaluation logic
+
+- Since the puzzle provides a **pre‑defined correct action**, we do **not** need to run the hand evaluator at runtime. The correct action is known from the puzzle data.  
+- However, we could later add puzzles that are dynamically generated by simulating a hand and picking the optimal action based on the evaluator – but for now, keep it static.
+
+---
+
+### 🔧 Part 2 – Frontend (Agent 2)
+
+#### 1. Puzzle component
+
+- Add a new page or modal accessible from the lobby (e.g., a “Daily Puzzle” card or a dedicated route `/puzzle`).
+- Display:
+  - Hole cards (with nice poker card graphics).
+  - Community cards (if applicable).
+  - Action description (e.g., “You are in the big blind with 1000 chips. Blinds 10/20. Opponent raises to 100. What do you do?”).
+  - Four action buttons: Fold, Check/Call, Raise, All‑in (only the relevant ones for the puzzle – can filter based on `possible_actions` returned by the API).
+- If the user has already submitted today, show the result (correct/incorrect) and the explanation.
+
+#### 2. Submission flow
+
+- When user clicks an action, call `POST /puzzle/submit` with the selected action.
+- Show a loading indicator.
+- On response:
+  - If correct: show a success message with a celebratory animation.
+  - If incorrect: show the correct answer and explanation.
+  - Show the **“Share my answer”** button regardless of correctness.
+
+#### 3. Share functionality
+
+- Use the platform‑agnostic `PlatformAPI.shareContent` (implemented in #006) to share a card/image.
+- The shared content should include:
+  - The user’s chosen answer (e.g., “I chose RAISE”).
+  - The correct answer (e.g., “The correct action was FOLD”).
+  - A brief explanation or fun fact.
+  - An invite link to the app (with referral attribution, if possible – e.g., `?ref=<user_id>`).
+- The share card can be rendered as an image (using an HTML‑to‑image library like `html2canvas` or a server‑side renderer) or as a plain text message (depending on the platform; for Telegram, a message with buttons is enough; for social media, an image is better). Since #006 defines `shareContent` generically, we can pass a text or a URL to an image. For MVP, we can share a text message with a deep link.
+
+#### 4. Status indicator
+
+- On the lobby page or settings, show a badge indicating whether today’s puzzle has been completed.
+
+---
+
+### ✅ Acceptance Criteria
+
+- [ ] **Backend:**
+  - [ ] Puzzles are loaded from the JSON file; each day yields a deterministic puzzle.
+  - [ ] `GET /puzzle/today` returns the puzzle data for the current UTC date (no correct answer).
+  - [ ] `POST /puzzle/submit` accepts a user’s action and validates correctness.
+  - [ ] A user can submit only once per day; duplicate attempts return `409 Conflict` with their previous result.
+  - [ ] Submissions are stored in `puzzle_submissions` with correct/incorrect flag.
+  - [ ] Metrics (completion rate, correctness rate) are recorded (via Prometheus counters or a daily summary table).
+
+- [ ] **Frontend:**
+  - [ ] A puzzle component is displayed on the lobby or a dedicated page.
+  - [ ] Users see their hole cards, community cards, action description, and action buttons.
+  - [ ] After submission, users see immediate feedback (correct/incorrect + explanation).
+  - [ ] The “Share my answer” button triggers `PlatformAPI.shareContent` with a message including the user’s answer, correct answer, and invite link.
+  - [ ] The component shows the submission status for the current day (answered/unanswered) and disables further submissions.
+  - [ ] The UI handles loading states and errors gracefully.
+
+- [ ] **General:**
+  - [ ] Puzzle changes at 00:00 UTC daily (tested by mocking time).
+  - [ ] The share card/content drives social engagement (tested manually).
+
+---
+
+### 🔗 Blocked By
+
+- **#003** – Hand evaluator is used to verify correctness (though we use static correct answers, we may still rely on the evaluator for future dynamic puzzles). For MVP, we can bypass it, but the evaluator must exist for the share card to show hand strengths (if we want to display hand rank).  
+- **#006** – Frontend must have a working `PlatformAPI.shareContent` to enable sharing.
+
+---
+
+### 🧪 Testing Notes
+
+- Unit tests for the puzzle selection logic (deterministic by date).
+- Integration tests for the submit endpoint (check duplicate submissions, correctness evaluation).
+- Frontend unit tests for the puzzle component (action buttons, API calls, feedback display).
+- E2E test: complete a puzzle, share it, verify the share payload.
+
+---
+
+### 📝 Implementation Hints
+
+- **Backend:**  
+  - Create a new module `puzzle` in `sb-viral` or a separate crate `sb-puzzle`. Keep it small; no heavy dependencies.  
+  - Use `chrono::Utc::now().date_naive()` for the current UTC date.  
+  - The puzzle data can be stored as a static `lazy_static` or loaded once at startup.  
+  - The `puzzle_submissions` table can be created via a migration; use `ON CONFLICT` or a unique constraint to handle duplicates.
+
+- **Frontend:**  
+  - Use the existing card rendering logic from `sb-ws-messages` (if any) to display cards visually.  
+  - For sharing, call `PlatformAPI.shareContent` with a constructed text (e.g., “I solved today’s poker puzzle! I chose RAISE, but the correct action was FOLD. Can you beat me? Join here: {link}”).  
+  - Store the submission status in local state or a global store (Redux/Zustand) to avoid re‑fetching.
+
+- **Metrics:**  
+  - Use `prometheus` counters in the backend to track total submissions, correct submissions, and daily completion rate. These can be exposed via the existing `/metrics` endpoint.
+
+---
+
+This ticket provides a clear, self‑contained specification for both backend and frontend agents, with all necessary context and acceptance criteria.
