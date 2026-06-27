@@ -48,8 +48,4 @@ impl MigratorTrait for Migrator {
         ]
     }
 }
-
-mod m20260628_000001_create_puzzle_submissions;
-
-pub use m20260628_000001_create_puzzle_submissions::Migration as PuzzleSubmissions;
 pub mod m20260628_000001_create_puzzle_submissions;

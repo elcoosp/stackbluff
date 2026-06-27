@@ -5,7 +5,6 @@ edition = "2024"
 rust-version = "1.94"
 
 [dependencies]
-
 sea-orm = { workspace = true }
 sb-db-repos = { path = "../sb-db-repos" }
 sb-anti-cheat = { path = "../sb-anti-cheat" }

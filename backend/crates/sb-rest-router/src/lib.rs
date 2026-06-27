@@ -311,9 +311,7 @@ fn forbidden(msg: &str) -> (StatusCode, Json<ErrorResponse>) {
         }),
     )
 }
-
 pub mod routes;
-
 
 pub fn register_metrics(registry: &prometheus::Registry) {
     sb_viral::puzzle::service::register_metrics(registry);
