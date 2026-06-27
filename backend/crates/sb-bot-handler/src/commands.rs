@@ -76,14 +76,15 @@ pub async fn handle_poker_command(ctx: &RequestContext, state: &Arc<BotState>, m
     let ctx_with_user = RequestContext::new(ctx.request_id, Some(user_id));
 
     let input = CreateTableInput {
-        name: format!("Poker table from group {}", chat_id.0),
+        name: "Poker Game".to_string(),
         club_id: None,
-        stake_level: sb_shared_types::game_types::StakeLevel::Micro,
-        variant: sb_shared_types::game_types::GameVariant::Holdem,
-        created_by: user_id,
+        stake_level: sb_shared_types::StakeLevel::Low,
+        variant: sb_shared_types::GameVariant::HoldEm,
         is_private: false,
-        invited_users: vec![],
-    };
+        invited_users: None,
+        created_by: message.from.as_ref().map(|user| user.id.into()).unwrap_or(sb_shared_types::UserId(0)),
+        telegram_chat_id: Some(message.chat.id.to_string()),
+    }
 
     let table_id = match timeout(
         SERVICE_TIMEOUT,
@@ -197,14 +198,15 @@ pub async fn handle_challenge_command(
     let ctx_with_user = RequestContext::new(ctx.request_id, Some(challenger_id));
 
     let input = CreateTableInput {
-        name: format!("Heads-up: {} vs {}", challenger_id, challenged_id),
+        name: "Poker Game".to_string(),
         club_id: None,
-        stake_level: sb_shared_types::game_types::StakeLevel::Micro,
-        variant: sb_shared_types::game_types::GameVariant::Holdem,
-        created_by: challenger_id,
-        is_private: true,
-        invited_users: vec![challenger_id, challenged_id],
-    };
+        stake_level: sb_shared_types::StakeLevel::Low,
+        variant: sb_shared_types::GameVariant::HoldEm,
+        is_private: false,
+        invited_users: None,
+        created_by: message.from.as_ref().map(|user| user.id.into()).unwrap_or(sb_shared_types::UserId(0)),
+        telegram_chat_id: Some(message.chat.id.to_string()),
+    }
 
     let table_id = match timeout(
         SERVICE_TIMEOUT,
