@@ -369,3 +369,22 @@ pub trait PuzzleRepo: Send + Sync {
         record: PuzzleSubmissionRecord,
     ) -> Result<(), crate::persistence_error::PersistenceError>;
 }
+
+// ─── Puzzle Repository (Pure Domain Boundary) ──────────────────────────────
+use chrono::NaiveDate;
+use sb_shared_types::puzzle::PuzzleSubmissionRecord;
+use uuid::Uuid;
+
+#[async_trait::async_trait]
+pub trait PuzzleRepo: Send + Sync {
+    async fn find_submission(
+        &self,
+        user_id: Uuid,
+        date: NaiveDate,
+    ) -> Result<Option<PuzzleSubmissionRecord>, crate::persistence_error::PersistenceError>;
+
+    async fn save_submission(
+        &self,
+        record: PuzzleSubmissionRecord,
+    ) -> Result<(), crate::persistence_error::PersistenceError>;
+}

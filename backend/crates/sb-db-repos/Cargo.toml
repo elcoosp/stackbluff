@@ -4,16 +4,18 @@ version = "0.1.0"
 edition.workspace = true
 
 [dependencies]
-uuid = { workspace = true }
 
-sb-shared-types = { workspace = true }
-sb-contracts = { workspace = true }
-sb-db-entities = { workspace = true }
-async-trait = { workspace = true }
-sea-orm = { workspace = true, features = ["sqlx-sqlite", "runtime-tokio-rustls", "macros"] }
 tracing = { workspace = true }
 thiserror = { workspace = true }
-chrono = { workspace = true }
+
 tokio = { workspace = true }
 serde_json = { workspace = true }
 serde = { workspace = true }
+
+chrono = { workspace = true }
+uuid = { workspace = true }
+async-trait = { workspace = true }
+sea-orm = { workspace = true }
+sb-shared-types = { path = "../sb-shared-types" }
+sb-contracts = { path = "../sb-contracts" }
+sb-db-entities = { path = "../sb-db-entities" }

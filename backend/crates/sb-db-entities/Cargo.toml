@@ -5,15 +5,17 @@ edition = "2024"
 rust-version = "1.94"
 
 [dependencies]
-sea-orm = { workspace = true }
+
 serde = { workspace = true }
 serde_json = { workspace = true }
-uuid = { workspace = true, features = ["v7", "serde"] }
-chrono = { workspace = true, features = ["serde"] }
+
 derive_more = { workspace = true }
 sb-shared-types = { path = "../sb-shared-types" }
 sb-contracts = { path = "../sb-contracts" }
 
+sea-orm = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
 [dev-dependencies]
 migration = { path = "../../migration" }
 tokio = { workspace = true, features = ["rt", "macros"] }
