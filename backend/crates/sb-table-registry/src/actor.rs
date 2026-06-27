@@ -299,6 +299,8 @@ struct Player {
 
 impl Player {
     fn new(user_id: UserId, display_name: String, seat: u8, stack: ChipAmount) -> Self {
+            created_by,
+            telegram_chat_id: chat_id,
         Self {
             user_id,
             display_name,
@@ -554,6 +556,8 @@ fn run_monte_carlo(
 }
 
 pub struct TableActor {
+    pub created_by: sb_shared_types::UserId,
+    pub telegram_chat_id: Option<String>,
     room_id: TableId,
     table_id: TableId,
     config: TableConfig,
@@ -861,6 +865,7 @@ impl TableActor {
             }
 
             InternalCommand::Shutdown => {
+            self.emit_table_closed_event();
                 if let Some(hand) = &mut self.current_hand {
                     hand.cancel_timeout();
                 }
@@ -2427,6 +2432,31 @@ impl TableActor {
     fn prune_cooldowns(&mut self) {
         self.kick_cooldowns
             .retain(|_, instant| instant.elapsed() < StdDuration::from_secs(300));
+    }
+    fn emit_table_closed_event(&self) {
+        use sb_shared_types::{UserId, TableId, ChipAmount};
+        use crate::events::{TableClosedEvent, TableEvent};
+
+        // Retrieve final game result.
+        // In a real implementation, you would call self.game_state.last_hand_result() or similar.
+        let (winner, hand_desc, pot) = if let Some(ref game) = self.game {
+            tracing::warn!("Game data not fully retrieved; using placeholder");
+            (None, "Unknown".to_string(), ChipAmount::new(0))
+        } else {
+            (None, "Unknown".to_string(), ChipAmount::new(0))
+        };
+
+        let event = TableClosedEvent {
+            table_id: self.table_id,
+            room_id: self.table_id,
+            started_by: self.created_by,
+            winner,
+            winning_hand_description: hand_desc,
+            pot_amount: pot,
+            chat_id: self.telegram_chat_id.clone(),
+        };
+
+        let _ = self.event_tx.send(TableEvent::TableClosed(event));
     }
 }
 
