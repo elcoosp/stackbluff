@@ -8,9 +8,6 @@ import { fetchProducts, createPaymentIntent, fetchUserMe } from '../lib/shopApi'
 import { getPaymentProvider, isMiniApp } from '../lib/platform';
 import { GlassPanel } from '@stackbluff/shared/ui/GlassPanel';
 import { LiquidMetalButton } from '@stackbluff/shared/ui/LiquidMetalButton';
-import { LiquidMetalButton } from '@stackbluff/shared/ui/LiquidMetalButton';
-import { LiquidMetalButton } from '@stackbluff/shared/ui/LiquidMetalButton';
-import { LiquidMetalButton } from '@stackbluff/shared/ui/LiquidMetalButton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/Dialog';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
