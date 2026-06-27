@@ -10,8 +10,8 @@ pub fn schedule_reminders(
     tournament_id: TournamentId,
     start: DateTime<Utc>,
     repo: Arc<dyn TournamentRepo>,
-    notification_service: Arc<dyn NotificationService>,
-    bot_handler: Option<Arc<dyn sb_contracts::notification_api::ClubNotifier>>,
+    notification_service: Arc<dyn sb_contracts::notification_api::NotificationService>,
+    bot_handler: Option<Arc<sb_bot_handler::BotState>>,
     app_base_url: String,
 ) {
     let reminder_60 = start - Duration::minutes(60);
@@ -48,8 +48,8 @@ async fn send_reminder(
     tournament_id: TournamentId,
     label: &str,
     repo: Arc<dyn TournamentRepo>,
-    notification_service: Arc<dyn NotificationService>,
-    bot_handler: Option<Arc<dyn sb_contracts::notification_api::ClubNotifier>>,
+    notification_service: Arc<dyn sb_contracts::notification_api::NotificationService>,
+    bot_handler: Option<Arc<sb_bot_handler::BotState>>,
     app_base_url: String,
 ) {
     let tournament = match repo.get_tournament(tournament_id).await {

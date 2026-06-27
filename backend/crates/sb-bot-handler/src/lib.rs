@@ -16,3 +16,11 @@ pub fn attach(state: Arc<BotState>) -> Router {
 }
 
 pub mod webhook_setup;
+
+
+#[async_trait::async_trait]
+impl sb_contracts::notification_api::ClubNotifier for BotState {
+    async fn send_club_reminder(&self, _club_id: sb_shared_types::ClubId, _message: String) -> Result<(), sb_shared_types::errors::AppError> {
+        Ok(())
+    }
+}

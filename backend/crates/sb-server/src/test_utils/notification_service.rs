@@ -60,3 +60,33 @@ impl NotificationService for InMemoryNotificationService {
         Ok(())
     }
 }
+
+
+#[async_trait::async_trait]
+impl sb_contracts::notification_api::NotificationService for InMemoryNotificationService {
+    async fn send_telegram_message(
+        &self,
+        _chat_id: i64,
+        _text: String,
+        _keyboard: Option<serde_json::Value>,
+    ) -> Result<(), sb_contracts::notification_api::NotificationError> {
+        Ok(())
+    }
+
+    async fn send_telegram_message_to_user(
+        &self,
+        _user_id: sb_shared_types::UserId,
+        _text: String,
+        _keyboard: Option<serde_json::Value>,
+    ) -> Result<(), sb_contracts::notification_api::NotificationError> {
+        Ok(())
+    }
+
+    async fn answer_callback_query(
+        &self,
+        _callback_query_id: String,
+        _text: Option<String>,
+    ) -> Result<(), sb_contracts::notification_api::NotificationError> {
+        Ok(())
+    }
+}

@@ -17,8 +17,8 @@ pub struct TournamentServiceImpl {
     user_repo: Arc<dyn UserRepo>,
     registry: Arc<Registry>,
     broker: Arc<ConnectionBroker>,
-    notification_service: Arc<dyn NotificationService>,
-    bot_handler: Option<Arc<dyn sb_contracts::notification_api::ClubNotifier>>,
+    notification_service: Arc<dyn sb_contracts::notification_api::NotificationService>,
+    bot_handler: Option<Arc<sb_bot_handler::BotState>>,
     app_base_url: String,
 }
 
@@ -28,8 +28,8 @@ impl TournamentServiceImpl {
         user_repo: Arc<dyn UserRepo>,
         registry: Arc<Registry>,
         broker: Arc<ConnectionBroker>,
-        notification_service: Arc<dyn NotificationService>,
-        bot_handler: Option<Arc<dyn sb_contracts::notification_api::ClubNotifier>>,
+        notification_service: Arc<dyn sb_contracts::notification_api::NotificationService>,
+        bot_handler: Option<Arc<sb_bot_handler::BotState>>,
         app_base_url: String,
     ) -> Self {
         Self {
@@ -116,5 +116,15 @@ impl TournamentService for TournamentServiceImpl {
         _user_id: UserId,
     ) -> Result<Option<TableId>, AppError> {
         Ok(None)
+    }
+}
+
+impl TournamentServiceImpl {
+    pub fn register_sit_go(&self, _tournament_id: sb_shared_types::TournamentId, _cmd_tx: tokio::sync::mpsc::Sender<sb_tournament::SitGoCommand>) {
+        // Stub implementation
+    }
+
+    pub fn register_mtt(&self, _tournament_id: sb_shared_types::TournamentId, _cmd_tx: tokio::sync::mpsc::Sender<sb_tournament::MttCommand>) {
+        // Stub implementation
     }
 }
