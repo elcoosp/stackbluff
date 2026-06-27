@@ -28,6 +28,7 @@ edition = "2024"
 rust-version = "1.94"
 
 [workspace.dependencies]
+image = { version = "0.25.5", default-features = false, features = ["png"] }
 sb-notification = { path = "crates/sb-notification" }
 figment = { version = "0.10", features = ["toml", "env"] }
 wiremock = { version = "0.6",}
