@@ -10,7 +10,7 @@ use serde_json::json;
 use std::sync::Arc;
 use uuid::Uuid;
 
-use sb_db_repos::season_card_repo::SeaOrmSeasonCardRepo;
+use sb_db_repos::season_card_repo::{SeaOrmSeasonCardRepo, SeasonCardRepo};
 
 pub fn router(db: DatabaseConnection) -> Router {
     let repo = Arc::new(SeaOrmSeasonCardRepo::new(db));
