@@ -349,3 +349,22 @@ fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
          Build with --features test-stubs for development."
     )
 }
+
+use tokio_cron_scheduler::{JobScheduler, Job};
+
+async fn start_gdpr_job(state: std::sync::Arc<crate::AppState>) {
+    let mut sched = JobScheduler::new().await.unwrap();
+    sched.add(Job::new_async("0 0 2 * * *", move |_uuid, _l| {
+        let state = state.clone();
+        Box::pin(async move {
+            println!("Running daily GDPR deletion job...");
+            if let Ok(pending) = state.gdpr_repo.get_pending_deletions(30).await {
+                for req in pending {
+                    let _ = state.gdpr_repo.anonymize_user(req.user_id).await;
+                    let _ = state.gdpr_repo.mark_deletion_completed(req.user_id).await;
+                }
+            }
+        })
+    }).unwrap()).await.unwrap();
+    sched.start().await.unwrap();
+}
