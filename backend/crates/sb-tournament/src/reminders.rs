@@ -85,15 +85,15 @@ async fn send_reminder(
         }
     }
 
-    if let Some(cn) = club_notifier {
-        if let Some(club_id) = tournament.config.club_id {
-            let club_message = format!(
-                "🏟️ Tournament \"{}\" starts in {}! Join: {}",
-                tournament_name, label, deep_link
-            );
-            if let Err(e) = cn.send_club_reminder(club_id, club_message).await {
-                tracing::warn!(club_id = %club_id, error = %e, "Failed to send club reminder");
-            }
+    if let Some(cn) = club_notifier
+        && let Some(club_id) = tournament.config.club_id
+    {
+        let club_message = format!(
+            "🏟️ Tournament \"{}\" starts in {}! Join: {}",
+            tournament_name, label, deep_link
+        );
+        if let Err(e) = cn.send_club_reminder(club_id, club_message).await {
+            tracing::warn!(club_id = %club_id, error = %e, "Failed to send club reminder");
         }
     }
 }
