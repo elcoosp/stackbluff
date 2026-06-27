@@ -107,6 +107,7 @@ pub struct AppState {
     registry: Arc<Registry>,
     hand_history_repo: Arc<dyn HandHistoryRepository + Send + Sync>,
     pub leaderboard_query: Arc<dyn sb_contracts::leaderboard::LeaderboardQuery + Send + Sync>,
+    pub gdpr_repo: std::sync::Arc<dyn sb_contracts::repo_api::GdprRepo>,
 }
 
 pub fn create_router(

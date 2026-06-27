@@ -7,10 +7,12 @@ use argon2::{Argon2, PasswordHash, PasswordVerifier};
 
 pub struct AuthUser(pub Uuid);
 
-#[async_trait::async_trait]
 impl<S: Send + Sync> FromRequestParts<S> for AuthUser {
     type Rejection = axum::http::StatusCode;
-    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(
+        parts: &mut Parts,
+        _state: &S,
+    ) -> Result<Self, Self::Rejection> {
         let user_id = parts.headers.get("X-User-Id")
             .and_then(|v| v.to_str().ok())
             .and_then(|s| Uuid::parse_str(s).ok())
