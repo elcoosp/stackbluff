@@ -48,7 +48,6 @@ use test_utils::notification_service::InMemoryNotificationService;
 use test_utils::table_service::InMemoryTableService;
 #[cfg(feature = "test-stubs")]
 use test_utils::user_resolution_service::InMemoryUserResolutionService;
-use sb_table_registry::events::{TableEvent, TableClosedEvent};
 mod hand_archive;
 
 #[tokio::main]
@@ -335,54 +334,6 @@ fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
         Arc::new(InMemoryUserResolutionService::new());
 
     Arc::new(sb_bot_handler::BotState::new(
-
-
-
-
-
-
-    // Spawn listener for TableClosedEvent
-    {
-        let registry = registry.clone();
-        let notification_service = notification_service.clone();
-        tokio::spawn(async move {
-            let mut rx = registry.subscribe();
-            while let Ok(event) = rx.recv().await {
-                if let TableEvent::TableClosed(closed_event) = event {
-                    tracing::info!(
-                        table_id = ?closed_event.table_id,
-                        started_by = ?closed_event.started_by,
-                        chat_id = ?closed_event.chat_id,
-                        "Received TableClosedEvent"
-                    );
-                    if let Some(chat_id) = closed_event.chat_id {
-                        let winner_name = closed_event.winner
-                            .map(|uid| format!("<a href=\"tg://user?id={}\">{}</a>", uid, uid))
-                            .unwrap_or_else(|| "Unknown".to_string());
-                        let pot = closed_event.pot_amount.0;
-                        let hand = closed_event.winning_hand_description;
-                        let invite_url = std::env::var("MINI_APP_URL")
-                            .map(|url| format!("{}?ref={}", url, closed_event.started_by))
-                            .unwrap_or_else(|_| {
-                                tracing::error!("MINI_APP_URL environment variable not set");
-                                "https://stackbluff.com".to_string()
-                            });
-                        let text = format!("{} won {} chips with {}\\n\\n[Play again]({})", winner_name, pot, hand, invite_url);
-                        match notification_service.send_telegram_message(chat_id, text, None).await {
-                            Ok(_) => {
-                                tracing::info!("Game summary posted to chat {}", chat_id);
-                            }
-                            Err(e) => {
-                                tracing::warn!("Failed to send game summary to chat {}: {:?}", chat_id, e);
-                            }
-                        }
-                    } else {
-                        tracing::debug!("TableClosedEvent has no chat_id, skipping");
-                    }
-                }
-            }
-        });
-    }
         table_service,
         notification_service,
         user_resolution,
