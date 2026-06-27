@@ -29,8 +29,8 @@ use sb_db_repos::player_stats_repo::PlayerStatsRepoImpl;
 use sb_db_repos::tournament_repo::TournamentRepoImpl;
 use sb_db_repos::user_repo::UserRepoImpl;
 use sb_rest_router::create_router;
-use sb_rest_router::season_card;
 use sb_rest_router::player_stats::player_stats_routes;
+use sb_rest_router::season_card;
 use sb_rest_router::tournament_routes::{self, TournamentState};
 use sb_shared_types::{GameVariant, StakeLevel, TableConfig, TournamentId};
 use sb_table_registry::buy_in_limits_for_stake;
@@ -50,7 +50,6 @@ use test_utils::table_service::InMemoryTableService;
 #[cfg(feature = "test-stubs")]
 use test_utils::user_resolution_service::InMemoryUserResolutionService;
 mod hand_archive;
-mod season_end;
 mod r2_storage;
 mod season_card_generator;
 
@@ -71,8 +70,7 @@ async fn main() {
         .expect("failed to run migrations");
 
     leaderboard_refresh::spawn_leaderboard_refresh_task(db.clone()).await;
-    let r2: std::sync::Arc<dyn hand_archive::R2Storage> = std::sync::Arc::new(hand_archive::NoOpR2);
-    season_end::spawn_season_end_task(db.clone(), r2).await;
+
 
     let writer_handle = init_writer_loop(db.clone(), None);
     let user_repo: Arc<dyn UserRepo> = Arc::new(UserRepoImpl::new(writer_handle.sender.clone()));
@@ -249,12 +247,14 @@ async fn main() {
             eprintln!("Scheduler error: {e}");
         }
     });
-// Season end background processor
+    // Season end background processor
     let season_processor = std::sync::Arc::new(season_card_generator::SeasonCardGenerator::new(
         db.clone(),
         std::sync::Arc::new(r2_storage::R2StorageAdapter::new(r2.clone())),
         notifier.clone(),
-        std::sync::Arc::new(sb_db_repos::season_card_repo::SeaOrmSeasonCardRepo::new(db.clone())),
+        std::sync::Arc::new(sb_db_repos::season_card_repo::SeaOrmSeasonCardRepo::new(
+            db.clone(),
+        )),
     ));
     let season_proc_clone = season_processor.clone();
     tokio::spawn(async move {
