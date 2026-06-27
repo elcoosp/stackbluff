@@ -97,7 +97,7 @@ impl SeasonCardGenerator {
             let active = player_rank::ActiveModel {
                 user_id: Set(rank.user_id),
                 season_id: Set(next_season_id),
-                rank_tier: Set(new_tier),
+                rank_rank_tier: Set(new_tier),
                 rank_points: Set(0),
                 ..Default::default()
             };
