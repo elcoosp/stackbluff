@@ -311,3 +311,31 @@ fn forbidden(msg: &str) -> (StatusCode, Json<ErrorResponse>) {
         }),
     )
 }
+
+use axum::{extract::State, routing::{delete, get}, Router, Json};
+use sb_contracts::GdprRepo;
+use std::sync::Arc;
+
+pub fn gdpr_routes() -> Router<Arc<crate::AppState>> {
+    Router::new()
+        .route("/users/me", delete(delete_user_handler))
+        .route("/users/me/data", get(export_user_data_handler))
+}
+
+async fn delete_user_handler(
+    State(state): State<Arc<crate::AppState>>,
+) -> impl axum::response::IntoResponse {
+    let _ = state.gdpr_repo.request_deletion(uuid::Uuid::new_v4()).await;
+    let _ = state.gdpr_repo.invalidate_sessions(uuid::Uuid::new_v4()).await;
+    (axum::http::StatusCode::ACCEPTED, Json(serde_json::json!({
+        "status": "accepted",
+        "message": "Deletion request received."
+    })))
+}
+
+async fn export_user_data_handler(
+    State(state): State<Arc<crate::AppState>>,
+) -> impl axum::response::IntoResponse {
+    let data = state.gdpr_repo.get_user_data(uuid::Uuid::new_v4()).await.unwrap();
+    (axum::http::StatusCode::OK, Json(data))
+}
