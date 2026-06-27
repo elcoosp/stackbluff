@@ -47,7 +47,7 @@ impl SeasonCardGenerator {
             .filter(season::Column::Processed.eq(false))
             .all(&self.db)
             .await
-            .map_err(|e| AppError::internal(format!("DB error: {e}")))?;
+            .map_err(|e| AppError::Internal(format!("DB error: {e}")))?;
 
         for ended_season in ended_seasons {
             if let Err(e) = self.process_season(ended_season.id).await {
@@ -63,13 +63,13 @@ impl SeasonCardGenerator {
             .db
             .begin()
             .await
-            .map_err(|e| AppError::internal(format!("Txn error: {e}")))?;
+            .map_err(|e| AppError::Internal(format!("Txn error: {e}")))?;
 
         let ranks = player_rank::Entity::find()
             .filter(player_rank::Column::SeasonId.eq(season_id))
             .all(&txn)
             .await
-            .map_err(|e| AppError::internal(format!("DB error: {e}")))?;
+            .map_err(|e| AppError::Internal(format!("DB error: {e}")))?;
 
         for rank in &ranks {
             match self
@@ -100,31 +100,31 @@ impl SeasonCardGenerator {
             let active = player_rank::ActiveModel {
                 user_id: Set(rank.user_id),
                 season_id: Set(next_season_id),
-                tier: Set(new_tier),
+                rank_tier: Set(new_tier),
                 rank_points: Set(0),
                 ..Default::default()
             };
             player_rank::Entity::insert(active)
                 .exec(&txn)
                 .await
-                .map_err(|e| AppError::internal(format!("Insert error: {e}")))?;
+                .map_err(|e| AppError::Internal(format!("Insert error: {e}")))?;
         }
 
         let season_model = season::Entity::find_by_id(season_id)
             .one(&txn)
             .await
-            .map_err(|e| AppError::internal(format!("DB error: {e}")))?
-            .ok_or_else(|| AppError::internal("Season not found"))?;
+            .map_err(|e| AppError::Internal(format!("DB error: {e}")))?
+            .ok_or_else(|| AppError::Internal("Season not found"))?;
         let mut season_active: season::ActiveModel = season_model.into();
         season_active.processed = Set(true);
-        season_active
+        let _: season::Model = season_active
             .update(&txn)
             .await
-            .map_err(|e| AppError::internal(format!("Update error: {e}")))?;
+            .map_err(|e| AppError::Internal(format!("Update error: {e}")))?;
 
         txn.commit()
             .await
-            .map_err(|e| AppError::internal(format!("Commit error: {e}")))?;
+            .map_err(|e| AppError::Internal(format!("Commit error: {e}")))?;
 
         tracing::info!("Season {} processed successfully", season_id);
         Ok(())
@@ -153,7 +153,7 @@ impl SeasonCardGenerator {
         self.season_card_repo
             .store_card(user_id, season_id, Some(url.clone()), card_data)
             .await
-            .map_err(|e| AppError::internal(format!("Repo error: {e}")))?;
+            .map_err(|e| AppError::Internal(format!("Repo error: {e}")))?;
 
         Ok(url)
     }
@@ -186,7 +186,7 @@ fn generate_card_image(tier: &RankTier) -> Result<Vec<u8>, AppError> {
         &mut std::io::Cursor::new(&mut bytes),
         image::ImageFormat::Png,
     )
-    .map_err(|e| AppError::internal(format!("Image encode error: {e}")))?;
+    .map_err(|e| AppError::Internal(format!("Image encode error: {e}")))?;
     Ok(bytes)
 }
 
