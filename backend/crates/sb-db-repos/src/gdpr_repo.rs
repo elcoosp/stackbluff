@@ -53,8 +53,14 @@ impl GdprRepo for PgGdprRepo {
     }
 
     async fn get_user_data(&self, user_id: Uuid) -> Result<UserDataExportDto, PersistenceError> {
+        let user = user::Entity::find_by_id(user_id)
+            .one(&self.db)
+            .await
+            .map_err(|_| PersistenceError::DatabaseError)?
+            .ok_or(PersistenceError::NotFound)?;
+
         Ok(UserDataExportDto {
-            profile: serde_json::json!({"id": user_id, "status": "anonymized"}),
+            profile: serde_json::to_value(&user).unwrap_or_default(),
             hand_history: serde_json::json!([]),
             missions: serde_json::json!([]),
         })
@@ -70,11 +76,12 @@ impl GdprRepo for PgGdprRepo {
 
         if let Some(u) = user_opt {
             let mut active: user::ActiveModel = u.into();
-            active.display_name = Set(Some("Deleted User".to_owned()));
-            active.email = ActiveValue::NotSet;
-            active.telegram_id = ActiveValue::NotSet;
-            active.password_hash = ActiveValue::NotSet;
-            active.push_subscription = ActiveValue::NotSet;
+            active.display_name = Set("Deleted User".to_owned());
+            // Use Set(None) for nullable PII columns to actually clear them (GDPR compliance)
+            active.email = Set(None);
+            active.telegram_id = Set(None);
+            active.password_hash = Set(None);
+            active.push_subscription = Set(None);
             active.chip_balance = Set(0);
             active.deleted_at = Set(Some(Utc::now().naive_utc()));
             sea_orm::ActiveModelTrait::update(active, &txn).await.map_err(|_| PersistenceError::DatabaseError)?;
@@ -86,5 +93,15 @@ impl GdprRepo for PgGdprRepo {
 
     async fn invalidate_sessions(&self, _user_id: Uuid) -> Result<(), PersistenceError> {
         Ok(())
+    }
+
+    async fn get_user_password_hash(&self, user_id: Uuid) -> Result<String, PersistenceError> {
+        let user = user::Entity::find_by_id(user_id)
+            .one(&self.db)
+            .await
+            .map_err(|_| PersistenceError::DatabaseError)?
+            .ok_or(PersistenceError::NotFound)?;
+        // Assuming password_hash is Option<String> in entity, unwrap or default to empty
+        Ok(user.password_hash.unwrap_or_default())
     }
 }
