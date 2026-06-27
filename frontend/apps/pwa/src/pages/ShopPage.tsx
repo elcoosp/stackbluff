@@ -1,3 +1,4 @@
+import { useUserUpdates } from '../hooks/useUserUpdates';
 import { useEffect, useCallback, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -52,6 +53,7 @@ export default function ShopPage() {
   const queryClient = useQueryClient();
   const shop = useShopStore();
   const auth = useAuthStore();
+  useUserUpdates();
 
   // Fetch products
   const { data: productsData, isLoading: productsLoading } = useQuery({
