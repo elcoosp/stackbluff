@@ -1,3 +1,4 @@
+use crate::events::{TableEvent, TableClosedEvent};
 #![allow(dead_code)]
 #![allow(unused_imports)]
 
@@ -17,8 +18,6 @@ use sb_shared_types::player_stats::PlayerStatsDto;
 use sb_shared_types::{ActionType, ChipAmount, PlayerId, StakeLevel, TableConfig, TableId, UserId};
 
 use crate::connection_broker::ConnectionBroker;
-use crate::events::HandCompletedEvent;
-use crate::events::{TableEvent, TableClosedEvent};
 use chrono::Utc;
 use sb_db_entities::hand_history_json::{
     HandAction, HandActions, HandPlayer, HandPlayers, HandResult, PotSplit, Winner,
@@ -2436,28 +2435,6 @@ impl TableActor {
         self.kick_cooldowns
             .retain(|_, instant| instant.elapsed() < StdDuration::from_secs(300));
     }
-    fn emit_table_closed_event(&self) {
-        use sb_shared_types::{UserId, TableId, ChipAmount};
-        use crate::events::{TableClosedEvent, TableEvent};
-
-        // Placeholder: in a real implementation, retrieve from game state.
-        // For now, use default values.
-        let winner = None;
-        let hand_desc = "Unknown".to_string();
-        let pot = ChipAmount::new(0);
-
-        let event = TableClosedEvent {
-            table_id: self.table_id,
-            room_id: self.table_id,
-            winner,
-            winning_hand_description: hand_desc,
-            pot_amount: pot,
-            chat_id: self.telegram_chat_id.clone(),
-        };
-
-        let _ = self.event_tx.send(TableEvent::TableClosed(event));
-    }
-}
 
 fn community_cards_to_array(hand: &ActiveHand) -> Option<[sb_shared_types::Card; 5]> {
     let cc = hand.state.community_cards();
