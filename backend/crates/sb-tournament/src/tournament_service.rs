@@ -3,11 +3,11 @@ use chrono::Utc;
 use async_trait::async_trait;
 use sb_contracts::tournament_api::{
     TournamentConfig, TournamentRepo, TournamentService, TournamentSummary,
-    TournamentResult, TournamentType, TournamentId
+    TournamentResult, TournamentType
 };
-use sb_contracts::notification_api::{NotificationService, ClubNotifier};
+use sb_contracts::notification_api::NotificationService;
 use sb_contracts::repo_api::UserRepo;
-use sb_shared_types::{AppError, RequestContext, UserId, TableId};
+use sb_shared_types::{AppError, RequestContext, UserId, TableId, TournamentId};
 use sb_table_registry::registry::Registry;
 use sb_table_registry::connection_broker::ConnectionBroker;
 
@@ -69,8 +69,8 @@ impl TournamentService for TournamentServiceImpl {
     async fn register(
         &self,
         _ctx: &RequestContext,
-        tournament_id: TournamentId,
-        user_id: UserId,
+        _tournament_id: TournamentId,
+        _user_id: UserId,
     ) -> Result<(), AppError> {
         // Placeholder for existing logic
         Ok(())
@@ -79,8 +79,8 @@ impl TournamentService for TournamentServiceImpl {
     async fn unregister(
         &self,
         _ctx: &RequestContext,
-        tournament_id: TournamentId,
-        user_id: UserId,
+        _tournament_id: TournamentId,
+        _user_id: UserId,
     ) -> Result<(), AppError> {
         // Placeholder for existing logic
         Ok(())
@@ -89,7 +89,7 @@ impl TournamentService for TournamentServiceImpl {
     async fn get_tournament(
         &self,
         _ctx: &RequestContext,
-        tournament_id: TournamentId,
+        _tournament_id: TournamentId,
     ) -> Result<TournamentSummary, AppError> {
         // Placeholder for existing logic
         Err(AppError::NotFound("Not implemented".into()))
@@ -98,7 +98,7 @@ impl TournamentService for TournamentServiceImpl {
     async fn list_tournaments(
         &self,
         _ctx: &RequestContext,
-        type_filter: Option<TournamentType>,
+        _type_filter: Option<TournamentType>,
     ) -> Result<Vec<TournamentSummary>, AppError> {
         // Placeholder for existing logic
         Ok(vec![])
@@ -107,7 +107,7 @@ impl TournamentService for TournamentServiceImpl {
     async fn get_results(
         &self,
         _ctx: &RequestContext,
-        tournament_id: TournamentId,
+        _tournament_id: TournamentId,
     ) -> Result<Vec<TournamentResult>, AppError> {
         // Placeholder for existing logic
         Ok(vec![])
@@ -116,8 +116,8 @@ impl TournamentService for TournamentServiceImpl {
     async fn get_my_table(
         &self,
         _ctx: &RequestContext,
-        tournament_id: TournamentId,
-        user_id: UserId,
+        _tournament_id: TournamentId,
+        _user_id: UserId,
     ) -> Result<Option<TableId>, AppError> {
         // Placeholder for existing logic
         Ok(None)

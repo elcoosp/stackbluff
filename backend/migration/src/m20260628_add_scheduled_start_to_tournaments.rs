@@ -11,8 +11,7 @@ impl MigrationTrait for Migration {
                 Table::alter()
                     .table(Tournament::Table)
                     .add_column_if_not_exists(
-                        Tournament::ScheduledStart,
-                        ColumnType::TimestampWithTimeZone.null(),
+                        ColumnDef::new(Tournament::ScheduledStart, ColumnType::TimestampWithTimeZone).null()
                     )
                     .to_owned(),
             )

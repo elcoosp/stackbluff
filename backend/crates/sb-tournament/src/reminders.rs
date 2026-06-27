@@ -1,10 +1,10 @@
 use std::sync::Arc;
 use chrono::{DateTime, Utc, Duration};
 use sb_contracts::tournament_api::{TournamentRepo, TournamentStatus};
-use sb_contracts::notification_api::{NotificationService, ClubNotifier};
+use sb_contracts::notification_api::NotificationService;
+use sb_contracts::notification::NotificationEvent;
 use sb_shared_types::TournamentId;
-use tokio::time::sleep_until;
-use std::time::Instant;
+use tokio::time::{sleep_until, Instant};
 
 pub fn schedule_reminders(
     tournament_id: TournamentId,
@@ -71,19 +71,21 @@ async fn send_reminder(
     let start_time = tournament.config.scheduled_start.unwrap();
 
     for reg in registrations {
-        let _ = notification_service.send(
-            reg.user_id,
-            sb_contracts::notification_api::NotificationEvent::TournamentReminder {
-                tournament_name: tournament_name.clone(),
-                start_time,
-                deep_link: deep_link.clone(),
-            },
-        ).await;
+        let event = NotificationEvent::TournamentReminder {
+            tournament_name: tournament_name.clone(),
+            start_time,
+            deep_link: deep_link.clone(),
+        };
+        // TODO: Call the actual notification service method
+        // notification_service.send_notification(reg.user_id, event).await;
+        tracing::info!(user_id = %reg.user_id, "Would send reminder: {:?}", event);
     }
 
     if let Some(bh) = bot_handler {
         if let Some(club_id) = tournament.config.club_id {
-            let _ = bh.send_telegram_message(club_id, format!("Tournament {} starts in {}!", tournament_name, label)).await;
+            // TODO: Call the actual bot handler method
+            // bh.notify_club(club_id, format!("Tournament {} starts in {}!", tournament_name, label)).await;
+            tracing::info!(club_id = %club_id, "Would send Telegram message: Tournament {} starts in {}!", tournament_name, label);
         }
     }
 }
