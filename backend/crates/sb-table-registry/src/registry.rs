@@ -1,6 +1,5 @@
 use crate::actor::{InternalCommand, LeaveResult, spawn_table_actor};
 use crate::connection_broker::ConnectionBroker;
-use crate::events::HandCompletedEvent;
 use crate::game_room::RoomMessage;
 use sb_contracts::stats_api::PlayerStatsRepo;
 use sb_contracts::{TableCommand, TableError, lobby_api::TableInfo};
@@ -32,7 +31,7 @@ pub struct Registry {
     rooms: Arc<RwLock<HashMap<TableId, RoomEntry>>>,
     users_at_table: Arc<RwLock<HashMap<TableId, HashSet<UserId>>>>,
     user_room_map: Arc<RwLock<HashMap<UserId, HashSet<TableId>>>>,
-    event_tx: tokio::sync::broadcast::Sender<HandCompletedEvent>,
+    event_tx: tokio::sync::broadcast::Sender<TableEvent>,
     stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
 }
 
@@ -443,7 +442,7 @@ impl Registry {
             .unwrap_or(false)
     }
 
-    pub fn event_sender(&self) -> tokio::sync::broadcast::Sender<HandCompletedEvent> {
+    pub fn event_sender(&self) -> tokio::sync::broadcast::Sender<TableEvent> {
         self.event_tx.clone()
     }
 
