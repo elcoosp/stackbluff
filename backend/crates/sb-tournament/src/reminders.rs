@@ -2,7 +2,7 @@ use std::sync::Arc;
 use chrono::{DateTime, Utc, Duration};
 use sb_contracts::tournament_api::{TournamentRepo, TournamentStatus};
 use sb_contracts::notification::{NotificationService, NotificationEvent};
-use sb_shared_types::{TournamentId, RequestContext, UserId};
+use sb_shared_types::{TournamentId, RequestContext};
 use tokio::time::{sleep_until, Instant};
 use uuid::Uuid;
 
@@ -81,9 +81,9 @@ async fn send_reminder(
         let _ = notification_service.send(&ctx, reg.user_id, event).await;
     }
 
-    if let Some(bh) = bot_handler {
-        if let Some(club_id) = tournament.config.club_id {
-            let _ = bh.send_club_reminder(club_id, format!("Tournament {} starts in {}!", tournament_name, label)).await;
-        }
+    if let Some(bh) = bot_handler
+        && let Some(club_id) = tournament.config.club_id
+    {
+        let _ = bh.send_club_reminder(club_id, format!("Tournament {} starts in {}!", tournament_name, label)).await;
     }
 }

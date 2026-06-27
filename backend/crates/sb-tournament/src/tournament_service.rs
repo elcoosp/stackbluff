@@ -11,6 +11,7 @@ use sb_shared_types::{AppError, RequestContext, UserId, TableId, TournamentId};
 use sb_table_registry::registry::Registry;
 use sb_table_registry::connection_broker::ConnectionBroker;
 
+#[allow(dead_code)]
 pub struct TournamentServiceImpl {
     repo: Arc<dyn TournamentRepo>,
     user_repo: Arc<dyn UserRepo>,
@@ -51,17 +52,17 @@ impl TournamentService for TournamentServiceImpl {
         config: TournamentConfig,
     ) -> Result<TournamentId, AppError> {
         let id = self.repo.insert_tournament(&config).await?;
-        if let Some(start) = config.scheduled_start {
-            if start > Utc::now() {
-                crate::reminders::schedule_reminders(
-                    id,
-                    start,
-                    self.repo.clone(),
-                    self.notification_service.clone(),
-                    self.bot_handler.clone(),
-                    self.app_base_url.clone(),
-                );
-            }
+        if let Some(start) = config.scheduled_start
+            && start > Utc::now()
+        {
+            crate::reminders::schedule_reminders(
+                id,
+                start,
+                self.repo.clone(),
+                self.notification_service.clone(),
+                self.bot_handler.clone(),
+                self.app_base_url.clone(),
+            );
         }
         Ok(id)
     }
