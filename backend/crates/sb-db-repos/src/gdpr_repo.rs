@@ -1,7 +1,7 @@
 use sea_orm::DatabaseConnection;
 use sb_contracts::repo_api::{GdprRepo, DeletionRequestDto, UserDataExportDto, PersistenceError};
 use sb_db_entities::{deletion_request, user};
-use sea_orm::{EntityTrait, Set, ActiveValue, QueryFilter, ColumnTrait};
+use sea_orm::{EntityTrait, Set, ActiveValue, QueryFilter, ColumnTrait, ActiveModelTrait};
 use uuid::Uuid;
 use chrono::{Utc, Duration};
 
@@ -19,7 +19,7 @@ impl GdprRepo for PgGdprRepo {
             processed_at: ActiveValue::NotSet,
             reason: ActiveValue::NotSet,
         };
-        deletion_request::Entity::insert(req).exec(&self.db).await.map_err(|_| unimplemented!())?;
+        deletion_request::Entity::insert(req).exec(&self.db).await.map_err(|e| sb_shared_types::AppError::Internal(format!("{:?}", e)).into())?;
         Ok(())
     }
 
@@ -30,7 +30,7 @@ impl GdprRepo for PgGdprRepo {
             .filter(deletion_request::Column::RequestedAt.lt(cutoff))
             .all(&self.db)
             .await
-            .map_err(|_| unimplemented!())?;
+            .map_err(|e| sb_shared_types::AppError::Internal(format!("{:?}", e)).into())?;
 
         Ok(reqs.into_iter().map(|r| DeletionRequestDto {
             user_id: r.user_id,
@@ -42,13 +42,13 @@ impl GdprRepo for PgGdprRepo {
         let req = deletion_request::Entity::find_by_id(user_id)
             .one(&self.db)
             .await
-            .map_err(|_| unimplemented!())?
-            .ok_or(PersistenceError::unimplemented!())?;
+            .map_err(|e| sb_shared_types::AppError::Internal(format!("{:?}", e)).into())?
+            .ok_or(sb_shared_types::AppError::NotFound.into())?;
 
         let mut active: deletion_request::ActiveModel = req.into();
         active.status = Set("completed".to_owned());
         active.processed_at = Set(Some(Utc::now().naive_utc()));
-        <deletion_request::ActiveModel as sea_orm::ActiveModelTrait>::update(active, &self.db).await.map_err(|_| unimplemented!())?;
+        active.update(&self.db).await.map_err(|e| sb_shared_types::AppError::Internal(format!("{:?}", e)).into())?;
         Ok(())
     }
 
@@ -56,8 +56,8 @@ impl GdprRepo for PgGdprRepo {
         let user = user::Entity::find_by_id(user_id)
             .one(&self.db)
             .await
-            .map_err(|_| unimplemented!())?
-            .ok_or(PersistenceError::unimplemented!())?;
+            .map_err(|e| sb_shared_types::AppError::Internal(format!("{:?}", e)).into())?
+            .ok_or(sb_shared_types::AppError::NotFound.into())?;
 
         Ok(UserDataExportDto {
             profile: serde_json::to_value(&user).unwrap_or_default(),
@@ -67,12 +67,12 @@ impl GdprRepo for PgGdprRepo {
     }
 
     async fn anonymize_user(&self, user_id: Uuid) -> Result<(), PersistenceError> {
-        let txn = sea_orm::TransactionTrait::begin(&self.db).await.map_err(|_| unimplemented!())?;
+        let txn = self.db.begin().await.map_err(|e| sb_shared_types::AppError::Internal(format!("{:?}", e)).into())?;
 
         let user_opt = user::Entity::find_by_id(user_id)
             .one(&txn)
             .await
-            .map_err(|_| unimplemented!())?;
+            .map_err(|e| sb_shared_types::AppError::Internal(format!("{:?}", e)).into())?;
 
         if let Some(u) = user_opt {
             let mut active: user::ActiveModel = u.into();
@@ -80,13 +80,12 @@ impl GdprRepo for PgGdprRepo {
             active.email = Set(None);
             active.telegram_id = Set(None);
             active.password_hash = Set(None);
-            active.push_subscription = Set(None);
             active.chip_balance = Set(0);
             active.deleted_at = Set(Some(Utc::now().naive_utc()));
-            <user::ActiveModel as sea_orm::ActiveModelTrait>::update(active, &txn).await.map_err(|_| unimplemented!())?;
+            active.update(&txn).await.map_err(|e| sb_shared_types::AppError::Internal(format!("{:?}", e)).into())?;
         }
 
-        sea_orm::TransactionTrait::commit(txn).await.map_err(|_| unimplemented!())?;
+        txn.commit().await.map_err(|e| sb_shared_types::AppError::Internal(format!("{:?}", e)).into())?;
         Ok(())
     }
 
@@ -98,8 +97,8 @@ impl GdprRepo for PgGdprRepo {
         let user = user::Entity::find_by_id(user_id)
             .one(&self.db)
             .await
-            .map_err(|_| unimplemented!())?
-            .ok_or(PersistenceError::unimplemented!())?;
+            .map_err(|e| sb_shared_types::AppError::Internal(format!("{:?}", e)).into())?
+            .ok_or(sb_shared_types::AppError::NotFound.into())?;
 
         let val = serde_json::to_value(&user.password_hash).unwrap_or_default();
         Ok(val.as_str().unwrap_or("").to_owned())
