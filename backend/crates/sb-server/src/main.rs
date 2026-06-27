@@ -371,7 +371,7 @@ async fn load_existing_tournaments(
 fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
     let table_service: Arc<dyn sb_contracts::service_api::TableService> =
         Arc::new(InMemoryTableService::new());
-    let notification_service: Arc<dyn sb_contracts::notification::NotificationService> =
+    let notification_api_service: Arc<dyn sb_contracts::notification_api::NotificationService> =
         Arc::new(InMemoryNotificationService::new());
     let user_resolution: Arc<dyn sb_contracts::user_resolution::UserResolutionService> =
         Arc::new(InMemoryUserResolutionService::new());
