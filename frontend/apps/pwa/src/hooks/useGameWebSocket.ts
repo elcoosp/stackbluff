@@ -1,3 +1,4 @@
+import { useUserUpdates } from './useUserUpdates';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useGameStore, TableState, ActionRequired } from '@stackbluff/shared/stores/gameStore';
 import { toast } from 'sonner';
