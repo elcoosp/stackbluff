@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { useShopStore, type Product } from '../stores/shopStore';
@@ -9,10 +9,9 @@ import { GlassPanel, LiquidMetalButton } from '@stackbluff/shared/ui';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/Dialog';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
-import { useUserUpdates } from '../hooks/useUserUpdates';
 
 function SeasonPassTimer({ expiresAt }: { expiresAt: string }) {
-  const [remaining, setRemaining] = React.useState(() => {
+  const [remaining, setRemaining] = useState(() => {
     const diff = new Date(expiresAt).getTime() - Date.now();
     return Math.max(0, diff);
   });
