@@ -1,10 +1,10 @@
-import { useAuthStore } from '../../stores/authStore';
+import { useEntitlementsStore } from '../../stores/entitlementsStore';
 
 export function ClubCustomizer() {
   const clubProExpiresAt = useAuthStore((s) => s.clubProExpiresAt);
-  const isClubProActive = clubProExpiresAt ? new Date(clubProExpiresAt) > new Date() : false;
+  
 
-  if (!isClubProActive) return null;
+  if (!hasActiveClubPro()) return null;
 
   return (
     <div className="mt-4 rounded-lg bg-indigo-900/30 p-4">
