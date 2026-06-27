@@ -5247,7 +5247,6 @@ dependencies = [
  "sb-db-entities",
  "sb-db-repos",
  "sb-shared-types",
- "sb-tournament",
  "sea-orm",
  "sea-orm-migration",
  "serde",

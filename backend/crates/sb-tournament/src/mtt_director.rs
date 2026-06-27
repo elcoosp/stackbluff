@@ -742,18 +742,12 @@ impl MttDirector {
             started_at: self.started_at,
         }
     }
+}
 
-    /// Emit a TournamentCompletedEvent when the tournament ends.
-    pub fn build_completion_event(
-        &self,
-        final_rankings: Vec<sb_contracts::tournament_api::TournamentRanking>,
-    ) -> sb_contracts::tournament_api::TournamentCompletedEvent {
-        sb_contracts::tournament_api::TournamentCompletedEvent {
-            tournament_id: self.tournament_id,
-            club_id: self.config.club_id,
-            tournament_name: self.config.name.clone(),
-            final_rankings,
-        }
-    }
 
+// === Issue #029: Result Posting ===
+pub async fn post_tournament_results_to_telegram(club_id: sb_shared_types::ids::ClubId, tournament_id: uuid::Uuid) {
+    // TODO: Fetch club.telegram_chat_id via ClubRepo
+    // TODO: Build summary message (top 3 placements, winning hand)
+    // TODO: Call NotificationService::send_telegram_message(chat_id, text) within 10s of final hand
 }

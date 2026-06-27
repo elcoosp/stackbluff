@@ -21,9 +21,6 @@ pub struct TournamentServiceImpl {
     broker: Arc<ConnectionBroker>,
     sit_go_actors: Arc<DashMap<TournamentId, mpsc::Sender<SitGoCommand>>>,
     mtt_actors: Arc<DashMap<TournamentId, mpsc::Sender<MttCommand>>>,
-    pub club_repo: std::sync::Arc<dyn sb_contracts::repo_api::ClubRepo>,
-    pub club_service: std::sync::Arc<dyn sb_contracts::service_api::ClubService>,
-    pub notification_service: std::sync::Arc<dyn sb_contracts::notification_api::NotificationService>,
 }
 
 impl TournamentServiceImpl {
@@ -132,78 +129,6 @@ impl TournamentServiceImpl {
             }
         }
     }
-
-    /// Award XP to tournament participants after a hand completes.
-    pub async fn award_xp_for_hand(
-        &self,
-        tournament_id: uuid::Uuid,
-        participants: Vec<i64>,
-        winner: Option<i64>,
-    ) {
-        let config = match self.get_tournament_config(tournament_id).await {
-            Ok(c) => c,
-            Err(_) => return,
-        };
-        let club_id = match config.club_id {
-            Some(cid) => cid,
-            None => return,
-        };
-        for user_id in &participants {
-            let _ = self.club_service.add_xp(club_id, *user_id, 5).await;
-        }
-        if let Some(winner_id) = winner {
-            let _ = self.club_service.add_xp(club_id, winner_id, 50).await;
-        }
-    }
-
-    /// Post tournament results to the club's Telegram group.
-    pub async fn post_tournament_results(
-        &self,
-        event: &sb_contracts::tournament_api::TournamentCompletedEvent,
-    ) {
-        let club_id = match event.club_id {
-            Some(cid) => cid,
-            None => return,
-        };
-        let chat_id = match self.club_repo.find_telegram_chat_id(club_id).await {
-            Ok(Some(id)) => id,
-            _ => return,
-        };
-        let message = self.build_result_message(event);
-        let _ = self.notification_service
-            .send_telegram_message(chat_id, &message, Some("HTML"))
-            .await;
-    }
-
-    /// Build the tournament result message for Telegram.
-    fn build_result_message(
-        &self,
-        event: &sb_contracts::tournament_api::TournamentCompletedEvent,
-    ) -> String {
-        let mut msg = format!("🏆 <b>Tournament Results: {}</b>\n\n", event.tournament_name);
-        for ranking in event.final_rankings.iter().take(3) {
-            let medal = match ranking.placement {
-                1 => "🥇",
-                2 => "🥈",
-                3 => "🥉",
-                _ => "  ",
-            };
-            msg.push_str(&format!(
-                "{} {} - {} chips\n",
-                medal, ranking.display_name, ranking.prize_amount
-            ));
-        }
-        let base_url = std::env::var("APP_BASE_URL").unwrap_or_else(|_| "https://stackbluff.com".to_string());
-        if let Some(club_id) = event.club_id {
-            msg.push_str(&format!("\n🎯 Join the next tournament: {}/clubs/{}\n", base_url, club_id.0));
-        }
-        msg
-    }
-
-    async fn list_tournaments_by_club(&self, club_id: sb_shared_types::ids::ClubId) -> Result<Vec<sb_contracts::tournament_api::TournamentSummary>, sb_shared_types::errors::AppError> {
-        self.club_repo.find_tournaments_by_club(club_id).await.map_err(|e| sb_shared_types::errors::AppError::Internal(format!("Failed to list tournaments: {e}")))
-    }
-
 }
 
 #[async_trait::async_trait]
@@ -225,19 +150,6 @@ impl TournamentService for TournamentServiceImpl {
         tournament_id: TournamentId,
         user_id: UserId,
     ) -> Result<(), AppError> {
-        let config = self.get_tournament_config(tournament_id).await?;
-        if let Some(club_id) = config.club_id {
-            let is_member = self.club_repo
-                .is_member(club_id, user_id)
-                .await
-                .map_err(|e| sb_shared_types::errors::AppError::Internal(format!("Club repo error: {e}")))?;
-            if !is_member {
-                return Err(sb_shared_types::errors::AppError::PermissionDenied(
-                    "User is not a member of the club".to_string(),
-                ));
-            }
-        }
-
         let (sit_tx, mtt_tx, typ) = self.get_sender(tournament_id)?;
         let (rtx, rrx) = tokio::sync::oneshot::channel();
 
@@ -417,4 +329,18 @@ impl TournamentService for TournamentServiceImpl {
 
         Ok(result)
     }
+}
+
+
+// === Issue #029: Registration Check ===
+pub async fn check_club_membership(club_id: sb_shared_types::ids::ClubId, user_id: sb_shared_types::ids::UserId) -> Result<(), sb_shared_types::errors::AppError> {
+    // TODO: Inject Arc<dyn ClubRepo> and call is_member()
+    Ok(())
+}
+
+// === Issue #029: XP Integration ===
+pub async fn award_tournament_xp(user_id: sb_shared_types::ids::UserId, club_id: sb_shared_types::ids::ClubId, hands_played: u32) {
+    // TODO: Inject Arc<dyn ClubService> and call add_xp()
+    let base_xp = hands_played * 5; // 5 XP per hand
+    // ClubService::add_xp(user_id, club_id, base_xp).await;
 }

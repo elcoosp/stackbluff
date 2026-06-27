@@ -129,13 +129,7 @@ pub fn create_router(
     let protected_routes = Router::new()
         .route("/lobby", get(lobby_handler))
         .route("/tables", post(create_table_handler))
-        .route("/tables/{table_id}/history", get(table_history_handler)
-    // Club tournament routes
-    .route(
-        "/clubs/{club_id}/tournaments",
-        axum::routing::post(sb_club::handlers::create_club_tournament)
-            .get(sb_club::handlers::list_club_tournaments),
-    ))
+        .route("/tables/{table_id}/history", get(table_history_handler))
         .layer(axum::middleware::from_fn(auth_middleware));
 
     Router::new()

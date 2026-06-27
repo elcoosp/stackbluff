@@ -213,15 +213,6 @@ pub trait ClubRepo: Send + Sync {
     async fn refresh_leaderboard(&self, club_id: ClubId) -> ClubResult<()>;
 
     async fn get_all_club_ids(&self) -> ClubResult<Vec<ClubId>>;
-    async fn find_telegram_chat_id(
-        &self,
-        club_id: sb_shared_types::ids::ClubId,
-    ) -> Result<Option<i64>, crate::persistence_error::PersistenceError>;
-    async fn find_tournaments_by_club(
-        &self,
-        club_id: sb_shared_types::ids::ClubId,
-    ) -> Result<Vec<crate::tournament_api::TournamentSummary>, crate::persistence_error::PersistenceError>;
-
 }
 
 #[async_trait::async_trait]
