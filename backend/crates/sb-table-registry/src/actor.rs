@@ -595,6 +595,29 @@ impl TableActor {
         // Retrieve final game result.
         // In a real implementation, you would call self.game_state.last_hand_result() or similar.
         let (winner, hand_desc, pot) = if let Some(ref game) = self.game {
+            tracing::warn!("Game data not fully retrieved; using placeholder");
+            (None, "Unknown".to_string(), ChipAmount(0))
+        } else {
+            (None, "Unknown".to_string(), ChipAmount(0))
+        };
+
+        let event = TableClosedEvent {
+            table_id: self.table_id,
+            room_id: self.table_id,
+            started_by: self.created_by,
+            winner,
+            winning_hand_description: hand_desc,
+            pot_amount: pot,
+            chat_id: self.telegram_chat_id.clone(),
+        };
+
+        let _ = self.event_tx.send(TableEvent::TableClosed(event));
+    }
+        use crate::events::{TableClosedEvent, TableEvent};
+
+        // Retrieve final game result.
+        // In a real implementation, you would call self.game_state.last_hand_result() or similar.
+        let (winner, hand_desc, pot) = if let Some(ref game) = self.game {
             // Placeholder – extract real data here.
             tracing::warn!("Game data not fully retrieved; using placeholder");
             (None, "Unknown".to_string(), ChipAmount(0))
