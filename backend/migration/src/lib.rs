@@ -1,3 +1,4 @@
+mod m20260628_000001_gdpr_deletion;
 // backend/migration/src/lib.rs
 #![allow(clippy::needless_update)]
 #![allow(clippy::enum_variant_names)]
@@ -24,7 +25,8 @@ pub struct Migrator;
 #[async_trait::async_trait]
 impl MigratorTrait for Migrator {
     fn migrations() -> Vec<Box<dyn MigrationTrait>> {
-        vec![Box::new(m20260628_000001_gdpr_deletion::Migration), 
+        vec![
+        Box::new(m20260628_000001_gdpr_deletion::Migration),
             // 1. Core tables
             Box::new(m20260607_000001_create_all_tables::Migration),
             Box::new(m20260607_000002_create_clubs_tables::Migration),
@@ -48,5 +50,3 @@ impl MigratorTrait for Migrator {
         ]
     }
 }
-mod m20260628_000001_gdpr_deletion;
-mod m20260628_000001_gdpr_deletion;
