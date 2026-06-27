@@ -46,7 +46,7 @@ async fn delete_user_handler(
                     false
                 }
             } else {
-                true // Allow deletion if no password is set (e.g. OAuth only)
+                true
             }
         },
         Err(_) => false
