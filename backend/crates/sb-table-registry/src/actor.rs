@@ -18,6 +18,7 @@ use sb_shared_types::{ActionType, ChipAmount, PlayerId, StakeLevel, TableConfig,
 
 use crate::connection_broker::ConnectionBroker;
 use crate::events::HandCompletedEvent;
+use crate::events::{TableEvent, TableClosedEvent};
 use chrono::Utc;
 use sb_db_entities::hand_history_json::{
     HandAction, HandActions, HandPlayer, HandPlayers, HandResult, PotSplit, Winner,
@@ -2448,7 +2449,6 @@ impl TableActor {
         let event = TableClosedEvent {
             table_id: self.table_id,
             room_id: self.table_id,
-            started_by: self.created_by,
             winner,
             winning_hand_description: hand_desc,
             pot_amount: pot,
