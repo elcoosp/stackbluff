@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
 import { Minimize2, Maximize2 } from 'lucide-react';
-import { useEntitlementsStore } from '../../stores/entitlementsStore';
+import { useHasActiveSeasonPass } from '../../hooks/useEntitlements';
 
 const glassPanel: React.CSSProperties = {
   background: 'rgba(10, 10, 10, 0.75)',
