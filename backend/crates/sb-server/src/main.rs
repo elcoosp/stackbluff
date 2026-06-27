@@ -340,6 +340,7 @@ fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
 
 
 
+
     // Spawn listener for TableClosedEvent
     {
         let registry = registry.clone();
