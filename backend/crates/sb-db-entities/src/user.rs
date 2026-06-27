@@ -7,6 +7,7 @@ use uuid::Uuid;
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "users")]
 pub struct Model {
+    pub deleted_at: Option<chrono::NaiveDateTime>,
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
     pub telegram_id: Option<i64>,
