@@ -1,7 +1,7 @@
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json, Extension};
 use sb_contracts::repo_api::PuzzleRepo;
 use sb_shared_types::request_context::RequestContext;
-use sb_viral::puzzle::models::{SubmitRequest, SubmitResponse};
+use sb_viral::puzzle::models::SubmitRequest;
 use sb_viral::puzzle::service;
 use serde_json::json;
 use std::sync::Arc;
@@ -20,7 +20,13 @@ pub async fn submit_puzzle(
     State(state): State<Arc<AppState>>,
     Json(request): Json<SubmitRequest>,
 ) -> impl IntoResponse {
-    let user_id = ctx.user_id;
+    // Safely extract Uuid from Option<UserId>.
+    // Uses .into() assuming UserId implements Into<Uuid> (standard with derive_more).
+    let user_id = match ctx.user_id {
+        Some(uid) => uid.into(),
+        None => return (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthenticated"}))).into_response(),
+    };
+
     match service::submit_puzzle_action(user_id, request, state.puzzle_repo.as_ref()).await {
         Ok(response) => (StatusCode::OK, Json(json!(response))).into_response(),
         Err(service::PuzzleServiceError::AlreadySubmitted { correct, selected_action }) =>
