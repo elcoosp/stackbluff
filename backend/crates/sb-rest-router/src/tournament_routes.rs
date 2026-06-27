@@ -1,13 +1,20 @@
 use axum::{
     Json, Router,
-    extract::{Path, State},
+    extract::{Extension, Path, State},
     http::StatusCode,
     routing::{get, post},
 };
-use sb_contracts::tournament_api::{TournamentConfig, TournamentType};
+use sb_contracts::tournament_api::TournamentService; // <-- import the trait
 use sb_shared_types::{AppError, TournamentId, UserId};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use uuid::Uuid;
+
+use sb_auth::middleware::AuthUser;
+use sb_db_repos::tournament_repo::TournamentRepoImpl;
+use sb_table_registry::connection_broker::ConnectionBroker;
+use sb_table_registry::registry::Registry;
+use sb_tournament::TournamentServiceImpl;
 
 #[derive(Debug, Deserialize)]
 pub struct CreateTournamentRequest {
@@ -32,10 +39,14 @@ pub struct RegisterRequest {
 
 #[derive(Clone)]
 pub struct TournamentState {
-    pub tournament_service: Arc<dyn sb_contracts::tournament_api::TournamentService>,
+    pub tournament_service: Arc<TournamentServiceImpl>,
+    pub registry: Arc<Registry>,
+    pub broker: Arc<ConnectionBroker>,
+    pub tournament_repo: Arc<TournamentRepoImpl>,
+    pub user_repo: Arc<dyn sb_contracts::repo_api::UserRepo>,
 }
 
-pub fn tournament_routes() -> Router<Arc<TournamentState>> {
+pub fn tournament_routes(state: Arc<TournamentState>) -> Router {
     Router::new()
         .route("/tournaments", post(create_tournament))
         .route("/tournaments", get(list_tournaments))
@@ -43,16 +54,20 @@ pub fn tournament_routes() -> Router<Arc<TournamentState>> {
         .route("/tournaments/{tournament_id}/register", post(register))
         .route("/tournaments/{tournament_id}/unregister", post(unregister))
         .route("/tournaments/{tournament_id}/results", get(get_results))
+        .route("/tournaments/{tournament_id}/my-table", get(get_my_table))
+        .with_state(state)
 }
 
 async fn create_tournament(
     State(state): State<Arc<TournamentState>>,
     Json(req): Json<CreateTournamentRequest>,
 ) -> Result<Json<CreateTournamentResponse>, (StatusCode, Json<serde_json::Value>)> {
+    use sb_contracts::tournament_api::TournamentConfig;
+
     let config = TournamentConfig {
         tournament_type: match req.tournament_type.as_str() {
-            "SitAndGo" | "sit_and_go" => TournamentType::SitAndGo,
-            "Mtt" | "mtt" => TournamentType::Mtt,
+            "SitAndGo" | "sit_and_go" => sb_contracts::tournament_api::TournamentType::SitAndGo,
+            "Mtt" | "mtt" => sb_contracts::tournament_api::TournamentType::Mtt,
             _ => {
                 return Err((
                     StatusCode::BAD_REQUEST,
@@ -196,4 +211,45 @@ async fn get_results(
             )
         })?;
     Ok(Json(results))
+}
+
+async fn get_my_table(
+    State(state): State<Arc<TournamentState>>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(tournament_id): Path<TournamentId>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
+    let user_id = UserId::new(Uuid::parse_str(&auth_user.user_id).map_err(|_| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({"error": "Invalid user ID"})),
+        )
+    })?);
+    let ctx = sb_shared_types::RequestContext::new(uuid::Uuid::new_v4(), Some(user_id));
+
+    match state
+        .tournament_service
+        .get_my_table(&ctx, tournament_id, user_id)
+        .await
+    {
+        Ok(Some(table_id)) => Ok(Json(serde_json::json!({
+            "table_id": table_id.to_string(),
+            "status": "seated"
+        }))),
+        Ok(None) => Ok(Json(serde_json::json!({
+            "table_id": null,
+            "status": "not_seated"
+        }))),
+        Err(AppError::NotFound(_)) => Err((
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({"error": "Tournament not found"})),
+        )),
+        Err(AppError::Timeout) => Err((
+            StatusCode::GATEWAY_TIMEOUT,
+            Json(serde_json::json!({"error": "Service timed out"})),
+        )),
+        Err(e) => Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": e.to_string()})),
+        )),
+    }
 }

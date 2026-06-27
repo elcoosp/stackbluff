@@ -117,7 +117,7 @@ export class AudioEngine {
 
   /* ── Sound synthesis helpers ── */
 
-  private static panner(ctx: AudioContext, value: number): StereoPannerNode {
+  public static panner(ctx: AudioContext, value: number): StereoPannerNode {
     const p = ctx.createStereoPanner();
     p.pan.value = Math.max(-1, Math.min(1, value));
     return p;

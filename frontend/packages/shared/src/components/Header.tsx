@@ -69,7 +69,7 @@ export function Header() {
               initial="initial"
               animate="animate"
               exit="exit"
-              variants={containerVariants}
+              variants={containerVariants as any}
               className="w-24 h-8"
             />
           ) : user ? (
@@ -78,21 +78,23 @@ export function Header() {
               initial="initial"
               animate="animate"
               exit="exit"
-              variants={containerVariants}
+              variants={containerVariants as any}
               className="flex items-center gap-2 md:gap-4 h-full"
             >
               <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full glass-hub border border-tertiary/30">
                 <Coins className="w-4 h-4 text-tertiary" />
-                <span className="font-data-mono text-sm text-tertiary font-bold">
+                <span className="font-data-mono text-sm text-tertiary font-bold" data-testid="user-balance">
                   ${balance?.toLocaleString() ?? '0'}
                 </span>
               </div>
 
               <div className="relative h-full flex items-center" ref={dropdownRef}>
+                {/* ─── Added data-testid="user-menu" ─── */}
                 <button
                   type="button"
                   onClick={toggleDropdown}
                   className="flex items-center gap-2 px-2 py-1 rounded-full glass-hub border border-white/10 hover:border-tertiary/50 transition-all cursor-pointer"
+                  data-testid="user-menu"
                 >
                   <div className="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface font-bold">
                     {getInitials(user.username)}
@@ -109,7 +111,7 @@ export function Header() {
                       initial="initial"
                       animate="animate"
                       exit="exit"
-                      variants={dropdownVariants}
+                      variants={dropdownVariants as any}
                       className="absolute right-0 top-full mt-2 w-44 max-w-[calc(100vw-1rem)] bg-surface-container border border-outline-variant rounded-lg shadow-xl py-2 z-[2000] backdrop-blur-md origin-top-right"
                       onClick={(e) => e.stopPropagation()}
                     >
@@ -150,7 +152,7 @@ export function Header() {
               initial="initial"
               animate="animate"
               exit="exit"
-              variants={containerVariants}
+              variants={containerVariants as any}
               className="flex items-center gap-4"
             >
               <Link to="/login" className="text-sm font-label-caps text-on-surface-variant hover:text-on-surface transition tracking-wider">

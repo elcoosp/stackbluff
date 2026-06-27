@@ -2,10 +2,11 @@ use async_trait::async_trait;
 use sb_contracts::leaderboard::{LeaderboardEntry, LeaderboardQuery};
 use sb_contracts::persistence_error::PersistenceError;
 use sea_orm::{ConnectionTrait, DatabaseBackend, DatabaseConnection, FromQueryResult, Statement};
+use uuid::Uuid;
 
 #[derive(FromQueryResult)]
 struct LeaderboardEntryModel {
-    user_id: String,
+    user_id: Uuid, // Decode BLOB as Uuid
     display_name: String,
     total_chips_won: i64,
     rank: i64,
@@ -28,6 +29,7 @@ impl LeaderboardQuery for LeaderboardRepo {
         offset: u64,
         limit: u64,
     ) -> Result<Vec<LeaderboardEntry>, PersistenceError> {
+        // Select user_id directly (as BLOB); SeaORM will decode to Uuid
         let stmt = Statement::from_sql_and_values(
             DatabaseBackend::Sqlite,
             r#"SELECT user_id, display_name, total_chips_won, rank_position as rank
@@ -45,7 +47,7 @@ impl LeaderboardQuery for LeaderboardRepo {
         let entries = models
             .into_iter()
             .map(|m| LeaderboardEntry {
-                user_id: m.user_id,
+                user_id: m.user_id.to_string(),
                 display_name: m.display_name,
                 total_chips_won: m.total_chips_won,
                 rank: m.rank,
@@ -64,9 +66,11 @@ pub async fn refresh_leaderboard_mv(db: &DatabaseConnection) -> Result<(), Persi
         db.execute_unprepared("DELETE FROM leaderboard_global_mv")
             .await
             .map_err(|e| PersistenceError::Database(e.to_string()))?;
+        // Optionally, ensure future inserts store user_id as TEXT by casting;
+        // but this is not strictly required if we keep the struct as Uuid.
         db.execute_unprepared(
             r#"INSERT INTO leaderboard_global_mv (user_id, display_name, total_chips_won, rank_position, refreshed_at)
-               SELECT u.id, u.display_name, u.chip_balance as total_chips_won, ROW_NUMBER() OVER (ORDER BY u.chip_balance DESC) as rank_position, datetime('now') as refreshed_at
+               SELECT u.id, u.display_name, u.chip_balance, ROW_NUMBER() OVER (ORDER BY u.chip_balance DESC), datetime('now')
                FROM users u"#,
         )
         .await

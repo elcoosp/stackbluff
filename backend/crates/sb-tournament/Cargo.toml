@@ -14,6 +14,7 @@ tracing = { workspace = true }
 thiserror = { workspace = true }
 chrono = { workspace = true }
 
+metrics = { workspace = true }
 sb-table-registry = { path = "../sb-table-registry" }
 sb-db-repos = { path = "../sb-db-repos" }
 sea-orm = { workspace = true }

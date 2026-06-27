@@ -39,6 +39,9 @@ pub enum AppError {
 
     #[error("Invalid seat")]
     InvalidSeat,
+
+    #[error("Request timed out")]
+    Timeout,
 }
 
 impl From<&str> for AppError {

@@ -17,6 +17,11 @@ impl MigrationTrait for Migration {
                             .not_null()
                             .primary_key(),
                     )
+                    .col(
+                        ColumnDef::new(Tournaments::Name) // NEW
+                            .string()
+                            .not_null(),
+                    )
                     .col(ColumnDef::new(Tournaments::ConfigJson).json().not_null())
                     .col(
                         ColumnDef::new(Tournaments::Status)
@@ -146,6 +151,7 @@ impl MigrationTrait for Migration {
 enum Tournaments {
     Table,
     Id,
+    Name, // NEW
     ConfigJson,
     Status,
     PrizePool,

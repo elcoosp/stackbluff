@@ -97,7 +97,6 @@ function LobbyPage() {
       <aside className="hidden md:flex flex-col w-64 bg-surface-container-low border-r border-outline-variant py-gutter space-y-4 sticky top-0 h-screen">
         <div className="px-6 pt-6 mb-8">
           <div className="p-4 rounded-lg bg-surface-container-highest razor-highlight border border-outline-variant">
-        <Leaderboard />
             <h3 className="font-headline-md text-headline-md text-on-surface mb-1">StackBluff Elite</h3>
             <p className="font-label-caps text-[10px] text-tertiary">Tier: Obsidian</p>
           </div>
@@ -108,7 +107,7 @@ function LobbyPage() {
             <LayoutGrid className="w-5 h-5" />
             <span className="font-label-caps text-label-caps">Lobby</span>
           </Link>
-          <button className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
+          <button onClick={() => navigate({ to: "/tournaments" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
             <Trophy className="w-5 h-5" />
             <span className="font-label-caps text-label-caps">Tournaments</span>
           </button>
@@ -150,7 +149,7 @@ function LobbyPage() {
             </div>
             <div className="flex gap-1 md:gap-2 bg-surface-container p-1 rounded-xl border border-outline-variant self-start md:self-auto">
               <button className="px-3 md:px-6 py-1.5 md:py-2 rounded-lg bg-surface-container-highest text-tertiary font-label-caps text-xs md:text-sm transition-all">Cash Games</button>
-              <button className="px-3 md:px-6 py-1.5 md:py-2 rounded-lg text-on-surface-variant hover:text-on-surface font-label-caps text-xs md:text-sm transition-all">Tournaments</button>
+              <button onClick={() => navigate({ to: "/tournaments" })} className="px-3 md:px-6 py-1.5 md:py-2 rounded-lg text-on-surface-variant hover:text-on-surface font-label-caps text-xs md:text-sm transition-all">Tournaments</button>
               <button className="px-3 md:px-6 py-1.5 md:py-2 rounded-lg text-on-surface-variant hover:text-on-surface font-label-caps text-xs md:text-sm transition-all">Clubs</button>
             </div>
           </div>

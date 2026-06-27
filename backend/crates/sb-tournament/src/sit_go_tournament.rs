@@ -19,7 +19,6 @@ use sb_table_registry::registry::Registry;
 use crate::blind_scheduler::BlindScheduler;
 use crate::payout_calculator::calculate_payouts;
 
-/// Commands sent to the SitGoTournament actor.
 pub enum SitGoCommand {
     Register {
         user_id: UserId,
@@ -39,6 +38,10 @@ pub enum SitGoCommand {
         repo: Arc<dyn sb_contracts::tournament_api::TournamentRepo>,
         user_repo: Arc<dyn sb_contracts::repo_api::UserRepo>,
     },
+    GetMyTable {
+        user_id: UserId,
+        respond_to: oneshot::Sender<Option<TableId>>,
+    },
 }
 
 #[derive(Clone)]
@@ -48,7 +51,6 @@ struct RegisteredPlayer {
     buy_in: ChipAmount,
 }
 
-/// Manages a single Sit & Go tournament lifecycle.
 pub struct SitGoTournament {
     tournament_id: TournamentId,
     config: TournamentConfig,
@@ -66,15 +68,16 @@ pub struct SitGoTournament {
     blind_scheduler: Option<BlindScheduler>,
     players_remaining: u32,
 
-    // For payout tracking
     survivors: HashSet<UserId>,
     elimination_order: Vec<(UserId, PlayerId)>,
     player_info: HashMap<UserId, PlayerId>,
 
-    // Persistence
     tournament_repo: Option<Arc<dyn sb_contracts::tournament_api::TournamentRepo>>,
     user_repo: Option<Arc<dyn sb_contracts::repo_api::UserRepo>>,
     pending_start: bool,
+
+    table_id: Option<TableId>,
+    user_to_table: HashMap<UserId, TableId>,
 }
 
 impl SitGoTournament {
@@ -108,6 +111,8 @@ impl SitGoTournament {
             tournament_repo: None,
             user_repo: None,
             pending_start: false,
+            table_id: None,
+            user_to_table: HashMap::new(),
         }
     }
 
@@ -159,6 +164,13 @@ impl SitGoTournament {
             SitGoCommand::SetRepoHandle { repo, user_repo } => {
                 self.tournament_repo = Some(repo);
                 self.user_repo = Some(user_repo);
+            }
+            SitGoCommand::GetMyTable {
+                user_id,
+                respond_to,
+            } => {
+                let table_id = self.user_to_table.get(&user_id).copied();
+                let _ = respond_to.send(table_id);
             }
         }
     }
@@ -238,7 +250,6 @@ impl SitGoTournament {
         self.status = TournamentStatus::Running;
         self.started_at = Some(Utc::now());
 
-        // Notify players
         let msg = sb_table_registry::game_room::RoomMessage::TournamentStarting {
             tournament_id: self.tournament_id,
             starts_in_seconds: 0,
@@ -246,7 +257,6 @@ impl SitGoTournament {
         self.broker
             .broadcast_to_room(TableId::new(self.tournament_id.as_uuid()), msg);
 
-        // Persist status update
         if let Some(repo) = &self.tournament_repo {
             let _ = repo
                 .set_status(
@@ -257,27 +267,30 @@ impl SitGoTournament {
                 .await;
         }
 
-        // Shuffle players for random seat assignment
-        let mut rng = rand::rng();
-        let mut shuffled = self.players.clone();
-        shuffled.shuffle(&mut rng);
+        let shuffled = {
+            let mut rng = rand::rng();
+            let mut tmp = self.players.clone();
+            tmp.shuffle(&mut rng);
+            tmp
+        };
 
-        // Create tournament table
         let table_config = TableConfig {
             max_players: self.config.max_players as u8,
-            stake_level: sb_shared_types::StakeLevel::Micro, // placeholder
+            stake_level: sb_shared_types::StakeLevel::Micro,
             variant: sb_shared_types::GameVariant::Holdem,
             min_buy_in: self.config.buy_in,
             max_buy_in: self.config.buy_in,
             turn_time_limit_ms: 30_000,
         };
 
-        let cmd_tx = self
+        let (cmd_tx, table_id) = self
             .registry
             .create_tournament_table(table_config, self.tournament_id, self.broker.clone())
             .await?;
 
-        // Transfer players in with specific seats
+        self.table_id = Some(table_id);
+        self.table_cmd_tx = Some(cmd_tx.clone());
+
         for (seat, player) in shuffled.iter().enumerate() {
             let (tx, rx) = oneshot::channel();
             let cmd = TableCommand::TransferPlayerIn {
@@ -299,6 +312,7 @@ impl SitGoTournament {
                         new_seat: assigned_seat,
                     };
                     self.broker.send_to_user(player.user_id, msg);
+                    self.user_to_table.insert(player.user_id, table_id);
                 }
                 Ok(Err(e)) => {
                     error!(%player.user_id, error = ?e, "Failed to transfer player");
@@ -310,11 +324,9 @@ impl SitGoTournament {
             }
         }
 
-        self.table_cmd_tx = Some(cmd_tx.clone());
         self.players_remaining = shuffled.len() as u32;
         self.survivors = shuffled.iter().map(|p| p.user_id).collect();
 
-        // Set initial blinds
         let mut scheduler = BlindScheduler::new(self.config.blind_schedule.levels.clone());
         let (sb, bb, _ante) = scheduler.current_blinds();
         let _ = cmd_tx
@@ -323,7 +335,6 @@ impl SitGoTournament {
         scheduler.start_timer();
         self.blind_scheduler = Some(scheduler);
 
-        // Start first hand
         let (tx, rx) = oneshot::channel();
         let _ = cmd_tx
             .send(TableCommand::ResumeHand {
@@ -343,8 +354,6 @@ impl SitGoTournament {
             return;
         }
 
-        // Process eliminations (busted_players is sorted by starting stack descending,
-        // meaning larger starting stack = better position among those eliminated together)
         for (user_id, _starting_stack) in &event.busted_players {
             if self.survivors.contains(user_id) {
                 let position = self.players_remaining;
@@ -375,13 +384,11 @@ impl SitGoTournament {
             }
         }
 
-        // Check for tournament end
         if self.players_remaining <= 1 {
             self.end_tournament().await;
             return;
         }
 
-        // Advance blinds
         if let Some(scheduler) = &mut self.blind_scheduler
             && let Some((level, sb, bb, ante)) = scheduler.on_hand_completed()
         {
@@ -401,7 +408,6 @@ impl SitGoTournament {
                 .broadcast_to_room(TableId::new(self.tournament_id.as_uuid()), msg);
         }
 
-        // Resume next hand
         if let Some(cmd_tx) = &self.table_cmd_tx {
             let (tx, rx) = oneshot::channel();
             let _ = cmd_tx
@@ -420,29 +426,21 @@ impl SitGoTournament {
         self.status = TournamentStatus::Completed;
         let completed_at = Utc::now();
 
-        // Determine final positions
-        // elimination_order has users in elimination order (first eliminated = last position).
-        // The survivor gets position 1.
         let survivor_user = self.survivors.iter().copied().next();
         let total_players = self.config.max_players;
 
-        // Build position-to-user mapping
         let mut position_map: HashMap<u32, UserId> = HashMap::new();
-        // First eliminated gets the highest position (max_players)
         for (i, (user_id, _)) in self.elimination_order.iter().enumerate() {
             let position = total_players - i as u32;
             position_map.insert(position, *user_id);
         }
-        // Survivor gets position 1
         if let Some(user_id) = survivor_user {
             position_map.insert(1, user_id);
         }
 
-        // Compute payouts
         let prize_pool = self.prize_pool.as_i64();
         let payouts = calculate_payouts(prize_pool, &self.config.payout_structure);
 
-        // Assign prizes and record results
         for (position, prize_amount) in &payouts {
             if let Some(user_id) = position_map.get(position) {
                 let prize = ChipAmount::new(*prize_amount).unwrap();
@@ -454,7 +452,6 @@ impl SitGoTournament {
                     completed_at,
                 });
 
-                // Credit chips to player
                 if let Some(user_repo) = &self.user_repo {
                     let ctx =
                         sb_shared_types::RequestContext::new(uuid::Uuid::new_v4(), Some(*user_id));
@@ -466,7 +463,6 @@ impl SitGoTournament {
                     }
                 }
 
-                // Persist result
                 if let Some(repo) = &self.tournament_repo {
                     let _ = repo
                         .record_result(&TournamentResult {
@@ -481,7 +477,6 @@ impl SitGoTournament {
             }
         }
 
-        // Broadcast results
         let msg = sb_table_registry::game_room::RoomMessage::TournamentResult {
             tournament_id: self.tournament_id,
             results: self
@@ -498,7 +493,6 @@ impl SitGoTournament {
         self.broker
             .broadcast_to_room(TableId::new(self.tournament_id.as_uuid()), msg);
 
-        // Update status
         if let Some(repo) = &self.tournament_repo {
             let _ = repo
                 .set_status(
@@ -509,7 +503,6 @@ impl SitGoTournament {
                 .await;
         }
 
-        // Shutdown table
         if let Some(cmd_tx) = &self.table_cmd_tx {
             let _ = cmd_tx.send(TableCommand::Shutdown).await;
         }

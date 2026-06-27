@@ -13,7 +13,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
 export interface LoginCredentials { email: string; password: string; }
 export interface RegisterData { username: string; email: string; password: string; }
-export interface AuthResponse { token: string; user: { id: string; username: string; email: string; }; }
+export interface AuthResponse { token: string; user: { id: string; username: string; email: string; }; balance?: number; }
 
 export const authApi = {
   login: (creds: LoginCredentials) => request<AuthResponse>('/auth/login', { method: 'POST', body: JSON.stringify(creds) }),

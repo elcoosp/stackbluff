@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TournamentsRouteImport } from './routes/tournaments'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LobbyRouteImport } from './routes/lobby'
@@ -17,6 +18,11 @@ import { Route as GuideRouteImport } from './routes/guide'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TableTableIdRouteImport } from './routes/table/$tableId'
 
+const TournamentsRoute = TournamentsRouteImport.update({
+  id: '/tournaments',
+  path: '/tournaments',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
@@ -60,6 +66,7 @@ export interface FileRoutesByFullPath {
   '/lobby': typeof LobbyRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/tournaments': typeof TournamentsRoute
   '/table/$tableId': typeof TableTableIdRoute
 }
 export interface FileRoutesByTo {
@@ -69,6 +76,7 @@ export interface FileRoutesByTo {
   '/lobby': typeof LobbyRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/tournaments': typeof TournamentsRoute
   '/table/$tableId': typeof TableTableIdRoute
 }
 export interface FileRoutesById {
@@ -79,6 +87,7 @@ export interface FileRoutesById {
   '/lobby': typeof LobbyRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/tournaments': typeof TournamentsRoute
   '/table/$tableId': typeof TableTableIdRoute
 }
 export interface FileRouteTypes {
@@ -90,6 +99,7 @@ export interface FileRouteTypes {
     | '/lobby'
     | '/login'
     | '/register'
+    | '/tournaments'
     | '/table/$tableId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -99,6 +109,7 @@ export interface FileRouteTypes {
     | '/lobby'
     | '/login'
     | '/register'
+    | '/tournaments'
     | '/table/$tableId'
   id:
     | '__root__'
@@ -108,6 +119,7 @@ export interface FileRouteTypes {
     | '/lobby'
     | '/login'
     | '/register'
+    | '/tournaments'
     | '/table/$tableId'
   fileRoutesById: FileRoutesById
 }
@@ -118,11 +130,19 @@ export interface RootRouteChildren {
   LobbyRoute: typeof LobbyRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
+  TournamentsRoute: typeof TournamentsRoute
   TableTableIdRoute: typeof TableTableIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/tournaments': {
+      id: '/tournaments'
+      path: '/tournaments'
+      fullPath: '/tournaments'
+      preLoaderRoute: typeof TournamentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/register': {
       id: '/register'
       path: '/register'
@@ -182,6 +202,7 @@ const rootRouteChildren: RootRouteChildren = {
   LobbyRoute: LobbyRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
+  TournamentsRoute: TournamentsRoute,
   TableTableIdRoute: TableTableIdRoute,
 }
 export const routeTree = rootRouteImport

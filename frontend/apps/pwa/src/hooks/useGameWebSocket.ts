@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useGameStore, TableState, ActionRequired } from '@stackbluff/shared/stores/gameStore';
 import { toast } from 'sonner';
+import { useTournamentStore } from '@stackbluff/shared/stores/tournamentStore';
 
 function getToken(): string | null {
   return localStorage.getItem('auth_token');
@@ -47,7 +48,6 @@ const parseMessage = (data: any) => {
 
     case 'TableState': {
       if (!data.players) return null;
-      // FIX: Return seats as an array to match the expected type in gameStore.ts
       const seats: any[] = data.players.map((p: any) => ({
         seat: p.seat,
         user_id: p.user_id,
@@ -166,6 +166,79 @@ const parseMessage = (data: any) => {
       return null;
     }
 
+    // ─── Tournament events ──────────────────────────────────────
+    case 'TournamentState': {
+      useTournamentStore.getState().setTournamentState(data.tournament_id, {
+        status: data.status,
+        registered_count: data.registered_count,
+        max_players: data.max_players,
+        prize_pool: data.prize_pool,
+        blind_level: data.blind_level,
+        players_remaining: data.players_remaining,
+        tables: data.tables,
+        next_blind_at: data.next_blind_at,
+      });
+      if (data.players_remaining !== undefined && data.players_remaining <= 9) {
+        window.dispatchEvent(new CustomEvent('tournament:finalTable', { detail: { tournamentId: data.tournament_id } }));
+      }
+      return null;
+    }
+
+    case 'TournamentRegistered': {
+      const store = useTournamentStore.getState();
+      store.setTournament(data.tournament_id, {
+        registered: data.current_players,
+      });
+      const userId = data.user_id;
+      if (userId) {
+        store.setRegistered(data.tournament_id, userId, true);
+      }
+      return null;
+    }
+
+    case 'TournamentStarting': {
+      window.dispatchEvent(new CustomEvent('tournament:starting', {
+        detail: { tournamentId: data.tournament_id, startsInSeconds: data.starts_in_seconds }
+      }));
+      return null;
+    }
+
+    case 'TournamentBlindLevel': {
+      useTournamentStore.getState().setTournamentState(data.tournament_id, {
+        blind_level: data.level,
+      });
+      window.dispatchEvent(new CustomEvent('tournament:blindLevel', {
+        detail: { tournamentId: data.tournament_id, level: data.level, blinds: data.blinds }
+      }));
+      return null;
+    }
+
+    case 'TournamentElimination': {
+      window.dispatchEvent(new CustomEvent('tournament:elimination', {
+        detail: { tournamentId: data.tournament_id, playerName: data.player_name, position: data.position }
+      }));
+      return null;
+    }
+
+    case 'TournamentTableChanged': {
+      const state = useTournamentStore.getState();
+      state.setTournamentState(data.tournament_id, {
+        my_table_id: data.new_room_id,
+      });
+      window.dispatchEvent(new CustomEvent('tournament:tableChanged', {
+        detail: { tournamentId: data.tournament_id, newRoomId: data.new_room_id, newSeat: data.new_seat }
+      }));
+      return null;
+    }
+
+    case 'TournamentResult': {
+      useTournamentStore.getState().setResults(data.tournament_id, data.results);
+      window.dispatchEvent(new CustomEvent('tournament:result', {
+        detail: { tournamentId: data.tournament_id, results: data.results }
+      }));
+      return null;
+    }
+
     default:
       return null;
   }
@@ -205,10 +278,9 @@ export function useGameWebSocket(tableId: string) {
       reconnectAttempts.current = 0;
 
       if (buyInRef.current !== null) {
-        wsRef.current.send(JSON.stringify({ type: 'join_table', table_id: tableId, buy_in: buyInRef.current }));
+        wsRef.current?.send(JSON.stringify({ type: 'join_table', table_id: tableId, buy_in: buyInRef.current }));
         buyInRef.current = null;
       } else {
-        // FIX: Always send reconnect if no pending join. The backend will tell us if we aren't seated.
         ws.send(JSON.stringify({ type: 'reconnect', table_id: tableId }));
       }
 
@@ -246,7 +318,6 @@ export function useGameWebSocket(tableId: string) {
         const roomId = message.room_id;
         const store = useGameStore.getState();
 
-        // FIX: Ensure room exists before applying store methods to prevent race conditions
         if (roomId && !store.rooms[roomId]) {
           useGameStore.setState((s) => {
             const rooms = { ...s.rooms };
@@ -282,7 +353,6 @@ export function useGameWebSocket(tableId: string) {
             if (roomId) {
               store.ensureRoom(roomId);
               store.setHeroSeat(roomId, message.seat_index);
-              // FIX: ALWAYS set active room on Connected to ensure UI switches to the new room
               store.setActiveRoom(roomId);
             }
             break;
@@ -295,7 +365,6 @@ export function useGameWebSocket(tableId: string) {
               }
               return { rooms };
             });
-            // FIX: ALWAYS set active room on RoomAssigned
             store.setActiveRoom(message.room_id);
             break;
           }
@@ -306,11 +375,9 @@ export function useGameWebSocket(tableId: string) {
           case 'TableState': {
             if (roomId) {
               store.setRoomState(roomId, message as TableState);
-              // FIX: ALWAYS set active room on TableState if it's not already set
               if (useGameStore.getState().activeRoomId !== roomId) {
                 store.setActiveRoom(roomId);
               }
-
               const state = message as TableState;
               if (!state.current_hand_in_progress || state.current_turn_user_id !== myUserIdRef.current) {
                 store.clearActionRequired(roomId);
@@ -320,7 +387,7 @@ export function useGameWebSocket(tableId: string) {
           }
           case 'ActionRequired': {
             if (roomId) {
-              if (myUserIdRef.current && message.player_id === myUserIdRef.current) {
+              if (myUserIdRef.current && message.player_id && message.player_id === myUserIdRef.current) {
                 store.setActionRequired(roomId, message as ActionRequired);
               } else {
                 store.clearActionRequired(roomId);
@@ -353,7 +420,9 @@ export function useGameWebSocket(tableId: string) {
             break;
           }
           case 'Analytics': {
-            if (roomId) store.setAnalytics(roomId, message.analytics);
+            if (roomId && message.analytics) {
+              store.setAnalytics(roomId, message.analytics);
+            }
             break;
           }
           case 'HandResult': {
@@ -388,11 +457,9 @@ export function useGameWebSocket(tableId: string) {
 
   useEffect(() => {
     mountedRef.current = true;
-
     const timer = setTimeout(() => {
       if (mountedRef.current) connect();
     }, 100);
-
     return () => {
       mountedRef.current = false;
       clearTimeout(timer);
@@ -441,12 +508,29 @@ export function useGameWebSocket(tableId: string) {
   const sendLeave = useCallback((roomId: string) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'leave_table', room_id: roomId }));
-
       const nextRoom = Object.keys(useGameStore.getState().rooms).find(id => id !== roomId);
       useGameStore.getState().setActiveRoom(nextRoom || null);
       useGameStore.getState().removeRoom(roomId);
     }
   }, []);
 
-  return { sendLeave, sendJoin, sendAction, sendRebuy, connectionStatus, myUserId, notSeated };
+  const sendWsMessage = useCallback((type: string, payload: Record<string, any>) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type, ...payload }));
+    }
+  }, []);
+
+  // Auto-subscribe to tournament if tournamentId in URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tournamentId = urlParams.get('tournamentId');
+    if (tournamentId && wsRef.current?.readyState === WebSocket.OPEN) {
+      sendWsMessage('register_tournament', { tournament_id: tournamentId });
+      return () => {
+        sendWsMessage('unregister_tournament', { tournament_id: tournamentId });
+      };
+    }
+  }, [tableId, sendWsMessage]);
+
+  return { sendLeave, sendJoin, sendAction, sendRebuy, sendWsMessage, connectionStatus, myUserId, notSeated };
 }
