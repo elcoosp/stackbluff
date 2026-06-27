@@ -77,6 +77,9 @@ pub async fn handle_poker_command(ctx: &RequestContext, state: &Arc<BotState>, m
 
     CreateTableInput {
         name: format!("Poker table from group {}", chat_id.0),
+            created_by: message.from.as_ref().map(|user| user.id.into()).unwrap_or(0.into()),
+            telegram_chat_id: Some(message.chat.id.to_string()),
+    }
         created_by: msg.from.as_ref().map(|user| user.id.into()).unwrap_or(0.into()),
         telegram_chat_id: Some(msg.chat.id.to_string()),
     }
