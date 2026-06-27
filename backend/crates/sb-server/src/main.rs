@@ -50,8 +50,6 @@ use test_utils::table_service::InMemoryTableService;
 use test_utils::user_resolution_service::InMemoryUserResolutionService;
 mod hand_archive;
 
-#[tokio::main]
-
 async fn reschedule_tournament_reminders(
     repo: std::sync::Arc<dyn sb_contracts::tournament_api::TournamentRepo>,
     notification_service: std::sync::Arc<dyn sb_contracts::notification::NotificationService>,
@@ -79,6 +77,7 @@ async fn reschedule_tournament_reminders(
     }
 }
 
+#[tokio::main]
 async fn main() {
     dotenvy::dotenv().expect("Failed to load .env");
     tracing_subscriber::fmt().init();
