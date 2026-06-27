@@ -556,6 +556,8 @@ fn run_monte_carlo(
 }
 
 pub struct TableActor {
+    pub created_by: sb_shared_types::UserId,
+    pub telegram_chat_id: Option<String>,
     room_id: TableId,
     table_id: TableId,
     config: TableConfig,
@@ -564,7 +566,7 @@ pub struct TableActor {
     user_senders: HashMap<UserId, mpsc::UnboundedSender<RoomMessage>>,
     cmd_tx: mpsc::Sender<InternalCommand>,
     last_dealer_index: Option<usize>,
-    event_tx: tokio::sync::broadcast::Sender<HandCompletedEvent>,
+    event_tx: tokio::sync::broadcast::Sender<TableEvent>,
     hand_players: Vec<HandPlayer>,
     hand_actions: Vec<HandAction>,
     hand_started_at: Option<chrono::DateTime<chrono::Utc>>,
@@ -590,7 +592,7 @@ impl TableActor {
         table_id: TableId,
         config: TableConfig,
         cmd_tx: mpsc::Sender<InternalCommand>,
-        event_tx: tokio::sync::broadcast::Sender<HandCompletedEvent>,
+        event_tx: tokio::sync::broadcast::Sender<TableEvent>,
         stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
         active_players: Arc<AtomicU8>,
     ) -> Self {
@@ -865,6 +867,7 @@ impl TableActor {
             }
 
             InternalCommand::Shutdown => {
+            self.emit_table_closed_event();
                 if let Some(hand) = &mut self.current_hand {
                     hand.cancel_timeout();
                 }
@@ -1817,7 +1820,7 @@ impl TableActor {
             busted_players: busted,
         };
 
-        if let Err(e) = self.event_tx.send(event) {
+        if let Err(e) = self.event_tx.send(TableEvent::HandCompleted(event)) {
             warn!(
                 table_id = %self.table_id,
                 room_id = %self.room_id,
@@ -2432,6 +2435,28 @@ impl TableActor {
         self.kick_cooldowns
             .retain(|_, instant| instant.elapsed() < StdDuration::from_secs(300));
     }
+    fn emit_table_closed_event(&self) {
+        use sb_shared_types::{UserId, TableId, ChipAmount};
+        use crate::events::{TableClosedEvent, TableEvent};
+
+        // Placeholder: in a real implementation, retrieve from game state.
+        // For now, use default values.
+        let winner = None;
+        let hand_desc = "Unknown".to_string();
+        let pot = ChipAmount::new(0);
+
+        let event = TableClosedEvent {
+            table_id: self.table_id,
+            room_id: self.table_id,
+            started_by: self.created_by,
+            winner,
+            winning_hand_description: hand_desc,
+            pot_amount: pot,
+            chat_id: self.telegram_chat_id.clone(),
+        };
+
+        let _ = self.event_tx.send(TableEvent::TableClosed(event));
+    }
 }
 
 fn community_cards_to_array(hand: &ActiveHand) -> Option<[sb_shared_types::Card; 5]> {
@@ -2447,7 +2472,7 @@ pub fn spawn_table_actor(
     room_id: TableId,
     table_id: TableId,
     config: TableConfig,
-    event_tx: tokio::sync::broadcast::Sender<HandCompletedEvent>,
+    event_tx: tokio::sync::broadcast::Sender<TableEvent>,
     stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
     active_players: Arc<AtomicU8>,
 ) -> (mpsc::Sender<InternalCommand>, tokio::task::JoinHandle<()>) {
