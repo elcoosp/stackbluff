@@ -1,0 +1,101 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/sb-payment",
+    "crates/sb-anti-cheat",
+    "crates/sb-viral",
+    "crates/sb-oracle",
+    "crates/sb-auth",
+    "crates/sb-contracts",
+    "crates/sb-db-entities",
+    "crates/sb-mission",
+    "crates/sb-db-repos",
+    "crates/sb-game-engine",
+    "crates/sb-rest-router",
+    "crates/sb-shared-types",
+    "crates/sb-table-registry",
+    "crates/sb-ws-handler",
+    "crates/sb-ws-messages",
+    "migration",
+    "crates/sb-club",
+    "crates/sb-server",
+    "crates/sb-tournament",
+        "crates/sb-notification",
+]
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.94"
+
+[workspace.dependencies]
+tokio-cron-scheduler = "0.11"
+sb-notification = { path = "crates/sb-notification" }
+figment = { version = "0.10", features = ["toml", "env"] }
+wiremock = { version = "0.6",}
+reqwest = { version = "0.12", features = ["json"] }
+web-push = { version = "0.11" }
+axum-extra = { version = "0.10", features = ["cookie"] }
+    lazy_static = "1.4"
+    prometheus = { version = "0.14", features = ["process"] }
+    dotenvy = "0.15"
+# DUPLICATE REMOVED:     reqwest = { version = "0.13", features = ["json"] }
+    async-stripe-types = "=1.0.0-rc.6"
+    async-stripe-webhook = "=1.0.0-rc.6"
+    async-stripe-checkout = { version = "=1.0.0-rc.6", features = ["checkout_session"] }
+    async-stripe = { version = "=1.0.0-rc.6", features = ["default-tls"] }
+metrics = "0.24"
+dashmap = { version = "6", features = ["serde"] }
+
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+sb-server = { path = "crates/sb-server" }
+sb-club = { path = "crates/sb-club" }
+futures = { version = "0.3.32", default-features = false, features = ["std", "async-await"] }
+moka = { version = "0.12.5", features = ["sync"] }
+parking_lot = "0.12.3"
+sb-bot-handler = { path = "crates/sb-bot-handler" }
+teloxide = { version = "0.17", features = ["webhooks", "axum"] }
+sb-rest-router = { path = "crates/sb-rest-router" }
+sb-oracle = { path = "crates/sb-oracle" }
+tracing-appender = { version = "0.2" }
+
+sb-contracts = { path = "crates/sb-contracts" }
+
+sb-auth = { path = "crates/sb-auth" }
+
+sb-shared-types = { path = "crates/sb-shared-types" }
+sb-game-engine = { path = "crates/sb-game-engine" }
+sb-mission = { path = "crates/sb-mission" }
+sb-ws-messages = { path = "crates/sb-ws-messages" }
+sb-ws-handler = { path = "crates/sb-ws-handler" }
+async-trait = { version = "0.1.89" }
+anyhow = { version = "1.0.102" }
+thiserror = { version = "2.0.18" }
+serde_json = { version = "1.0.150" }
+tracing = { version = "0.1.44" }
+axum = { version = "0.8.9", features = ["ws", "macros"] }
+secrecy = "0.10"
+url = "2.5"
+once_cell = "1.21.4"
+password-hash = "0.6.1"
+mockall = "0.14.0"
+hex = "0.4"
+base64 = "0.22"
+sha2 = "0.11"
+hmac = "0.13"
+jsonwebtoken = { version = "=10.3.0", features = ["rust_crypto"] }
+argon2 = "0.6.0-rc.8"
+sqlx = { version = "0.9.0", features = ["sqlite", "runtime-tokio", "tls-rustls"] }
+sea-orm = { version = "2.0.0-rc.38", features = ["sqlx-sqlite", "runtime-tokio-rustls", "macros"] }
+sea-orm-migration = { version = "2.0.0-rc.38" }
+serde = { version = "1.0.228", features = ["derive"] }
+uuid = { version = "1.23.0", features = ["v7", "serde"] }
+chrono = { version = "0.4.45", features = ["serde"] }
+derive_more = "2.1.1"
+tokio = { version = "1.52.3", features = ["rt", "macros"] }
+rand = { version = "0.10.0", features = ["std_rng"] }
+strum = { version = "0.28.0", features = ["derive"] }
+tower = { version = "0.5" }
+tower-http = { version = "0.6", features = ["auth"] }
+tokio-tungstenite = { version = "0.29.0" }
+http = { version = "1.1.0" }
+sb-db-entities = { path = "crates/sb-db-entities" }
