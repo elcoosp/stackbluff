@@ -1,7 +1,7 @@
 use sea_orm_migration::prelude::*;
 
 #[derive(DeriveMigrationName)]
-struct Migration;
+pub struct Migration;
 
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
@@ -11,11 +11,11 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(DeletionRequests::Table)
                     .if_not_exists()
-                    .col(ColumnDef::new(DeletionRequests::UserId).Uuid().not_null().primary_key())
-                    .col(ColumnDef::new(DeletionRequests::RequestedAt).Timestamp().not_null())
-                    .col(ColumnDef::new(DeletionRequests::Status).Text().not_null().default("pending"))
-                    .col(ColumnDef::new(DeletionRequests::ProcessedAt).Timestamp())
-                    .col(ColumnDef::new(DeletionRequests::Reason).Text())
+                    .col(ColumnDef::new(DeletionRequests::UserId).uuid().not_null().primary_key())
+                    .col(ColumnDef::new(DeletionRequests::RequestedAt).timestamp().not_null())
+                    .col(ColumnDef::new(DeletionRequests::Status).text().not_null().default("pending"))
+                    .col(ColumnDef::new(DeletionRequests::ProcessedAt).timestamp())
+                    .col(ColumnDef::new(DeletionRequests::Reason).text())
                     .foreign_key(
                         ForeignKey::create()
                             .name("fk-deletion-requests-user-id")
@@ -31,7 +31,7 @@ impl MigrationTrait for Migration {
             .alter_table(
                 Table::alter()
                     .table(Users::Table)
-                    .add_column(ColumnDef::new(Users::DeletedAt).Timestamp())
+                    .add_column(ColumnDef::new(Users::DeletedAt).timestamp())
                     .to_owned(),
             )
             .await?;
