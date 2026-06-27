@@ -233,24 +233,21 @@ pub trait ReferralRepository: Send + Sync {
 
 pub use UserRepository as UserRepo;
 
-use uuid::Uuid;
-use chrono::NaiveDateTime;
-
 #[async_trait::async_trait]
 pub trait GdprRepo: Send + Sync {
-    async fn request_deletion(&self, user_id: Uuid) -> Result<(), PersistenceError>;
+    async fn request_deletion(&self, user_id: uuid::Uuid) -> Result<(), PersistenceError>;
     async fn get_pending_deletions(&self, older_than_days: i64) -> Result<Vec<DeletionRequestDto>, PersistenceError>;
-    async fn mark_deletion_completed(&self, user_id: Uuid) -> Result<(), PersistenceError>;
-    async fn get_user_data(&self, user_id: Uuid) -> Result<UserDataExportDto, PersistenceError>;
-    async fn anonymize_user(&self, user_id: Uuid) -> Result<(), PersistenceError>;
-    async fn invalidate_sessions(&self, user_id: Uuid) -> Result<(), PersistenceError>;
-    async fn get_user_password_hash(&self, user_id: Uuid) -> Result<String, PersistenceError>;
+    async fn mark_deletion_completed(&self, user_id: uuid::Uuid) -> Result<(), PersistenceError>;
+    async fn get_user_data(&self, user_id: uuid::Uuid) -> Result<UserDataExportDto, PersistenceError>;
+    async fn anonymize_user(&self, user_id: uuid::Uuid) -> Result<(), PersistenceError>;
+    async fn invalidate_sessions(&self, user_id: uuid::Uuid) -> Result<(), PersistenceError>;
+    async fn get_user_password_hash(&self, user_id: uuid::Uuid) -> Result<String, PersistenceError>;
 }
 
 #[derive(Clone, Debug)]
 pub struct DeletionRequestDto {
-    pub user_id: Uuid,
-    pub requested_at: NaiveDateTime,
+    pub user_id: uuid::Uuid,
+    pub requested_at: chrono::NaiveDateTime,
 }
 
 #[derive(Clone, Debug, serde::Serialize)]
