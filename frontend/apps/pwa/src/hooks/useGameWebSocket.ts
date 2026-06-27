@@ -1,4 +1,5 @@
 import { useEntitlementsStore } from '../stores/entitlementsStore';
+import { UserUpdatedPayloadSchema } from '../lib/wsMessages';
 import { useAuthStore } from '../stores/authStore';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useGameStore, TableState, ActionRequired } from '@stackbluff/shared/stores/gameStore';
