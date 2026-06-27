@@ -1,9 +1,9 @@
-import { useUserUpdates } from '../hooks/useUserUpdates';
 import { useEffect, useCallback, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { useShopStore, type Product } from '../stores/shopStore';
 import { useAuthStore } from '../stores/authStore';
+import { useEntitlementsStore } from '../stores/entitlementsStore';
 import { fetchProducts, createPaymentIntent, fetchUserMe } from '../lib/shopApi';
 import { getPaymentProvider, isMiniApp } from '../lib/platform';
 import { GlassPanel, LiquidMetalButton } from '@stackbluff/shared/ui';
@@ -13,13 +13,19 @@ import { Card } from '../components/ui/Card';
 
 function SeasonPassTimer({ expiresAt }: { expiresAt: string }) {
   const [remaining, setRemaining] = useState(() => {
-    const diff = new Date(expiresAt).getTime() - Date.now();
-    return Math.max(0, diff);
+    const exp = new Date(expiresAt);
+    if (isNaN(exp.getTime())) return 0;
+    return Math.max(0, exp.getTime() - Date.now());
   });
 
   useEffect(() => {
     const interval = setInterval(() => {
-      const diff = new Date(expiresAt).getTime() - Date.now();
+      const exp = new Date(expiresAt);
+      if (isNaN(exp.getTime())) {
+        setRemaining(0);
+        return;
+      }
+      const diff = exp.getTime() - Date.now();
       setRemaining(Math.max(0, diff));
     }, 1000);
     return () => clearInterval(interval);
@@ -27,6 +33,8 @@ function SeasonPassTimer({ expiresAt }: { expiresAt: string }) {
 
   const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
   const hours = Math.floor((remaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+
+  if (remaining === 0) return <span className="text-sm text-red-400">Expired</span>;
 
   return (
     <span className="text-sm text-emerald-400">
@@ -53,28 +61,25 @@ export default function ShopPage() {
   const queryClient = useQueryClient();
   const shop = useShopStore();
   const auth = useAuthStore();
-  useUserUpdates();
+  const entitlements = useEntitlementsStore();
 
-  // Fetch products
   const { data: productsData, isLoading: productsLoading } = useQuery({
     queryKey: ['shop-products'],
     queryFn: fetchProducts,
   });
 
-  // Fetch user profile (hydrates authStore)
   const { isLoading: userLoading } = useQuery({
     queryKey: ['user-me'],
     queryFn: async () => {
       const user = await fetchUserMe();
       auth.setBalance(user.balance);
-      auth.setSeasonPassExpiresAt(user.season_pass_expires_at);
-      auth.setClubProExpiresAt(user.club_pro_expires_at);
-      auth.setIsClubOwner(user.is_club_owner);
+      entitlements.setSeasonPassExpiresAt(user.season_pass_expires_at);
+      entitlements.setClubProExpiresAt(user.club_pro_expires_at);
+      entitlements.setIsClubOwner(user.is_club_owner);
       return user;
     },
   });
 
-  // Polling fallback after purchase
   useEffect(() => {
     if (!shop.isPurchasing) return;
     const interval = setInterval(() => {
@@ -83,7 +88,6 @@ export default function ShopPage() {
     return () => clearInterval(interval);
   }, [shop.isPurchasing, queryClient]);
 
-  // Hydrate shop store from products query
   useEffect(() => {
     if (productsData?.products) {
       shop.setProducts(
@@ -163,7 +167,6 @@ export default function ShopPage() {
     }
   }, [shop, queryClient]);
 
-  // Auto-dismiss toast
   useEffect(() => {
     if (!shop.toast) return;
     const timer = setTimeout(() => shop.setToast(null), 4000);
@@ -172,7 +175,7 @@ export default function ShopPage() {
 
   const isLoading = productsLoading || userLoading;
   const products = shop.products;
-  const isClubOwner = auth.isClubOwner;
+  const isClubOwner = entitlements.isClubOwner;
 
   if (isLoading && products.length === 0) {
     return (
@@ -194,14 +197,10 @@ export default function ShopPage() {
             }
 
             const isSeasonPassActive =
-              product.type === 'season_pass' &&
-              auth.seasonPassExpiresAt !== null &&
-              new Date(auth.seasonPassExpiresAt) > new Date();
+              product.type === 'season_pass' && entitlements.hasActiveSeasonPass();
 
             const isClubProActive =
-              product.type === 'club_pro' &&
-              auth.clubProExpiresAt !== null &&
-              new Date(auth.clubProExpiresAt) > new Date();
+              product.type === 'club_pro' && entitlements.hasActiveClubPro();
 
             return (
               <motion.div
@@ -226,12 +225,12 @@ export default function ShopPage() {
                       <div className="mb-1 text-lg font-bold text-white">{formatPrice(product)}</div>
                       <div className="mb-4 text-sm text-slate-500">{formatSecondaryPrice(product)}</div>
 
-                      {product.type === 'season_pass' && isSeasonPassActive && auth.seasonPassExpiresAt ? (
+                      {product.type === 'season_pass' && isSeasonPassActive && entitlements.seasonPassExpiresAt ? (
                         <div className="flex flex-col gap-2">
                           <span className="inline-flex items-center rounded-full bg-emerald-500/20 px-3 py-1 text-sm font-medium text-emerald-400">
                             Active
                           </span>
-                          <SeasonPassTimer expiresAt={auth.seasonPassExpiresAt} />
+                          <SeasonPassTimer expiresAt={entitlements.seasonPassExpiresAt} />
                         </div>
                       ) : product.type === 'club_pro' && isClubProActive ? (
                         <span className="inline-flex items-center rounded-full bg-emerald-500/20 px-3 py-1 text-sm font-medium text-emerald-400">
@@ -258,7 +257,6 @@ export default function ShopPage() {
         </div>
       </div>
 
-      {/* Confirmation Dialog */}
       <Dialog open={shop.isDialogOpen} onOpenChange={(open) => shop.setDialogOpen(open)}>
         <DialogContent className="bg-[#1a1a1a] text-white">
           <DialogHeader>
@@ -288,7 +286,6 @@ export default function ShopPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Toast */}
       {shop.toast ? (
         <motion.div
           initial={{ opacity: 0, y: 50 }}
