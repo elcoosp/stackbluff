@@ -1,5 +1,4 @@
-import { useAuthStore } from '../../stores/authStore';
-import { useAuthStore } from '../stores/authStore';
+import { useEntitlementsStore } from '../../stores/entitlementsStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
 import { Minimize2, Maximize2 } from 'lucide-react';
@@ -66,7 +65,7 @@ export const TacticalOracle = ({
 
   return (
     <
-      {isSeasonPassActive && (
+      {hasActiveSeasonPass() && (
         <span className="ml-2 inline-flex items-center rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-medium text-amber-400">
           Unlimited
         </span>
