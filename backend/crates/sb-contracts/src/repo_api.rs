@@ -44,6 +44,12 @@ pub trait UserRepository: Send + Sync {
         id: UserId,
     ) -> PersistenceResult<UserProfile>;
 
+    async fn has_active_season_pass(
+        &self,
+        ctx: RequestContext,
+        user_id: UserId,
+    ) -> Result<bool, PersistenceError>;
+
     /// Updates the user's chip balance by `delta`. Returns the new balance.
     async fn update_chip_balance(
         &self,

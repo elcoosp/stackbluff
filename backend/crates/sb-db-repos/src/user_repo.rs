@@ -1,21 +1,3 @@
-use crate::commands::DbCommand;
-use sb_contracts::repo_api::{
-    PersistenceError, PersistenceResult, UserCreate, UserProfile, UserRepository,
-};
-use sb_shared_types::{RequestContext, UserId};
-use tokio::sync::{mpsc, oneshot};
-
-pub struct UserRepoImpl {
-    sender: mpsc::UnboundedSender<DbCommand>,
-}
-
-impl UserRepoImpl {
-    pub fn new(sender: mpsc::UnboundedSender<DbCommand>) -> Self {
-        Self { sender }
-    }
-}
-
-#[async_trait::async_trait]
 impl UserRepository for UserRepoImpl {
     async fn create_user(
         &self,
@@ -177,5 +159,16 @@ impl UserRepository for UserRepoImpl {
             .map_err(|e| PersistenceError::Database(e.to_string()))?;
 
         Ok(new_balance)
+    }
+    async fn has_active_season_pass(
+        &self,
+        ctx: RequestContext,
+        user_id: UserId,
+    ) -> Result<bool, PersistenceError> {
+        let profile = self.get_user_profile(ctx, user_id).await?;
+        Ok(profile
+            .season_pass_expires_at
+            .map(|exp| exp > chrono::Utc::now())
+            .unwrap_or(false))
     }
 }

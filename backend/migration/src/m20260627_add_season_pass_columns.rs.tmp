@@ -1,0 +1,83 @@
+use sea_orm_migration::prelude::*;
+
+#[derive(DeriveMigrationName)]
+pub struct Migration;
+
+#[async_trait::async_trait]
+impl MigrationTrait for Migration {
+        // Helper to drop a column and ignore “no such column” errors
+        async fn drop_column(
+            manager: &SchemaManager<'_>,
+            table: Alias,
+            column: &str,
+        ) -> Result<(), DbErr> {
+            let stmt = Table::alter()
+                .table(table)
+                .drop_column(Alias::new(column))
+                .to_owned();
+            if let Err(e) = manager.alter_table(stmt).await {
+                let msg = e.to_string();
+                if msg.contains("no such column") {
+                    Ok(())
+                } else {
+                    Err(e)
+                }
+            } else {
+                Ok(())
+            }
+        }
+
+        drop_column(manager, Alias::new("users"), "streak_count").await?;
+        drop_column(manager, Alias::new("users"), "last_streak_date").await?;
+        drop_column(manager, Alias::new("users"), "weekly_bonus_awarded_streak").await?;
+
+        // Drop tables
+        manager
+            .drop_table(Table::drop().table(DailyMission::Table).to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(MissionDefinition::Table).to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(Streak::Table).to_owned())
+            .await?;
+
+        Ok(())
+    }
+}
+
+#[derive(DeriveIden)]
+enum DailyMission {
+    Table,
+    Id,
+    UserId,
+    AssignedDate,
+    MissionType,
+    Progress,
+    Completed,
+    Rerolled,
+    RewardClaimed,
+}
+
+#[derive(DeriveIden)]
+enum MissionDefinition {
+    Table,
+    MissionType,
+    Name,
+    Description,
+    TargetValue,
+    RewardChips,
+    Category,
+    IsViral,
+}
+
+#[derive(DeriveIden)]
+enum Streak {
+    Table,
+    UserId,
+    CurrentStreak,
+    LongestStreak,
+    LastCompletionDate,
+    ShieldAvailable,
+    BonusAwardedStreak,
+}

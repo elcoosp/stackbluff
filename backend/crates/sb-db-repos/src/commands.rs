@@ -3,6 +3,8 @@ use sb_contracts::repo_api::UserProfile;
 use sb_shared_types::{RequestContext, UserId};
 use tokio::sync::oneshot;
 use uuid::Uuid;
+#[allow(unused_imports)]
+use chrono::{DateTime, Utc};
 
 pub type ResponseSender<T> = oneshot::Sender<PersistenceResult<T>>;
 
