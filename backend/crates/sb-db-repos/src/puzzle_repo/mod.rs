@@ -21,7 +21,7 @@ impl PuzzleRepo for PuzzleRepoImpl {
             .filter(puzzle_submission::Column::PuzzleDate.eq(date))
             .one(&self.db)
             .await
-            .map_err(|e| PersistenceError::Internal(e.to_string()))?;
+            .map_err(|e| PersistenceError::Database(e.to_string()))?;
 
         Ok(model.map(|m| PuzzleSubmissionRecord {
             user_id: m.user_id,
@@ -40,7 +40,7 @@ impl PuzzleRepo for PuzzleRepoImpl {
             is_correct: Set(record.is_correct),
             submitted_at: Set(record.submitted_at),
         };
-        active_model.insert(&self.db).await.map_err(|e| PersistenceError::Internal(e.to_string()))?;
+        active_model.insert(&self.db).await.map_err(|e| PersistenceError::Database(e.to_string()))?;
         Ok(())
     }
 }

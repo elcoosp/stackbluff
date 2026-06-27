@@ -5,11 +5,10 @@ edition = "2024"
 rust-version = "1.94"
 
 [dependencies]
-
+uuid = { workspace = true, features = ["v4", "serde"] }
+serde = { workspace = true }
 thiserror = { workspace = true }
 derive_more = { workspace = true, features = ["display", "from", "into", "add"] }
 tracing = { workspace = true }
 
 chrono = { workspace = true }
-uuid = { workspace = true }
-serde = { workspace = true, features = ["derive"] }

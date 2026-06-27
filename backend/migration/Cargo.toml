@@ -5,13 +5,10 @@ edition = "2024"
 rust-version = "1.94"
 
 [dependencies]
-
+sea-orm-migration = { workspace = true }
 sb-db-entities = { path = "../crates/sb-db-entities" }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
-
+async-trait = { workspace = true }
 uuid = { workspace = true, features = ["v4"] }
 serde_json = { workspace = true }
 chrono = { workspace = true }
-
-sea-orm-migration = { workspace = true }
-async-trait = { workspace = true }

@@ -7,13 +7,12 @@ edition.workspace = true
 sea-orm = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-
+sb-shared-types = { path = "../sb-shared-types" }
 tokio = { workspace = true, features = ["sync"] }
 thiserror = { workspace = true }
+async-trait.workspace = true
+chrono.workspace = true
+uuid.workspace = true
 
-chrono = { workspace = true }
-uuid = { workspace = true }
-async-trait = { workspace = true }
-sb-shared-types = { path = "../sb-shared-types" }
 [dev-dependencies]
 mockall.workspace = true

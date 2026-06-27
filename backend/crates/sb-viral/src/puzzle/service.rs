@@ -25,7 +25,7 @@ pub fn get_today_puzzle_response() -> Option<PuzzleResponse> {
 
 pub async fn submit_puzzle_action(user_id: Uuid, request: SubmitRequest, repo: &dyn PuzzleRepo) -> Result<SubmitResponse, PuzzleServiceError> {
     let today = data::get_today_date();
-    if let Some(existing) = repo.find_submission(user_id, today).await.map_err(PuzzleServiceError::DbError)? {
+    if let Some(existing) = repo.find_submission(user_id, today).await.map_err(|e| PuzzleServiceError::DbError(e.to_string()))? {
         return Err(PuzzleServiceError::AlreadySubmitted { correct: existing.is_correct, selected_action: existing.selected_action.to_string() });
     }
 
@@ -38,7 +38,7 @@ pub async fn submit_puzzle_action(user_id: Uuid, request: SubmitRequest, repo: &
     let is_correct = parsed_action.to_string() == puzzle.correct_action.to_lowercase();
     let record = PuzzleSubmissionRecord { user_id, puzzle_date: today, selected_action: parsed_action, is_correct, submitted_at: Utc::now().naive_utc() };
 
-    repo.save_submission(record).await.map_err(PuzzleServiceError::DbError)?;
+    repo.save_submission(record).await.map_err(|e| PuzzleServiceError::DbError(e.to_string()))?;
     PUZZLE_SUBMISSIONS_TOTAL.inc();
     if is_correct { PUZZLE_CORRECT_TOTAL.inc(); }
 
