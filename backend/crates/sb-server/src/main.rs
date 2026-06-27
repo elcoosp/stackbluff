@@ -357,14 +357,21 @@ async fn start_gdpr_job(state: std::sync::Arc<crate::AppState>) {
     sched.add(Job::new_async("0 0 2 * * *", move |_uuid, _l| {
         let state = state.clone();
         Box::pin(async move {
-            println!("Running daily GDPR deletion job...");
+            tracing::info!("Running daily GDPR deletion job...");
             if let Ok(pending) = state.gdpr_repo.get_pending_deletions(30).await {
                 for req in pending {
-                    let _ = state.gdpr_repo.anonymize_user(req.user_id).await;
+                    if let Err(e) = state.gdpr_repo.anonymize_user(req.user_id).await {
+                        tracing::error!("Failed to anonymize user {}: {:?}", req.user_id, e);
+                        continue;
+                    }
                     let _ = state.gdpr_repo.mark_deletion_completed(req.user_id).await;
                 }
             }
         })
     }).unwrap()).await.unwrap();
     sched.start().await.unwrap();
+}
+
+pub fn spawn_gdpr_scheduler(state: std::sync::Arc<crate::AppState>) {
+    tokio::spawn(start_gdpr_job(state));
 }
