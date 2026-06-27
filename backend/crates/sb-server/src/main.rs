@@ -49,6 +49,7 @@ use test_utils::table_service::InMemoryTableService;
 #[cfg(feature = "test-stubs")]
 use test_utils::user_resolution_service::InMemoryUserResolutionService;
 mod hand_archive;
+mod season_end;
 mod r2_storage;
 mod season_card_generator;
 
@@ -69,6 +70,8 @@ async fn main() {
         .expect("failed to run migrations");
 
     leaderboard_refresh::spawn_leaderboard_refresh_task(db.clone()).await;
+    let r2: std::sync::Arc<dyn hand_archive::R2Storage> = std::sync::Arc::new(hand_archive::NoOpR2);
+    season_end::spawn_season_end_task(db.clone(), r2).await;
 
     let writer_handle = init_writer_loop(db.clone(), None);
     let user_repo: Arc<dyn UserRepo> = Arc::new(UserRepoImpl::new(writer_handle.sender.clone()));
