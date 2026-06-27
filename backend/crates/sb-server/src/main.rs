@@ -55,7 +55,7 @@ mod hand_archive;
 
 async fn reschedule_tournament_reminders(
     repo: std::sync::Arc<dyn sb_contracts::tournament_api::TournamentRepo>,
-    notification_service: std::sync::Arc<dyn sb_contracts::notification_api::NotificationService>,
+    notification_service: std::sync::Arc<dyn sb_contracts::notification::NotificationService>,
     bot_handler: Option<std::sync::Arc<dyn sb_contracts::notification_api::ClubNotifier>>,
     app_base_url: String,
 ) {
@@ -199,10 +199,10 @@ async fn main() {
     let tournament_repo = Arc::new(TournamentRepoImpl::new(db.clone()));
     let broker = Arc::new(sb_table_registry::connection_broker::ConnectionBroker::new());
     #[cfg(feature = "test-stubs")]
-    let notification_service: Arc<dyn sb_contracts::notification_api::NotificationService> =
+    let notification_service: Arc<dyn sb_contracts::notification::NotificationService> =
         Arc::new(test_utils::notification_service::InMemoryNotificationService::new());
     #[cfg(not(feature = "test-stubs"))]
-    let notification_service: Arc<dyn sb_contracts::notification_api::NotificationService> =
+    let notification_service: Arc<dyn sb_contracts::notification::NotificationService> =
         panic!("Production notification service not implemented");
     let bot_handler: Option<Arc<dyn sb_contracts::notification_api::ClubNotifier>> = Some(bot_state.clone());
     let app_base_url = std::env::var("APP_BASE_URL").unwrap_or_else(|_| "https://app.stackbluff.com".to_string());

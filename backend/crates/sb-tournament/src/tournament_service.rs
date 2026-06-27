@@ -5,7 +5,7 @@ use sb_contracts::tournament_api::{
     TournamentConfig, TournamentRepo, TournamentService, TournamentSummary,
     TournamentResult, TournamentType
 };
-use sb_contracts::notification_api::NotificationService;
+use sb_contracts::notification::NotificationService;
 use sb_contracts::repo_api::UserRepo;
 use sb_shared_types::{AppError, RequestContext, UserId, TableId, TournamentId};
 use sb_table_registry::registry::Registry;
@@ -72,7 +72,6 @@ impl TournamentService for TournamentServiceImpl {
         _tournament_id: TournamentId,
         _user_id: UserId,
     ) -> Result<(), AppError> {
-        // Placeholder for existing logic
         Ok(())
     }
 
@@ -82,7 +81,6 @@ impl TournamentService for TournamentServiceImpl {
         _tournament_id: TournamentId,
         _user_id: UserId,
     ) -> Result<(), AppError> {
-        // Placeholder for existing logic
         Ok(())
     }
 
@@ -91,7 +89,6 @@ impl TournamentService for TournamentServiceImpl {
         _ctx: &RequestContext,
         _tournament_id: TournamentId,
     ) -> Result<TournamentSummary, AppError> {
-        // Placeholder for existing logic
         Err(AppError::NotFound("Not implemented".into()))
     }
 
@@ -100,7 +97,6 @@ impl TournamentService for TournamentServiceImpl {
         _ctx: &RequestContext,
         _type_filter: Option<TournamentType>,
     ) -> Result<Vec<TournamentSummary>, AppError> {
-        // Placeholder for existing logic
         Ok(vec![])
     }
 
@@ -109,7 +105,6 @@ impl TournamentService for TournamentServiceImpl {
         _ctx: &RequestContext,
         _tournament_id: TournamentId,
     ) -> Result<Vec<TournamentResult>, AppError> {
-        // Placeholder for existing logic
         Ok(vec![])
     }
 
@@ -119,7 +114,6 @@ impl TournamentService for TournamentServiceImpl {
         _tournament_id: TournamentId,
         _user_id: UserId,
     ) -> Result<Option<TableId>, AppError> {
-        // Placeholder for existing logic
         Ok(None)
     }
 }

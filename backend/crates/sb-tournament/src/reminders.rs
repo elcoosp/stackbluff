@@ -1,9 +1,8 @@
 use std::sync::Arc;
 use chrono::{DateTime, Utc, Duration};
 use sb_contracts::tournament_api::{TournamentRepo, TournamentStatus};
-use sb_contracts::notification_api::NotificationService;
-use sb_contracts::notification::NotificationEvent;
-use sb_shared_types::TournamentId;
+use sb_contracts::notification::{NotificationService, NotificationEvent};
+use sb_shared_types::{TournamentId, RequestContext};
 use tokio::time::{sleep_until, Instant};
 
 pub fn schedule_reminders(
@@ -68,24 +67,22 @@ async fn send_reminder(
 
     let deep_link = format!("{}/tournaments/{}", app_base_url, tournament_id);
     let tournament_name = format!("{:?}", tournament.config.tournament_type);
-    let start_time = tournament.config.scheduled_start.unwrap();
+    let start_time = tournament.config.scheduled_start.unwrap().to_rfc3339();
+
+    let ctx = RequestContext::new(sb_shared_types::RequestId::new(), sb_shared_types::UserId::nil());
 
     for reg in registrations {
         let event = NotificationEvent::TournamentReminder {
             tournament_name: tournament_name.clone(),
-            start_time,
+            start_time: start_time.clone(),
             deep_link: deep_link.clone(),
         };
-        // TODO: Call the actual notification service method
-        // notification_service.send_notification(reg.user_id, event).await;
-        tracing::info!(user_id = %reg.user_id, "Would send reminder: {:?}", event);
+        let _ = notification_service.send(&ctx, reg.user_id, event).await;
     }
 
     if let Some(bh) = bot_handler {
         if let Some(club_id) = tournament.config.club_id {
-            // TODO: Call the actual bot handler method
-            // bh.notify_club(club_id, format!("Tournament {} starts in {}!", tournament_name, label)).await;
-            tracing::info!(club_id = %club_id, "Would send Telegram message: Tournament {} starts in {}!", tournament_name, label);
+            let _ = bh.send_club_reminder(club_id, format!("Tournament {} starts in {}!", tournament_name, label)).await;
         }
     }
 }

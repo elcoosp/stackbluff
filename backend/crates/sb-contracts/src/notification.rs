@@ -9,6 +9,7 @@ pub enum NotificationEvent {
     TournamentReminder {
         tournament_name: String,
         start_time: String,
+        deep_link: String,
     },
     StreakAlert {
         streak_count: u32,
