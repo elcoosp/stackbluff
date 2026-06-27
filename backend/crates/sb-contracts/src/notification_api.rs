@@ -34,3 +34,11 @@ pub trait NotificationService: Send + Sync {
         text: Option<String>,
     ) -> Result<(), NotificationError>;
 }
+
+#[derive(Debug, Clone)]
+pub enum NotificationEvent {
+    SeasonCardReady {
+        season_id: i32,
+        card_url: Option<String>,
+    },
+}
