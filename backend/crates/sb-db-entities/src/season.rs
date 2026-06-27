@@ -12,4 +12,3 @@ pub struct Model {
     pub ends_at: DateTimeUtc,
 }
 
-impl ActiveModelBehavior for ActiveModel {}
