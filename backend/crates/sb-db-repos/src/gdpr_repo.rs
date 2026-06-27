@@ -1,12 +1,12 @@
-use crate::Database;
-use sb_contracts::{GdprRepo, DeletionRequestDto, UserDataExportDto, PersistenceError};
+use sea_orm::DatabaseConnection;
+use sb_contracts::repo_api::{GdprRepo, DeletionRequestDto, UserDataExportDto, PersistenceError};
 use sb_db_entities::{deletion_request, user};
-use sea_orm::{EntityTrait, Set, ActiveValue, ConnectionTrait, TransactionTrait, QueryFilter, ColumnTrait};
+use sea_orm::{EntityTrait, Set, ActiveValue, TransactionTrait, QueryFilter, ColumnTrait};
 use uuid::Uuid;
 use chrono::{Utc, Duration};
 
 pub struct PgGdprRepo {
-    pub db: Database,
+    pub db: DatabaseConnection,
 }
 
 #[async_trait::async_trait]
@@ -100,6 +100,9 @@ impl GdprRepo for PgGdprRepo {
             .await
             .map_err(|_| PersistenceError::DatabaseError)?
             .ok_or(PersistenceError::NotFound)?;
-        Ok(user.password_hash.unwrap_or_default())
+
+        // Safe extraction regardless of whether password_hash is String or Option<String>
+        let val = serde_json::to_value(&user.password_hash).unwrap_or_default();
+        Ok(val.as_str().unwrap_or("").to_owned())
     }
 }
