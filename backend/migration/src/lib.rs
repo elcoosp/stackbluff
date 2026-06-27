@@ -49,3 +49,4 @@ impl MigratorTrait for Migrator {
     }
 }
 mod m20260628_000001_gdpr_deletion;
+mod m20260628_000001_gdpr_deletion;
