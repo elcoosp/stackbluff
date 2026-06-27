@@ -5,11 +5,11 @@ use sb_contracts::tournament_api::{
     TournamentConfig, TournamentRepo, TournamentService, TournamentSummary,
     TournamentResult, TournamentType
 };
-use sb_contracts::notification::NotificationService;
 use sb_contracts::repo_api::UserRepo;
 use sb_shared_types::{AppError, RequestContext, UserId, TableId, TournamentId};
 use sb_table_registry::registry::Registry;
 use sb_table_registry::connection_broker::ConnectionBroker;
+use crate::{SitGoCommand, MttCommand};
 
 #[allow(dead_code)]
 pub struct TournamentServiceImpl {
@@ -18,7 +18,7 @@ pub struct TournamentServiceImpl {
     registry: Arc<Registry>,
     broker: Arc<ConnectionBroker>,
     notification_service: Arc<dyn sb_contracts::notification_api::NotificationService>,
-    bot_handler: Option<Arc<sb_bot_handler::BotState>>,
+    club_notifier: Option<Arc<dyn sb_contracts::notification_api::ClubNotifier>>,
     app_base_url: String,
 }
 
@@ -29,7 +29,7 @@ impl TournamentServiceImpl {
         registry: Arc<Registry>,
         broker: Arc<ConnectionBroker>,
         notification_service: Arc<dyn sb_contracts::notification_api::NotificationService>,
-        bot_handler: Option<Arc<sb_bot_handler::BotState>>,
+        club_notifier: Option<Arc<dyn sb_contracts::notification_api::ClubNotifier>>,
         app_base_url: String,
     ) -> Self {
         Self {
@@ -60,7 +60,7 @@ impl TournamentService for TournamentServiceImpl {
                 start,
                 self.repo.clone(),
                 self.notification_service.clone(),
-                self.bot_handler.clone(),
+                self.club_notifier.clone(),
                 self.app_base_url.clone(),
             );
         }
@@ -120,11 +120,11 @@ impl TournamentService for TournamentServiceImpl {
 }
 
 impl TournamentServiceImpl {
-    pub fn register_sit_go(&self, _tournament_id: sb_shared_types::TournamentId, _cmd_tx: tokio::sync::mpsc::Sender<sb_tournament::SitGoCommand>) {
+    pub fn register_sit_go(&self, _tournament_id: sb_shared_types::TournamentId, _cmd_tx: tokio::sync::mpsc::Sender<crate::SitGoCommand>) {
         // Stub implementation
     }
 
-    pub fn register_mtt(&self, _tournament_id: sb_shared_types::TournamentId, _cmd_tx: tokio::sync::mpsc::Sender<sb_tournament::MttCommand>) {
+    pub fn register_mtt(&self, _tournament_id: sb_shared_types::TournamentId, _cmd_tx: tokio::sync::mpsc::Sender<crate::MttCommand>) {
         // Stub implementation
     }
 }

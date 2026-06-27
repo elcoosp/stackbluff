@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use chrono::{DateTime, Utc, Duration};
 use sb_contracts::tournament_api::{TournamentRepo, TournamentStatus};
-use sb_contracts::notification::{NotificationService, NotificationEvent};
+use sb_contracts::notification_api::{NotificationService, ClubNotifier};
 use sb_shared_types::{TournamentId, RequestContext};
 use tokio::time::{sleep_until, Instant};
 use uuid::Uuid;
@@ -10,8 +10,8 @@ pub fn schedule_reminders(
     tournament_id: TournamentId,
     start: DateTime<Utc>,
     repo: Arc<dyn TournamentRepo>,
-    notification_service: Arc<dyn sb_contracts::notification_api::NotificationService>,
-    bot_handler: Option<Arc<sb_bot_handler::BotState>>,
+    notification_service: Arc<dyn NotificationService>,
+    club_notifier: Option<Arc<dyn ClubNotifier>>,
     app_base_url: String,
 ) {
     let reminder_60 = start - Duration::minutes(60);
@@ -20,26 +20,26 @@ pub fn schedule_reminders(
     if reminder_60 > Utc::now() {
         let repo = repo.clone();
         let ns = notification_service.clone();
-        let bh = bot_handler.clone();
+        let cn = club_notifier.clone();
         let url = app_base_url.clone();
         let tid = tournament_id;
         tokio::spawn(async move {
             let duration = (reminder_60 - Utc::now()).to_std().unwrap_or_default();
             sleep_until(Instant::now() + duration).await;
-            send_reminder(tid, "60 minutes", repo, ns, bh, url).await;
+            send_reminder(tid, "60 minutes", repo, ns, cn, url).await;
         });
     }
 
     if reminder_10 > Utc::now() {
         let repo = repo.clone();
         let ns = notification_service.clone();
-        let bh = bot_handler.clone();
+        let cn = club_notifier.clone();
         let url = app_base_url.clone();
         let tid = tournament_id;
         tokio::spawn(async move {
             let duration = (reminder_10 - Utc::now()).to_std().unwrap_or_default();
             sleep_until(Instant::now() + duration).await;
-            send_reminder(tid, "10 minutes", repo, ns, bh, url).await;
+            send_reminder(tid, "10 minutes", repo, ns, cn, url).await;
         });
     }
 }
@@ -48,8 +48,8 @@ async fn send_reminder(
     tournament_id: TournamentId,
     label: &str,
     repo: Arc<dyn TournamentRepo>,
-    notification_service: Arc<dyn sb_contracts::notification_api::NotificationService>,
-    bot_handler: Option<Arc<sb_bot_handler::BotState>>,
+    notification_service: Arc<dyn NotificationService>,
+    club_notifier: Option<Arc<dyn ClubNotifier>>,
     app_base_url: String,
 ) {
     let tournament = match repo.get_tournament(tournament_id).await {
@@ -57,7 +57,9 @@ async fn send_reminder(
         _ => return,
     };
 
-    if tournament.status == TournamentStatus::Cancelled || tournament.status == TournamentStatus::Completed {
+    if tournament.status == TournamentStatus::Cancelled
+        || tournament.status == TournamentStatus::Completed
+    {
         return;
     }
 
@@ -70,20 +72,29 @@ async fn send_reminder(
     let tournament_name = format!("{:?}", tournament.config.tournament_type);
     let start_time = tournament.config.scheduled_start.unwrap().to_rfc3339();
 
-    let ctx = RequestContext::new(Uuid::new_v4(), None);
+    let message = format!(
+        "🏟️ Tournament \"{}\" starts at {}. Join now: {}",
+        tournament_name, start_time, deep_link
+    );
 
     for reg in registrations {
-        let event = NotificationEvent::TournamentReminder {
-            tournament_name: tournament_name.clone(),
-            start_time: start_time.clone(),
-            deep_link: deep_link.clone(),
-        };
-        let _ = notification_service.send(&ctx, reg.user_id, event).await;
+        if let Err(e) = notification_service
+            .send_telegram_message_to_user(reg.user_id, message.clone(), None)
+            .await
+        {
+            tracing::warn!(user_id = %reg.user_id, error = %e, "Failed to send tournament reminder");
+        }
     }
 
-    if let Some(bh) = bot_handler
-        && let Some(club_id) = tournament.config.club_id
-    {
-        let _ = bh.send_club_reminder(club_id, format!("Tournament {} starts in {}!", tournament_name, label)).await;
+    if let Some(cn) = club_notifier {
+        if let Some(club_id) = tournament.config.club_id {
+            let club_message = format!(
+                "🏟️ Tournament \"{}\" starts in {}! Join: {}",
+                tournament_name, label, deep_link
+            );
+            if let Err(e) = cn.send_club_reminder(club_id, club_message).await {
+                tracing::warn!(club_id = %club_id, error = %e, "Failed to send club reminder");
+            }
+        }
     }
 }
