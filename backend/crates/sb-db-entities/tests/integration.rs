@@ -1,3 +1,4 @@
+use sea_orm::Set;
 use chrono::Utc;
 use migration::Migrator;
 use sb_db_entities::enums::Platform;
