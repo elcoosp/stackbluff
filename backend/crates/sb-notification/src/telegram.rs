@@ -21,6 +21,7 @@ impl TelegramSender {
             NotificationEvent::TournamentReminder {
                 tournament_name,
                 start_time,
+                deep_link,
             } => format!(
                 "🏟️ Tournament '{}' starts at {}",
                 tournament_name, start_time
