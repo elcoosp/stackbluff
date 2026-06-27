@@ -1,6 +1,6 @@
 use async_trait::async_trait;
-use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter, Set};
 use sb_db_entities::user_season_card;
+use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter, Set};
 use uuid::Uuid;
 
 #[async_trait]
@@ -19,10 +19,7 @@ pub trait SeasonCardRepo: Send + Sync {
         season_id: i32,
     ) -> Result<Option<user_season_card::Model>, DbErr>;
 
-    async fn find_by_user(
-        &self,
-        user_id: Uuid,
-    ) -> Result<Vec<user_season_card::Model>, DbErr>;
+    async fn find_by_user(&self, user_id: Uuid) -> Result<Vec<user_season_card::Model>, DbErr>;
 }
 
 pub struct SeaOrmSeasonCardRepo {
@@ -48,7 +45,7 @@ impl SeasonCardRepo for SeaOrmSeasonCardRepo {
             user_id: Set(user_id),
             season_id: Set(season_id),
             card_image_url: Set(card_image_url),
-            card_data: Set(Some(sea_orm::Json(card_data))),
+            card_data: Set(Some(sea_orm::Value::Json(card_data))),
             generated_at: Set(chrono::Utc::now().into()),
         };
         active.insert(&self.db).await?;
@@ -67,10 +64,7 @@ impl SeasonCardRepo for SeaOrmSeasonCardRepo {
             .await
     }
 
-    async fn find_by_user(
-        &self,
-        user_id: Uuid,
-    ) -> Result<Vec<user_season_card::Model>, DbErr> {
+    async fn find_by_user(&self, user_id: Uuid) -> Result<Vec<user_season_card::Model>, DbErr> {
         user_season_card::Entity::find()
             .filter(user_season_card::Column::UserId.eq(user_id))
             .all(&self.db)
