@@ -200,14 +200,9 @@ async fn main() {
     let in_memory_notif = Arc::new(test_utils::notification_service::InMemoryNotificationService::new());
     #[cfg(feature = "test-stubs")]
     let notification_service: Arc<dyn sb_contracts::notification::NotificationService> = in_memory_notif.clone();
-    #[cfg(feature = "test-stubs")]
-    let notification_api_service: Arc<dyn sb_contracts::notification_api::NotificationService> = in_memory_notif.clone();
     #[cfg(not(feature = "test-stubs"))]
     let notification_service: Arc<dyn sb_contracts::notification::NotificationService> =
         panic!("Production notification service not implemented");
-    #[cfg(not(feature = "test-stubs"))]
-    let notification_api_service: Arc<dyn sb_contracts::notification_api::NotificationService> =
-        panic!("Production notification_api service not implemented");
     let bot_handler: Option<Arc<dyn sb_contracts::notification_api::ClubNotifier>> = Some(bot_state.clone());
     let app_base_url = std::env::var("APP_BASE_URL").unwrap_or_else(|_| "https://app.stackbluff.com".to_string());
 
