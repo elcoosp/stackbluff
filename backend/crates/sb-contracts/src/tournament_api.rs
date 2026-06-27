@@ -55,6 +55,12 @@ pub struct TournamentConfig {
     pub payout_structure: PayoutStructure,
     pub start_delay_seconds: u32,
     pub min_players_to_start: u32,
+    #[serde(default)]
+    pub club_id: Option<sb_shared_types::ids::ClubId>,
+    #[serde(default)]
+    pub scheduled_start: Option<chrono::DateTime<chrono::Utc>>,
+    #[serde(default)]
+    pub blind_schedule_id: Option<uuid::Uuid>,
 }
 
 // ── Query types ──────────────────────────────────────────────────────────────
@@ -70,6 +76,10 @@ pub struct TournamentSummary {
     pub prize_pool: ChipAmount,
     pub current_blind_level: Option<u32>,
     pub started_at: Option<DateTime<Utc>>,
+    pub tournament_id: uuid::Uuid,
+    pub scheduled_start: Option<chrono::DateTime<chrono::Utc>>,
+    pub player_count: u32,
+    pub club_id: Option<sb_shared_types::ids::ClubId>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -227,4 +237,20 @@ pub trait TournamentRepo: Send + Sync {
 
     // ── Added for registration counts ────────────────────────────────
     async fn count_registrations(&self, tournament_id: TournamentId) -> Result<u32, AppError>;
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct TournamentCompletedEvent {
+    pub tournament_id: uuid::Uuid,
+    pub club_id: Option<sb_shared_types::ids::ClubId>,
+    pub tournament_name: String,
+    pub final_rankings: Vec<TournamentRanking>,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct TournamentRanking {
+    pub user_id: i64,
+    pub display_name: String,
+    pub placement: u32,
+    pub prize_amount: i64,
 }

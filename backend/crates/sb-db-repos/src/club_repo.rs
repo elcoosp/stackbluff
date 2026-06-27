@@ -19,6 +19,47 @@ impl ClubRepoImpl {
     pub fn new(db: DatabaseConnection) -> Self {
         Self { db }
     }
+
+    async fn find_telegram_chat_id(
+        &self,
+        club_id: sb_shared_types::ids::ClubId,
+    ) -> Result<Option<i64>, sb_contracts::persistence_error::PersistenceError> {
+        use sb_db_entities::club;
+        let c = club::Entity::find_by_id(club_id.0 as i64)
+            .one(&self.db)
+            .await
+            .map_err(|e| sb_contracts::persistence_error::PersistenceError::Database(e.to_string()))?;
+        Ok(c.and_then(|m| m.telegram_chat_id))
+    }
+
+    async fn find_tournaments_by_club(
+        &self,
+        club_id: sb_shared_types::ids::ClubId,
+    ) -> Result<Vec<sb_contracts::tournament_api::TournamentSummary>, sb_contracts::persistence_error::PersistenceError> {
+        use sb_db_entities::tournament;
+        use sea_orm::{QueryFilter, ColumnTrait};
+        let ts = tournament::Entity::find()
+            .filter(tournament::Column::ConfigJson.contains(&format!(""club_id":{}", club_id.0)))
+            .all(&self.db)
+            .await
+            .map_err(|e| sb_contracts::persistence_error::PersistenceError::Database(e.to_string()))?;
+        let mut summaries = Vec::new();
+        for t in ts {
+            let config: Option<sb_contracts::tournament_api::TournamentConfig> = serde_json::from_str(&t.config_json).ok();
+            if config.as_ref().and_then(|c| c.club_id) == Some(club_id) {
+                summaries.push(sb_contracts::tournament_api::TournamentSummary {
+                    tournament_id: t.id,
+                    name: config.as_ref().map(|c| c.name.clone()).unwrap_or_default(),
+                    status: t.status,
+                    scheduled_start: config.and_then(|c| c.scheduled_start),
+                    player_count: 0,
+                    club_id: Some(club_id),
+                });
+            }
+        }
+        Ok(summaries)
+    }
+
 }
 
 #[async_trait]

@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 pub struct ClubServiceImpl {
     repo: Arc<dyn ClubRepo>,
+    pub tournament_service: std::sync::Arc<dyn sb_contracts::tournament_api::TournamentService>,
 }
 
 impl ClubServiceImpl {
@@ -77,4 +78,38 @@ impl ClubService for ClubServiceImpl {
         );
         self.repo.increment_weekly_xp(club_id, user_id, xp).await
     }
+
+    /// Schedule a new tournament for a club.
+    pub async fn schedule_tournament(
+        &self,
+        club_id: sb_shared_types::ids::ClubId,
+        requester_id: i64,
+        mut config: sb_contracts::tournament_api::TournamentConfig,
+    ) -> Result<uuid::Uuid, sb_shared_types::errors::AppError> {
+        let is_member = self
+            .club_repo
+            .is_member(club_id, requester_id)
+            .await
+            .map_err(|e| sb_shared_types::errors::AppError::Internal(format!("Club repo error: {e}")))?;
+
+        if !is_member {
+            return Err(sb_shared_types::errors::AppError::PermissionDenied(
+                "User is not a member of the club".to_string(),
+            ));
+        }
+
+        config.club_id = Some(club_id);
+        let tournament_id = self.tournament_service.create_tournament(config).await?;
+        tracing::info!(tournament_id = %tournament_id, club_id = %club_id.0, "Scheduled club tournament");
+        Ok(tournament_id)
+    }
+
+    /// List all tournaments for a club.
+    pub async fn list_club_tournaments(
+        &self,
+        club_id: sb_shared_types::ids::ClubId,
+    ) -> Result<Vec<sb_contracts::tournament_api::TournamentSummary>, sb_shared_types::errors::AppError> {
+        self.tournament_service.list_tournaments_by_club(club_id).await
+    }
+
 }

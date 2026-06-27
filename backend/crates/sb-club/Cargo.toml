@@ -5,6 +5,7 @@ edition = "2024"
 rust-version = "1.94"
 
 [dependencies]
+sb-tournament = { path = "../sb-tournament" }
 sb-contracts = { path = "../sb-contracts" }
 sb-shared-types = { path = "../sb-shared-types" }
 axum = { workspace = true }

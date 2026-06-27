@@ -742,4 +742,18 @@ impl MttDirector {
             started_at: self.started_at,
         }
     }
+
+    /// Emit a TournamentCompletedEvent when the tournament ends.
+    pub fn build_completion_event(
+        &self,
+        final_rankings: Vec<sb_contracts::tournament_api::TournamentRanking>,
+    ) -> sb_contracts::tournament_api::TournamentCompletedEvent {
+        sb_contracts::tournament_api::TournamentCompletedEvent {
+            tournament_id: self.tournament_id,
+            club_id: self.config.club_id,
+            tournament_name: self.config.name.clone(),
+            final_rankings,
+        }
+    }
+
 }

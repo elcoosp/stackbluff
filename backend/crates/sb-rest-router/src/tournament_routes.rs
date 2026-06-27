@@ -54,7 +54,13 @@ pub fn tournament_routes(state: Arc<TournamentState>) -> Router {
         .route("/tournaments/{tournament_id}/register", post(register))
         .route("/tournaments/{tournament_id}/unregister", post(unregister))
         .route("/tournaments/{tournament_id}/results", get(get_results))
-        .route("/tournaments/{tournament_id}/my-table", get(get_my_table))
+        .route("/tournaments/{tournament_id}/my-table", get(get_my_table)
+    // Club tournament routes
+    .route(
+        "/clubs/{club_id}/tournaments",
+        axum::routing::post(sb_club::handlers::create_club_tournament)
+            .get(sb_club::handlers::list_club_tournaments),
+    ))
         .with_state(state)
 }
 

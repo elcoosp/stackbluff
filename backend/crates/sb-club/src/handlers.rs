@@ -87,3 +87,61 @@ fn map_club_error(e: ClubError) -> (StatusCode, String) {
         }
     }
 }
+
+/// POST /clubs/{club_id}/tournaments
+pub async fn create_club_tournament(
+    axum::extract::State(state): axum::extract::State<crate::AppState>,
+    axum::extract::Path(club_id): axum::extract::Path<i64>,
+    axum::Json(req): axum::Json<CreateClubTournamentRequest>,
+) -> Result<axum::Json<CreateClubTournamentResponse>, sb_shared_types::errors::AppError> {
+    let club_id = sb_shared_types::ids::ClubId(club_id);
+    let user_id = req.requester_user_id;
+
+    let config = sb_contracts::tournament_api::TournamentConfig {
+        name: req.name,
+        max_players: req.max_players,
+        buy_in: req.buy_in,
+        starting_chips: req.starting_chips.unwrap_or(req.buy_in * 10),
+        blind_levels: req.blind_schedule,
+        payout_structure: req.payout_structure,
+        club_id: Some(club_id),
+        scheduled_start: req.scheduled_start,
+        blind_schedule_id: None,
+    };
+
+    let tournament_id = state
+        .club_service
+        .schedule_tournament(club_id, user_id, config)
+        .await?;
+
+    Ok(axum::Json(CreateClubTournamentResponse {
+        tournament_id,
+    }))
+}
+
+/// GET /clubs/{club_id}/tournaments
+pub async fn list_club_tournaments(
+    axum::extract::State(state): axum::extract::State<crate::AppState>,
+    axum::extract::Path(club_id): axum::extract::Path<i64>,
+) -> Result<axum::Json<Vec<sb_contracts::tournament_api::TournamentSummary>>, sb_shared_types::errors::AppError> {
+    let club_id = sb_shared_types::ids::ClubId(club_id);
+    let tournaments = state.club_service.list_club_tournaments(club_id).await?;
+    Ok(axum::Json(tournaments))
+}
+
+#[derive(serde::Deserialize)]
+pub struct CreateClubTournamentRequest {
+    pub requester_user_id: i64,
+    pub name: String,
+    pub max_players: u32,
+    pub buy_in: i64,
+    pub starting_chips: Option<i64>,
+    pub scheduled_start: Option<chrono::DateTime<chrono::Utc>>,
+    pub blind_schedule: Vec<sb_contracts::tournament_api::BlindLevel>,
+    pub payout_structure: sb_contracts::tournament_api::PayoutStructure,
+}
+
+#[derive(serde::Serialize)]
+pub struct CreateClubTournamentResponse {
+    pub tournament_id: uuid::Uuid,
+}
