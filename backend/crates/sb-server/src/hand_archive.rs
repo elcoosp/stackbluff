@@ -183,6 +183,7 @@ pub async fn get_hand(
     Ok(Json(json))
 }
 
+#[allow(dead_code)]
 pub struct NoOpR2;
 
 #[async_trait::async_trait]

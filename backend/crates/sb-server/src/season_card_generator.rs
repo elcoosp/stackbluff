@@ -89,7 +89,6 @@ impl SeasonCardGenerator {
                 season_id: Set(next_season_id),
                 rank_tier: Set(new_tier),
                 rank_points: Set(0),
-                ..Default::default()
             };
             player_rank::Entity::insert(active)
                 .exec(&txn)
