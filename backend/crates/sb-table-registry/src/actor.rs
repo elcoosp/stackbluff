@@ -234,7 +234,6 @@ pub enum InternalCommand {
     ShowdownComplete,
     ClearLastActions,
     Shutdown,
-            self.emit_table_closed_event();
     UpdatePlayerStats {
         user_id: UserId,
         stats: PlayerStatsDto,
