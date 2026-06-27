@@ -20,7 +20,7 @@ pub async fn submit_puzzle(
     State(state): State<Arc<AppState>>,
     Json(request): Json<SubmitRequest>,
 ) -> impl IntoResponse {
-    let user_id = ctx.user_id; // Securely extracted from Auth middleware
+    let user_id = ctx.user_id;
     match service::submit_puzzle_action(user_id, request, state.puzzle_repo.as_ref()).await {
         Ok(response) => (StatusCode::OK, Json(json!(response))).into_response(),
         Err(service::PuzzleServiceError::AlreadySubmitted { correct, selected_action }) =>
