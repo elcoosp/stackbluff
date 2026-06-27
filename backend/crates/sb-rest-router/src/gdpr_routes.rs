@@ -1,5 +1,5 @@
 use axum::{extract::{State, FromRequestParts}, http::request::Parts, routing::{delete, get}, Router, Json};
-use sb_contracts::GdprRepo;
+use sb_contracts::repo_api::GdprRepo;
 use std::sync::Arc;
 use uuid::Uuid;
 use serde::Deserialize;
