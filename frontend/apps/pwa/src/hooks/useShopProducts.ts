@@ -6,8 +6,5 @@ export function useShopProducts() {
     queryKey: ['shop-products'],
     queryFn: fetchProducts,
     staleTime: 1000 * 60 * 5,
-    onError: (err) => {
-      console.error('[Shop] Failed to fetch products:', err);
-    },
   });
 }
