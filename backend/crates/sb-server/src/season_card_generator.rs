@@ -12,7 +12,6 @@ use crate::r2_storage::R2Storage;
 pub struct SeasonCardGenerator {
     db: sea_orm::DatabaseConnection,
     r2: Arc<dyn R2Storage>,
-    notifier: Arc<dyn NotificationService>,
     season_card_repo: Arc<dyn SeasonCardRepo>,
 }
 
@@ -20,13 +19,11 @@ impl SeasonCardGenerator {
     pub fn new(
         db: sea_orm::DatabaseConnection,
         r2: Arc<dyn R2Storage>,
-        notifier: Arc<dyn NotificationService>,
-        season_card_repo: Arc<dyn SeasonCardRepo>,
+            season_card_repo: Arc<dyn SeasonCardRepo>,
     ) -> Self {
         Self {
             db,
             r2,
-            notifier,
             season_card_repo,
         }
     }
