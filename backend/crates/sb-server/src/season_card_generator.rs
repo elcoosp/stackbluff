@@ -74,12 +74,7 @@ impl SeasonCardGenerator {
                 .await
             {
                 Ok(url) => {
-                    if let Err(e) = self
-                        /* notifier removed */
-                        .send(NotificationEvent::SeasonCardReady {
-                            season_id,
-                            card_url: Some(url),
-                        })
+                    // MVP: notifications disabled
                         .await
                     {
                         tracing::warn!("Notification failed for user {}: {}", rank.user_id, e);
