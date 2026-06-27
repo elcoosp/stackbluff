@@ -588,7 +588,6 @@ pub struct TableActor {
 }
 
 impl TableActor {
-
     fn emit_table_closed_event(&self) {
         use sb_shared_types::{UserId, TableId, ChipAmount};
         use crate::events::{TableClosedEvent, TableEvent};
@@ -616,24 +615,3 @@ impl TableActor {
         let _ = self.event_tx.send(TableEvent::TableClosed(event));
     }
 
-pub fn spawn_table_actor(
-    room_id: TableId,
-    table_id: TableId,
-    config: TableConfig,
-    event_tx: tokio::sync::broadcast::Sender<HandCompletedEvent>,
-    stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
-    active_players: Arc<AtomicU8>,
-) -> (mpsc::Sender<InternalCommand>, tokio::task::JoinHandle<()>) {
-    let (tx, rx) = mpsc::channel(32);
-    let actor = TableActor::new(
-        room_id,
-        table_id,
-        config,
-        tx.clone(),
-        event_tx,
-        stats_repo,
-        active_players,
-    );
-    let handle = tokio::spawn(actor.run(rx));
-    (tx, handle)
-}
