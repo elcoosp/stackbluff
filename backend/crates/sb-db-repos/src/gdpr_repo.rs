@@ -77,7 +77,6 @@ impl GdprRepo for PgGdprRepo {
         if let Some(u) = user_opt {
             let mut active: user::ActiveModel = u.into();
             active.display_name = Set("Deleted User".to_owned());
-            // Use Set(None) for nullable PII columns to actually clear them (GDPR compliance)
             active.email = Set(None);
             active.telegram_id = Set(None);
             active.password_hash = Set(None);
@@ -101,7 +100,6 @@ impl GdprRepo for PgGdprRepo {
             .await
             .map_err(|_| PersistenceError::DatabaseError)?
             .ok_or(PersistenceError::NotFound)?;
-        // Assuming password_hash is Option<String> in entity, unwrap or default to empty
         Ok(user.password_hash.unwrap_or_default())
     }
 }
