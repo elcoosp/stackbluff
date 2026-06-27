@@ -266,6 +266,10 @@ pub enum InternalCommand {
         user_id: UserId,
         respond_to: tokio::sync::oneshot::Sender<TransferOutResult>,
     },
+    GetPlayerStack {
+        user_id: UserId,
+        respond_to: tokio::sync::oneshot::Sender<ChipAmount>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -745,6 +749,17 @@ impl TableActor {
             }
 
             // ── Tournament commands ────────────────────────────────────────
+            InternalCommand::GetPlayerStack {
+                user_id,
+                respond_to,
+            } => {
+                let stack = self
+                    .players
+                    .get(&user_id)
+                    .map(|p| p.stack)
+                    .unwrap_or_else(zero);
+                let _ = respond_to.send(stack);
+            }
             InternalCommand::EnterTournamentMode { parent, broker } => {
                 self.mode = TableMode::Tournament {
                     parent,

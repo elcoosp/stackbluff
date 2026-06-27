@@ -31,7 +31,7 @@ pub async fn get_global_leaderboard(
 
 pub fn leaderboard_routes() -> axum::Router<Arc<crate::AppState>> {
     axum::Router::new().route(
-        "/api/leaderboard/global",
+        "/leaderboard/global",
         axum::routing::get(get_global_leaderboard),
     )
 }

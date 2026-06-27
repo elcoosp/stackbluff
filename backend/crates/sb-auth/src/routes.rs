@@ -32,6 +32,7 @@ fn app_error_to_status(e: &AppError) -> StatusCode {
         | AppError::TournamentNotRunning
         | AppError::InvalidSeat => StatusCode::BAD_REQUEST,
         AppError::External(_) => StatusCode::BAD_GATEWAY,
+        AppError::Timeout => StatusCode::GATEWAY_TIMEOUT, // <-- NEW ARM
     }
 }
 
@@ -64,7 +65,7 @@ struct AuthUserResponse {
 struct AuthResponse {
     token: String,
     user: AuthUserResponse,
-    balance: i64, // <-- Added balance here
+    balance: i64,
 }
 
 #[derive(Serialize)]
@@ -75,12 +76,11 @@ struct MeResponse {
     chip_balance: i64,
 }
 
-/// Helper to set the auth cookie on any successful auth response.
 fn set_auth_cookie(cookies: &Cookies, jwt: &str) {
     let cookie = Cookie::build(("token", jwt.to_string()))
         .path("/")
         .http_only(true)
-        .secure(false) // set to true in production with HTTPS
+        .secure(false)
         .same_site(tower_cookies::cookie::SameSite::Lax)
         .build();
     cookies.add(cookie);
@@ -113,7 +113,7 @@ async fn telegram_auth(
                             username: profile.display_name,
                             email: profile.email,
                         },
-                        balance: profile.chip_balance, // <-- Return balance
+                        balance: profile.chip_balance,
                     }),
                 )
                     .into_response(),
@@ -146,7 +146,7 @@ async fn register(
                             username: profile.display_name,
                             email: profile.email,
                         },
-                        balance: profile.chip_balance, // <-- Return balance
+                        balance: profile.chip_balance,
                     }),
                 )
                     .into_response(),
@@ -176,7 +176,7 @@ async fn login(
                             username: profile.display_name,
                             email: profile.email,
                         },
-                        balance: profile.chip_balance, // <-- Return balance
+                        balance: profile.chip_balance,
                     }),
                 )
                     .into_response(),

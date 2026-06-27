@@ -1,3 +1,4 @@
+// backend/migration/src/lib.rs
 #![allow(clippy::needless_update)]
 #![allow(clippy::enum_variant_names)]
 mod m20250101_000001_add_participants_to_hand_history;
@@ -14,6 +15,7 @@ mod m20260616_seed_base_tables;
 mod m20260617_add_table_name;
 mod m20260622_132958_mission_system;
 mod m20260624_create_tournament_tables;
+mod m20260625_seed_tournaments; // <-- new
 
 use sea_orm_migration::prelude::*;
 
@@ -38,9 +40,11 @@ impl MigratorTrait for Migrator {
             Box::new(m20260614_152712_add_registration_order_to_users::Migration),
             Box::new(m20260614_152713_add_referrer_id_index::Migration),
             Box::new(m20260622_132958_mission_system::Migration),
-            // 4. Seed data (last)
-            Box::new(m20260616_seed_base_tables::Migration),
+            // 4. Tournament tables
             Box::new(m20260624_create_tournament_tables::Migration),
+            // 5. Seed data (last)
+            Box::new(m20260616_seed_base_tables::Migration),
+            Box::new(m20260625_seed_tournaments::Migration), // <-- added here
         ]
     }
 }

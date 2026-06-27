@@ -131,7 +131,7 @@ export function HistoryDialog({ open, onClose, tableId }: HistoryDialogProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[3000] bg-black/70 backdrop-blur-sm"
+            
             onClick={onClose}
           />
 
@@ -142,7 +142,7 @@ export function HistoryDialog({ open, onClose, tableId }: HistoryDialogProps) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 40, scale: 0.95 }}
             transition={{ type: 'spring', damping: 30, stiffness: 400, duration: 0.3 }}
-            className="fixed z-[3010] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-md rounded-xl bg-[rgba(12,12,12,0.97)] border border-white/10 backdrop-blur-xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
+            
           >
             {/* Custom Scrollbar Styles */}
             <style>{`
@@ -166,32 +166,32 @@ export function HistoryDialog({ open, onClose, tableId }: HistoryDialogProps) {
             `}</style>
 
             {/* Header */}
-            <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/5 shrink-0">
+            <div >
               <div>
-                <h2 className="text-sm font-semibold text-on-surface">Hand History</h2>
-                <p className="text-[11px] text-on-surface-variant mt-0.5">
+                <h2 >Hand History</h2>
+                <p >
                   {total} hands played
                 </p>
               </div>
               <button
                 type="button"
                 onClick={onClose}
-                className="p-1.5 rounded-lg hover:bg-white/5 text-on-surface-variant hover:text-on-surface transition-colors"
+                
               >
-                <X className="w-4 h-4" />
+                <X  />
               </button>
             </div>
 
             {/* Content */}
-            <div ref={containerRef} className="flex-1 overflow-y-auto px-5 py-4 history-dialog-scroll">
+            <div ref={containerRef} >
               {status === 'pending' && (
-                <div className="text-center py-8 text-on-surface-variant text-sm">Loading...</div>
+                <div >Loading...</div>
               )}
               {status === 'error' && (
-                <div className="text-center py-8 text-red-400 text-sm">Failed to load history.</div>
+                <div >Failed to load history.</div>
               )}
               {status === 'success' && allHistory.length === 0 && (
-                <div className="text-center py-8 text-on-surface-variant text-sm">No hands played yet.</div>
+                <div >No hands played yet.</div>
               )}
 
               <div
@@ -216,29 +216,25 @@ export function HistoryDialog({ open, onClose, tableId }: HistoryDialogProps) {
                         width: '100%',
                         transform: `translateY(${virtualItem.start}px)`,
                       }}
-                      className="border-b border-white/5 py-3"
+                      
                     >
                       {isLoader ? (
-                        <div className="text-center text-on-surface-variant text-xs font-mono py-2">
+                        <div >
                           Loading more...
                         </div>
                       ) : (
-                        <div className="flex flex-col gap-2">
+                        <div >
                           {/* Time & Pot */}
-                          <div className="flex justify-between items-center">
-                            <TimeAgo
-                              date={hand.played_at}
-                              locale="en-US"
-                              className="font-mono text-sm text-on-surface"
-                            />
-                            <span className="font-mono text-tertiary font-bold text-sm">
+                          <div >
+                            <span className="font-mono text-sm text-on-surface">{new Date(hand.played_at).toLocaleString()}</span>
+                            <span >
                               ${hand.pot.toLocaleString()}
                             </span>
                           </div>
 
                           {/* Community Cards */}
                           {hand.community_cards && hand.community_cards.length > 0 && (
-                            <div className="flex gap-1 flex-wrap">
+                            <div >
                               {hand.community_cards.map((c, i) => {
                                 const { rank, suit } = parseCard(c);
                                 return (
@@ -248,7 +244,7 @@ export function HistoryDialog({ open, onClose, tableId }: HistoryDialogProps) {
                                     suit={suit}
                                     size="xs"
                                     hoverable={false}
-                                    className="w-7 h-10"
+                                    
                                   />
                                 );
                               })}
@@ -256,11 +252,11 @@ export function HistoryDialog({ open, onClose, tableId }: HistoryDialogProps) {
                           )}
 
                           {/* Winner Info */}
-                          <div className="flex justify-between items-center text-xs text-on-surface-variant">
-                            <div className="flex items-center gap-2">
+                          <div >
+                            <div >
                               <span>Winner: {shortId(hand.winners[0]?.user_id || '')}</span>
                               {hand.winner_hole_cards && hand.winner_hole_cards.length > 0 && (
-                                <span className="flex gap-1">
+                                <span >
                                   {hand.winner_hole_cards.map((c, i) => {
                                     const { rank, suit } = parseCard(c);
                                     return (
@@ -270,17 +266,17 @@ export function HistoryDialog({ open, onClose, tableId }: HistoryDialogProps) {
                                         suit={suit}
                                         size="xs"
                                         hoverable={false}
-                                        className="w-6 h-8"
+                                        
                                       />
                                     );
                                   })}
                                 </span>
                               )}
-                              <span className="text-[10px] font-mono text-tertiary/60">
+                              <span >
                                 {hand.winners[0]?.hand_rank || ''}
                               </span>
                             </div>
-                            <span className="font-medium text-tertiary">
+                            <span >
                               ${hand.winners[0]?.amount.toLocaleString()}
                             </span>
                           </div>
@@ -293,13 +289,13 @@ export function HistoryDialog({ open, onClose, tableId }: HistoryDialogProps) {
             </div>
 
             {/* Footer */}
-            <div className="px-5 py-4 border-t border-white/5 flex gap-3 shrink-0">
+            <div >
               <motion.button
                 type="button"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={onClose}
-                className="w-full py-2.5 rounded-lg border border-white/10 text-on-surface-variant text-[11px] font-label-caps uppercase tracking-wider hover:bg-white/5 transition-all"
+                
               >
                 Close
               </motion.button>

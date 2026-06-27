@@ -8,6 +8,7 @@ rust-version = "1.94"
 sea-orm = { workspace = true }
 sb-db-repos = { path = "../sb-db-repos" }
 sb-anti-cheat = { path = "../sb-anti-cheat" }
+sb-tournament = { path = "../sb-tournament" }
 sb-oracle = { workspace = true }
 base64 = { workspace = true }
 axum = { workspace = true }

@@ -16,6 +16,7 @@ export interface Seat {
   win_amount?: number;
   hand_description?: string;
   is_showdown_revealed?: boolean;
+  winningCards?: any[];
 }
 
 export interface Card {
@@ -133,7 +134,7 @@ interface GameState {
   applyActionBroadcast: (roomId: string, broadcast: any) => void;
   setHandResult: (roomId: string, result: { winners: any[]; pot: number }) => void;
   removeRoom: (roomId: string) => void;
-  setActiveRoom: (roomId: string) => void;
+  setActiveRoom: (roomId: string | null) => void;
 }
 
 export const useGameStore = create<GameState>((set, get) => ({

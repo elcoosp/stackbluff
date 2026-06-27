@@ -1,25 +1,40 @@
-use crate::mtt_director::MttCommand;
-use crate::sit_go_tournament::SitGoCommand;
+use crate::mtt_director::{MttCommand, MttDirector};
+use crate::sit_go_tournament::{SitGoCommand, SitGoTournament};
 use dashmap::DashMap;
+use sb_contracts::repo_api::UserRepo;
 use sb_contracts::tournament_api::{
     TournamentConfig, TournamentRepo, TournamentResult, TournamentService, TournamentSummary,
     TournamentType,
 };
-use sb_shared_types::{AppError, RequestContext, TournamentId, UserId};
+use sb_shared_types::{AppError, RequestContext, TableId, TournamentId, UserId};
+use sb_table_registry::connection_broker::ConnectionBroker;
+use sb_table_registry::registry::Registry;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::mpsc;
 use tracing::info;
 
 pub struct TournamentServiceImpl {
     repo: Arc<dyn TournamentRepo>,
+    user_repo: Arc<dyn UserRepo>,
+    registry: Arc<Registry>,
+    broker: Arc<ConnectionBroker>,
     sit_go_actors: Arc<DashMap<TournamentId, mpsc::Sender<SitGoCommand>>>,
     mtt_actors: Arc<DashMap<TournamentId, mpsc::Sender<MttCommand>>>,
 }
 
 impl TournamentServiceImpl {
-    pub fn new(repo: Arc<dyn TournamentRepo>) -> Self {
+    pub fn new(
+        repo: Arc<dyn TournamentRepo>,
+        user_repo: Arc<dyn UserRepo>,
+        registry: Arc<Registry>,
+        broker: Arc<ConnectionBroker>,
+    ) -> Self {
         Self {
             repo,
+            user_repo,
+            registry,
+            broker,
             sit_go_actors: Arc::new(DashMap::new()),
             mtt_actors: Arc::new(DashMap::new()),
         }
@@ -38,11 +53,81 @@ impl TournamentServiceImpl {
         self.mtt_actors.remove(&id);
     }
 
-    fn sit_go_tx(&self, id: TournamentId) -> Result<mpsc::Sender<SitGoCommand>, AppError> {
-        self.sit_go_actors
-            .get(&id)
-            .map(|r| r.value().clone())
-            .ok_or_else(|| AppError::NotFound("Tournament not found".into()))
+    fn get_sender(
+        &self,
+        id: TournamentId,
+    ) -> Result<
+        (
+            mpsc::Sender<SitGoCommand>,
+            mpsc::Sender<MttCommand>,
+            TournamentType,
+        ),
+        AppError,
+    > {
+        let sit = self.sit_go_actors.get(&id);
+        let mtt = self.mtt_actors.get(&id);
+        match (sit, mtt) {
+            (Some(s), _) => Ok((
+                s.value().clone(),
+                mpsc::channel(1).0,
+                TournamentType::SitAndGo,
+            )),
+            (None, Some(m)) => Ok((mpsc::channel(1).0, m.value().clone(), TournamentType::Mtt)),
+            (None, None) => Err(AppError::NotFound("Tournament not found".into())),
+        }
+    }
+
+    async fn spawn_actor(&self, config: &TournamentConfig, id: TournamentId) {
+        let repo = self.repo.clone();
+        let user_repo = self.user_repo.clone();
+        match config.tournament_type {
+            TournamentType::SitAndGo => {
+                let (tx, rx) = mpsc::channel(32);
+                let actor = SitGoTournament::new(
+                    id,
+                    config.clone(),
+                    self.registry.clone(),
+                    self.broker.clone(),
+                    rx,
+                    self.registry.event_sender().subscribe(),
+                );
+                let handle = tokio::spawn(actor.run());
+                self.sit_go_actors.insert(id, tx.clone());
+                tokio::spawn(async move {
+                    let _ = handle.await;
+                });
+                // ─── Send SetRepoHandle to the actor ────────────────────
+                let _ = tx
+                    .send(SitGoCommand::SetRepoHandle {
+                        repo: repo.clone(),
+                        user_repo: user_repo.clone(),
+                    })
+                    .await;
+            }
+            TournamentType::Mtt => {
+                let (tx, rx) = mpsc::channel(32);
+                let actor = MttDirector::new(
+                    id,
+                    config.clone(),
+                    self.registry.clone(),
+                    self.broker.clone(),
+                    rx,
+                    self.registry.event_sender().subscribe(),
+                );
+                let handle = tokio::spawn(actor.run());
+                self.mtt_actors.insert(id, tx.clone());
+                tokio::spawn(async move {
+                    let _ = handle.await;
+                });
+                // ─── Send SetRepoHandle to the actor ────────────────────
+                let _ = tx
+                    .send(MttCommand::SetRepoHandle {
+                        repo: repo.clone(),
+                        user_repo: user_repo.clone(),
+                    })
+                    .await;
+            }
+        }
     }
 }
 
@@ -54,7 +139,8 @@ impl TournamentService for TournamentServiceImpl {
         config: TournamentConfig,
     ) -> Result<TournamentId, AppError> {
         let id = self.repo.insert_tournament(&config).await?;
-        info!(tournament_id = %id, tournament_type = ?config.tournament_type, max_players = config.max_players, buy_in = config.buy_in.as_i64(), "tournament created");
+        self.spawn_actor(&config, id).await;
+        info!(tournament_id = %id, tournament_type = ?config.tournament_type, max_players = config.max_players, buy_in = config.buy_in.as_i64(), "tournament created and actor spawned");
         Ok(id)
     }
 
@@ -64,14 +150,30 @@ impl TournamentService for TournamentServiceImpl {
         tournament_id: TournamentId,
         user_id: UserId,
     ) -> Result<(), AppError> {
-        let tx = self.sit_go_tx(tournament_id)?;
+        let (sit_tx, mtt_tx, typ) = self.get_sender(tournament_id)?;
         let (rtx, rrx) = tokio::sync::oneshot::channel();
-        tx.send(SitGoCommand::Register {
-            user_id,
-            respond_to: rtx,
-        })
-        .await
-        .map_err(|_| AppError::Internal("actor dropped".into()))?;
+
+        match typ {
+            TournamentType::SitAndGo => {
+                sit_tx
+                    .send(SitGoCommand::Register {
+                        user_id,
+                        respond_to: rtx,
+                    })
+                    .await
+                    .map_err(|_| AppError::Internal("actor dropped".into()))?;
+            }
+            TournamentType::Mtt => {
+                mtt_tx
+                    .send(MttCommand::Register {
+                        user_id,
+                        respond_to: rtx,
+                    })
+                    .await
+                    .map_err(|_| AppError::Internal("actor dropped".into()))?;
+            }
+        }
+
         rrx.await
             .map_err(|_| AppError::Internal("response dropped".into()))?
     }
@@ -82,14 +184,30 @@ impl TournamentService for TournamentServiceImpl {
         tournament_id: TournamentId,
         user_id: UserId,
     ) -> Result<(), AppError> {
-        let tx = self.sit_go_tx(tournament_id)?;
+        let (sit_tx, mtt_tx, typ) = self.get_sender(tournament_id)?;
         let (rtx, rrx) = tokio::sync::oneshot::channel();
-        tx.send(SitGoCommand::Unregister {
-            user_id,
-            respond_to: rtx,
-        })
-        .await
-        .map_err(|_| AppError::Internal("actor dropped".into()))?;
+
+        match typ {
+            TournamentType::SitAndGo => {
+                sit_tx
+                    .send(SitGoCommand::Unregister {
+                        user_id,
+                        respond_to: rtx,
+                    })
+                    .await
+                    .map_err(|_| AppError::Internal("actor dropped".into()))?;
+            }
+            TournamentType::Mtt => {
+                mtt_tx
+                    .send(MttCommand::Unregister {
+                        user_id,
+                        respond_to: rtx,
+                    })
+                    .await
+                    .map_err(|_| AppError::Internal("actor dropped".into()))?;
+            }
+        }
+
         rrx.await
             .map_err(|_| AppError::Internal("response dropped".into()))?
     }
@@ -99,11 +217,24 @@ impl TournamentService for TournamentServiceImpl {
         _ctx: &RequestContext,
         tournament_id: TournamentId,
     ) -> Result<TournamentSummary, AppError> {
-        let tx = self.sit_go_tx(tournament_id)?;
+        let (sit_tx, mtt_tx, typ) = self.get_sender(tournament_id)?;
         let (rtx, rrx) = tokio::sync::oneshot::channel();
-        tx.send(SitGoCommand::GetSummary { respond_to: rtx })
-            .await
-            .map_err(|_| AppError::Internal("actor dropped".into()))?;
+
+        match typ {
+            TournamentType::SitAndGo => {
+                sit_tx
+                    .send(SitGoCommand::GetSummary { respond_to: rtx })
+                    .await
+                    .map_err(|_| AppError::Internal("actor dropped".into()))?;
+            }
+            TournamentType::Mtt => {
+                mtt_tx
+                    .send(MttCommand::GetSummary { respond_to: rtx })
+                    .await
+                    .map_err(|_| AppError::Internal("actor dropped".into()))?;
+            }
+        }
+
         rrx.await
             .map_err(|_| AppError::Internal("response dropped".into()))
     }
@@ -114,20 +245,22 @@ impl TournamentService for TournamentServiceImpl {
         type_filter: Option<TournamentType>,
     ) -> Result<Vec<TournamentSummary>, AppError> {
         let records = self.repo.list_tournaments(type_filter).await?;
-        Ok(records
-            .into_iter()
-            .map(|r| TournamentSummary {
+        let mut summaries = Vec::with_capacity(records.len());
+        for r in records {
+            let registered = self.repo.count_registrations(r.id).await?;
+            summaries.push(TournamentSummary {
                 id: r.id,
                 tournament_type: r.config.tournament_type,
                 status: r.status,
-                registered: 0,
+                registered,
                 max_players: r.config.max_players,
                 buy_in: r.config.buy_in,
                 prize_pool: r.prize_pool,
                 current_blind_level: None,
                 started_at: r.started_at,
-            })
-            .collect())
+            });
+        }
+        Ok(summaries)
     }
 
     async fn get_results(
@@ -136,5 +269,64 @@ impl TournamentService for TournamentServiceImpl {
         tournament_id: TournamentId,
     ) -> Result<Vec<TournamentResult>, AppError> {
         self.repo.list_results(tournament_id).await
+    }
+
+    async fn get_my_table(
+        &self,
+        _ctx: &RequestContext,
+        tournament_id: TournamentId,
+        user_id: UserId,
+    ) -> Result<Option<TableId>, AppError> {
+        let (sit_tx, mtt_tx, typ) = self.get_sender(tournament_id)?;
+        let (rtx, rrx) = tokio::sync::oneshot::channel();
+        let timeout = Duration::from_secs(
+            std::env::var("TOURNAMENT_GET_TABLE_TIMEOUT_SECS")
+                .unwrap_or_else(|_| "2".to_string())
+                .parse()
+                .unwrap_or(2),
+        );
+
+        let result = match typ {
+            TournamentType::SitAndGo => {
+                sit_tx
+                    .send(SitGoCommand::GetMyTable {
+                        user_id,
+                        respond_to: rtx,
+                    })
+                    .await
+                    .map_err(|_| AppError::Internal("actor dropped".into()))?;
+                tokio::time::timeout(timeout, rrx)
+                    .await
+                    .map_err(|_| AppError::Timeout)?
+                    .map_err(|_| AppError::Internal("oneshot dropped".into()))?
+            }
+            TournamentType::Mtt => {
+                mtt_tx
+                    .send(MttCommand::GetMyTable {
+                        user_id,
+                        respond_to: rtx,
+                    })
+                    .await
+                    .map_err(|_| AppError::Internal("actor dropped".into()))?;
+                tokio::time::timeout(timeout, rrx)
+                    .await
+                    .map_err(|_| AppError::Timeout)?
+                    .map_err(|_| AppError::Internal("oneshot dropped".into()))?
+            }
+        };
+
+        match &result {
+            Some(id) => tracing::info!(%tournament_id, %user_id, %id, "Table found"),
+            None => tracing::info!(%tournament_id, %user_id, "No table found (not seated)"),
+        }
+
+        metrics::counter!("tournament.get_my_table.total").increment(1);
+        if result.is_some() {
+            metrics::counter!("tournament.get_my_table.found").increment(1);
+        } else {
+            metrics::counter!("tournament.get_my_table.not_found").increment(1);
+        }
+
+        Ok(result)
     }
 }

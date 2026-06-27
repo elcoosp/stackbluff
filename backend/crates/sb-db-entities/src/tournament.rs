@@ -8,6 +8,7 @@ use uuid::Uuid;
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
+    pub name: String, // NEW
     #[sea_orm(column_type = "Json")]
     pub config_json: serde_json::Value,
     pub status: String,

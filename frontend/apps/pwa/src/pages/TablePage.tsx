@@ -34,6 +34,14 @@ import { Settings, LogOut, History, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from '@tanstack/react-router';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
+import { toast } from 'sonner';
+import { TournamentHUD } from '../components/tournament/TournamentHUD';
+import { BlindLevelNotification } from '../components/tournament/BlindLevelNotification';
+import { TournamentResultsModal } from '../components/tournament/TournamentResultsModal';
+import { FinalTableBanner } from '../components/tournament/FinalTableBanner';
+import { useTournamentStore } from '@stackbluff/shared/stores/tournamentStore';
+import type { TournamentResultEntry } from '@stackbluff/shared/types/tournament.types';
+import { tournamentApi } from '@stackbluff/shared/api/tournamentApi';
 
 function Fallback({ error, resetErrorBoundary }: any) {
   return (
@@ -136,7 +144,7 @@ function useGameFeedback(
     if (
       game.currentTurnUserId &&
       game.currentTurnUserId !== prevCurrentTurn.current &&
-      game.currentTurnUserId !== resolvedHeroSeat
+      String(game.currentTurnUserId) !== String(resolvedHeroSeat)
     ) {
       const seatIdx = getSeatByUserId(game.currentTurnUserId);
       if (seatIdx !== undefined) {
@@ -222,6 +230,7 @@ export function TablePage() {
 
   // FIX: urlBuyIn and isObserving declared early to be available to all hooks
   const isObserving = (search as any)?.observe === 'true' || (search as any)?.observe === true;
+  const tournamentId = (search as any).tournamentId as string | undefined;
   const urlBuyIn = (search as any)?.buyIn as number | undefined;
 
   const { sendJoin, sendAction, sendRebuy, connectionStatus, myUserId, notSeated, sendLeave } = useGameWebSocket(tableId);
@@ -243,6 +252,9 @@ export function TablePage() {
   const [isJoining, setIsJoining] = useState(false);
   const [isAddingTable, setIsAddingTable] = useState(false);
   const [statsUserId, setStatsUserId] = useState<string | null>(null);
+  const [resultsModalOpen, setResultsModalOpen] = useState(false);
+  const [resultsData, setResultsData] = useState<TournamentResultEntry[]>([]);
+  const [finalTableVisible, setFinalTableVisible] = useState(false);
   const { isDealing } = useDealStore();
   const balance = useAuthStore((s) => s.balance);
 
@@ -265,6 +277,90 @@ export function TablePage() {
     }
   }, [rooms, tableId, activeRoomId]);
 
+  // ── Tournament event listeners (UPDATED with tableChanged) ──
+  useEffect(() => {
+    const handleResult = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail.tournamentId === tournamentId) {
+        setResultsData(detail.results);
+        setResultsModalOpen(true);
+        const userId = useAuthStore.getState().user?.id;
+        if (userId) {
+          const myResult = detail.results.find((r: any) => r.user_id === userId);
+          if (myResult && myResult.prize > 0) {
+            useAuthStore.getState().updateBalance(myResult.prize);
+          }
+        }
+      }
+    };
+    const handleElimination = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail.tournamentId === tournamentId) {
+        toast.info(`${detail.playerName || 'A player'} eliminated in position ${detail.position || '?'}`);
+      }
+    };
+    const handleFinalTable = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail.tournamentId === tournamentId) {
+        setFinalTableVisible(true);
+      }
+    };
+    // ─── NEW: Handle table change event ───────────────────────────────
+    const handleTableChanged = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (tournamentId && detail.tournamentId === tournamentId) {
+        const newTableId = detail.newRoomId;
+        if (newTableId) {
+          // Update store with the table ID (if the store supports it, otherwise just navigate)
+          // We use a local state or ignore store update.
+          navigate({
+            to: '/table/$tableId',
+            params: { tableId: newTableId },
+            search: { tournamentId },
+          });
+        }
+      }
+    };
+
+    window.addEventListener('tournament:result', handleResult as EventListener);
+    window.addEventListener('tournament:finalTable', handleFinalTable as EventListener);
+    window.addEventListener('tournament:elimination', handleElimination as EventListener);
+    window.addEventListener('tournament:tableChanged', handleTableChanged as EventListener);
+
+    return () => {
+      window.removeEventListener('tournament:result', handleResult as EventListener);
+      window.removeEventListener('tournament:finalTable', handleFinalTable as EventListener);
+      window.removeEventListener('tournament:elimination', handleElimination as EventListener);
+      window.removeEventListener('tournament:tableChanged', handleTableChanged as EventListener);
+    };
+  }, [tournamentId, navigate]);
+
+  // ─── Polling fallback for table assignment ────────────────────
+  useEffect(() => {
+    if (!tournamentId) return;
+    const tournamentState = useTournamentStore.getState().tournaments[tournamentId];
+    // Only poll if the tournament is running and we are not already on a table
+    if (tournamentState?.status !== 'Running') return;
+
+    const interval = setInterval(async () => {
+      try {
+        const data = await tournamentApi.getMyTable(tournamentId);
+        if (data.table_id) {
+          clearInterval(interval);
+          navigate({
+            to: '/table/$tableId',
+            params: { tableId: data.table_id },
+            search: { tournamentId },
+          });
+        }
+      } catch (e) {
+        // ignore errors
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [tournamentId, navigate]);
+
   // Reset dealing state when switching tables to prevent replaying the deal animation
   useEffect(() => {
     useDealStore.setState({ isDealing: false });
@@ -285,7 +381,7 @@ export function TablePage() {
     lastAction,
   } = game;
 
-  const potRef = useRef<HTMLDivElement>(null);
+  const potRef = useRef<HTMLDivElement | null>(null);
 
   const winProb = analytics?.winProb ?? 0;
   const potOdds = analytics?.potOdds ?? 0;
@@ -335,7 +431,7 @@ export function TablePage() {
           hand_description: player.hand_description,
           is_winner: player.is_winner,
           win_amount: player.win_amount,
-          winning_cards: player.winning_cards,
+          winningCards: player.winning_cards,
           is_showdown_revealed: true,
         };
       }
@@ -717,6 +813,13 @@ export function TablePage() {
                 )}
               </AnimatePresence>
 
+              {tournamentId && (
+                <div className="absolute top-4 right-4 z-[460]">
+                  <TournamentHUD tournamentId={tournamentId} isMobile={!isDesktop} heroStack={heroStack} />
+                </div>
+              )}
+              {tournamentId && <BlindLevelNotification tournamentId={tournamentId} />}
+              <FinalTableBanner visible={finalTableVisible} />
               <TableFelt isMobile={!isDesktop} />
 
               <div className="absolute top-[42%] md:top-[40%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
@@ -747,7 +850,7 @@ export function TablePage() {
                   toCall={actionRequired?.to_call}
                   isMobile={!isDesktop}
                   showdownReveal={showdownReveal}
-                  potRef={potRef}
+                  potRef={potRef as React.RefObject<HTMLDivElement>}
                   lastAction={lastAction}
                 />
               </div>
@@ -772,7 +875,7 @@ export function TablePage() {
               key={`deal-${activeRoomId}`}
               isDesktop={isDesktop}
               heroSeat={resolvedHeroSeat}
-              heroHoleCards={heroHoleCards}
+              heroHoleCards={heroHoleCards ? [...heroHoleCards] : []}
               communityCards={displayCommunityCards}
               seats={seatsWithShowdown}
             />
@@ -789,7 +892,7 @@ export function TablePage() {
                 key={`chip-${activeRoomId}`}
                 isDesktop={isDesktop}
                 heroSeat={resolvedHeroSeat}
-                potRef={potRef}
+                potRef={potRef as React.RefObject<HTMLDivElement>}
                 showdownReveal={showdownReveal}
               />
             )}

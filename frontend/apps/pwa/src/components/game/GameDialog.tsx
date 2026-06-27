@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Dialog } from '@/components/ui/Dialog';
+import { Dialog } from '@stackbluff/shared/components/Dialog';
 import { TimerBar } from './TimerBar';
 
 interface GameDialogProps {

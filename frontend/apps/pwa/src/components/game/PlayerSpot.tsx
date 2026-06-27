@@ -655,7 +655,7 @@ export const PlayerSpot = memo(({
           {showActionBadge && (
             <motion.div
               key={`${action?.text}-${current_bet}`}
-              variants={badgeVariants}
+              variants={badgeVariants as any}
               initial="initial"
               animate="animate"
               exit="exit"

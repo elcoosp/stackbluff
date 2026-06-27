@@ -453,7 +453,7 @@ impl Registry {
         config: TableConfig,
         tournament_id: sb_shared_types::TournamentId,
         broker: Arc<ConnectionBroker>,
-    ) -> Result<mpsc::Sender<InternalCommand>, AppError> {
+    ) -> Result<(mpsc::Sender<InternalCommand>, TableId), AppError> {
         let room_id = TableId::new(uuid::Uuid::new_v4());
         let active_players = Arc::new(AtomicU8::new(0));
 
@@ -491,9 +491,8 @@ impl Registry {
             .push(room_id);
 
         info!(%room_id, %tournament_id, "Tournament table created");
-        Ok(cmd_tx)
+        Ok((cmd_tx, room_id))
     }
-
     /// Remove a room from the registry.
     pub async fn remove_room(&self, room_id: TableId) {
         if let Some(entry) = self.rooms.write().await.remove(&room_id) {

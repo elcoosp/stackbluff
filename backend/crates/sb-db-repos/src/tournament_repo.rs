@@ -5,8 +5,8 @@ use sb_contracts::tournament_api::{
 use sb_db_entities::{tournament, tournament_registration, tournament_result};
 use sb_shared_types::{AppError, ChipAmount, TournamentId, UserId};
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, Set,
-    TransactionTrait,
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter,
+    QueryOrder, Set, TransactionTrait,
 };
 use uuid::Uuid;
 
@@ -52,7 +52,6 @@ impl TournamentRepo for TournamentRepoImpl {
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;
 
-        // Insert registration
         let reg = tournament_registration::ActiveModel {
             id: Set(Uuid::new_v4()),
             tournament_id: Set(tournament_id.as_uuid()),
@@ -64,7 +63,6 @@ impl TournamentRepo for TournamentRepoImpl {
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;
 
-        // Increment prize pool
         let tour = tournament::Entity::find_by_id(tournament_id.as_uuid())
             .one(&txn)
             .await
@@ -96,7 +94,6 @@ impl TournamentRepo for TournamentRepoImpl {
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;
 
-        // Delete registration
         tournament_registration::Entity::delete_many()
             .filter(tournament_registration::Column::TournamentId.eq(tournament_id.as_uuid()))
             .filter(tournament_registration::Column::UserId.eq(user_id.as_uuid()))
@@ -104,7 +101,6 @@ impl TournamentRepo for TournamentRepoImpl {
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;
 
-        // Decrement prize pool
         let tour = tournament::Entity::find_by_id(tournament_id.as_uuid())
             .one(&txn)
             .await
@@ -124,18 +120,50 @@ impl TournamentRepo for TournamentRepoImpl {
         Ok(())
     }
 
+    async fn register_player(
+        &self,
+        tournament_id: TournamentId,
+        user_id: UserId,
+        buy_in: ChipAmount,
+    ) -> Result<(), AppError> {
+        let conn = &self.db;
+        self.register_player_txn(conn, tournament_id, user_id, buy_in)
+            .await
+    }
+
+    async fn unregister_player(
+        &self,
+        tournament_id: TournamentId,
+        user_id: UserId,
+        buy_in: ChipAmount,
+    ) -> Result<(), AppError> {
+        let conn = &self.db;
+        self.unregister_player_txn(conn, tournament_id, user_id, buy_in)
+            .await
+    }
+
     async fn insert_tournament(&self, config: &TournamentConfig) -> Result<TournamentId, AppError> {
         let id = Uuid::new_v4();
         let config_json =
             serde_json::to_value(config).map_err(|e| AppError::Internal(e.to_string()))?;
+        let now = chrono::Utc::now();
+        let name = format!(
+            "{} Tournament {}",
+            match config.tournament_type {
+                TournamentType::SitAndGo => "Sit&Go",
+                TournamentType::Mtt => "MTT",
+            },
+            id.to_string().chars().take(8).collect::<String>()
+        );
         let active = tournament::ActiveModel {
             id: Set(id),
+            name: Set(name),
             config_json: Set(config_json),
             status: Set("Registering".to_string()),
             prize_pool: Set(0),
             started_at: Set(None),
             completed_at: Set(None),
-            created_at: Set(chrono::Utc::now()),
+            created_at: Set(now),
         };
         active
             .insert(&self.db)
@@ -300,5 +328,15 @@ impl TournamentRepo for TournamentRepoImpl {
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;
         Ok(())
+    }
+
+    // ─── Added: count registrations ──────────────────────────────────────
+    async fn count_registrations(&self, tournament_id: TournamentId) -> Result<u32, AppError> {
+        let count: u64 = tournament_registration::Entity::find()
+            .filter(tournament_registration::Column::TournamentId.eq(tournament_id.as_uuid()))
+            .count(&self.db)
+            .await
+            .map_err(|e| AppError::Database(e.to_string()))?;
+        Ok(count as u32)
     }
 }

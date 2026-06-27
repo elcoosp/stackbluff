@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
@@ -10,12 +14,25 @@
     "jsx": "react-jsx",
     "isolatedModules": true,
     "skipLibCheck": true,
-    "types": ["vite/client", "node"],
+    "types": [
+      "vite/client",
+      "node"
+    ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@stackbluff/shared/*": ["../../packages/shared/src/*"],
-      "@stackbluff/shared": ["../../packages/shared/src/index.ts"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@stackbluff/shared/*": [
+        "../../packages/shared/src/*"
+      ],
+      "@stackbluff/shared": [
+        "../../packages/shared/src/index.ts"
+      ]
     }
   },
-  "include": ["src", "../../packages/shared/src"]
+  "include": [
+    "e2e",
+    "src",
+    "../../packages/shared/src"
+  ]
 }

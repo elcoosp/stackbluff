@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use sb_shared_types::{AppError, ChipAmount, RequestContext, TournamentId, UserId};
+use sb_shared_types::{AppError, ChipAmount, RequestContext, TableId, TournamentId, UserId};
 use serde::{Deserialize, Serialize};
 
 // ── Enums ────────────────────────────────────────────────────────────────────
@@ -141,12 +141,20 @@ pub trait TournamentService: Send + Sync {
         ctx: &RequestContext,
         tournament_id: TournamentId,
     ) -> Result<Vec<TournamentResult>, AppError>;
+
+    async fn get_my_table(
+        &self,
+        ctx: &RequestContext,
+        tournament_id: TournamentId,
+        user_id: UserId,
+    ) -> Result<Option<TableId>, AppError>;
 }
 
 // ── Repository trait ─────────────────────────────────────────────────────────
 
 #[async_trait]
 pub trait TournamentRepo: Send + Sync {
+    // Transactional versions (used internally)
     async fn register_player_txn(
         &self,
         conn: &sea_orm::DatabaseConnection,
@@ -158,6 +166,21 @@ pub trait TournamentRepo: Send + Sync {
     async fn unregister_player_txn(
         &self,
         conn: &sea_orm::DatabaseConnection,
+        tournament_id: TournamentId,
+        user_id: UserId,
+        buy_in: ChipAmount,
+    ) -> Result<(), AppError>;
+
+    // Simple versions that use the repo's own connection
+    async fn register_player(
+        &self,
+        tournament_id: TournamentId,
+        user_id: UserId,
+        buy_in: ChipAmount,
+    ) -> Result<(), AppError>;
+
+    async fn unregister_player(
+        &self,
         tournament_id: TournamentId,
         user_id: UserId,
         buy_in: ChipAmount,
@@ -201,4 +224,7 @@ pub trait TournamentRepo: Send + Sync {
         id: TournamentId,
         amount: ChipAmount,
     ) -> Result<(), AppError>;
+
+    // ── Added for registration counts ────────────────────────────────
+    async fn count_registrations(&self, tournament_id: TournamentId) -> Result<u32, AppError>;
 }

@@ -12,10 +12,11 @@ interface AuthState {
   token: string | null;
   balance: number;
   isAuthenticated: boolean;
-  isLoading: boolean; // <-- Added loading state
+  isLoading: boolean;
   setAuth: (user: User, token: string, balance?: number) => void;
   loadUser: () => Promise<void>;
   logout: () => void;
+  updateBalance: (amount: number) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -23,7 +24,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   token: localStorage.getItem('auth_token'),
   balance: 0,
   isAuthenticated: !!localStorage.getItem('auth_token'),
-  isLoading: !!localStorage.getItem('auth_token'), // <-- Start as loading if token exists
+  isLoading: !!localStorage.getItem('auth_token'),
 
   setAuth: (user, token, balance = 0) => {
     localStorage.setItem('auth_token', token);
@@ -62,4 +63,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.removeItem('auth_token');
     set({ user: null, token: null, balance: 0, isAuthenticated: false, isLoading: false });
   },
+
+  updateBalance: (amount: number) =>
+    set((state) => ({ balance: state.balance + amount })),
 }));

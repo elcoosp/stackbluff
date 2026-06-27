@@ -3,8 +3,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use chrono::Utc;
-use rand::RngExt;
-use rand::seq::SliceRandom;
+use rand::prelude::*; // imports Rng, SliceRandom, etc.
 use tokio::sync::{mpsc, oneshot};
 use tracing::info;
 
@@ -40,6 +39,10 @@ pub enum MttCommand {
         repo: Arc<dyn sb_contracts::tournament_api::TournamentRepo>,
         user_repo: Arc<dyn sb_contracts::repo_api::UserRepo>,
     },
+    GetMyTable {
+        user_id: UserId,
+        respond_to: oneshot::Sender<Option<TableId>>,
+    },
 }
 
 #[derive(Clone)]
@@ -50,6 +53,7 @@ struct RegisteredPlayer {
 }
 
 struct TableInfo {
+    table_id: TableId,
     cmd_tx: mpsc::Sender<TableCommand>,
     players: Vec<(PlayerId, UserId)>,
 }
@@ -62,7 +66,6 @@ enum DirectorState {
     Completed,
 }
 
-/// Manages a Multi-Table Tournament lifecycle.
 pub struct MttDirector {
     tournament_id: TournamentId,
     config: TournamentConfig,
@@ -79,7 +82,7 @@ pub struct MttDirector {
 
     tables: Vec<TableInfo>,
     blind_scheduler: Option<BlindScheduler>,
-    player_assignments: HashMap<UserId, usize>, // user -> table index
+    player_assignments: HashMap<UserId, usize>,
 
     survivors: HashSet<UserId>,
     elimination_order: Vec<(UserId, PlayerId)>,
@@ -87,6 +90,8 @@ pub struct MttDirector {
 
     tournament_repo: Option<Arc<dyn sb_contracts::tournament_api::TournamentRepo>>,
     user_repo: Option<Arc<dyn sb_contracts::repo_api::UserRepo>>,
+
+    user_to_table: HashMap<UserId, TableId>,
 }
 
 impl MttDirector {
@@ -119,6 +124,7 @@ impl MttDirector {
             player_info: HashMap::new(),
             tournament_repo: None,
             user_repo: None,
+            user_to_table: HashMap::new(),
         }
     }
 
@@ -136,6 +142,27 @@ impl MttDirector {
             }
         }
         info!(tournament_id = %self.tournament_id, "MttDirector terminated");
+    }
+
+    // ─── Helper to fetch actual stacks from table actor ──────────────
+    async fn fetch_player_stacks(&self, table_idx: usize) -> Vec<(PlayerId, UserId, ChipAmount)> {
+        let table = &self.tables[table_idx];
+        let mut result = Vec::new();
+        for (player_id, user_id) in &table.players {
+            let (tx, rx) = tokio::sync::oneshot::channel();
+            let cmd = TableCommand::GetPlayerStack {
+                user_id: *user_id,
+                respond_to: tx,
+            };
+            if let Err(e) = table.cmd_tx.send(cmd).await {
+                tracing::error!(%user_id, error = ?e, "Failed to get player stack");
+                continue;
+            }
+            if let Ok(stack) = rx.await {
+                result.push((*player_id, *user_id, stack));
+            }
+        }
+        result
     }
 
     pub(crate) async fn handle_command(&mut self, cmd: MttCommand) {
@@ -164,6 +191,13 @@ impl MttDirector {
                 self.tournament_repo = Some(repo);
                 self.user_repo = Some(user_repo);
             }
+            MttCommand::GetMyTable {
+                user_id,
+                respond_to,
+            } => {
+                let table_id = self.user_to_table.get(&user_id).copied();
+                let _ = respond_to.send(table_id);
+            }
         }
     }
 
@@ -187,6 +221,11 @@ impl MttDirector {
         });
         self.player_info.insert(user_id, player_id);
         self.prize_pool = ChipAmount::new(self.prize_pool.as_i64() + buy_in.as_i64()).unwrap();
+
+        if let Some(repo) = &self.tournament_repo {
+            repo.register_player(self.tournament_id, user_id, buy_in)
+                .await?;
+        }
 
         self.broker
             .subscribe_to_room(TableId::new(self.tournament_id.as_uuid()), user_id);
@@ -222,6 +261,12 @@ impl MttDirector {
         self.prize_pool =
             ChipAmount::new((self.prize_pool.as_i64() - player.buy_in.as_i64()).max(0)).unwrap();
         self.player_info.remove(&user_id);
+
+        if let Some(repo) = &self.tournament_repo {
+            repo.unregister_player(self.tournament_id, user_id, self.config.buy_in)
+                .await?;
+        }
+
         self.broker
             .unsubscribe_from_room(TableId::new(self.tournament_id.as_uuid()), user_id);
         self.broadcast_state();
@@ -244,12 +289,13 @@ impl MttDirector {
         self.broker
             .broadcast_to_room(TableId::new(self.tournament_id.as_uuid()), msg);
 
-        // Shuffle players
-        let mut rng = rand::rng();
-        let mut shuffled = self.players.clone();
-        shuffled.shuffle(&mut rng);
+        let shuffled = {
+            let mut rng = rand::rng();
+            let mut tmp = self.players.clone();
+            tmp.shuffle(&mut rng);
+            tmp
+        };
 
-        // Create tables: ceil(total / 9)
         let num_tables = (shuffled.len() as f32 / 9.0).ceil() as usize;
         let table_config = TableConfig {
             max_players: 9,
@@ -261,7 +307,7 @@ impl MttDirector {
         };
 
         for _ in 0..num_tables {
-            let cmd_tx = self
+            let (cmd_tx, table_id) = self
                 .registry
                 .create_tournament_table(
                     table_config.clone(),
@@ -270,12 +316,12 @@ impl MttDirector {
                 )
                 .await?;
             self.tables.push(TableInfo {
+                table_id,
                 cmd_tx,
                 players: vec![],
             });
         }
 
-        // Distribute players round-robin
         for (i, player) in shuffled.iter().enumerate() {
             let table_idx = i % num_tables;
             let table = &mut self.tables[table_idx];
@@ -302,6 +348,7 @@ impl MttDirector {
             table.players.push((player.player_id, player.user_id));
             self.player_assignments.insert(player.user_id, table_idx);
             self.survivors.insert(player.user_id);
+            self.user_to_table.insert(player.user_id, table.table_id);
 
             let msg = sb_table_registry::game_room::RoomMessage::TournamentTableChanged {
                 tournament_id: self.tournament_id,
@@ -311,7 +358,6 @@ impl MttDirector {
             self.broker.send_to_user(player.user_id, msg);
         }
 
-        // Initialize blinds
         let mut scheduler = BlindScheduler::new(self.config.blind_schedule.levels.clone());
         let (sb, bb, _) = scheduler.current_blinds();
         for table in &self.tables {
@@ -323,7 +369,6 @@ impl MttDirector {
         scheduler.start_timer();
         self.blind_scheduler = Some(scheduler);
 
-        // Resume all tables
         for table in &self.tables {
             let (tx, rx) = oneshot::channel();
             let _ = table
@@ -346,7 +391,6 @@ impl MttDirector {
             return;
         }
 
-        // Process eliminations
         for (user_id, _) in &event.busted_players {
             if self.survivors.contains(user_id) {
                 let position = self.survivors.len() as u32;
@@ -369,7 +413,6 @@ impl MttDirector {
             }
         }
 
-        // Rebalance check
         let total_active = self.survivors.len();
         if total_active <= 1 {
             self.end_tournament().await;
@@ -385,7 +428,6 @@ impl MttDirector {
             }
         }
 
-        // Advance blinds
         if let Some(scheduler) = &mut self.blind_scheduler
             && let Some((level, sb, bb, ante)) = scheduler.on_hand_completed()
         {
@@ -406,7 +448,6 @@ impl MttDirector {
                 .broadcast_to_room(TableId::new(self.tournament_id.as_uuid()), msg);
         }
 
-        // Resume all tables
         for table in &self.tables {
             let (tx, rx) = oneshot::channel();
             let _ = table
@@ -435,24 +476,18 @@ impl MttDirector {
             let _ = rx.await;
         }
 
-        // Build table state for rebalancer
-        let table_states: Vec<Vec<(PlayerId, UserId, ChipAmount)>> = self
-            .tables
-            .iter()
-            .map(|t| {
-                t.players
-                    .iter()
-                    .map(|(pid, uid)| (*pid, *uid, self.config.buy_in)) // simplified: use buy_in as stack
-                    .collect()
-            })
-            .collect();
+        // ─── Fetch actual stacks for all players ──────────────────────
+        let mut table_states = Vec::with_capacity(self.tables.len());
+        for idx in 0..self.tables.len() {
+            let stacks = self.fetch_player_stacks(idx).await;
+            table_states.push(stacks);
+        }
 
         let moves = compute_rebalance_moves(&table_states);
 
         self.state = DirectorState::Rebalancing;
         info!(tournament_id = %self.tournament_id, moves = moves.len(), "Rebalancing");
 
-        // Execute moves
         for m in &moves {
             let from_table = &self.tables[m.from_table_idx];
             let to_table = &self.tables[m.to_table_idx];
@@ -468,7 +503,7 @@ impl MttDirector {
                 .await;
             let result = rx.await;
             if let Ok(transfer) = result {
-                // Transfer in
+                // Transfer in with the actual stack (from transfer)
                 let (tx, rx) = oneshot::channel();
                 let _ = to_table
                     .cmd_tx
@@ -476,7 +511,7 @@ impl MttDirector {
                         user_id: m.user_id,
                         player_id: m.player_id,
                         stack: transfer.stack,
-                        seat: None, // auto-assign
+                        seat: None,
                         respond_to: tx,
                     })
                     .await;
@@ -489,6 +524,7 @@ impl MttDirector {
                         new_seat: seat,
                     };
                     self.broker.send_to_user(m.user_id, msg);
+                    self.user_to_table.insert(m.user_id, to_table.table_id);
                 }
             }
         }
@@ -515,7 +551,7 @@ impl MttDirector {
     async fn do_final_table_merge(&mut self) {
         self.state = DirectorState::Pausing;
 
-        // Pause all
+        // Pause all tables
         for table in &self.tables {
             let (tx, rx) = oneshot::channel();
             let _ = table
@@ -525,20 +561,15 @@ impl MttDirector {
             let _ = rx.await;
         }
 
-        let table_states: Vec<Vec<(PlayerId, UserId, ChipAmount)>> = self
-            .tables
-            .iter()
-            .map(|t| {
-                t.players
-                    .iter()
-                    .map(|(pid, uid)| (*pid, *uid, self.config.buy_in))
-                    .collect()
-            })
-            .collect();
+        // ─── Fetch actual stacks for all players ──────────────────────
+        let mut table_states = Vec::with_capacity(self.tables.len());
+        for idx in 0..self.tables.len() {
+            let stacks = self.fetch_player_stacks(idx).await;
+            table_states.push(stacks);
+        }
 
         let moves = compute_final_table_moves(&table_states);
 
-        // Execute moves
         for m in &moves {
             let from_table = &self.tables[m.from_table_idx];
             let to_table = &self.tables[m.to_table_idx];
@@ -572,6 +603,7 @@ impl MttDirector {
                         new_seat: seat,
                     };
                     self.broker.send_to_user(m.user_id, msg);
+                    self.user_to_table.insert(m.user_id, to_table.table_id);
                 }
             }
         }
@@ -582,8 +614,10 @@ impl MttDirector {
             self.tables.truncate(1);
         }
 
-        // Random dealer
-        let dealer_seat = rand::rng().random_range(0..9u8);
+        let dealer_seat = {
+            let mut rng = rand::rng();
+            rng.random_range(0..9u8)
+        };
         for table in &self.tables {
             let (tx, rx) = oneshot::channel();
             let _ = table

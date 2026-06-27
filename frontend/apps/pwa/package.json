@@ -8,7 +8,11 @@
     "build": "vite build",
     "check": "tsc --noEmit",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "vitest --config e2e/vitest.config.e2e.ts",
+    "test:e2e:ui": "vitest --config e2e/vitest.config.e2e.ts --ui",
+    "test:e2e:watch": "vitest --config e2e/vitest.config.e2e.ts --watch",
+    "test:e2e:headless": "HEADLESS=true vitest --config e2e/vitest.config.e2e.ts"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.16",
@@ -30,14 +34,22 @@
     "@tanstack/router-plugin": "^1.168.18",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
+    "@types/node": "^25.9.3",
     "@types/react": "^19.2.7",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
+    "@vitest/ui": "^4.1.9",
+    "dotenv": "^17.4.2",
     "jsdom": "^26.0.0",
+    "puppeteer": "^25.2.1",
+    "puppeteer-cluster": "^0.25.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "sqlite3": "^6.0.1",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "~6.0.0",
     "vite": "^8.0.8",
     "vite-plugin-pwa": "^1.0.0",
-    "vitest": "^4.0.0"
+    "vitest": "^4.1.8"
   }
 }
