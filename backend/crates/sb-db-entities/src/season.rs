@@ -10,5 +10,7 @@ pub struct Model {
     pub name: String,
     pub starts_at: DateTimeUtc,
     pub ends_at: DateTimeUtc,
+    pub processed: bool,
 }
 
+impl ActiveModelBehavior for ActiveModel {}
