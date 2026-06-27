@@ -9,11 +9,10 @@ impl MigrationTrait for Migration {
         manager
             .alter_table(
                 Table::alter()
-                    .table(Tournaments::Table)
-                    .add_column(
-                        Column::new(Tournaments::ScheduledStart)
-                            .timestamp_with_time_zone()
-                            .null(),
+                    .table(Tournament::Table)
+                    .add_column_if_not_exists(
+                        Tournament::ScheduledStart,
+                        ColumnType::TimestampWithTimeZone.null(),
                     )
                     .to_owned(),
             )
@@ -24,16 +23,17 @@ impl MigrationTrait for Migration {
         manager
             .alter_table(
                 Table::alter()
-                    .table(Tournaments::Table)
-                    .drop_column(Tournaments::ScheduledStart)
+                    .table(Tournament::Table)
+                    .drop_column(Tournament::ScheduledStart)
                     .to_owned(),
             )
             .await
     }
 }
 
-#[derive(DeriveIden)]
-enum Tournaments {
+#[derive(Iden)]
+pub enum Tournament {
     Table,
+    #[iden = "scheduled_start"]
     ScheduledStart,
 }
