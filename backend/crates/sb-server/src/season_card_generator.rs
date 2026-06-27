@@ -1,5 +1,4 @@
 use image::{ImageBuffer, Rgba, RgbaImage};
-use sb_contracts::notification_api::NotificationEvent;
 use sb_db_entities::{enums::RankTier, player_rank, season};
 use sb_db_repos::season_card_repo::SeasonCardRepo;
 use sb_shared_types::errors::AppError;
@@ -74,11 +73,7 @@ impl SeasonCardGenerator {
                 .await
             {
                 Ok(url) => {
-                    // MVP: notifications disabled
-                        .await
-                    {
-                        tracing::warn!("Notification failed for user {}: {}", rank.user_id, e);
-                    }
+                    tracing::info!("Generated card for user {}: {}", rank.user_id, url);
                 }
                 Err(e) => {
                     tracing::error!("Card generation failed for user {}: {}", rank.user_id, e);
@@ -109,7 +104,7 @@ impl SeasonCardGenerator {
             .ok_or_else(|| AppError::Internal("Season not found".to_string()))?;
         let mut season_active: season::ActiveModel = season_model.into();
         season_active.processed = Set(true);
-        let _: season::Model = season_active
+        season_active
             .update(&txn)
             .await
             .map_err(|e| AppError::Internal(format!("Update error: {e}")))?;
