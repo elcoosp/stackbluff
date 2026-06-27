@@ -65,6 +65,9 @@ mod tests {
 
     fn make_config(max_players: u32) -> TournamentConfig {
         TournamentConfig {
+            club_id: None,
+            scheduled_start: None,
+            blind_schedule_id: None,
             tournament_type: TournamentType::SitAndGo,
             max_players,
             buy_in: ChipAmount::new(1000).unwrap(),
