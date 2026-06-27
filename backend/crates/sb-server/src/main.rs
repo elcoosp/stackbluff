@@ -71,7 +71,6 @@ async fn main() {
 
     leaderboard_refresh::spawn_leaderboard_refresh_task(db.clone()).await;
 
-
     let writer_handle = init_writer_loop(db.clone(), None);
     let user_repo: Arc<dyn UserRepo> = Arc::new(UserRepoImpl::new(writer_handle.sender.clone()));
 
@@ -247,11 +246,10 @@ async fn main() {
             eprintln!("Scheduler error: {e}");
         }
     });
-    // Season end background processor
+    // Season end background processor (MVP - no notifications)
     let season_processor = std::sync::Arc::new(season_card_generator::SeasonCardGenerator::new(
         db.clone(),
         std::sync::Arc::new(r2_storage::R2StorageAdapter::new(r2.clone())),
-        notifier.clone(),
         std::sync::Arc::new(sb_db_repos::season_card_repo::SeaOrmSeasonCardRepo::new(
             db.clone(),
         )),
