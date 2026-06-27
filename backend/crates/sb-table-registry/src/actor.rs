@@ -616,15 +616,6 @@ impl TableActor {
         let _ = self.event_tx.send(TableEvent::TableClosed(event));
     }
 
-fn community_cards_to_array(hand: &ActiveHand) -> Option<[sb_shared_types::Card; 5]> {
-    let cc = hand.state.community_cards();
-    if cc.len() >= 5 {
-        Some(cc[..5].try_into().ok()?)
-    } else {
-        None
-    }
-}
-
 pub fn spawn_table_actor(
     room_id: TableId,
     table_id: TableId,
