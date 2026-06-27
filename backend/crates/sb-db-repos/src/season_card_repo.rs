@@ -48,7 +48,7 @@ impl SeasonCardRepo for SeaOrmSeasonCardRepo {
             user_id: Set(user_id),
             season_id: Set(season_id),
             card_image_url: Set(card_image_url),
-            card_data: Set(Some(card_data)),
+            card_data: Set(Some(sea_orm::Json(card_data))),
             generated_at: Set(chrono::Utc::now().into()),
         };
         active.insert(&self.db).await?;
