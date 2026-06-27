@@ -1,23 +1,13 @@
 use crate::types::BotState;
-use uuid::Uuid;
 use anyhow::Context;
-use uuid::Uuid;
 use sb_contracts::service_api::CreateTableInput;
-use uuid::Uuid;
 use sb_shared_types::ids::{TableId, UserId};
-use uuid::Uuid;
 use sb_shared_types::request_context::RequestContext;
-use uuid::Uuid;
 use std::sync::Arc;
-use uuid::Uuid;
 use std::time::Duration;
-use uuid::Uuid;
 use teloxide::types::{CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message};
-use uuid::Uuid;
 use tokio::time::timeout;
-use uuid::Uuid;
 use tracing::{error, info, warn};
-use uuid::Uuid;
 
 const SERVICE_TIMEOUT: Duration = Duration::from_secs(2);
 
@@ -86,15 +76,14 @@ pub async fn handle_poker_command(ctx: &RequestContext, state: &Arc<BotState>, m
     let ctx_with_user = RequestContext::new(ctx.request_id, Some(user_id));
 
     let input = CreateTableInput {
-        name: "Poker Game".to_string(),
+        name: format!("Poker table from group {}", chat_id.0),
         club_id: None,
-        stake_level: sb_shared_types::StakeLevel::Low,
-        variant: sb_shared_types::GameVariant::Holdem,
+        stake_level: sb_shared_types::game_types::StakeLevel::Micro,
+        variant: sb_shared_types::game_types::GameVariant::Holdem,
+        created_by: user_id,
         is_private: false,
-        invited_users: Vec::new(),
-        created_by: sb_shared_types::UserId(uuid::Uuid::from_u64_pair(0, message.from.as_ref().map(|user| user.id.0).unwrap_or(0))),
-        telegram_chat_id: Some(message.chat.id.to_string()),
-    }
+        invited_users: vec![],
+    };
 
     let table_id = match timeout(
         SERVICE_TIMEOUT,
@@ -208,15 +197,14 @@ pub async fn handle_challenge_command(
     let ctx_with_user = RequestContext::new(ctx.request_id, Some(challenger_id));
 
     let input = CreateTableInput {
-        name: "Poker Game".to_string(),
+        name: format!("Heads-up: {} vs {}", challenger_id, challenged_id),
         club_id: None,
-        stake_level: sb_shared_types::StakeLevel::Low,
-        variant: sb_shared_types::GameVariant::Holdem,
-        is_private: false,
-        invited_users: Vec::new(),
-        created_by: sb_shared_types::UserId(uuid::Uuid::from_u64_pair(0, message.from.as_ref().map(|user| user.id.0).unwrap_or(0))),
-        telegram_chat_id: Some(message.chat.id.to_string()),
-    }
+        stake_level: sb_shared_types::game_types::StakeLevel::Micro,
+        variant: sb_shared_types::game_types::GameVariant::Holdem,
+        created_by: challenger_id,
+        is_private: true,
+        invited_users: vec![challenger_id, challenged_id],
+    };
 
     let table_id = match timeout(
         SERVICE_TIMEOUT,
