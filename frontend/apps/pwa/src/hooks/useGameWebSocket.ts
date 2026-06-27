@@ -273,29 +273,7 @@ export function useGameWebSocket(tableId: string) {
     const url = token ? `${baseWs}/ws/game?token=${encodeURIComponent(token)}` : `${baseWs}/ws/game`;
 
     const ws = new WebSocket(url);
-    // Handle user entitlement updates from payment webhooks
-    socket.current?.addEventListener('message', (event: MessageEvent) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === 'user.updated') {
-          const payload = data.payload ?? data.data ?? {};
-          if (typeof payload.balance === 'number') {
-            useAuthStore.getState().setBalance(payload.balance);
-          }
-          if (payload.season_pass_expires_at !== undefined) {
-            useEntitlementsStore.getState().setSeasonPassExpiresAt(payload.season_pass_expires_at);
-          }
-          if (payload.club_pro_expires_at !== undefined) {
-            useEntitlementsStore.getState().setClubProExpiresAt(payload.club_pro_expires_at);
-          }
-          if (typeof payload.is_club_owner === 'boolean') {
-            useEntitlementsStore.getState().setIsClubOwner(payload.is_club_owner);
-          }
-        }
-      } catch {
-        // Ignore non-JSON or malformed WS messages
-      }
-    });
+    
 
     wsRef.current = ws;
 
@@ -322,6 +300,31 @@ export function useGameWebSocket(tableId: string) {
       if (!mountedRef.current) return;
       try {
         const data = JSON.parse(event.data);
+        // Handle payment-driven entitlement updates
+        if (data.type === 'user.updated') {
+          const parsed = UserUpdatedPayloadSchema.safeParse(data);
+          if (!parsed.success) {
+            console.warn('[WS] Ignored malformed user.updated message:', parsed.error.format());
+          } else {
+            const msg = parsed.data;
+            const payload = msg.payload ?? msg.data ?? {};
+            if (typeof payload.balance === 'number') {
+              useAuthStore.getState().setBalance(payload.balance);
+              console.info('[WS] Balance updated:', payload.balance);
+            }
+            if (payload.season_pass_expires_at !== undefined) {
+              useEntitlementsStore.getState().setSeasonPassExpiresAt(payload.season_pass_expires_at);
+            }
+            if (payload.club_pro_expires_at !== undefined) {
+              useEntitlementsStore.getState().setClubProExpiresAt(payload.club_pro_expires_at);
+            }
+            if (typeof payload.is_club_owner === 'boolean') {
+              useEntitlementsStore.getState().setIsClubOwner(payload.is_club_owner);
+            }
+          }
+          return;
+        }
+
         console.debug('[WS Hook] Message received:', data);
 
         if (data.type === 'Error') {
