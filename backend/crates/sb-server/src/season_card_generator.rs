@@ -69,7 +69,7 @@ impl SeasonCardGenerator {
 
         for rank in &ranks {
             match self
-                .generate_and_store_card(rank.user_id, season_id, rank.rank_tier)
+                .generate_and_store_card(rank.user_id, season_id, rank.rank_tier.clone())
                 .await
             {
                 Ok(url) => {
