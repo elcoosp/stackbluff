@@ -3,44 +3,44 @@ use chrono::NaiveDate;
 use sb_contracts::persistence_error::PersistenceError;
 use sb_contracts::repo_api::PuzzleRepo;
 use sb_db_entities::puzzle_submission;
-use sea_orm::{
-    ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseConnection, EntityTrait,
-    QueryFilter, Set,
-};
+use sb_shared_types::puzzle::{PuzzleAction, PuzzleSubmissionRecord};
+use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use uuid::Uuid;
 
-pub struct PuzzleRepoImpl;
+pub struct PuzzleRepoImpl { db: DatabaseConnection }
 
 impl PuzzleRepoImpl {
-    pub fn new() -> Self {
-        Self
-    }
+    pub fn new(db: DatabaseConnection) -> Self { Self { db } }
 }
 
 #[async_trait]
 impl PuzzleRepo for PuzzleRepoImpl {
-    async fn find_submission(
-        &self,
-        db: &DatabaseConnection,
-        user_id: Uuid,
-        date: NaiveDate,
-    ) -> Result<Option<puzzle_submission::Model>, PersistenceError> {
-        puzzle_submission::Entity::find()
+    async fn find_submission(&self, user_id: Uuid, date: NaiveDate) -> Result<Option<PuzzleSubmissionRecord>, PersistenceError> {
+        let model = puzzle_submission::Entity::find()
             .filter(puzzle_submission::Column::UserId.eq(user_id))
             .filter(puzzle_submission::Column::PuzzleDate.eq(date))
-            .one(db)
+            .one(&self.db)
             .await
-            .map_err(|e| PersistenceError::Internal(e.to_string()))
+            .map_err(|e| PersistenceError::Internal(e.to_string()))?;
+
+        Ok(model.map(|m| PuzzleSubmissionRecord {
+            user_id: m.user_id,
+            puzzle_date: m.puzzle_date,
+            selected_action: m.selected_action.parse().unwrap_or(PuzzleAction::Fold),
+            is_correct: m.is_correct,
+            submitted_at: m.submitted_at,
+        }))
     }
 
-    async fn save_submission(
-        &self,
-        db: &DatabaseConnection,
-        model: puzzle_submission::ActiveModel,
-    ) -> Result<puzzle_submission::Model, PersistenceError> {
-        model
-            .insert(db)
-            .await
-            .map_err(|e| PersistenceError::Internal(e.to_string()))
+    async fn save_submission(&self, record: PuzzleSubmissionRecord) -> Result<(), PersistenceError> {
+        let active_model = puzzle_submission::ActiveModel {
+            user_id: Set(record.user_id),
+            puzzle_date: Set(record.puzzle_date),
+            selected_action: Set(record.selected_action.to_string()),
+            is_correct: Set(record.is_correct),
+            submitted_at: Set(record.submitted_at),
+        };
+        active_model.insert(&self.db).await.map_err(|e| PersistenceError::Internal(e.to_string()))?;
+        Ok(())
     }
 }
