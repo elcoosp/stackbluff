@@ -182,3 +182,16 @@ pub async fn get_hand(
         serde_json::from_str(&json_str).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(Json(json))
 }
+
+pub struct NoOpR2;
+
+#[async_trait::async_trait]
+impl R2Storage for NoOpR2 {
+    async fn put_object(&self, _key: &str, _data: Vec<u8>) -> Result<(), String> {
+        Ok(())
+    }
+
+    async fn get_object(&self, _key: &str) -> Result<Vec<u8>, String> {
+        Err("not found".to_string())
+    }
+}
