@@ -18,5 +18,8 @@ export function useUserProfile() {
       return user;
     },
     staleTime: 1000 * 30,
+    onError: (err) => {
+      console.error('[User] Failed to fetch profile:', err);
+    },
   });
 }
