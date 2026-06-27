@@ -1,6 +1,6 @@
 use image::{ImageBuffer, Rgba, RgbaImage};
 use sb_contracts::notification_api::{NotificationEvent, NotificationService};
-use sb_db_entities::{player_rank, season, user_season_card, enums::RankTier};
+use sb_db_entities::{player_rank, season, enums::RankTier};
 use sb_db_repos::season_card_repo::SeasonCardRepo;
 use sb_shared_types::errors::AppError;
 use sea_orm::{
@@ -149,7 +149,7 @@ impl SeasonCardGenerator {
         });
 
         // Generate PNG image
-        let img_bytes = self.generate_card_image(&tier)?;
+        let img_bytes = generate_card_image(&tier)?;
         let key = format!("seasons/{}/user_{}.png", season_id, user_id);
         let url = self
             .r2
@@ -164,37 +164,37 @@ impl SeasonCardGenerator {
 
         Ok(url)
     }
+}
 
-    fn generate_card_image(&self, tier: &RankTier) -> Result<Vec<u8>, AppError> {
-        let width = 800u32;
-        let height = 600u32;
-        let mut img: RgbaImage = ImageBuffer::new(width, height);
+fn generate_card_image(tier: &RankTier) -> Result<Vec<u8>, AppError> {
+    let width = 800u32;
+    let height = 600u32;
+    let mut img: RgbaImage = ImageBuffer::new(width, height);
 
-        let (r, g, b) = match tier {
-            RankTier::Legend => (255, 215, 0),
-            RankTier::Maestro => (220, 20, 60),
-            RankTier::Diamond => (0, 191, 255),
-            RankTier::Platinum => (229, 228, 226),
-            RankTier::Gold => (255, 223, 0),
-            RankTier::Silver => (192, 192, 192),
-            RankTier::Bronze => (205, 127, 50),
-            RankTier::Brick => (139, 69, 19),
-        };
+    let (r, g, b) = match tier {
+        RankTier::Legend => (255, 215, 0),
+        RankTier::Maestro => (220, 20, 60),
+        RankTier::Diamond => (0, 191, 255),
+        RankTier::Platinum => (229, 228, 226),
+        RankTier::Gold => (255, 223, 0),
+        RankTier::Silver => (192, 192, 192),
+        RankTier::Bronze => (205, 127, 50),
+        RankTier::Brick => (139, 69, 19),
+    };
 
-        for y in 0..height {
-            for x in 0..width {
-                img.put_pixel(x, y, Rgba([r, g, b, 255]));
-            }
+    for y in 0..height {
+        for x in 0..width {
+            img.put_pixel(x, y, Rgba([r, g, b, 255]));
         }
-
-        let mut bytes: Vec<u8> = Vec::new();
-        img.write_to(
-            &mut std::io::Cursor::new(&mut bytes),
-            image::ImageFormat::Png,
-        )
-        .map_err(|e| AppError::internal(format!("Image encode error: {e}")))?;
-        Ok(bytes)
     }
+
+    let mut bytes: Vec<u8> = Vec::new();
+    img.write_to(
+        &mut std::io::Cursor::new(&mut bytes),
+        image::ImageFormat::Png,
+    )
+    .map_err(|e| AppError::internal(format!("Image encode error: {e}")))?;
+    Ok(bytes)
 }
 
 #[cfg(test)]
@@ -203,49 +203,7 @@ mod tests {
 
     #[test]
     fn test_card_image_generation() {
-        let gen = SeasonCardGenerator {
-            db: panic!("not used in test"),
-            r2: Arc::new(MockR2),
-            notifier: Arc::new(MockNotifier),
-            season_card_repo: Arc::new(MockRepo),
-        };
-        let bytes = gen.generate_card_image(&RankTier::Diamond).unwrap();
+        let bytes = generate_card_image(&RankTier::Diamond).unwrap();
         assert!(!bytes.is_empty());
-    }
-
-    struct MockR2;
-    #[async_trait::async_trait]
-    impl R2Storage for MockR2 {
-        async fn put_object(
-            &self,
-            _bucket: &str,
-            _key: &str,
-            _data: Vec<u8>,
-            _content_type: &str,
-        ) -> Result<String, AppError> {
-            Ok("https://mock.example.com/card.png".to_string())
-        }
-    }
-
-    struct MockNotifier;
-    #[async_trait::async_trait]
-    impl NotificationService for MockNotifier {
-        async fn send(&self, _event: NotificationEvent) -> Result<(), AppError> {
-            Ok(())
-        }
-    }
-
-    struct MockRepo;
-    #[async_trait::async_trait]
-    impl SeasonCardRepo for MockRepo {
-        async fn store_card(
-            &self,
-            _user_id: Uuid,
-            _season_id: i32,
-            _url: Option<String>,
-            _data: serde_json::Value,
-        ) -> Result<(), sea_orm::DbErr> {
-            Ok(())
-        }
     }
 }
