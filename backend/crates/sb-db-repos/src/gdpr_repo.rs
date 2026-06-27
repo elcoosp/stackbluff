@@ -43,7 +43,7 @@ impl GdprRepo for PgGdprRepo {
             .one(&self.db)
             .await
             .map_err(|e| PersistenceError::from(sb_shared_types::AppError::Internal(format!("{:?}", e))))?
-            .ok_or(PersistenceError::from(sb_shared_types::AppError::NotFound))?;
+            .ok_or(PersistenceError::from(sb_shared_types::AppError::NotFound("Not found".to_string())))?;
 
         let mut active: deletion_request::ActiveModel = req.into();
         active.status = Set("completed".to_owned());
@@ -57,7 +57,7 @@ impl GdprRepo for PgGdprRepo {
             .one(&self.db)
             .await
             .map_err(|e| PersistenceError::from(sb_shared_types::AppError::Internal(format!("{:?}", e))))?
-            .ok_or(PersistenceError::from(sb_shared_types::AppError::NotFound))?;
+            .ok_or(PersistenceError::from(sb_shared_types::AppError::NotFound("Not found".to_string())))?;
 
         Ok(UserDataExportDto {
             profile: serde_json::to_value(&user).unwrap_or_default(),
@@ -98,7 +98,7 @@ impl GdprRepo for PgGdprRepo {
             .one(&self.db)
             .await
             .map_err(|e| PersistenceError::from(sb_shared_types::AppError::Internal(format!("{:?}", e))))?
-            .ok_or(PersistenceError::from(sb_shared_types::AppError::NotFound))?;
+            .ok_or(PersistenceError::from(sb_shared_types::AppError::NotFound("Not found".to_string())))?;
 
         let val = serde_json::to_value(&user.password_hash).unwrap_or_default();
         Ok(val.as_str().unwrap_or("").to_owned())

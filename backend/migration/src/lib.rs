@@ -1,7 +1,7 @@
-mod m20260628_000001_gdpr_deletion;
 // backend/migration/src/lib.rs
 #![allow(clippy::needless_update)]
 #![allow(clippy::enum_variant_names)]
+mod m20260628_000001_gdpr_deletion;
 mod m20250101_000001_add_participants_to_hand_history;
 mod m20250614_create_payment_intents;
 mod m20260101_000008_player_statistics;
