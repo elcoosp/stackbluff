@@ -9,7 +9,6 @@ use sb_contracts::repo_api::UserRepo;
 use sb_shared_types::{AppError, RequestContext, UserId, TableId, TournamentId};
 use sb_table_registry::registry::Registry;
 use sb_table_registry::connection_broker::ConnectionBroker;
-use crate::{SitGoCommand, MttCommand};
 
 #[allow(dead_code)]
 pub struct TournamentServiceImpl {
@@ -38,7 +37,7 @@ impl TournamentServiceImpl {
             registry,
             broker,
             notification_service,
-            bot_handler,
+            club_notifier,
             app_base_url,
         }
     }

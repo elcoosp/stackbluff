@@ -2,9 +2,8 @@ use std::sync::Arc;
 use chrono::{DateTime, Utc, Duration};
 use sb_contracts::tournament_api::{TournamentRepo, TournamentStatus};
 use sb_contracts::notification_api::{NotificationService, ClubNotifier};
-use sb_shared_types::{TournamentId, RequestContext};
+use sb_shared_types::TournamentId;
 use tokio::time::{sleep_until, Instant};
-use uuid::Uuid;
 
 pub fn schedule_reminders(
     tournament_id: TournamentId,
