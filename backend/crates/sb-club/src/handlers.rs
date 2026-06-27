@@ -87,23 +87,3 @@ fn map_club_error(e: ClubError) -> (StatusCode, String) {
         }
     }
 }
-
-
-// === Issue #029: Club Tournament Scheduling ===
-use axum::{extract::Path, Json, routing::post, Router};
-use sb_contracts::tournament_api::TournamentConfig;
-use sb_shared_types::ids::ClubId;
-
-pub async fn create_club_tournament(
-    Path(club_id): Path<ClubId>,
-    Json(mut config): Json<TournamentConfig>,
-) -> impl axum::response::IntoResponse {
-    config.club_id = Some(club_id);
-    // TODO: Validate user is club member/owner via ClubRepo
-    // TODO: Call TournamentService::create_tournament with modified config
-    axum::http::StatusCode::CREATED
-}
-
-pub fn club_tournament_routes() -> Router {
-    Router::new().route("/clubs/:club_id/tournaments", post(create_club_tournament))
-}

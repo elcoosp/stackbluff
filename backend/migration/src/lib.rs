@@ -1,6 +1,6 @@
-// backend/migration/src/lib.rs
 #![allow(clippy::needless_update)]
 #![allow(clippy::enum_variant_names)]
+// backend/migration/src/lib.rs
 mod m20250101_000001_add_participants_to_hand_history;
 mod m20250614_create_payment_intents;
 mod m20260101_000008_player_statistics;
@@ -15,8 +15,7 @@ mod m20260616_seed_base_tables;
 mod m20260617_add_table_name;
 mod m20260622_132958_mission_system;
 mod m20260624_create_tournament_tables;
-mod m20260625_seed_tournaments;
-mod m20250701_000001_add_telegram_chat_id_to_clubs; // <-- new
+mod m20260625_seed_tournaments; // <-- new
 
 use sea_orm_migration::prelude::*;
 
@@ -25,7 +24,7 @@ pub struct Migrator;
 #[async_trait::async_trait]
 impl MigratorTrait for Migrator {
     fn migrations() -> Vec<Box<dyn MigrationTrait>> {
-        vec![Box::new(main::Migration), 
+        vec![
             // 1. Core tables
             Box::new(m20260607_000001_create_all_tables::Migration),
             Box::new(m20260607_000002_create_clubs_tables::Migration),

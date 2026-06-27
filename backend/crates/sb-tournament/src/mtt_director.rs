@@ -743,11 +743,3 @@ impl MttDirector {
         }
     }
 }
-
-
-// === Issue #029: Result Posting ===
-pub async fn post_tournament_results_to_telegram(club_id: sb_shared_types::ids::ClubId, tournament_id: uuid::Uuid) {
-    // TODO: Fetch club.telegram_chat_id via ClubRepo
-    // TODO: Build summary message (top 3 placements, winning hand)
-    // TODO: Call NotificationService::send_telegram_message(chat_id, text) within 10s of final hand
-}

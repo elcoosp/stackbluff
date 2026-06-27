@@ -330,17 +330,3 @@ impl TournamentService for TournamentServiceImpl {
         Ok(result)
     }
 }
-
-
-// === Issue #029: Registration Check ===
-pub async fn check_club_membership(club_id: sb_shared_types::ids::ClubId, user_id: sb_shared_types::ids::UserId) -> Result<(), sb_shared_types::errors::AppError> {
-    // TODO: Inject Arc<dyn ClubRepo> and call is_member()
-    Ok(())
-}
-
-// === Issue #029: XP Integration ===
-pub async fn award_tournament_xp(user_id: sb_shared_types::ids::UserId, club_id: sb_shared_types::ids::ClubId, hands_played: u32) {
-    // TODO: Inject Arc<dyn ClubService> and call add_xp()
-    let base_xp = hands_played * 5; // 5 XP per hand
-    // ClubService::add_xp(user_id, club_id, base_xp).await;
-}
