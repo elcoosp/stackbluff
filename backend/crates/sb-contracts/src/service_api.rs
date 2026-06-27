@@ -12,6 +12,8 @@ use sb_shared_types::{ClubId, StakeLevel};
 /// Input for creating a new poker table.
 #[derive(Debug, Clone)]
 pub struct CreateTableInput {
+    pub created_by: sb_shared_types::UserId,
+    pub telegram_chat_id: Option<String>,
     pub name: String,
     pub club_id: Option<ClubId>,
     pub stake_level: StakeLevel,
