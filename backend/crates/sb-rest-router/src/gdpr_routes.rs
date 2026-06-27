@@ -1,5 +1,4 @@
 use axum::{extract::{State, FromRequestParts}, http::request::Parts, routing::{delete, get}, Router, Json};
-use sb_contracts::repo_api::GdprRepo;
 use std::sync::Arc;
 use uuid::Uuid;
 use serde::Deserialize;
@@ -79,7 +78,7 @@ async fn export_user_data_handler(
     State(state): State<Arc<crate::AppState>>,
 ) -> impl axum::response::IntoResponse {
     match state.gdpr_repo.get_user_data(user_id).await {
-        Ok(data) => (axum::http::StatusCode::OK, Json(data)),
+        Ok(data) => (axum::http::StatusCode::OK, Json(serde_json::to_value(data).unwrap_or_default())),
         Err(_) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
             "error": "Failed to export user data"
         })))

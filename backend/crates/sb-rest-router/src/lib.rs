@@ -123,6 +123,7 @@ pub fn create_router(
         registry,
         hand_history_repo,
         leaderboard_query,
+            gdpr_repo: std::sync::Arc::new(DummyGdprRepo),
     });
 
     let public_routes = Router::new().route("/api/tables", get(list_tables_public));
