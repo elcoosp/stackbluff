@@ -28,6 +28,8 @@ edition = "2024"
 rust-version = "1.94"
 
 [workspace.dependencies]
+once_cell = "1.21.4"
+prometheus = { version = "0.13", default-features = false }
 sb-notification = { path = "crates/sb-notification" }
 figment = { version = "0.10", features = ["toml", "env"] }
 wiremock = { version = "0.6",}

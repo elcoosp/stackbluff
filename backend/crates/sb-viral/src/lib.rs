@@ -135,3 +135,5 @@ impl<R: ReferralRepository + Send + Sync, U: UserService + Send + Sync> HandCoun
         }
     }
 }
+
+pub mod puzzle;

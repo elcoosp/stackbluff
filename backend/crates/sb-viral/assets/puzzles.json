@@ -1,0 +1,281 @@
+[
+  {
+    "id": 1,
+    "hole_cards": ["Ah", "Kh"],
+    "community_cards": ["Qd", "Jc", "Ts", "3s"],
+    "action_description": "Hero is on the button with 1000 chips. Blinds 10/20. Opponent raises to 100.",
+    "correct_action": "raise",
+    "possible_actions": ["fold", "call", "raise", "allin"],
+    "explanation": "You have a strong draw with a gutshot and overcards, raising is optimal."
+  },
+  {
+    "id": 2,
+    "hole_cards": ["7s", "2d"],
+    "community_cards": ["Ah", "Kh", "Qd", "Jc", "Ts"],
+    "action_description": "Hero is in the big blind with 500 chips. Blinds 10/20. Opponent bets 200 into a 400 pot.",
+    "correct_action": "fold",
+    "possible_actions": ["fold", "call", "raise", "allin"],
+    "explanation": "You have 7-high with no draw. Folding is the only option."
+  },
+  {
+    "id": 3,
+    "hole_cards": ["As", "Ad"],
+    "community_cards": ["Ks", "Qs", "Js"],
+    "action_description": "Hero is UTG with 2000 chips. Blinds 25/50. You have pocket aces.",
+    "correct_action": "raise",
+    "possible_actions": ["fold", "check", "call", "raise", "allin"],
+    "explanation": "Pocket aces pre-flop should be raised for value."
+  },
+  {
+    "id": 4,
+    "hole_cards": ["9h", "9c"],
+    "community_cards": ["Ah", "Kd", "7s"],
+    "action_description": "Hero is in position with 1500 chips. Blinds 15/30. Opponent c-bets 100 into 150.",
+    "correct_action": "call",
+    "possible_actions": ["fold", "call", "raise", "allin"],
+    "explanation": "With a pocket pair and overcards on board, calling in position is standard."
+  },
+  {
+    "id": 5,
+    "hole_cards": ["Qh", "Jh"],
+    "community_cards": ["Ts", "9h", "8c"],
+    "action_description": "Hero has an open-ended straight draw with two overcards. Pot is 300, opponent bets 150.",
+    "correct_action": "raise",
+    "possible_actions": ["fold", "call", "raise", "allin"],
+    "explanation": "You have a strong draw with overcards. A semi-bluff raise applies maximum pressure."
+  },
+  {
+    "id": 6,
+    "hole_cards": ["5c", "5d"],
+    "community_cards": ["2h", "7s", "Qd"],
+    "action_description": "Hero has a small pocket pair. Board is dry with one overcard. Opponent bets 50 into 100.",
+    "correct_action": "fold",
+    "possible_actions": ["fold", "call", "raise", "allin"],
+    "explanation": "With no set and a dry board, folding to a bet is correct."
+  },
+  {
+    "id": 7,
+    "hole_cards": ["Ac", "Qc"],
+    "community_cards": ["Kc", "Jc", "Tc"],
+    "action_description": "Hero has the nut flush! Pot is 500, opponent bets 300.",
+    "correct_action": "raise",
+    "possible_actions": ["fold", "call", "raise", "allin"],
+    "explanation": "You have the nuts. Raise for maximum value."
+  },
+  {
+    "id": 8,
+    "hole_cards": ["6h", "4h"],
+    "community_cards": ["Ah", "2h", "9s"],
+    "action_description": "Hero has a flush draw. Pot is 200, opponent bets 100.",
+    "correct_action": "call",
+    "possible_actions": ["fold", "call", "raise", "allin"],
+    "explanation": "With a nut flush draw, calling gives you the right pot odds to continue."
+  },
+  {
+    "id": 9,
+    "hole_cards": ["Ts", "Ts"],
+    "community_cards": ["As", "Ks", "Qs", "Js", "9s"],
+    "action_description": "Hero has a straight on a monotone board. Pot is 1000, opponent goes all-in for 500.",
+    "correct_action": "fold",
+    "possible_actions": ["fold", "call", "raise", "allin"],
+    "explanation": "On a monotone board with a non-nut straight, folding to an all-in is correct."
+  },
+  {
+    "id": 10,
+    "hole_cards": ["Kh", "Qh"],
+    "community_cards": ["Jh", "Th", "9h"],
+    "action_description": "Hero has a royal flush! Pot is 1000, opponent checks.",
+    "correct_action": "raise",
+    "possible_actions": ["check", "raise", "allin"],
+    "explanation": "You have the absolute nuts. Bet or raise to extract maximum value."
+  },
+  {
+    "id": 11,
+    "hole_cards": ["8d", "8c"],
+    "community_cards": ["8h", "2s", "7c"],
+    "action_description": "Hero flopped a set of eights! Pot is 150, opponent bets 75.",
+    "correct_action": "raise",
+    "possible_actions": ["fold", "call", "raise", "allin"],
+    "explanation": "You have a set on a dry board. Raise to build the pot."
+  },
+  {
+    "id": 12,
+    "hole_cards": ["Jd", "Jh"],
+    "community_cards": ["As", "Kd", "Qh"],
+    "action_description": "Hero has pocket jacks on an AKQ board. Opponent bets 200 into 400.",
+    "correct_action": "fold",
+    "possible_actions": ["fold", "call", "raise", "allin"],
+    "explanation": "Your jacks are likely beaten by the AKQ board. Folding is correct."
+  },
+  {
+    "id": 13,
+    "hole_cards": ["2c", "2h"],
+    "community_cards": ["2d", "7s", "Kc"],
+    "action_description": "Hero flopped a set of deuces! Pot is 100, opponent checks.",
+    "correct_action": "raise",
+    "possible_actions": ["check", "raise", "allin"],
+    "explanation": "You have a set. Bet for value."
+  },
+  {
+    "id": 14,
+    "hole_cards": ["Ah", "Th"],
+    "community_cards": ["Kh", "Qh", "Jh"],
+    "action_description": "Hero has the nut flush on a very coordinated board. Opponent bets big.",
+    "correct_action": "raise",
+    "possible_actions": ["fold", "call", "raise", "allin"],
+    "explanation": "You have the nut flush. Raise for maximum value."
+  },
+  {
+    "id": 15,
+    "hole_cards": ["9s", "8s"],
+    "community_cards": ["7s", "6s", "5s"],
+    "action_description": "Hero has a straight flush! Pot is 300, opponent bets 150.",
+    "correct_action": "raise",
+    "possible_actions": ["fold", "call", "raise", "allin"],
+    "explanation": "You have a straight flush. Slow-play or raise for value."
+  },
+  {
+    "id": 16,
+    "hole_cards": ["Qs", "Ts"],
+    "community_cards": ["Jh", "9c", "4d"],
+    "action_description": "Hero has an open-ended straight draw. Pot is 250, opponent bets 125.",
+    "correct_action": "call",
+    "possible_actions": ["fold", "call", "raise", "allin"],
+    "explanation": "With a straight draw, calling gives you correct pot odds."
+  },
+  {
+    "id": 17,
+    "hole_cards": ["Kh", "Jh"],
+    "community_cards": ["Ah", "Qh", "9h"],
+    "action_description": "Hero has a king-high flush. Pot is 400, opponent bets 200.",
+    "correct_action": "call",
+    "possible_actions": ["fold", "call", "raise", "allin"],
+    "explanation": "You have a flush but not the nut flush. Calling is safer than raising."
+  },
+  {
+    "id": 18,
+    "hole_cards": ["Ac", "Kc"],
+    "community_cards": ["2h", "7d", "9s"],
+    "action_description": "Hero has ace-high on a very dry board. Opponent checks.",
+    "correct_action": "check",
+    "possible_actions": ["check", "raise", "allin"],
+    "explanation": "On a dry board with ace-high, checking behind is standard."
+  },
+  {
+    "id": 19,
+    "hole_cards": ["5s", "4s"],
+    "community_cards": ["As", "Ks", "Qs"],
+    "action_description": "Hero has a small flush. Pot is 500, opponent bets 250.",
+    "correct_action": "fold",
+    "possible_actions": ["fold", "call", "raise", "allin"],
+    "explanation": "With a small flush on a coordinated board, folding to a big bet is correct."
+  },
+  {
+    "id": 20,
+    "hole_cards": ["Jc", "Tc"],
+    "community_cards": ["9c", "8c", "2d"],
+    "action_description": "Hero has a flush draw and an open-ended straight draw (combo draw). Pot is 200, opponent bets 100.",
+    "correct_action": "raise",
+    "possible_actions": ["fold", "call", "raise", "allin"],
+    "explanation": "With a massive combo draw, a semi-bluff raise is optimal."
+  },
+  {
+    "id": 21,
+    "hole_cards": ["Kd", "Qd"],
+    "community_cards": ["Jd", "Td", "9d"],
+    "action_description": "Hero has a straight flush! Pot is 1000, opponent bets 500.",
+    "correct_action": "raise",
+    "possible_actions": ["fold", "call", "raise", "allin"],
+    "explanation": "You have a straight flush. Raise for maximum value."
+  },
+  {
+    "id": 22,
+    "hole_cards": ["7h", "6h"],
+    "community_cards": ["5h", "4h", "3h"],
+    "action_description": "Hero has a straight flush! Pot is 500, opponent checks.",
+    "correct_action": "raise",
+    "possible_actions": ["check", "raise", "allin"],
+    "explanation": "You have the nuts. Bet for value."
+  },
+  {
+    "id": 23,
+    "hole_cards": ["Ts", "8s"],
+    "community_cards": ["9s", "7s", "2c"],
+    "action_description": "Hero has a gutshot straight draw. Pot is 150, opponent bets 75.",
+    "correct_action": "fold",
+    "possible_actions": ["fold", "call", "raise", "allin"],
+    "explanation": "With only a gutshot, the pot odds are not sufficient. Fold."
+  },
+  {
+    "id": 24,
+    "hole_cards": ["Ad", "5d"],
+    "community_cards": ["2d", "3d", "4d"],
+    "action_description": "Hero has a flush and a straight! Pot is 300, opponent bets 150.",
+    "correct_action": "raise",
+    "possible_actions": ["fold", "call", "raise", "allin"],
+    "explanation": "You have a very strong hand. Raise for maximum value."
+  },
+  {
+    "id": 25,
+    "hole_cards": ["Ks", "Kd"],
+    "community_cards": ["As", "7h", "2c"],
+    "action_description": "Hero has pocket kings on an ace-high board. Opponent bets 200 into 300.",
+    "correct_action": "fold",
+    "possible_actions": ["fold", "call", "raise", "allin"],
+    "explanation": "With an ace on the board, your kings are likely beaten. Fold."
+  },
+  {
+    "id": 26,
+    "hole_cards": ["Qh", "9h"],
+    "community_cards": ["Jh", "Th", "2c"],
+    "action_description": "Hero has an open-ended straight draw and a flush draw. Pot is 400, opponent bets 200.",
+    "correct_action": "raise",
+    "possible_actions": ["fold", "call", "raise", "allin"],
+    "explanation": "With a massive combo draw, a semi-bluff raise is optimal."
+  },
+  {
+    "id": 27,
+    "hole_cards": ["3c", "3d"],
+    "community_cards": ["3h", "As", "Kd"],
+    "action_description": "Hero flopped a set of threes! Pot is 200, opponent bets 100.",
+    "correct_action": "raise",
+    "possible_actions": ["fold", "call", "raise", "allin"],
+    "explanation": "You have a set. Raise to build the pot and extract value."
+  },
+  {
+    "id": 28,
+    "hole_cards": ["Jh", "9h"],
+    "community_cards": ["Th", "8h", "5c"],
+    "action_description": "Hero has an open-ended straight draw and a flush draw. Pot is 150, opponent bets 75.",
+    "correct_action": "raise",
+    "possible_actions": ["fold", "call", "raise", "allin"],
+    "explanation": "With a massive combo draw, a semi-bluff raise is optimal."
+  },
+  {
+    "id": 29,
+    "hole_cards": ["8h", "7h"],
+    "community_cards": ["6h", "5h", "4h"],
+    "action_description": "Hero has a straight flush! Pot is 600, opponent goes all-in for 300.",
+    "correct_action": "call",
+    "possible_actions": ["fold", "call", "raise", "allin"],
+    "explanation": "You have a straight flush. Calling the all-in is correct."
+  },
+  {
+    "id": 30,
+    "hole_cards": ["Ac", "2c"],
+    "community_cards": ["3c", "4c", "5c"],
+    "action_description": "Hero has a wheel straight and a flush! Pot is 500, opponent bets 250.",
+    "correct_action": "raise",
+    "possible_actions": ["fold", "call", "raise", "allin"],
+    "explanation": "You have a very strong hand. Raise for maximum value."
+  },
+  {
+    "id": 31,
+    "hole_cards": ["Kh", "Qd"],
+    "community_cards": ["Jh", "Ts", "9c"],
+    "action_description": "Hero has a straight! Pot is 300, opponent bets 150.",
+    "correct_action": "raise",
+    "possible_actions": ["fold", "call", "raise", "allin"],
+    "explanation": "You have a straight. Raise for value."
+  }
+]

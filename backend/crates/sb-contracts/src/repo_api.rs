@@ -232,3 +232,45 @@ pub trait ReferralRepository: Send + Sync {
 }
 
 pub use UserRepository as UserRepo;
+
+// ─── Puzzle Repository ─────────────────────────────────────────────────────
+use chrono::NaiveDate;
+use sb_db_entities::puzzle_submission;
+use uuid::Uuid;
+
+#[async_trait::async_trait]
+pub trait PuzzleRepo: Send + Sync {
+    async fn find_submission(
+        &self,
+        db: &sea_orm::DatabaseConnection,
+        user_id: Uuid,
+        date: NaiveDate,
+    ) -> Result<Option<puzzle_submission::Model>, sb_contracts::persistence_error::PersistenceError>;
+
+    async fn save_submission(
+        &self,
+        db: &sea_orm::DatabaseConnection,
+        model: puzzle_submission::ActiveModel,
+    ) -> Result<puzzle_submission::Model, sb_contracts::persistence_error::PersistenceError>;
+}
+
+// ─── Puzzle Repository ─────────────────────────────────────────────────────
+use chrono::NaiveDate;
+use sb_db_entities::puzzle_submission;
+use uuid::Uuid;
+
+#[async_trait::async_trait]
+pub trait PuzzleRepo: Send + Sync {
+    async fn find_submission(
+        &self,
+        db: &sea_orm::DatabaseConnection,
+        user_id: Uuid,
+        date: NaiveDate,
+    ) -> Result<Option<puzzle_submission::Model>, sb_contracts::persistence_error::PersistenceError>;
+
+    async fn save_submission(
+        &self,
+        db: &sea_orm::DatabaseConnection,
+        model: puzzle_submission::ActiveModel,
+    ) -> Result<puzzle_submission::Model, sb_contracts::persistence_error::PersistenceError>;
+}
