@@ -4,7 +4,6 @@ use sb_contracts::tournament_api::{TournamentRepo, TournamentStatus};
 use sb_contracts::notification::{NotificationService, NotificationEvent};
 use sb_contracts::notification_api::ClubNotifier;
 use sb_shared_types::TournamentId;
-use uuid::Uuid;
 use tokio::time::{sleep_until, Instant};
 
 pub fn schedule_reminders(
@@ -72,11 +71,6 @@ async fn send_reminder(
     let deep_link = format!("{}/tournaments/{}", app_base_url, tournament_id);
     let tournament_name = format!("{:?}", tournament.config.tournament_type);
     let start_time = tournament.config.scheduled_start.unwrap().to_rfc3339();
-
-    let message = format!(
-        "🏟️ Tournament \"{}\" starts at {}. Join now: {}",
-        tournament_name, start_time, deep_link
-    );
 
     let ctx = sb_shared_types::RequestContext::new(uuid::Uuid::new_v4(), None);
 
