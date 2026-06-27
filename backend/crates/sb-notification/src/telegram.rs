@@ -23,8 +23,8 @@ impl TelegramSender {
                 start_time,
                 deep_link,
             } => format!(
-                "🏟️ Tournament '{}' starts at {}",
-                tournament_name, start_time
+                "🏟️ Tournament '{}' starts at {}. Join: {}",
+                tournament_name, start_time, deep_link
             ),
             NotificationEvent::StreakAlert { streak_count } => {
                 format!("🔥 You're on a {}-day streak!", streak_count)

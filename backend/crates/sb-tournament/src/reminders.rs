@@ -2,8 +2,9 @@ use std::sync::Arc;
 use chrono::{DateTime, Utc, Duration};
 use sb_contracts::tournament_api::{TournamentRepo, TournamentStatus};
 use sb_contracts::notification::{NotificationService, NotificationEvent};
-use sb_shared_types::{TournamentId, RequestContext};
+use sb_shared_types::{TournamentId, RequestContext, UserId, RequestId};
 use tokio::time::{sleep_until, Instant};
+use uuid::Uuid;
 
 pub fn schedule_reminders(
     tournament_id: TournamentId,
@@ -69,7 +70,7 @@ async fn send_reminder(
     let tournament_name = format!("{:?}", tournament.config.tournament_type);
     let start_time = tournament.config.scheduled_start.unwrap().to_rfc3339();
 
-    let ctx = RequestContext::new(sb_shared_types::RequestId::new(), sb_shared_types::UserId::nil());
+    let ctx = RequestContext::new(RequestId::new(Uuid::new_v4()), UserId::new(Uuid::nil()));
 
     for reg in registrations {
         let event = NotificationEvent::TournamentReminder {

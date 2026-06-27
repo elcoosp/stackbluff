@@ -24,7 +24,7 @@ pub enum NotificationEvent {
 }
 
 #[async_trait::async_trait]
-pub trait NotificationService {
+pub trait NotificationService: Send + Sync {
     async fn send(
         &self,
         ctx: &RequestContext,
