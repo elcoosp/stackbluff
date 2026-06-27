@@ -31,11 +31,13 @@ impl R2Storage for R2StorageAdapter {
         bucket: &str,
         key: &str,
         data: Vec<u8>,
-        content_type: &str,
+        _content_type: &str,
     ) -> Result<String, AppError> {
+        let full_key = format!("{}/{}", bucket, key);
         self.inner
-            .put_object(bucket, key, data, content_type)
+            .put_object(&full_key, data)
             .await
-            .map_err(|e| AppError::internal(format!("R2 error: {e}")))
+            .map_err(|e| AppError::Internal(format!("R2 error: {e}")))?;
+n        Ok(full_key)
     }
 }
