@@ -12,7 +12,6 @@ pub trait R2Storage: Send + Sync {
     ) -> Result<String, AppError>;
 }
 
-
 pub struct R2StorageAdapter {
     inner: Arc<dyn crate::hand_archive::R2Storage>,
 }
