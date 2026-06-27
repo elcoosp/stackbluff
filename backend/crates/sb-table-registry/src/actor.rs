@@ -234,6 +234,7 @@ pub enum InternalCommand {
     ShowdownComplete,
     ClearLastActions,
     Shutdown,
+            self.emit_table_closed_event();
     UpdatePlayerStats {
         user_id: UserId,
         stats: PlayerStatsDto,
@@ -299,6 +300,8 @@ struct Player {
 
 impl Player {
     fn new(user_id: UserId, display_name: String, seat: u8, stack: ChipAmount) -> Self {
+            created_by,
+            telegram_chat_id: chat_id,
         Self {
             user_id,
             display_name,
@@ -554,6 +557,8 @@ fn run_monte_carlo(
 }
 
 pub struct TableActor {
+    pub created_by: sb_shared_types::UserId,
+    pub telegram_chat_id: Option<String>,
     room_id: TableId,
     table_id: TableId,
     config: TableConfig,
@@ -583,6 +588,21 @@ pub struct TableActor {
 }
 
 impl TableActor {
+
+    fn emit_table_closed_event(&self) {
+        use sb_shared_types::{UserId, TableId, ChipAmount};
+        use crate::events::{TableClosedEvent, TableEvent};
+        let event = TableClosedEvent {
+            table_id: self.table_id,
+            room_id: self.table_id,
+            started_by: self.created_by,
+            winner: None, // TODO: retrieve from game state
+            winning_hand_description: "".to_string(),
+            pot_amount: ChipAmount(0),
+            chat_id: self.telegram_chat_id.clone(),
+        };
+        let _ = self.event_tx.send(TableEvent::TableClosed(event));
+    }
     pub fn new(
         room_id: TableId,
         table_id: TableId,
