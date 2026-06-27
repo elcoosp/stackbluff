@@ -300,9 +300,9 @@ struct Player {
 impl Player {
     fn new(user_id: UserId, display_name: String, seat: u8, stack: ChipAmount) -> Self {
         Self {
+            created_by,
+            telegram_chat_id: chat_id,
             user_id,
-            display_name,
-            seat,
             player_id: PlayerId(Uuid::new_v4()),
             stack,
             time_bank_remaining_seconds: 0,
@@ -333,6 +333,8 @@ impl ActiveHand {
         dealer_index: usize,
     ) -> Self {
         Self {
+            created_by,
+            telegram_chat_id: chat_id,
             state,
             user_by_player_id,
             player_by_user_id,
@@ -593,6 +595,8 @@ impl TableActor {
         active_players: Arc<AtomicU8>,
     ) -> Self {
         Self {
+            created_by,
+            telegram_chat_id: chat_id,
             room_id,
             table_id,
             config,
