@@ -49,8 +49,8 @@ impl ClubRepoImpl {
             if config.as_ref().and_then(|c| c.club_id) == Some(club_id) {
                 summaries.push(sb_contracts::tournament_api::TournamentSummary {
                     tournament_id: t.id,
-                    name: config.as_ref().map(|c| c.name.clone()).unwrap_or_default(),
-                    status: t.status,
+                    name: t.name,
+                    status: format!("{:?}", t.status),
                     scheduled_start: config.and_then(|c| c.scheduled_start),
                     player_count: 0,
                     club_id: Some(club_id),

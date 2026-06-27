@@ -66,22 +66,6 @@ pub struct TournamentConfig {
 // ── Query types ──────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TournamentSummary {
-    pub id: TournamentId,
-    pub tournament_type: TournamentType,
-    pub status: TournamentStatus,
-    pub registered: u32,
-    pub max_players: u32,
-    pub buy_in: ChipAmount,
-    pub prize_pool: ChipAmount,
-    pub current_blind_level: Option<u32>,
-    pub started_at: Option<DateTime<Utc>>,
-    pub tournament_id: uuid::Uuid,
-    pub scheduled_start: Option<chrono::DateTime<chrono::Utc>>,
-    pub player_count: u32,
-    pub club_id: Option<sb_shared_types::ids::ClubId>,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TournamentResult {
     pub tournament_id: TournamentId,
@@ -253,4 +237,14 @@ pub struct TournamentRanking {
     pub display_name: String,
     pub placement: u32,
     pub prize_amount: i64,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct TournamentSummary {
+    pub tournament_id: uuid::Uuid,
+    pub name: String,
+    pub status: String,
+    pub scheduled_start: Option<chrono::DateTime<chrono::Utc>>,
+    pub player_count: u32,
+    pub club_id: Option<sb_shared_types::ids::ClubId>,
 }

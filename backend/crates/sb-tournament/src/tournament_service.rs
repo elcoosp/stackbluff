@@ -200,6 +200,10 @@ impl TournamentServiceImpl {
         msg
     }
 
+    async fn list_tournaments_by_club(&self, club_id: sb_shared_types::ids::ClubId) -> Result<Vec<sb_contracts::tournament_api::TournamentSummary>, sb_shared_types::errors::AppError> {
+        self.club_repo.find_tournaments_by_club(club_id).await.map_err(|e| sb_shared_types::errors::AppError::Internal(format!("Failed to list tournaments: {e}")))
+    }
+
 }
 
 #[async_trait::async_trait]
@@ -221,7 +225,6 @@ impl TournamentService for TournamentServiceImpl {
         tournament_id: TournamentId,
         user_id: UserId,
     ) -> Result<(), AppError> {
-        // Check club membership if tournament is club-restricted
         let config = self.get_tournament_config(tournament_id).await?;
         if let Some(club_id) = config.club_id {
             let is_member = self.club_repo
