@@ -9,6 +9,8 @@ default = ["test-stubs"]
 test-stubs = []
 
 [dependencies]
+serde_json = { workspace = true }
+image = { workspace = true }
 sb-ws-handler = { path = "../sb-ws-handler" }
 sb-table-registry = { path = "../sb-table-registry" }
 tower-cookies = "0.11"
