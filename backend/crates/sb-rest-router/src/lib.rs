@@ -321,3 +321,7 @@ pub fn register_metrics(registry: &prometheus::Registry) {
 pub fn register_metrics(registry: &prometheus::Registry) {
     sb_viral::puzzle::service::register_metrics(registry);
 }
+
+pub fn register_metrics(registry: &prometheus::Registry) {
+    sb_viral::puzzle::service::register_metrics(registry);
+}
