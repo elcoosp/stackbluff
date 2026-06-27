@@ -13,6 +13,8 @@ use sb_shared_types::{ClubId, StakeLevel};
 #[derive(Debug, Clone)]
 pub struct CreateTableInput {
     pub name: String,
+    pub created_by: sb_shared_types::UserId,
+    pub telegram_chat_id: Option<String>,
     pub club_id: Option<ClubId>,
     pub stake_level: StakeLevel,
     pub variant: GameVariant,
