@@ -48,9 +48,38 @@ use test_utils::notification_service::InMemoryNotificationService;
 use test_utils::table_service::InMemoryTableService;
 #[cfg(feature = "test-stubs")]
 use test_utils::user_resolution_service::InMemoryUserResolutionService;
+use sb_tournament::reminders::schedule_reminders;
 mod hand_archive;
 
 #[tokio::main]
+
+async fn reschedule_tournament_reminders(
+    repo: std::sync::Arc<dyn sb_contracts::tournament_api::TournamentRepo>,
+    notification_service: std::sync::Arc<dyn sb_contracts::notification_api::NotificationService>,
+    bot_handler: Option<std::sync::Arc<dyn sb_contracts::notification_api::ClubNotifier>>,
+    app_base_url: String,
+) {
+    use sb_contracts::tournament_api::TournamentStatus;
+    use chrono::Utc;
+    let tournaments = match repo.list_tournaments(None).await {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::error!("Failed to list tournaments for reminders: {:?}", e);
+            return;
+        }
+    };
+    let now = Utc::now();
+    for tournament in &tournaments {
+        if tournament.status == TournamentStatus::Registering {
+            if let Some(start) = tournament.config.scheduled_start {
+                if start > now {
+                    sb_tournament::reminders::schedule_reminders(tournament.id, start, repo.clone(), notification_service.clone(), bot_handler.clone(), app_base_url.clone());
+                }
+            }
+        }
+    }
+}
+
 async fn main() {
     dotenvy::dotenv().expect("Failed to load .env");
     tracing_subscriber::fmt().init();
@@ -169,11 +198,23 @@ async fn main() {
     // ── Tournament system ────────────────────────────────────────────
     let tournament_repo = Arc::new(TournamentRepoImpl::new(db.clone()));
     let broker = Arc::new(sb_table_registry::connection_broker::ConnectionBroker::new());
+    #[cfg(feature = "test-stubs")]
+    let notification_service: Arc<dyn sb_contracts::notification_api::NotificationService> =
+        Arc::new(test_utils::notification_service::InMemoryNotificationService::new());
+    #[cfg(not(feature = "test-stubs"))]
+    let notification_service: Arc<dyn sb_contracts::notification_api::NotificationService> =
+        panic!("Production notification service not implemented");
+    let bot_handler: Option<Arc<dyn sb_contracts::notification_api::ClubNotifier>> = Some(bot_state.clone());
+    let app_base_url = std::env::var("APP_BASE_URL").unwrap_or_else(|_| "https://app.stackbluff.com".to_string());
+
     let tournament_service = Arc::new(TournamentServiceImpl::new(
         tournament_repo.clone(),
         user_repo.clone(),
         registry.clone(),
         broker.clone(),
+        notification_service.clone(),
+        bot_handler.clone(),
+        app_base_url.clone(),
     ));
 
     let tournament_state = Arc::new(TournamentState {
@@ -242,6 +283,9 @@ async fn main() {
             eprintln!("Scheduler error: {e}");
         }
     });
+
+    reschedule_tournament_reminders(tournament_repo.clone(), notification_service.clone(), bot_handler.clone(), app_base_url.clone()).await;
+
     axum::serve(listener, app).await.expect("server error");
 }
 

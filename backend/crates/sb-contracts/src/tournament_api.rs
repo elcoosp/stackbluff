@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use sb_shared_types::{AppError, ChipAmount, RequestContext, TableId, TournamentId, UserId};
+use sb_shared_types::{ClubId, AppError, ChipAmount, RequestContext, TableId, TournamentId, UserId};
 use serde::{Deserialize, Serialize};
 
 // ── Enums ────────────────────────────────────────────────────────────────────
@@ -46,8 +46,9 @@ pub struct PayoutStructure {
     pub entries: Vec<PayoutEntry>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct TournamentConfig {
+    pub scheduled_start: Option<DateTime<Utc>>,
     pub tournament_type: TournamentType,
     pub max_players: u32,
     pub buy_in: ChipAmount,
@@ -55,6 +56,7 @@ pub struct TournamentConfig {
     pub payout_structure: PayoutStructure,
     pub start_delay_seconds: u32,
     pub min_players_to_start: u32,
+    pub club_id: Option<ClubId>,
 }
 
 // ── Query types ──────────────────────────────────────────────────────────────
