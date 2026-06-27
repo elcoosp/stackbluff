@@ -25,6 +25,7 @@ pub struct Migrator;
 impl MigratorTrait for Migrator {
     fn migrations() -> Vec<Box<dyn MigrationTrait>> {
         vec![
+            Box::new(m20260628_create_user_season_cards::Migration),
             // 1. Core tables
             Box::new(m20260607_000001_create_all_tables::Migration),
             Box::new(m20260607_000002_create_clubs_tables::Migration),
