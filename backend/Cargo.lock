@@ -5512,6 +5512,7 @@ dependencies = [
  "sb-anti-cheat",
  "sb-auth",
  "sb-contracts",
+ "sb-db-entities",
  "sb-db-repos",
  "sb-oracle",
  "sb-shared-types",
