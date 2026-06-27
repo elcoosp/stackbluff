@@ -32,7 +32,6 @@ sb-contracts = { path = "../sb-contracts" }
 sb-shared-types = { path = "../sb-shared-types" }
 sea-orm.workspace = true
 migration = { path = "../../migration" }
-serde_json.workspace = true
 async-trait.workspace = true
 parking_lot = { workspace = true }
 uuid = { workspace = true }
