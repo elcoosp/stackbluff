@@ -1,5 +1,5 @@
 use image::{ImageBuffer, Rgba, RgbaImage};
-use sb_contracts::notification_api::{NotificationEvent, NotificationService};
+use sb_contracts::notification_api::NotificationEvent;
 use sb_db_entities::{enums::RankTier, player_rank, season};
 use sb_db_repos::season_card_repo::SeasonCardRepo;
 use sb_shared_types::errors::AppError;
