@@ -20,10 +20,8 @@ pub async fn submit_puzzle(
     State(state): State<Arc<AppState>>,
     Json(request): Json<SubmitRequest>,
 ) -> impl IntoResponse {
-    // Safely extract Uuid from Option<UserId>.
-    // Uses .into() assuming UserId implements Into<Uuid> (standard with derive_more).
     let user_id = match ctx.user_id {
-        Some(uid) => uid.into(),
+        Some(uid) => uid.0,
         None => return (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthenticated"}))).into_response(),
     };
 
