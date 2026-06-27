@@ -1,4 +1,4 @@
-import { useEntitlementsStore } from '../../stores/entitlementsStore';
+import { useHasActiveClubPro } from '../../hooks/useEntitlements';
 
 export function ClubCustomizer() {
   const clubProExpiresAt = useAuthStore((s) => s.clubProExpiresAt);
