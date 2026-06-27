@@ -16,7 +16,7 @@ pub struct TournamentServiceImpl {
     user_repo: Arc<dyn UserRepo>,
     registry: Arc<Registry>,
     broker: Arc<ConnectionBroker>,
-    notification_service: Arc<dyn sb_contracts::notification_api::NotificationService>,
+    notification_service: Arc<dyn sb_contracts::notification::NotificationService>,
     club_notifier: Option<Arc<dyn sb_contracts::notification_api::ClubNotifier>>,
     app_base_url: String,
 }
@@ -27,7 +27,7 @@ impl TournamentServiceImpl {
         user_repo: Arc<dyn UserRepo>,
         registry: Arc<Registry>,
         broker: Arc<ConnectionBroker>,
-        notification_service: Arc<dyn sb_contracts::notification_api::NotificationService>,
+        notification_service: Arc<dyn sb_contracts::notification::NotificationService>,
         club_notifier: Option<Arc<dyn sb_contracts::notification_api::ClubNotifier>>,
         app_base_url: String,
     ) -> Self {

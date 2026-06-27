@@ -1,8 +1,10 @@
 use std::sync::Arc;
 use chrono::{DateTime, Utc, Duration};
 use sb_contracts::tournament_api::{TournamentRepo, TournamentStatus};
-use sb_contracts::notification_api::{NotificationService, ClubNotifier};
+use sb_contracts::notification::{NotificationService, NotificationEvent};
+use sb_contracts::notification_api::ClubNotifier;
 use sb_shared_types::TournamentId;
+use uuid::Uuid;
 use tokio::time::{sleep_until, Instant};
 
 pub fn schedule_reminders(
@@ -76,11 +78,15 @@ async fn send_reminder(
         tournament_name, start_time, deep_link
     );
 
+    let ctx = sb_shared_types::RequestContext::new(uuid::Uuid::new_v4(), None);
+
     for reg in registrations {
-        if let Err(e) = notification_service
-            .send_telegram_message_to_user(reg.user_id, message.clone(), None)
-            .await
-        {
+        let event = NotificationEvent::TournamentReminder {
+            tournament_name: tournament_name.clone(),
+            start_time: start_time.clone(),
+            deep_link: deep_link.clone(),
+        };
+        if let Err(e) = notification_service.send(&ctx, reg.user_id, event).await {
             tracing::warn!(user_id = %reg.user_id, error = %e, "Failed to send tournament reminder");
         }
     }
