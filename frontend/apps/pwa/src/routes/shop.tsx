@@ -1,9 +1,6 @@
-import { lazy } from 'react';
-import type { RouteObject } from 'react-router-dom';
+import { createFileRoute } from '@tanstack/react-router'
+import ShopPage from '../pages/ShopPage'
 
-const ShopPage = lazy(() => import('../pages/ShopPage'));
-
-export const shopRoute: RouteObject = {
-  path: '/shop',
-  element: <ShopPage />,
-};
+export const Route = createFileRoute('/shop')({
+  component: ShopPage,
+})
