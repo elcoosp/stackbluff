@@ -33,7 +33,6 @@ impl SeasonCardGenerator {
         }
     }
 
-    /// Background job entry point: checks every hour for ended seasons.
     pub async fn run_scheduler(&self) {
         let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(3600));
         loop {
@@ -68,14 +67,12 @@ impl SeasonCardGenerator {
             .await
             .map_err(|e| AppError::internal(format!("Txn error: {e}")))?;
 
-        // Fetch all player ranks for this season
         let ranks = player_rank::Entity::find()
             .filter(player_rank::Column::SeasonId.eq(season_id))
             .all(&txn)
             .await
             .map_err(|e| AppError::internal(format!("DB error: {e}")))?;
 
-        // Generate cards and notify
         for rank in &ranks {
             match self.generate_and_store_card(rank.user_id, season_id, rank.tier).await {
                 Ok(url) => {
@@ -96,7 +93,6 @@ impl SeasonCardGenerator {
             }
         }
 
-        // Soft rank reset for next season
         let next_season_id = season_id + 1;
         for rank in &ranks {
             let new_tier = rank.tier.reset_rank();
@@ -113,7 +109,6 @@ impl SeasonCardGenerator {
                 .map_err(|e| AppError::internal(format!("Insert error: {e}")))?;
         }
 
-        // Mark season as processed
         let season_model = season::Entity::find_by_id(season_id)
             .one(&txn)
             .await
@@ -140,7 +135,6 @@ impl SeasonCardGenerator {
         season_id: i32,
         tier: RankTier,
     ) -> Result<String, AppError> {
-        // Build card data JSON
         let card_data = serde_json::json!({
             "season_id": season_id,
             "user_id": user_id,
@@ -148,7 +142,6 @@ impl SeasonCardGenerator {
             "generated_at": chrono::Utc::now().to_rfc3339(),
         });
 
-        // Generate PNG image
         let img_bytes = generate_card_image(&tier)?;
         let key = format!("seasons/{}/user_{}.png", season_id, user_id);
         let url = self
@@ -156,7 +149,6 @@ impl SeasonCardGenerator {
             .put_object("season-cards", &key, img_bytes, "image/png")
             .await?;
 
-        // Persist in DB
         self.season_card_repo
             .store_card(user_id, season_id, Some(url.clone()), card_data)
             .await
