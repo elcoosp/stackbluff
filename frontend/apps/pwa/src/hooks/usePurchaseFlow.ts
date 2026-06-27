@@ -3,11 +3,13 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useShopStore } from '../stores/shopStore';
 import { createPaymentIntent } from '../lib/shopApi';
 import { usePaymentProvider } from './usePaymentProvider';
+import { useTelegramWebApp } from './useTelegramWebApp';
 
 export function usePurchaseFlow() {
   const queryClient = useQueryClient();
   const shop = useShopStore();
   const provider = usePaymentProvider();
+  const { openInvoice } = useTelegramWebApp();
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const startPolling = useCallback(() => {
@@ -42,20 +44,19 @@ export function usePurchaseFlow() {
       const intent = await createPaymentIntent({ product_id: product.id, provider });
 
       if (provider === 'telegram_stars' && intent.invoice_link) {
-        const tg = window.Telegram?.WebApp;
-        if (tg?.openInvoice) {
-          tg.openInvoice(intent.invoice_link, (status) => {
-            if (status === 'paid') {
-              shop.setDialogOpen(false);
-              shop.setToast({ message: 'Purchase successful!', type: 'success' });
-              startPolling();
-            } else {
-              shop.setError('Payment was not completed.');
-              shop.setToast({ message: 'Payment cancelled.', type: 'error' });
-            }
-            shop.setPurchasing(false);
-          });
-        } else {
+        const opened = openInvoice(intent.invoice_link, (result) => {
+          if (result.status === 'paid') {
+            shop.setDialogOpen(false);
+            shop.setToast({ message: 'Purchase successful!', type: 'success' });
+            startPolling();
+          } else {
+            shop.setError('Payment was not completed.');
+            shop.setToast({ message: 'Payment cancelled.', type: 'error' });
+          }
+          shop.setPurchasing(false);
+        });
+
+        if (!opened) {
           window.open(intent.invoice_link, '_blank');
           shop.setPurchasing(false);
           shop.setDialogOpen(false);
@@ -77,7 +78,7 @@ export function usePurchaseFlow() {
       shop.setToast({ message: msg, type: 'error' });
       shop.setPurchasing(false);
     }
-  }, [shop, provider, startPolling]);
+  }, [shop, provider, openInvoice, startPolling]);
 
   return { confirmPurchase, stopPolling };
 }
