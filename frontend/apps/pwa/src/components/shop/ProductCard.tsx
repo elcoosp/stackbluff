@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { useIsMiniApp } from '../../hooks/usePaymentProvider';
 import { useHasActiveSeasonPass, useHasActiveClubPro, useIsClubOwner, useSeasonPassExpiry } from '../../hooks/useEntitlements';
@@ -26,7 +27,7 @@ interface ProductCardProps {
   onPurchase: (product: Product) => void;
 }
 
-export function ProductCard({ product, onPurchase }: ProductCardProps) {
+function ProductCardInner({ product, onPurchase }: ProductCardProps) {
   const isMini = useIsMiniApp();
   const isClubOwner = useIsClubOwner();
   const hasSeasonPass = useHasActiveSeasonPass();
@@ -91,3 +92,5 @@ export function ProductCard({ product, onPurchase }: ProductCardProps) {
     </motion.div>
   );
 }
+
+export const ProductCard = memo(ProductCardInner);
