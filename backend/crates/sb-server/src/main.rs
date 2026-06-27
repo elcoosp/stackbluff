@@ -49,6 +49,8 @@ use test_utils::table_service::InMemoryTableService;
 #[cfg(feature = "test-stubs")]
 use test_utils::user_resolution_service::InMemoryUserResolutionService;
 mod hand_archive;
+mod r2_storage;
+mod season_card_generator;
 
 #[tokio::main]
 async fn main() {
@@ -242,6 +244,18 @@ async fn main() {
             eprintln!("Scheduler error: {e}");
         }
     });
+// Season end background processor
+    let season_processor = std::sync::Arc::new(season_card_generator::SeasonCardGenerator::new(
+        db.clone(),
+        std::sync::Arc::new(r2_storage::R2StorageAdapter::new(r2.clone())),
+        notifier.clone(),
+        std::sync::Arc::new(sb_db_repos::season_card_repo::SeaOrmSeasonCardRepo::new(db.clone())),
+    ));
+    let season_proc_clone = season_processor.clone();
+    tokio::spawn(async move {
+        season_proc_clone.run_scheduler().await;
+    });
+
     axum::serve(listener, app).await.expect("server error");
 }
 
