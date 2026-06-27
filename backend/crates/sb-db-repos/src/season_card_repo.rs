@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, Set};
+use sea_orm::{ActiveModelTrait, DbErr, Set};
 use sb_db_entities::user_season_card;
 use uuid::Uuid;
 
