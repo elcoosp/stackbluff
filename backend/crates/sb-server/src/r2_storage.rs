@@ -12,7 +12,9 @@ pub trait R2Storage: Send + Sync {
     ) -> Result<String, AppError>;
 }
 
-// Wrapper around RealR2 from hand_archive to implement the trait
+// Re-export RealR2 from hand_archive so the adapter can reference it
+pub use crate::hand_archive::RealR2;
+
 pub struct R2StorageAdapter {
     inner: Arc<RealR2>,
 }
