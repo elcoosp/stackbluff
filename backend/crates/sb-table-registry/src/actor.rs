@@ -558,6 +558,10 @@ pub struct TableActor {
     pub telegram_chat_id: Option<String>,
     pub created_by: sb_shared_types::UserId,
     pub telegram_chat_id: Option<String>,
+    pub created_by: sb_shared_types::UserId,
+    pub telegram_chat_id: Option<String>,
+    pub created_by: sb_shared_types::UserId,
+    pub telegram_chat_id: Option<String>,
     room_id: TableId,
     table_id: TableId,
     config: TableConfig,
@@ -606,6 +610,8 @@ impl TableActor {
             cmd_tx,
             last_dealer_index: None,
             event_tx,
+            created_by,
+            telegram_chat_id: chat_id,
             created_by,
             telegram_chat_id: chat_id,
             created_by,
@@ -871,6 +877,8 @@ impl TableActor {
             }
 
             InternalCommand::Shutdown => {
+            self.emit_table_closed_event();
+            self.emit_table_closed_event();
             self.emit_table_closed_event();
             self.emit_table_closed_event();
             self.emit_table_closed_event();
