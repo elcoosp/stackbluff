@@ -45,8 +45,8 @@ impl MigratorTrait for Migrator {
             Box::new(m20260624_create_tournament_tables::Migration),
             // 5. Seed data (last)
             Box::new(m20260616_seed_base_tables::Migration),
-            Box::new(m20260625_seed_tournaments::Migration), // <-- added here
             Box::new(m20260628_add_scheduled_start_to_tournaments::Migration),
+            Box::new(m20260625_seed_tournaments::Migration), // <-- added here
         ]
     }
 }
