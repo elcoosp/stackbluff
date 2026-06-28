@@ -1,5 +1,6 @@
 import { getPlatform, useUserStore } from '@stackbluff/shared';
 import { useEffect } from 'react';
+import { CookieConsentBanner } from '@/components/consent/CookieConsentBanner';
 
 function App() {
   const { user, loading, loadUser } = useUserStore();
@@ -29,6 +30,7 @@ function App() {
           </button>
         </div>
       )}
+      <CookieConsentBanner />
     </div>
   );
 }
