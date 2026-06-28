@@ -1,6 +1,7 @@
 import { getPlatform, useUserStore } from '@stackbluff/shared';
 import { useEffect } from 'react';
 import { CookieConsentBanner } from '@/components/consent/CookieConsentBanner';
+import { NotificationPrompt } from '@/components/consent/NotificationPrompt';
 
 function App() {
   const { user, loading, loadUser } = useUserStore();
@@ -30,7 +31,14 @@ function App() {
           </button>
         </div>
       )}
+
+      {/* Consent components */}
       <CookieConsentBanner />
+      <NotificationPrompt
+        onDecision={(decision) => {
+          console.log('Notification prompt decision:', decision);
+        }}
+      />
     </div>
   );
 }
