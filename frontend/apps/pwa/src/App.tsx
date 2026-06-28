@@ -1,3 +1,4 @@
+import { clubWebSocket } from './lib/websocket';
 import { getPlatform, useUserStore } from '@stackbluff/shared';
 import { useEffect } from 'react';
 
@@ -6,6 +7,9 @@ function App() {
 
   useEffect(() => {
     loadUser();
+
+    // Initialize club WebSocket connection
+    clubWebSocket.connect();
   }, [loadUser]);
 
   return (

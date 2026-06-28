@@ -5,6 +5,7 @@ import { Card } from '@stackbluff/shared/ui/Card';
 import { ClubLeaderboardTab } from '../components/club/ClubLeaderboardTab';
 import { ClubTournamentsTab } from '../components/club/ClubTournamentsTab';
 import { ClubSettingsTab } from '../components/club/ClubSettingsTab';
+import { useClubWebSocket } from '../hooks/useClubWebSocket';
 
 type TabKey = 'leaderboard' | 'tournaments' | 'settings';
 
@@ -28,6 +29,9 @@ export function ClubPage() {
   const [club, setClub] = useState<ClubDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Listen for real-time club updates via WebSocket
+  useClubWebSocket(clubId);
 
   useEffect(() => {
     let cancelled = false;
