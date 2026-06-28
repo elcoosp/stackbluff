@@ -2,6 +2,7 @@ import { getPlatform, useUserStore } from '@stackbluff/shared';
 import { useEffect } from 'react';
 import { CookieConsentBanner } from '@/components/consent/CookieConsentBanner';
 import { NotificationPrompt } from '@/components/consent/NotificationPrompt';
+import { Header } from '@/components/Header';
 import { registerServiceWorker } from '@/lib/serviceWorker';
 
 function App() {
@@ -19,26 +20,30 @@ function App() {
   }, []);
 
   return (
-    <div style={{ padding: '2rem', fontFamily: 'system-ui' }}>
-      <h1>StackBluff PWA</h1>
-      {loading && <p>Loading user...</p>}
-      {user && (
-        <div>
-          <p>Welcome, {user.name}!</p>
-          <p>Platform: PWA</p>
-          <button
-            type="button"
-            onClick={() =>
-              getPlatform().shareContent({
-                title: 'Check out StackBluff',
-                url: window.location.href,
-              })
-            }
-          >
-            Share
-          </button>
-        </div>
-      )}
+    <div style={{ fontFamily: 'system-ui' }}>
+      <Header />
+
+      <div style={{ padding: '2rem' }}>
+        <h1>StackBluff PWA</h1>
+        {loading && <p>Loading user...</p>}
+        {user && (
+          <div>
+            <p>Welcome, {user.name}!</p>
+            <p>Platform: PWA</p>
+            <button
+              type="button"
+              onClick={() =>
+                getPlatform().shareContent({
+                  title: 'Check out StackBluff',
+                  url: window.location.href,
+                })
+              }
+            >
+              Share
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Consent components */}
       <CookieConsentBanner />

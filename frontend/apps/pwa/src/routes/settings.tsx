@@ -1,10 +1,11 @@
+import { createFileRoute } from '@tanstack/react-router';
 import { NotificationsSettings } from '@/components/settings/NotificationsSettings';
 
 /**
- * Settings page – user preferences and account management.
+ * Settings page route – user preferences and account management.
  * Issue #006 created this page; #036 adds the notifications section.
  */
-export function SettingsPage() {
+function SettingsPage() {
   return (
     <div
       style={{
@@ -28,4 +29,6 @@ export function SettingsPage() {
   );
 }
 
-export default SettingsPage;
+export const Route = createFileRoute('/settings')({
+  component: SettingsPage,
+});
