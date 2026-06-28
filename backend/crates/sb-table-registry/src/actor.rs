@@ -1,4 +1,3 @@
-use crate::events::{TableEvent, TableClosedEvent};
 #![allow(dead_code)]
 #![allow(unused_imports)]
 
@@ -18,6 +17,8 @@ use sb_shared_types::player_stats::PlayerStatsDto;
 use sb_shared_types::{ActionType, ChipAmount, PlayerId, StakeLevel, TableConfig, TableId, UserId};
 
 use crate::connection_broker::ConnectionBroker;
+use crate::events::HandCompletedEvent;
+use crate::events::{TableEvent, TableClosedEvent};
 use chrono::Utc;
 use sb_db_entities::hand_history_json::{
     HandAction, HandActions, HandPlayer, HandPlayers, HandResult, PotSplit, Winner,
@@ -301,6 +302,8 @@ impl Player {
     fn new(user_id: UserId, display_name: String, seat: u8, stack: ChipAmount) -> Self {
         Self {
             user_id,
+            display_name,
+            seat,
             player_id: PlayerId(Uuid::new_v4()),
             stack,
             time_bank_remaining_seconds: 0,
@@ -554,16 +557,6 @@ fn run_monte_carlo(
 pub struct TableActor {
     pub created_by: sb_shared_types::UserId,
     pub telegram_chat_id: Option<String>,
-    pub created_by: sb_shared_types::UserId,
-    pub telegram_chat_id: Option<String>,
-    pub created_by: sb_shared_types::UserId,
-    pub telegram_chat_id: Option<String>,
-    pub created_by: sb_shared_types::UserId,
-    pub telegram_chat_id: Option<String>,
-    pub created_by: sb_shared_types::UserId,
-    pub telegram_chat_id: Option<String>,
-    pub created_by: sb_shared_types::UserId,
-    pub telegram_chat_id: Option<String>,
     room_id: TableId,
     table_id: TableId,
     config: TableConfig,
@@ -601,8 +594,12 @@ impl TableActor {
         event_tx: tokio::sync::broadcast::Sender<TableEvent>,
         stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
         active_players: Arc<AtomicU8>,
+        created_by: sb_shared_types::UserId,
+        chat_id: Option<String>,
     ) -> Self {
         Self {
+            created_by,
+            telegram_chat_id: chat_id,
             room_id,
             table_id,
             config,
@@ -612,16 +609,6 @@ impl TableActor {
             cmd_tx,
             last_dealer_index: None,
             event_tx,
-            created_by,
-            telegram_chat_id: chat_id,
-            created_by,
-            telegram_chat_id: chat_id,
-            created_by,
-            telegram_chat_id: chat_id,
-            created_by,
-            telegram_chat_id: chat_id,
-            created_by,
-            telegram_chat_id: chat_id,
             hand_players: Vec::new(),
             hand_actions: Vec::new(),
             hand_started_at: None,
@@ -881,12 +868,7 @@ impl TableActor {
             }
 
             InternalCommand::Shutdown => {
-            self.emit_table_closed_event();
-            self.emit_table_closed_event();
-            self.emit_table_closed_event();
-            self.emit_table_closed_event();
-            self.emit_table_closed_event();
-            self.emit_table_closed_event();
+                self.emit_table_closed_event();
                 if let Some(hand) = &mut self.current_hand {
                     hand.cancel_timeout();
                 }
@@ -2451,6 +2433,9 @@ impl TableActor {
     }
 
     fn prune_cooldowns(&mut self) {
+        self.kick_cooldowns
+            .retain(|_, instant| instant.elapsed() < StdDuration::from_secs(300));
+    }
 
     fn emit_table_closed_event(&self) {
         use sb_shared_types::{UserId, TableId, ChipAmount};
@@ -2474,9 +2459,7 @@ impl TableActor {
 
         let _ = self.event_tx.send(TableEvent::TableClosed(event));
     }
-        self.kick_cooldowns
-            .retain(|_, instant| instant.elapsed() < StdDuration::from_secs(300));
-    }
+}
 
 fn community_cards_to_array(hand: &ActiveHand) -> Option<[sb_shared_types::Card; 5]> {
     let cc = hand.state.community_cards();
@@ -2494,9 +2477,11 @@ pub fn spawn_table_actor(
     event_tx: tokio::sync::broadcast::Sender<TableEvent>,
     stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
     active_players: Arc<AtomicU8>,
+    created_by: sb_shared_types::UserId,
+    chat_id: Option<String>,
 ) -> (mpsc::Sender<InternalCommand>, tokio::task::JoinHandle<()>) {
     let (tx, rx) = mpsc::channel(32);
-    let actor = TableActor::new(, created_by, chat_id
+    let actor = TableActor::new(
         room_id,
         table_id,
         config,
@@ -2504,29 +2489,9 @@ pub fn spawn_table_actor(
         event_tx,
         stats_repo,
         active_players,
+        created_by,
+        chat_id,
     );
     let handle = tokio::spawn(actor.run(rx));
     (tx, handle)
-    fn emit_table_closed_event(&self) {
-        use sb_shared_types::{UserId, TableId, ChipAmount};
-        use crate::events::{TableClosedEvent, TableEvent};
-
-        // Placeholder: in a real implementation, retrieve from game state.
-        // For now, use default values.
-        let winner = None;
-        let hand_desc = "Unknown".to_string();
-        let pot = ChipAmount::new(0);
-
-        let event = TableClosedEvent {
-            table_id: self.table_id,
-            room_id: self.table_id,
-            started_by: self.created_by,
-            winner,
-            winning_hand_description: hand_desc,
-            pot_amount: pot,
-            chat_id: self.telegram_chat_id.clone(),
-        };
-
-        let _ = self.event_tx.send(TableEvent::TableClosed(event));
-    }
 }
