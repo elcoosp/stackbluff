@@ -1,9 +1,9 @@
 import puppeteer, { Browser } from 'puppeteer';
 import { Cluster } from 'puppeteer-cluster';
 
-let browser: Browser;
+let browser: Browser | null = null;
 
-export async function getBrowser() {
+export async function getBrowser(): Promise<Browser> {
   if (!browser) {
     browser = await puppeteer.launch({ headless: true });
   }
@@ -27,6 +27,14 @@ export const createCluster = (concurrency: number) =>
   });
 
 export async function closeBrowser(): Promise<void> {
-  // Placeholder - implement actual browser closing logic
-  console.log('Closing browser...');
+  if (browser) {
+    try {
+      await browser.close();
+      browser = null;
+    } catch (error) {
+      console.error('Failed to close browser:', error);
+      // Force cleanup even if close fails
+      browser = null;
+    }
+  }
 }

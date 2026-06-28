@@ -1,6 +1,12 @@
+import { logger } from '@/lib/logger';
+
+const swLogger = logger.child({ component: 'serviceWorker' });
+
 /**
  * Service worker registration and management utilities.
  */
+
+let updateInterval: number | null = null;
 
 /**
  * Register the service worker.
@@ -8,19 +14,22 @@
  */
 export async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
   if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
-    console.warn('Service workers not supported');
+    swLogger.warn('Service workers not supported');
     return null;
   }
+
+  swLogger.info('Registering service worker');
 
   try {
     const registration = await navigator.serviceWorker.register('/sw.js', {
       scope: '/',
     });
 
-    console.log('[SW] Registered successfully:', registration.scope);
+    swLogger.info('Service worker registered successfully', { scope: registration.scope });
 
-    // Check for updates periodically
-    setInterval(() => {
+    // Check for updates periodically (with cleanup)
+    updateInterval = window.setInterval(() => {
+      swLogger.debug('Checking for service worker updates');
       registration.update();
     }, 60 * 60 * 1000); // Every hour
 
@@ -29,10 +38,11 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
       const newWorker = registration.installing;
       if (!newWorker) return;
 
+      swLogger.info('Service worker update found');
+
       newWorker.addEventListener('statechange', () => {
         if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-          // New version available
-          console.log('[SW] New version available');
+          swLogger.info('New service worker version available');
           // Could show an update prompt here
         }
       });
@@ -40,8 +50,20 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
 
     return registration;
   } catch (error) {
-    console.error('[SW] Registration failed:', error);
+    swLogger.error('Service worker registration failed', error);
     return null;
+  }
+}
+
+/**
+ * Cleanup service worker resources.
+ * Should be called when the app unmounts (for SSR/testing).
+ */
+export function cleanupServiceWorker(): void {
+  if (updateInterval !== null) {
+    swLogger.debug('Clearing service worker update interval');
+    window.clearInterval(updateInterval);
+    updateInterval = null;
   }
 }
 
@@ -51,13 +73,15 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
 export async function unregisterServiceWorker(): Promise<boolean> {
   if (!('serviceWorker' in navigator)) return false;
 
+  swLogger.info('Unregistering service worker');
+
   try {
     const registration = await navigator.serviceWorker.ready;
     const success = await registration.unregister();
-    console.log('[SW] Unregistered:', success);
+    swLogger.info('Service worker unregistered', { success });
     return success;
   } catch (error) {
-    console.error('[SW] Unregister failed:', error);
+    swLogger.error('Service worker unregister failed', error);
     return false;
   }
 }
@@ -67,6 +91,7 @@ export async function unregisterServiceWorker(): Promise<boolean> {
  */
 export function sendMessageToSW(message: any): void {
   if (navigator.serviceWorker.controller) {
+    swLogger.debug('Sending message to service worker', message);
     navigator.serviceWorker.controller.postMessage(message);
   }
 }

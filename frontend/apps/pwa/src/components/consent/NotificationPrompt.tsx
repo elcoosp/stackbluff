@@ -1,9 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useConsentStore } from '@/stores/consentStore';
-import {
-  isPushSupported,
-  subscribeToPushNotifications,
-} from '@/services/notificationService';
+import { isPushSupported, subscribeToPushNotifications } from '@/services/notifications';
+import { consentLogger } from '@/lib/logger';
 
 interface NotificationPromptProps {
   /**
@@ -14,21 +12,27 @@ interface NotificationPromptProps {
 
 /**
  * Non-intrusive notification permission prompt.
- * Should be shown after the user's first game hand completion.
+ * Unified visibility: reads directly from consent store.
  */
 export function NotificationPrompt({ onDecision }: NotificationPromptProps) {
-  const [isVisible, setIsVisible] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const canShowPrompt = useConsentStore((s) => s.canShowNotificationPrompt());
-  const markPromptShown = useConsentStore((s) => s.markNotificationPromptShown);
+  const notificationConsent = useConsentStore((s) => s.notificationConsent);
+  const markPromptShown = useConsentStore((s) => s.setNotificationConsent);
   const dismissPrompt = useConsentStore((s) => s.dismissNotificationPrompt);
 
-  // Don't show if:
-  // - Push is not supported
-  // - User has already granted/denied permission
-  // - Prompt was recently dismissed ("maybe later")
-  if (!isPushSupported() || !canShowPrompt || !isVisible) {
+  // Unified visibility: only show if store says we can
+  const isVisible = canShowPrompt && isPushSupported();
+
+  // Log visibility changes
+  useEffect(() => {
+    if (isVisible) {
+      consentLogger.info('Notification prompt shown');
+    }
+  }, [isVisible]);
+
+  if (!isVisible) {
     return null;
   }
 
@@ -39,80 +43,55 @@ export function NotificationPrompt({ onDecision }: NotificationPromptProps) {
       const success = await subscribeToPushNotifications();
 
       if (success) {
+        consentLogger.info('User allowed notifications');
         onDecision?.('allowed');
       } else {
-        // Permission was denied or failed
+        consentLogger.info('User denied notifications or subscription failed');
         onDecision?.('denied');
       }
     } catch (error) {
-      console.error('Error during notification subscription:', error);
+      consentLogger.error('Error during notification subscription', error);
       onDecision?.('denied');
     } finally {
-      setIsVisible(false);
       setIsProcessing(false);
-      markPromptShown();
     }
   };
 
   const handleDeny = () => {
+    consentLogger.info('User explicitly denied notifications');
     useConsentStore.getState().setNotificationConsent('denied');
-    setIsVisible(false);
-    markPromptShown();
     onDecision?.('denied');
   };
 
   const handleMaybeLater = () => {
-    setIsVisible(false);
+    consentLogger.info('User dismissed notification prompt (maybe later)');
     dismissPrompt(); // Sets cooldown timer (24 hours)
     onDecision?.('later');
   };
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        bottom: '5rem',
-        right: '1rem',
-        zIndex: 9998,
-        maxWidth: '24rem',
-        backgroundColor: 'rgba(0, 0, 0, 0.9)',
-        backdropFilter: 'blur(8px)',
-        borderRadius: '0.75rem',
-        padding: '1.25rem',
-        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
-        color: '#fff',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-      }}
+      className="fixed bottom-20 right-4 z-40 max-w-sm bg-black/90 backdrop-blur-sm rounded-xl p-5 shadow-2xl text-white"
       role="dialog"
       aria-label="Notification permission"
       data-testid="notification-prompt"
     >
-      <div style={{ marginBottom: '1rem' }}>
-        <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', fontWeight: 600 }}>
+      <div className="mb-4">
+        <h3 className="text-base font-semibold mb-2">
           🔔 Stay in the game
         </h3>
-        <p style={{ margin: 0, fontSize: '0.875rem', lineHeight: 1.5, opacity: 0.9 }}>
+        <p className="text-sm leading-relaxed opacity-90">
           Get tournament reminders and streak alerts. Allow notifications?
         </p>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+      <div className="flex flex-col gap-2">
         <button
           type="button"
           onClick={handleAllow}
           disabled={isProcessing}
           data-testid="notification-prompt-allow"
-          style={{
-            padding: '0.625rem 1rem',
-            borderRadius: '0.5rem',
-            border: 'none',
-            backgroundColor: '#3b82f6',
-            color: '#fff',
-            cursor: isProcessing ? 'not-allowed' : 'pointer',
-            fontSize: '0.875rem',
-            fontWeight: 600,
-            opacity: isProcessing ? 0.6 : 1,
-          }}
+          className="px-4 py-2.5 rounded-lg border-none bg-blue-500 text-white text-sm font-semibold hover:bg-blue-600 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {isProcessing ? 'Processing...' : 'Allow'}
         </button>
@@ -122,17 +101,7 @@ export function NotificationPrompt({ onDecision }: NotificationPromptProps) {
           onClick={handleDeny}
           disabled={isProcessing}
           data-testid="notification-prompt-deny"
-          style={{
-            padding: '0.625rem 1rem',
-            borderRadius: '0.5rem',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            backgroundColor: 'transparent',
-            color: '#fff',
-            cursor: isProcessing ? 'not-allowed' : 'pointer',
-            fontSize: '0.875rem',
-            fontWeight: 500,
-            opacity: isProcessing ? 0.6 : 1,
-          }}
+          className="px-4 py-2.5 rounded-lg border border-white/20 bg-transparent text-white text-sm font-medium hover:bg-white/10 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
         >
           No thanks
         </button>
@@ -142,17 +111,7 @@ export function NotificationPrompt({ onDecision }: NotificationPromptProps) {
           onClick={handleMaybeLater}
           disabled={isProcessing}
           data-testid="notification-prompt-later"
-          style={{
-            padding: '0.5rem',
-            borderRadius: '0.375rem',
-            border: 'none',
-            backgroundColor: 'transparent',
-            color: 'rgba(255, 255, 255, 0.6)',
-            cursor: isProcessing ? 'not-allowed' : 'pointer',
-            fontSize: '0.75rem',
-            textDecoration: 'underline',
-            opacity: isProcessing ? 0.6 : 1,
-          }}
+          className="px-4 py-2 rounded border-none bg-transparent text-white/60 text-xs underline hover:text-white/80 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
         >
           Maybe later
         </button>

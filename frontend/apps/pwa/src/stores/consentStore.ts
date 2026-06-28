@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { CONSENT_STORAGE_KEY, MAYBE_LATER_COOLDOWN_MS } from '@/lib/consent/constants';
 
 export type NotificationConsent = 'granted' | 'denied' | 'default' | 'not_asked';
 export type CookieConsent = 'accepted' | 'declined' | 'not_set';
@@ -7,59 +8,41 @@ export type CookieConsent = 'accepted' | 'declined' | 'not_set';
 interface ConsentState {
   // Notification consent
   notificationConsent: NotificationConsent;
-  notificationPromptShown: boolean;
   notificationPromptDismissedAt: number | null; // timestamp for "maybe later"
 
   // Cookie consent
   cookieConsent: CookieConsent;
 
-  // Actions
+  // Actions (pure state updates, no side effects)
   setNotificationConsent: (consent: NotificationConsent) => void;
-  markNotificationPromptShown: () => void;
   dismissNotificationPrompt: () => void; // "Maybe later"
   setCookieConsent: (consent: CookieConsent) => void;
 
   // Derived checks
   hasCookieConsent: () => boolean;
   canShowNotificationPrompt: () => boolean;
+  isNotificationPromptCooldownActive: () => boolean;
 }
-
-const MAYBE_LATER_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export const useConsentStore = create<ConsentState>()(
   persist(
     (set, get) => ({
       // Initial state
       notificationConsent: 'not_asked',
-      notificationPromptShown: false,
       notificationPromptDismissedAt: null,
       cookieConsent: 'not_set',
 
-      // Notification actions
+      // Pure state updates (no side effects)
       setNotificationConsent: (consent) => {
         set({ notificationConsent: consent });
-        // Sync with browser permission if applicable
-        if (typeof window !== 'undefined' && 'Notification' in window) {
-          if (consent === 'granted' && Notification.permission !== 'granted') {
-            Notification.requestPermission().then((perm) => {
-              set({ notificationConsent: perm as NotificationConsent });
-            });
-          }
-        }
-      },
-
-      markNotificationPromptShown: () => {
-        set({ notificationPromptShown: true });
       },
 
       dismissNotificationPrompt: () => {
         set({
-          notificationPromptShown: false,
           notificationPromptDismissedAt: Date.now(),
         });
       },
 
-      // Cookie actions
       setCookieConsent: (consent) => {
         set({ cookieConsent: consent });
       },
@@ -67,6 +50,13 @@ export const useConsentStore = create<ConsentState>()(
       // Derived checks
       hasCookieConsent: () => {
         return get().cookieConsent === 'accepted';
+      },
+
+      isNotificationPromptCooldownActive: () => {
+        const dismissedAt = get().notificationPromptDismissedAt;
+        if (!dismissedAt) return false;
+        const elapsed = Date.now() - dismissedAt;
+        return elapsed < MAYBE_LATER_COOLDOWN_MS;
       },
 
       canShowNotificationPrompt: () => {
@@ -84,22 +74,19 @@ export const useConsentStore = create<ConsentState>()(
           }
         }
 
-        // If dismissed ("maybe later"), wait 24 hours
-        if (state.notificationPromptDismissedAt) {
-          const elapsed = Date.now() - state.notificationPromptDismissedAt;
-          if (elapsed < MAYBE_LATER_COOLDOWN_MS) {
-            return false;
-          }
+        // If dismissed ("maybe later"), check cooldown
+        if (state.isNotificationPromptCooldownActive()) {
+          return false;
         }
 
         return true;
       },
     }),
     {
-      name: 'stackbluff-consent',
+      name: CONSENT_STORAGE_KEY,
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
-        // Only persist what we need
+        // Persist all relevant state
         notificationConsent: state.notificationConsent,
         notificationPromptDismissedAt: state.notificationPromptDismissedAt,
         cookieConsent: state.cookieConsent,
