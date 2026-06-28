@@ -72,6 +72,8 @@ mod tests {
             payout_structure: make_payout_structure(),
             start_delay_seconds: 0,
             min_players_to_start: max_players,
+            scheduled_start: None,
+            club_id: None,
         }
     }
 
