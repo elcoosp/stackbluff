@@ -554,6 +554,8 @@ fn run_monte_carlo(
 pub struct TableActor {
     pub created_by: sb_shared_types::UserId,
     pub telegram_chat_id: Option<String>,
+    pub created_by: sb_shared_types::UserId,
+    pub telegram_chat_id: Option<String>,
     room_id: TableId,
     table_id: TableId,
     config: TableConfig,
@@ -602,6 +604,8 @@ impl TableActor {
             cmd_tx,
             last_dealer_index: None,
             event_tx,
+            created_by,
+            telegram_chat_id: chat_id,
             created_by,
             telegram_chat_id: chat_id,
             hand_players: Vec::new(),
@@ -863,6 +867,7 @@ impl TableActor {
             }
 
             InternalCommand::Shutdown => {
+            self.emit_table_closed_event();
             self.emit_table_closed_event();
                 if let Some(hand) = &mut self.current_hand {
                     hand.cancel_timeout();
@@ -2461,4 +2466,26 @@ pub fn spawn_table_actor(
     );
     let handle = tokio::spawn(actor.run(rx));
     (tx, handle)
+    fn emit_table_closed_event(&self) {
+        use sb_shared_types::{UserId, TableId, ChipAmount};
+        use crate::events::{TableClosedEvent, TableEvent};
+
+        // Placeholder: in a real implementation, retrieve from game state.
+        // For now, use default values.
+        let winner = None;
+        let hand_desc = "Unknown".to_string();
+        let pot = ChipAmount::new(0);
+
+        let event = TableClosedEvent {
+            table_id: self.table_id,
+            room_id: self.table_id,
+            started_by: self.created_by,
+            winner,
+            winning_hand_description: hand_desc,
+            pot_amount: pot,
+            chat_id: self.telegram_chat_id.clone(),
+        };
+
+        let _ = self.event_tx.send(TableEvent::TableClosed(event));
+    }
 }
