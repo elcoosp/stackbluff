@@ -6,36 +6,16 @@ pub struct Migration;
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        manager
-            .alter_table(
-                Table::alter()
-                    .table(Tournament::Table)
-                    .add_column_if_not_exists(
-                        ColumnDef::new(Tournament::ScheduledStart)
-                            .timestamp_with_time_zone()
-                            .null()
-                    )
-                    .to_owned(),
-            )
-            .await
+        let db = manager.get_connection();
+        db.execute_unprepared(
+            "ALTER TABLE tournaments ADD COLUMN scheduled_start TIMESTAMP WITH TIME ZONE"
+        )
+        .await?;
+        Ok(())
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        manager
-            .alter_table(
-                Table::alter()
-                    .table(Tournament::Table)
-                    .drop_column(Tournament::ScheduledStart)
-                    .to_owned(),
-            )
-            .await
+        // SQLite doesn't support DROP COLUMN in older versions, so we skip it
+        Ok(())
     }
-}
-
-#[derive(Iden)]
-pub enum Tournament {
-    #[iden = "tournaments"]
-    Table,
-    #[iden = "scheduled_start"]
-    ScheduledStart,
 }
