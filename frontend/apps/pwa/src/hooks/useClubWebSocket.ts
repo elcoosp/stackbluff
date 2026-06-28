@@ -1,68 +1,110 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { getToken } from '@stackbluff/shared/auth/token';
+import type { ClubWebSocketEvent, WebSocketConnectionStatus } from '../types/club';
+import { logger } from '../lib/logger';
 
-interface ClubWebSocketEvent {
-  type: 'club.updated' | 'tournament.created' | 'tournament.registered' | 'leaderboard.refreshed';
-  clubId: string;
-  data?: any;
-}
-
-/**
- * Hook to listen for club-specific WebSocket events
- * Follows the same pattern as useGameWebSocket (custom DOM events)
- */
 export function useClubWebSocket(clubId: string) {
   const queryClient = useQueryClient();
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
+  const reconnectAttemptsRef = useRef(0);
+  const [connectionStatus, setConnectionStatus] = useState<WebSocketConnectionStatus>('disconnected');
 
-  useEffect(() => {
-    const handleClubEvent = (event: Event) => {
-      const customEvent = event as CustomEvent<ClubWebSocketEvent>;
-      const { type, clubId: eventClubId, data } = customEvent.detail;
+  const connect = () => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
-      // Only handle events for this club
-      if (eventClubId !== clubId) return;
+    const token = getToken();
+    if (!token) {
+      logger.warn('Cannot connect to WebSocket: no auth token');
+      return;
+    }
 
-      switch (type) {
-        case 'club.updated':
-          // Invalidate club details
-          queryClient.invalidateQueries({ queryKey: ['club', clubId] });
-          toast.info('Club settings updated');
-          break;
+    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3000';
+    const ws = new WebSocket(`${wsUrl}/ws?token=${token}`);
+    wsRef.current = ws;
 
-        case 'tournament.created':
-          // Invalidate tournaments list
-          queryClient.invalidateQueries({ queryKey: ['club-tournaments', clubId] });
-          toast.success('New tournament scheduled!');
-          break;
+    ws.onopen = () => {
+      logger.info('Club WebSocket connected', { clubId });
+      setConnectionStatus('connected');
+      reconnectAttemptsRef.current = 0;
 
-        case 'tournament.registered':
-          // Invalidate tournaments list to update registration counts
-          queryClient.invalidateQueries({ queryKey: ['club-tournaments', clubId] });
-          break;
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
 
-        case 'leaderboard.refreshed':
-          // Invalidate leaderboard
-          queryClient.invalidateQueries({ queryKey: ['club-leaderboard', clubId] });
-          break;
+      ws.send(JSON.stringify({ type: 'subscribe', channels: [`club:${clubId}`] }));
+    };
 
-        default:
-          console.warn('Unknown club event type:', type);
+    ws.onmessage = (event) => {
+      try {
+        const message: ClubWebSocketEvent = JSON.parse(event.data);
+
+        if (message.clubId !== clubId) return;
+
+        switch (message.type) {
+          case 'club.updated':
+            queryClient.invalidateQueries({ queryKey: ['club', clubId] });
+            toast.info('Club settings updated');
+            break;
+
+          case 'tournament.created':
+            queryClient.invalidateQueries({ queryKey: ['club-tournaments', clubId] });
+            toast.success('New tournament scheduled!');
+            break;
+
+          case 'tournament.registered':
+            queryClient.invalidateQueries({ queryKey: ['club-tournaments', clubId] });
+            break;
+
+          case 'leaderboard.refreshed':
+            queryClient.invalidateQueries({ queryKey: ['club-leaderboard', clubId] });
+            break;
+
+          default:
+            logger.warn('Unknown club event type', { type: message.type });
+        }
+      } catch (err) {
+        logger.error('Failed to parse WebSocket message', err instanceof Error ? err : undefined);
       }
     };
 
-    // Listen for club events
-    window.addEventListener('club:event', handleClubEvent);
+    ws.onclose = () => {
+      logger.info('Club WebSocket disconnected', { clubId });
+      setConnectionStatus('reconnecting');
+
+      if (reconnectAttemptsRef.current < 5) {
+        const delay = 1000 * Math.pow(2, reconnectAttemptsRef.current);
+        reconnectTimeoutRef.current = setTimeout(() => {
+          reconnectAttemptsRef.current++;
+          logger.info('Attempting to reconnect WebSocket', {
+            attempt: reconnectAttemptsRef.current,
+            clubId,
+          });
+          connect();
+        }, delay);
+      } else {
+        logger.warn('Max WebSocket reconnect attempts reached', { clubId });
+        setConnectionStatus('disconnected');
+      }
+    };
+
+    ws.onerror = (err) => {
+      logger.error('Club WebSocket error', err instanceof Error ? err : undefined, { clubId });
+    };
+  };
+
+  useEffect(() => {
+    connect();
 
     return () => {
-      window.removeEventListener('club:event', handleClubEvent);
+      wsRef.current?.close();
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
     };
-  }, [clubId, queryClient]);
-}
+  }, [clubId]);
 
-/**
- * Dispatch a club event (for testing or manual triggering)
- */
-export function dispatchClubEvent(event: ClubWebSocketEvent): void {
-  window.dispatchEvent(new CustomEvent('club:event', { detail: event }));
+  return { connectionStatus };
 }

@@ -3,13 +3,14 @@ import { toast } from 'sonner';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { useUpdateClubSettings } from '../../hooks/useUpdateClubSettings';
 import { uploadFile } from '../../lib/uploadFile';
-import type { ClubDetails } from '../../pages/ClubPage';
+import { handleApiError } from '../../lib/errorHandler';
+import { logger } from '../../lib/logger';
+import type { ClubDetails } from '../../types/club';
 
 interface ClubSettingsTabProps {
   club: ClubDetails;
 }
 
-// Chip preset options for Club Pro
 const CHIP_PRESETS = [
   { id: 'classic', name: 'Classic Red & Blue' },
   { id: 'gold', name: 'Gold & Black' },
@@ -20,15 +21,15 @@ const CHIP_PRESETS = [
 export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
   const user = useAuthStore((state) => state.user);
 
-  // Check if user has Club Pro (expires_at should be in user object)
-  // For now, we'll check if pro_settings exists as a proxy
-  const hasClubPro = !!club.pro_settings || false;
+  // Proper Club Pro check using authStore
+  const hasClubPro = user?.club_pro_expires_at
+    ? new Date(user.club_pro_expires_at) > new Date()
+    : false;
 
   const [formData, setFormData] = useState({
     name: club.name,
     telegram_group_id: club.telegram_group_id || '',
     logo_url: club.logo_url || '',
-    // Club Pro settings
     banner_url: club.pro_settings?.banner_url || '',
     chip_preset: club.pro_settings?.chip_preset || 'classic',
     felt_colour: club.pro_settings?.felt_colour || '#1a472a',
@@ -50,7 +51,6 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file
     if (!file.type.startsWith('image/')) {
       toast.error('Please upload an image file');
       return;
@@ -61,21 +61,20 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
       return;
     }
 
-    // Show preview
     const reader = new FileReader();
     reader.onloadend = () => {
       setLogoPreview(reader.result as string);
     };
     reader.readAsDataURL(file);
 
-    // Upload
     setIsUploadingLogo(true);
     try {
       const url = await uploadFile(file);
       setFormData({ ...formData, logo_url: url });
       toast.success('Logo uploaded successfully');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to upload logo');
+      logger.error('Failed to upload logo', err instanceof Error ? err : undefined, { clubId: club.id });
+      handleApiError(err, { clubId: club.id, action: 'upload_logo' });
       setLogoPreview(club.logo_url);
     } finally {
       setIsUploadingLogo(false);
@@ -108,7 +107,8 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
       setFormData({ ...formData, banner_url: url });
       toast.success('Banner uploaded successfully');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to upload banner');
+      logger.error('Failed to upload banner', err instanceof Error ? err : undefined, { clubId: club.id });
+      handleApiError(err, { clubId: club.id, action: 'upload_banner' });
       setBannerPreview(club.pro_settings?.banner_url || null);
     } finally {
       setIsUploadingBanner(false);
@@ -124,25 +124,22 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
     }
 
     try {
-      const updateData: any = {
+      await updateSettings({
         name: formData.name.trim(),
         telegram_group_id: formData.telegram_group_id.trim() || null,
         logo_url: formData.logo_url || null,
-      };
-
-      // Include Club Pro settings if user has Pro
-      if (hasClubPro) {
-        updateData.pro_settings = {
-          banner_url: formData.banner_url || null,
-          chip_preset: formData.chip_preset,
-          felt_colour: formData.felt_colour,
-        };
-      }
-
-      await updateSettings(updateData);
+        ...(hasClubPro && {
+          pro_settings: {
+            banner_url: formData.banner_url || null,
+            chip_preset: formData.chip_preset,
+            felt_colour: formData.felt_colour,
+          },
+        }),
+      });
       toast.success('Club settings updated successfully');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update settings');
+      logger.error('Failed to update club settings', err instanceof Error ? err : undefined, { clubId: club.id });
+      handleApiError(err, { clubId: club.id, action: 'update_settings' });
     }
   };
 
@@ -150,23 +147,17 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
     <div>
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-white mb-1">Club Settings</h2>
-        <p className="text-white/60 text-sm">
-          Manage your club's appearance and settings
-        </p>
+        <p className="text-white/60 text-sm">Manage your club's appearance and settings</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Basic Settings */}
         <div className="space-y-6">
           <h3 className="text-lg font-semibold text-white border-b border-white/10 pb-2">
             Basic Information
           </h3>
 
-          {/* Club Name */}
           <div>
-            <label className="block text-white/80 font-medium mb-2">
-              Club Name *
-            </label>
+            <label className="block text-white/80 font-medium mb-2">Club Name *</label>
             <input
               type="text"
               value={formData.name}
@@ -176,11 +167,8 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
             />
           </div>
 
-          {/* Logo Upload */}
           <div>
-            <label className="block text-white/80 font-medium mb-2">
-              Club Logo
-            </label>
+            <label className="block text-white/80 font-medium mb-2">Club Logo</label>
             <div className="flex items-start gap-4">
               {logoPreview ? (
                 <img
@@ -209,50 +197,35 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
                 >
                   {isUploadingLogo ? 'Uploading...' : 'Upload Logo'}
                 </button>
-                <p className="text-white/40 text-sm mt-2">
-                  Recommended: 200x200px, max 5MB
-                </p>
+                <p className="text-white/40 text-sm mt-2">Recommended: 200x200px, max 5MB</p>
               </div>
             </div>
           </div>
 
-          {/* Telegram Group ID */}
           <div>
-            <label className="block text-white/80 font-medium mb-2">
-              Telegram Group ID
-            </label>
+            <label className="block text-white/80 font-medium mb-2">Telegram Group ID</label>
             <input
               type="text"
               value={formData.telegram_group_id}
-              onChange={(e) =>
-                setFormData({ ...formData, telegram_group_id: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, telegram_group_id: e.target.value })}
               placeholder="e.g., -1001234567890"
               className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
-            <p className="text-white/40 text-sm mt-1">
-              Link your club to a Telegram group for notifications
-            </p>
+            <p className="text-white/40 text-sm mt-1">Link your club to a Telegram group for notifications</p>
           </div>
         </div>
 
-        {/* Club Pro Settings */}
         {hasClubPro && (
           <div className="space-y-6">
             <div className="flex items-center gap-2 border-b border-white/10 pb-2">
-              <h3 className="text-lg font-semibold text-white">
-                Club Pro Customization
-              </h3>
+              <h3 className="text-lg font-semibold text-white">Club Pro Customization</h3>
               <span className="px-2 py-0.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded text-xs font-medium text-white">
                 PRO
               </span>
             </div>
 
-            {/* Banner Upload */}
             <div>
-              <label className="block text-white/80 font-medium mb-2">
-                Banner Image
-              </label>
+              <label className="block text-white/80 font-medium mb-2">Banner Image</label>
               <div className="space-y-2">
                 {bannerPreview ? (
                   <img
@@ -280,22 +253,15 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
                 >
                   {isUploadingBanner ? 'Uploading...' : 'Upload Banner'}
                 </button>
-                <p className="text-white/40 text-sm">
-                  Recommended: 1200x300px, max 10MB
-                </p>
+                <p className="text-white/40 text-sm">Recommended: 1200x300px, max 10MB</p>
               </div>
             </div>
 
-            {/* Chip Preset */}
             <div>
-              <label className="block text-white/80 font-medium mb-2">
-                Chip Design Preset
-              </label>
+              <label className="block text-white/80 font-medium mb-2">Chip Design Preset</label>
               <select
                 value={formData.chip_preset}
-                onChange={(e) =>
-                  setFormData({ ...formData, chip_preset: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, chip_preset: e.target.value })}
                 className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
                 {CHIP_PRESETS.map((preset) => (
@@ -309,27 +275,20 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
               </p>
             </div>
 
-            {/* Felt Colour */}
             <div>
-              <label className="block text-white/80 font-medium mb-2">
-                Felt Colour
-              </label>
+              <label className="block text-white/80 font-medium mb-2">Felt Colour</label>
               <div className="flex items-center gap-4">
                 <input
                   type="color"
                   value={formData.felt_colour}
-                  onChange={(e) =>
-                    setFormData({ ...formData, felt_colour: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, felt_colour: e.target.value })}
                   className="w-16 h-16 rounded-lg border border-white/10 cursor-pointer"
                 />
                 <div className="flex-grow">
                   <input
                     type="text"
                     value={formData.felt_colour}
-                    onChange={(e) =>
-                      setFormData({ ...formData, felt_colour: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, felt_colour: e.target.value })}
                     className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white font-mono focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
@@ -341,7 +300,6 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
           </div>
         )}
 
-        {/* Submit Button */}
         <div className="flex justify-end gap-3 pt-6 border-t border-white/10">
           <button
             type="submit"

@@ -6,6 +6,7 @@ interface User {
   id: string;
   username: string;
   email?: string;
+  club_pro_expires_at?: string;
 }
 
 interface AuthState {
@@ -45,6 +46,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         id: string;
         username: string;
         email?: string;
+  club_pro_expires_at?: string;
         chip_balance: number;
       }>('/auth/me', { method: 'GET' });
 
