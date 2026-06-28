@@ -134,7 +134,7 @@ export function ClubPage() {
       {/* Tab Content */}
       <GlassPanel className="p-6">
         {activeTab === 'leaderboard' && <ClubLeaderboardTab clubId={clubId} />}
-        {activeTab === 'tournaments' && <ClubTournamentsTab clubId={clubId} />}
+        {activeTab === 'tournaments' && <ClubTournamentsTab clubId={clubId} isOwner={club.is_owner} />}
         {activeTab === 'settings' && club.is_owner && (
           <ClubSettingsTab club={club} />
         )}
