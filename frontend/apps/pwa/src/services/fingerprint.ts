@@ -8,22 +8,12 @@
 export function collectFingerprintComponents(): string {
   const components: string[] = [];
 
-  // Screen resolution
   components.push(`${window.screen.width}x${window.screen.height}`);
-
-  // Timezone
   components.push(Intl.DateTimeFormat().resolvedOptions().timeZone);
-
-  // Platform
   components.push(navigator.platform);
-
-  // Language
   components.push(navigator.language);
-
-  // User agent
   components.push(navigator.userAgent);
 
-  // WebGL vendor and renderer (if available)
   try {
     const canvas = document.createElement('canvas');
     const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
@@ -36,19 +26,12 @@ export function collectFingerprintComponents(): string {
         components.push(`webgl_renderer:${renderer}`);
       }
     }
-  } catch (_) {
-    // ignore WebGL errors
-  }
+  } catch (_) { /* ignore */ }
 
-  // Omitted: fonts – they are asynchronous and can cause inconsistencies.
-  // If needed, they can be added later as an optional component.
-
+  // Fonts are omitted for consistency (async issues).
   return components.join('|');
 }
 
-/**
- * Hash the concatenated components using SHA‑256.
- */
 export async function hashFingerprint(components: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(components);
@@ -57,12 +40,7 @@ export async function hashFingerprint(components: string): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-/**
- * Send the fingerprint hash to the backend.
- * Call this on login and before each game session.
- */
-export async function submitFingerprint(hash: string): Promise<void> {
-  const token = localStorage.getItem('authToken') || '';
+export async function submitFingerprint(hash: string, token: string): Promise<void> {
   const response = await fetch('/anti-cheat/fingerprint', {
     method: 'POST',
     headers: {
@@ -73,15 +51,15 @@ export async function submitFingerprint(hash: string): Promise<void> {
   });
   if (!response.ok) {
     console.error('Failed to submit fingerprint:', response.status);
-    // Optionally retry or notify user
   }
 }
 
 /**
- * Generate and submit fingerprint. Use this as a one‑stop function.
+ * Generate and submit fingerprint.
+ * @param token Authentication token (passed from caller).
  */
-export async function generateAndSubmitFingerprint(): Promise<void> {
+export async function generateAndSubmitFingerprint(token: string): Promise<void> {
   const components = collectFingerprintComponents();
   const hash = await hashFingerprint(components);
-  await submitFingerprint(hash);
+  await submitFingerprint(hash, token);
 }

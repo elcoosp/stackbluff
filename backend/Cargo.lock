@@ -5166,18 +5166,16 @@ dependencies = [
 name = "sb-anti-cheat"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "async-trait",
  "chrono",
  "dashmap",
  "metrics",
- "mockall",
- "once_cell",
  "sb-contracts",
  "sb-db-entities",
  "sb-shared-types",
  "sea-orm",
  "serde",
- "thiserror 2.0.18",
  "tokio",
  "tracing",
  "uuid",

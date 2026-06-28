@@ -134,3 +134,9 @@ impl std::str::FromStr for TournamentId {
         Ok(TournamentId(Uuid::parse_str(s)?))
     }
 }
+
+impl From<UserId> for uuid::Uuid {
+    fn from(user_id: UserId) -> Self {
+        user_id.0
+    }
+}
