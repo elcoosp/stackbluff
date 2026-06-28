@@ -2,6 +2,7 @@ use crate::actor::{InternalCommand, LeaveResult, spawn_table_actor};
 use crate::connection_broker::ConnectionBroker;
 use crate::events::HandCompletedEvent;
 use crate::events::TableEvent;
+use crate::events::TableEvent;
 use crate::game_room::RoomMessage;
 use sb_contracts::stats_api::PlayerStatsRepo;
 use sb_contracts::{TableCommand, TableError, lobby_api::TableInfo};
@@ -614,3 +615,4 @@ impl Registry {
             .await
             .map_err(|_| AppError::Internal("table actor disconnected".to_string()))?;
         Ok(())}
+}
