@@ -2495,3 +2495,4 @@ pub fn spawn_table_actor(
     let handle = tokio::spawn(actor.run(rx));
     (tx, handle)
 }
+
