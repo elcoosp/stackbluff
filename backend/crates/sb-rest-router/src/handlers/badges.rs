@@ -32,7 +32,7 @@ pub async fn get_my_badges<B: BadgeRepo>(
 
     let mut response = BadgesListResponse {
         badges: badges
-            .into_iter()
+            .iter()
             .map(|b| BadgeResponse {
                 badge_type: b.as_str().to_string(),
                 awarded_at: None,
@@ -40,6 +40,14 @@ pub async fn get_my_badges<B: BadgeRepo>(
             .collect(),
         founding_member_progress: None,
     };
+
+    if !badges.contains(&BadgeType::FoundingMember) {
+        // Progress will be filled by caller with referral stats; placeholder for now
+        response.founding_member_progress = Some(FoundingMemberProgress {
+            completed: 0,
+            required: 10,
+        });
+    }
 
     Json(response)
 }
@@ -53,7 +61,7 @@ pub async fn get_user_badges<B: BadgeRepo>(
 
     Json(BadgesListResponse {
         badges: badges
-            .into_iter()
+            .iter()
             .map(|b| BadgeResponse {
                 badge_type: b.as_str().to_string(),
                 awarded_at: None,

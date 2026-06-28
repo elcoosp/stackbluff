@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useMemo, useState, useEffect, useRef, memo } from 'react';
 import type { CSSProperties } from 'react';
 import { PlayerAvatar } from './PlayerAvatar';
+import { PlayerSpotBadge } from './PlayerSpotBadge';
 import { CardBack, Card } from './Card';
 import { TimerBar } from './TimerBar';
 import { cn } from '@/lib/utils';
@@ -588,6 +589,7 @@ export const PlayerSpot = memo(({
                 )}>
                   {display_name}
                 </span>
+                <PlayerSpotBadge userId={seat.user_id} badges={seat.badges} showBadges={true} />
                 {positionTag}
               </div>
               <div className="flex items-center gap-1 min-w-0">

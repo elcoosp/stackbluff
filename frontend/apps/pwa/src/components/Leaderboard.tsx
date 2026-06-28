@@ -1,4 +1,5 @@
 import { useLeaderboard, type LeaderboardEntry } from '../hooks/useLeaderboard';
+import { LeaderboardBadge } from './leaderboard/LeaderboardBadge';
 
 export function Leaderboard() {
     const { data, isLoading, error, isFetching } = useLeaderboard();
@@ -60,6 +61,7 @@ function LeaderboardRow({ entry }: { entry: LeaderboardEntry }) {
             <div className="flex items-center gap-3">
                 <span className={`w-8 text-right font-mono text-sm font-semibold ${rankColor}`}>#{entry.rank}</span>
                 <span className="font-medium">{entry.display_name}</span>
+                <LeaderboardBadge userId={entry.user_id} badges={entry.badges} />
             </div>
             <span className="font-mono text-sm tabular-nums">{entry.total_chips_won.toLocaleString()}</span>
         </div>
