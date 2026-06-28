@@ -1,5 +1,6 @@
 pub mod auth_service;
 pub mod email;
+pub mod email_queue;
 use sb_contracts::service_api::AuthService;
 pub mod config;
 pub mod error;
