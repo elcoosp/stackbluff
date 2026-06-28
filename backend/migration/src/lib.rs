@@ -16,6 +16,7 @@ mod m20260617_add_table_name;
 mod m20260622_132958_mission_system;
 mod m20260624_create_tournament_tables;
 mod m20260625_seed_tournaments; // <-- new
+mod m20260629_000001_add_division_to_club_memberships;
 
 use sea_orm_migration::prelude::*;
 
@@ -45,6 +46,7 @@ impl MigratorTrait for Migrator {
             // 5. Seed data (last)
             Box::new(m20260616_seed_base_tables::Migration),
             Box::new(m20260625_seed_tournaments::Migration), // <-- added here
-        ]
+            Box::new(m20260629_000001_add_division_to_club_memberships::Migration),
+]
     }
 }
