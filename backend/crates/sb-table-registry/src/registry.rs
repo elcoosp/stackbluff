@@ -1,8 +1,6 @@
+use crate::events::TableEvent;
 use crate::actor::{InternalCommand, LeaveResult, spawn_table_actor};
 use crate::connection_broker::ConnectionBroker;
-use crate::events::HandCompletedEvent;
-use crate::events::TableEvent;
-use crate::events::TableEvent;
 use crate::game_room::RoomMessage;
 use sb_contracts::stats_api::PlayerStatsRepo;
 use sb_contracts::{TableCommand, TableError, lobby_api::TableInfo};
@@ -98,7 +96,14 @@ impl Registry {
         let new_room_id = TableId::new(uuid::Uuid::new_v4());
         let active_players = Arc::new(AtomicU8::new(0));
 
-        let (cmd_tx, _) = spawn_table_actor(new_room_id, table_id, config.clone(), self.event_tx.clone(), self.stats_repo.clone(), active_players.clone(), created_by, chat_id);
+        let (cmd_tx, _) = spawn_table_actor(
+            new_room_id,
+            table_id,
+            config.clone(),
+            self.event_tx.clone(),
+            self.stats_repo.clone(),
+            active_players.clone(),
+        );
 
         let room_entry = RoomEntry {
             table_id,
@@ -441,10 +446,6 @@ impl Registry {
     pub fn event_sender(&self) -> tokio::sync::broadcast::Sender<TableEvent> {
         self.event_tx.clone()
     }
-        self.event_tx.clone()
-    }
-        self.event_tx.clone()
-    }
 
     /// Creates a tournament table and wires it into the registry.
     pub async fn create_tournament_table(
@@ -456,7 +457,14 @@ impl Registry {
         let room_id = TableId::new(uuid::Uuid::new_v4());
         let active_players = Arc::new(AtomicU8::new(0));
 
-        let (cmd_tx, _) = spawn_table_actor(room_id, room_id, config.clone(), self.event_tx.clone(), self.stats_repo.clone(), active_players.clone(), created_by, chat_id);
+        let (cmd_tx, _) = spawn_table_actor(
+            room_id,
+            room_id,
+            config.clone(),
+            self.event_tx.clone(),
+            self.stats_repo.clone(),
+            active_players.clone(),
+        );
 
         // Enter tournament mode
         cmd_tx
@@ -615,4 +623,5 @@ impl Registry {
             .await
             .map_err(|_| AppError::Internal("table actor disconnected".to_string()))?;
         Ok(())
+    }
 }
