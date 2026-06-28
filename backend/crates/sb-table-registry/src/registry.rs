@@ -3,6 +3,7 @@ use crate::connection_broker::ConnectionBroker;
 use crate::events::HandCompletedEvent;
 use crate::events::TableEvent;
 use crate::events::TableEvent;
+use crate::events::TableEvent;
 use crate::game_room::RoomMessage;
 use sb_contracts::stats_api::PlayerStatsRepo;
 use sb_contracts::{TableCommand, TableError, lobby_api::TableInfo};
@@ -98,14 +99,7 @@ impl Registry {
         let new_room_id = TableId::new(uuid::Uuid::new_v4());
         let active_players = Arc::new(AtomicU8::new(0));
 
-        let (cmd_tx, _) = spawn_table_actor(
-            new_room_id,
-            table_id,
-            config.clone(),
-            self.event_tx.clone(),
-            self.stats_repo.clone(),
-            active_players.clone(),
-        );
+        let (cmd_tx, _) = spawn_table_actor(new_room_id, table_id, config.clone(), self.event_tx.clone(), self.stats_repo.clone(), active_players.clone(), created_by, chat_id);
 
         let room_entry = RoomEntry {
             table_id,
@@ -445,7 +439,9 @@ impl Registry {
             .unwrap_or(false)
     }
 
-    pub fn event_sender(pub fn event_sender(pub fn event_sender(&self) -> tokio::sync::broadcast::Sender<HandCompletedEvent>self) -> tokio::sync::broadcast::Sender<TableEvent>self) -> tokio::sync::broadcast::Sender<TableEvent> {
+    pub fn event_sender(&self) -> tokio::sync::broadcast::Sender<TableEvent> {
+        self.event_tx.clone()
+    }
         self.event_tx.clone()
     }
 
@@ -459,14 +455,7 @@ impl Registry {
         let room_id = TableId::new(uuid::Uuid::new_v4());
         let active_players = Arc::new(AtomicU8::new(0));
 
-        let (cmd_tx, _) = spawn_table_actor(
-            room_id,
-            room_id,
-            config.clone(),
-            self.event_tx.clone(),
-            self.stats_repo.clone(),
-            active_players.clone(),
-        );
+        let (cmd_tx, _) = spawn_table_actor(room_id, room_id, config.clone(), self.event_tx.clone(), self.stats_repo.clone(), active_players.clone(), created_by, chat_id);
 
         // Enter tournament mode
         cmd_tx
