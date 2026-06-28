@@ -300,8 +300,6 @@ struct Player {
 impl Player {
     fn new(user_id: UserId, display_name: String, seat: u8, stack: ChipAmount) -> Self {
         Self {
-            created_by,
-            telegram_chat_id: chat_id,
             user_id,
             player_id: PlayerId(Uuid::new_v4()),
             stack,
@@ -333,8 +331,6 @@ impl ActiveHand {
         dealer_index: usize,
     ) -> Self {
         Self {
-            created_by,
-            telegram_chat_id: chat_id,
             state,
             user_by_player_id,
             player_by_user_id,
@@ -597,8 +593,6 @@ impl TableActor {
         active_players: Arc<AtomicU8>,
     ) -> Self {
         Self {
-            created_by,
-            telegram_chat_id: chat_id,
             room_id,
             table_id,
             config,
@@ -608,6 +602,8 @@ impl TableActor {
             cmd_tx,
             last_dealer_index: None,
             event_tx,
+            created_by,
+            telegram_chat_id: chat_id,
             hand_players: Vec::new(),
             hand_actions: Vec::new(),
             hand_started_at: None,
@@ -2454,7 +2450,7 @@ pub fn spawn_table_actor(
     active_players: Arc<AtomicU8>,
 ) -> (mpsc::Sender<InternalCommand>, tokio::task::JoinHandle<()>) {
     let (tx, rx) = mpsc::channel(32);
-    let actor = TableActor::new(
+    let actor = TableActor::new(, created_by, chat_id
         room_id,
         table_id,
         config,
