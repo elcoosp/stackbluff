@@ -1,4 +1,4 @@
-use sea_orm_migration::{prelude::*};
+use sea_orm_migration::prelude::*;
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -18,12 +18,19 @@ impl MigrationTrait for Migration {
                 .await?;
         }
         // Add season_pass_expires_at column
-        if !manager.has_column("users", "season_pass_expires_at").await? {
+        if !manager
+            .has_column("users", "season_pass_expires_at")
+            .await?
+        {
             manager
                 .alter_table(
                     Table::alter()
                         .table(Users::Table)
-                        .add_column(ColumnDef::new(Alias::new("season_pass_expires_at")).timestamp().null())
+                        .add_column(
+                            ColumnDef::new(Alias::new("season_pass_expires_at"))
+                                .timestamp()
+                                .null(),
+                        )
                         .to_owned(),
                 )
                 .await?;

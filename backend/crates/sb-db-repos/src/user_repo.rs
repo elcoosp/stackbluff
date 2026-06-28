@@ -1,3 +1,30 @@
+use crate::commands::DbCommand;
+use sb_contracts::repo_api::{
+    PersistenceError, PersistenceResult, UserCreate, UserProfile, UserRepository,
+};
+use sb_shared_types::{RequestContext, UserId};
+use tokio::sync::oneshot;
+
+pub struct UserRepoImpl {
+    sender: tokio::sync::mpsc::UnboundedSender<DbCommand>,
+}
+
+impl UserRepoImpl {
+    pub fn new(sender: tokio::sync::mpsc::UnboundedSender<DbCommand>) -> Self {
+        Self { sender }
+    }
+}
+
+#[async_trait::async_trait]
+#[async_trait::async_trait]
+#[async_trait::async_trait]
+#[async_trait::async_trait]
+#[async_trait::async_trait]
+#[async_trait::async_trait]
+#[async_trait::async_trait]
+#[async_trait::async_trait]
+#[async_trait::async_trait]
+#[async_trait::async_trait]
 impl UserRepository for UserRepoImpl {
     async fn create_user(
         &self,
@@ -14,9 +41,13 @@ impl UserRepository for UserRepoImpl {
         };
         self.sender
             .send(cmd)
-            .map_err(|e| PersistenceError::Database(e.to_string()))?;
+            .map_err(|e: tokio::sync::mpsc::error::SendError<DbCommand>| {
+                PersistenceError::Database(e.to_string())
+            })?;
         rx.await
-            .map_err(|e| PersistenceError::Database(e.to_string()))?
+            .map_err(|e: tokio::sync::oneshot::error::RecvError| {
+                PersistenceError::Database(e.to_string())
+            })?
     }
 
     async fn find_or_create_by_telegram(
@@ -32,9 +63,13 @@ impl UserRepository for UserRepoImpl {
         };
         self.sender
             .send(cmd)
-            .map_err(|e| PersistenceError::Database(e.to_string()))?;
+            .map_err(|e: tokio::sync::mpsc::error::SendError<DbCommand>| {
+                PersistenceError::Database(e.to_string())
+            })?;
         rx.await
-            .map_err(|e| PersistenceError::Database(e.to_string()))?
+            .map_err(|e: tokio::sync::oneshot::error::RecvError| {
+                PersistenceError::Database(e.to_string())
+            })?
     }
 
     async fn create_email_user(
@@ -54,9 +89,13 @@ impl UserRepository for UserRepoImpl {
         };
         self.sender
             .send(cmd)
-            .map_err(|e| PersistenceError::Database(e.to_string()))?;
+            .map_err(|e: tokio::sync::mpsc::error::SendError<DbCommand>| {
+                PersistenceError::Database(e.to_string())
+            })?;
         rx.await
-            .map_err(|e| PersistenceError::Database(e.to_string()))?
+            .map_err(|e: tokio::sync::oneshot::error::RecvError| {
+                PersistenceError::Database(e.to_string())
+            })?
     }
 
     async fn find_by_email(
@@ -72,9 +111,13 @@ impl UserRepository for UserRepoImpl {
         };
         self.sender
             .send(cmd)
-            .map_err(|e| PersistenceError::Database(e.to_string()))?;
+            .map_err(|e: tokio::sync::mpsc::error::SendError<DbCommand>| {
+                PersistenceError::Database(e.to_string())
+            })?;
         rx.await
-            .map_err(|e| PersistenceError::Database(e.to_string()))?
+            .map_err(|e: tokio::sync::oneshot::error::RecvError| {
+                PersistenceError::Database(e.to_string())
+            })?
     }
 
     async fn get_user(&self, ctx: RequestContext, id: UserId) -> PersistenceResult<String> {
@@ -86,9 +129,13 @@ impl UserRepository for UserRepoImpl {
         };
         self.sender
             .send(cmd)
-            .map_err(|e| PersistenceError::Database(e.to_string()))?;
+            .map_err(|e: tokio::sync::mpsc::error::SendError<DbCommand>| {
+                PersistenceError::Database(e.to_string())
+            })?;
         rx.await
-            .map_err(|e| PersistenceError::Database(e.to_string()))?
+            .map_err(|e: tokio::sync::oneshot::error::RecvError| {
+                PersistenceError::Database(e.to_string())
+            })?
     }
 
     async fn get_user_profile(
@@ -104,9 +151,13 @@ impl UserRepository for UserRepoImpl {
         };
         self.sender
             .send(cmd)
-            .map_err(|e| PersistenceError::Database(e.to_string()))?;
+            .map_err(|e: tokio::sync::mpsc::error::SendError<DbCommand>| {
+                PersistenceError::Database(e.to_string())
+            })?;
         rx.await
-            .map_err(|e| PersistenceError::Database(e.to_string()))?
+            .map_err(|e: tokio::sync::oneshot::error::RecvError| {
+                PersistenceError::Database(e.to_string())
+            })?
     }
 
     async fn update_chip_balance(
@@ -124,9 +175,13 @@ impl UserRepository for UserRepoImpl {
         };
         self.sender
             .send(cmd)
-            .map_err(|e| PersistenceError::Database(e.to_string()))?;
+            .map_err(|e: tokio::sync::mpsc::error::SendError<DbCommand>| {
+                PersistenceError::Database(e.to_string())
+            })?;
         rx.await
-            .map_err(|e| PersistenceError::Database(e.to_string()))?
+            .map_err(|e: tokio::sync::oneshot::error::RecvError| {
+                PersistenceError::Database(e.to_string())
+            })?
     }
 
     async fn update_chip_balance_with_conn(

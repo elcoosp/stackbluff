@@ -1,28 +1,25 @@
 use crate::{HandAnalysisParams, OracleServiceImpl, SessionManager};
-use sb_contracts::repo_api::{PersistenceError, UserProfile, UserRepo, UserCreate};
+use async_trait::async_trait;
+use mockall::mock;
+use sb_contracts::repo_api::{PersistenceError, UserCreate, UserProfile, UserRepo};
 use sb_contracts::service_api::OracleService;
 use sb_shared_types::{RequestContext, UserId};
 use std::sync::Arc;
-use chrono::{DateTime, Utc, Duration};
-use async_trait::async_trait;
 use uuid::Uuid;
 
-struct MockUserRepo {
-    expires_at: Option<DateTime<Utc>>,
-}
-
-#[async_trait]
-impl UserRepo for MockUserRepo {
-    async fn create_user(&self, _ctx: RequestContext, _create: UserCreate) -> Result<UserId, PersistenceError> { unimplemented!() }
-    async fn get_user(&self, _ctx: RequestContext, _id: UserId) -> Result<String, PersistenceError> { unimplemented!() }
-    async fn get_user_profile(&self, _ctx: RequestContext, _id: UserId) -> Result<UserProfile, PersistenceError> { unimplemented!() }
-    async fn update_chip_balance(&self, _ctx: RequestContext, _user_id: UserId, _delta: i64) -> Result<i64, PersistenceError> { unimplemented!() }
-    async fn update_chip_balance_with_conn(&self, _conn: &sea_orm::DatabaseConnection, _ctx: RequestContext, _user_id: UserId, _delta: i64) -> Result<i64, PersistenceError> { unimplemented!() }
-    async fn find_or_create_by_telegram(&self, _ctx: RequestContext, _tg_id: i64) -> Result<UserId, PersistenceError> { unimplemented!() }
-    async fn create_email_user(&self, _ctx: RequestContext, _username: &str, _email: &str, _password_hash: &str) -> Result<UserId, PersistenceError> { unimplemented!() }
-    async fn find_by_email(&self, _ctx: RequestContext, _email: &str) -> Result<Option<UserId>, PersistenceError> { unimplemented!() }
-    async fn has_active_season_pass(&self, _ctx: RequestContext, _user_id: UserId) -> Result<bool, PersistenceError> {
-        Ok(self.expires_at.map(|exp| exp > Utc::now()).unwrap_or(false))
+mock! {
+    UserRepo {}
+    #[async_trait]
+    impl UserRepo for UserRepo {
+        async fn create_user(&self, ctx: RequestContext, create: UserCreate) -> Result<UserId, PersistenceError>;
+        async fn get_user(&self, ctx: RequestContext, id: UserId) -> Result<String, PersistenceError>;
+        async fn get_user_profile(&self, ctx: RequestContext, id: UserId) -> Result<UserProfile, PersistenceError>;
+        async fn update_chip_balance(&self, ctx: RequestContext, user_id: UserId, delta: i64) -> Result<i64, PersistenceError>;
+        async fn update_chip_balance_with_conn(&self, conn: &sea_orm::DatabaseConnection, ctx: RequestContext, user_id: UserId, delta: i64) -> Result<i64, PersistenceError>;
+        async fn find_or_create_by_telegram(&self, ctx: RequestContext, tg_id: i64) -> Result<UserId, PersistenceError>;
+        async fn create_email_user(&self, ctx: RequestContext, username: &str, email: &str, password_hash: &str) -> Result<UserId, PersistenceError>;
+        async fn find_by_email(&self, ctx: RequestContext, email: &str) -> Result<Option<UserId>, PersistenceError>;
+        async fn has_active_season_pass(&self, ctx: RequestContext, user_id: UserId) -> Result<bool, PersistenceError>;
     }
 }
 
@@ -47,11 +44,16 @@ fn test_params() -> HandAnalysisParams {
 
 #[tokio::test]
 async fn active_pass_bypasses_limit() {
+    let mut repo = MockUserRepo::new();
+    repo.expect_has_active_season_pass()
+        .times(5)
+        .returning(|_, _| Ok(true));
+
     let session = SessionManager::new();
-    let repo = Arc::new(MockUserRepo { expires_at: Some(Utc::now() + Duration::hours(1)) });
-    let oracle = OracleServiceImpl::new(session, repo, None);
+    let oracle = OracleServiceImpl::new(session, Arc::new(repo), None);
     let ctx = test_ctx();
     let params = test_params();
+
     for _ in 0..5 {
         let result: Result<_, _> = oracle.analyze(&ctx, params.clone()).await;
         assert!(result.is_ok());
@@ -60,24 +62,37 @@ async fn active_pass_bypasses_limit() {
 
 #[tokio::test]
 async fn expired_pass_behaves_like_free_user() {
+    let mut repo = MockUserRepo::new();
+    repo.expect_has_active_season_pass()
+        .times(4)
+        .returning(|_, _| Ok(false));
+
     let session = SessionManager::new();
-    let repo = Arc::new(MockUserRepo { expires_at: Some(Utc::now() - Duration::hours(1)) });
-    let oracle = OracleServiceImpl::new(session, repo, None);
+    let oracle = OracleServiceImpl::new(session, Arc::new(repo), None);
     let ctx = test_ctx();
     let params = test_params();
+
     for _ in 0..3 {
         let result: Result<_, _> = oracle.analyze(&ctx, params.clone()).await;
         assert!(result.is_ok());
     }
+
     let result: Result<_, _> = oracle.analyze(&ctx, params.clone()).await;
-    assert!(matches!(result, Err(crate::OracleError::LimitReached { .. })));
+    assert!(matches!(
+        result,
+        Err(crate::OracleError::LimitReached { .. })
+    ));
 }
 
 #[tokio::test]
 async fn remaining_endpoint_for_pass_holder() {
+    let mut repo = MockUserRepo::new();
+    repo.expect_has_active_season_pass()
+        .once()
+        .returning(|_, _| Ok(true));
+
     let session = SessionManager::new();
-    let repo = Arc::new(MockUserRepo { expires_at: Some(Utc::now() + Duration::hours(1)) });
-    let oracle = OracleServiceImpl::new(session, repo, None);
+    let oracle = OracleServiceImpl::new(session, Arc::new(repo), None);
     let ctx = test_ctx();
     let resp = oracle.remaining_analyses(&ctx).await.unwrap();
     assert!(resp.unlimited);
@@ -85,9 +100,13 @@ async fn remaining_endpoint_for_pass_holder() {
 
 #[tokio::test]
 async fn remaining_endpoint_for_free_user() {
+    let mut repo = MockUserRepo::new();
+    repo.expect_has_active_season_pass()
+        .once()
+        .returning(|_, _| Ok(false));
+
     let session = SessionManager::new();
-    let repo = Arc::new(MockUserRepo { expires_at: None });
-    let oracle = OracleServiceImpl::new(session, repo, None);
+    let oracle = OracleServiceImpl::new(session, Arc::new(repo), None);
     let ctx = test_ctx();
     let resp = oracle.remaining_analyses(&ctx).await.unwrap();
     assert!(!resp.unlimited);

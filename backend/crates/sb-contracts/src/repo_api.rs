@@ -28,6 +28,8 @@ pub struct UserProfile {
     pub display_name: String,
     pub email: Option<String>,
     pub chip_balance: i64,
+    pub season_pass_id: Option<uuid::Uuid>,
+    pub season_pass_expires_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 #[async_trait]

@@ -24,7 +24,6 @@ pub struct Model {
     pub registration_order: Option<i64>,
     pub season_pass_id: Option<Uuid>,
     pub season_pass_expires_at: Option<DateTimeUtc>,
-
 }
 
 impl ActiveModelBehavior for ActiveModel {}

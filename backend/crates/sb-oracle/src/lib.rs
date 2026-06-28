@@ -12,6 +12,7 @@ use sb_shared_types::RequestContext;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use thiserror::Error;
+use tracing::{info, warn};
 
 const DEFAULT_UPGRADE_URL: &str = "https://stackbluff.com/upgrade";
 
@@ -19,7 +20,9 @@ const DEFAULT_UPGRADE_URL: &str = "https://stackbluff.com/upgrade";
 pub enum OracleError {
     #[error("analysis limit reached for this session")]
     LimitReached { upgrade_url: String },
-    #[error("oracle engine error: {0}")]
+    #[error("unauthorized: {0}")]
+    Unauthorized(String),
+    #[error("unauthorized: {0}")]
     Engine(String),
     #[error("persistence error: {0}")]
     Persistence(#[from] PersistenceError),
@@ -66,7 +69,9 @@ impl OracleServiceImpl {
         Self {
             session_manager,
             user_repo,
-            upgrade_url: upgrade_url.unwrap_or_else(|| DEFAULT_UPGRADE_URL.to_string()),
+            upgrade_url: upgrade_url
+                .or_else(|| std::env::var("UPGRADE_URL").ok())
+                .unwrap_or_else(|| DEFAULT_UPGRADE_URL.to_string()),
         }
     }
 
@@ -74,7 +79,9 @@ impl OracleServiceImpl {
         &self,
         ctx: &RequestContext,
     ) -> Result<RemainingResponse, OracleError> {
-        let user_id = ctx.user_id.ok_or_else(|| OracleError::Engine("missing user_id".to_string()))?;
+        let user_id = ctx.user_id.ok_or_else(|| {
+            OracleError::Unauthorized("missing user_id in request context".to_string())
+        })?;
         let has_pass = self
             .user_repo
             .has_active_season_pass(ctx.clone(), user_id)
@@ -106,17 +113,26 @@ impl OracleService for OracleServiceImpl {
         ctx: &RequestContext,
         _______params: Self::Params,
     ) -> Result<Self::Output, Self::Error> {
-        let user_id = ctx.user_id.ok_or_else(|| OracleError::Engine("missing user_id".to_string()))?;
+        let user_id = ctx.user_id.ok_or_else(|| {
+            OracleError::Unauthorized("missing user_id in request context".to_string())
+        })?;
 
         let has_pass = self
             .user_repo
             .has_active_season_pass(ctx.clone(), user_id)
             .await?;
 
-        if !has_pass && !self.session_manager.try_consume(user_id).await {
-            return Err(OracleError::LimitReached {
-                upgrade_url: self.upgrade_url.clone(),
-            });
+        if !has_pass {
+            let remaining = self.session_manager.remaining(user_id).await;
+            info!(%user_id, remaining, "oracle analysis request");
+            if !self.session_manager.try_consume(user_id).await {
+                warn!(%user_id, "oracle analysis limit reached");
+                return Err(OracleError::LimitReached {
+                    upgrade_url: self.upgrade_url.clone(),
+                });
+            }
+        } else {
+            info!(%user_id, "oracle analysis request with active season pass");
         }
 
         Ok(AnalysisResult {
@@ -133,4 +149,5 @@ impl OracleService for OracleServiceImpl {
         Ok(())
     }
 }
+
 mod tests;

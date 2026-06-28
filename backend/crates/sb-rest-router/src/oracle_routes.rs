@@ -7,7 +7,7 @@ use axum::{
     routing::{get, post},
 };
 use sb_contracts::service_api::OracleService;
-use sb_oracle::{HandAnalysisParams, OracleError, OracleServiceImpl, RemainingResponse};
+use sb_oracle::{HandAnalysisParams, OracleError, OracleServiceImpl};
 use sb_shared_types::RequestContext;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -29,7 +29,10 @@ async fn analyze_hand(
     Extension(auth_user): Extension<AuthUser>,
     Json(params): Json<HandAnalysisParams>,
 ) -> impl IntoResponse {
-    let ctx = RequestContext::new(auth_user.user_id);
+    let ctx = RequestContext::new(
+        uuid::Uuid::new_v4(),
+        Some(sb_shared_types::UserId(auth_user.user_id)),
+    );
     match oracle.analyze(&ctx, params).await {
         Ok(result) => (StatusCode::OK, Json(result)).into_response(),
         Err(OracleError::LimitReached { upgrade_url }) => (
@@ -38,6 +41,11 @@ async fn analyze_hand(
                 "error": "LimitReached",
                 "upgrade_url": upgrade_url
             })),
+        )
+            .into_response(),
+        Err(OracleError::Unauthorized(msg)) => (
+            StatusCode::UNAUTHORIZED,
+            Json(serde_json::json!({ "error": "Unauthorized", "message": msg })),
         )
             .into_response(),
         Err(e) => (
@@ -52,9 +60,17 @@ async fn remaining_analyses(
     State(oracle): State<Arc<OracleServiceImpl>>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> impl IntoResponse {
-    let ctx = RequestContext::new(auth_user.user_id);
+    let ctx = RequestContext::new(
+        uuid::Uuid::new_v4(),
+        Some(sb_shared_types::UserId(auth_user.user_id)),
+    );
     match oracle.remaining_analyses(&ctx).await {
         Ok(resp) => (StatusCode::OK, Json(resp)).into_response(),
+        Err(OracleError::Unauthorized(msg)) => (
+            StatusCode::UNAUTHORIZED,
+            Json(serde_json::json!({ "error": "Unauthorized", "message": msg })),
+        )
+            .into_response(),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(serde_json::json!({ "error": e.to_string() })),
