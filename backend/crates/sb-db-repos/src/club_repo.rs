@@ -65,6 +65,10 @@ impl ClubRepo for ClubRepoImpl {
     }
 
     async fn join_club(&self, club_id: ClubId, user_id: UserId) -> Result<(), ClubError> {
+        // Get current member count to assign division
+        let member_count = self.get_member_count(club_id).await?;
+        let division = ((member_count as u32) / DIVISION_SIZE) + 1;
+
         let id = Uuid::new_v4();
         let now = Utc::now();
         let active = club_memberships::ActiveModel {
@@ -74,6 +78,7 @@ impl ClubRepo for ClubRepoImpl {
             weekly_xp: Set(0),
             joined_at: Set(now),
             updated_at: Set(now),
+            division: Set(division as i32),
         };
 
         match active.insert(&self.db).await {
@@ -180,7 +185,7 @@ impl ClubRepo for ClubRepoImpl {
     }
 
     async fn refresh_leaderboard(&self, club_id: ClubId) -> Result<(), ClubError> {
-        let start = std::time::Instant::now();
+        let start_time = std::time::Instant::now();
         let now = Utc::now();
 
         let txn = self
@@ -196,34 +201,39 @@ impl ClubRepo for ClubRepoImpl {
             .await
             .map_err(|e| ClubError::Database(e.to_string()))?;
 
-        // Read all members sorted by weekly_xp
+        // Read all members (no global sort needed)
         let members = club_memberships::Entity::find()
             .filter(club_memberships::Column::ClubId.eq(club_id.as_uuid()))
-            .order_by_desc(club_memberships::Column::WeeklyXp)
             .all(&txn)
             .await
             .map_err(|e| ClubError::Database(e.to_string()))?;
 
-        // Batch insert new leaderboard rows (chunked for SQLite)
-        const INSERT_CHUNK_SIZE: usize = 150;
-        let active_models: Vec<club_leaderboard::ActiveModel> = members
-            .iter()
-            .enumerate()
-            .map(|(idx, member)| {
-                let rank = (idx + 1) as i32;
-                let division = ((idx as u32) / DIVISION_SIZE) + 1;
+        // Group members by their stored division
+        use std::collections::BTreeMap;
+        let mut by_division: BTreeMap<i32, Vec<&club_memberships::Model>> = BTreeMap::new();
+        for member in &members {
+            by_division.entry(member.division).or_default().push(member);
+        }
 
-                club_leaderboard::ActiveModel {
+        // Sort each division by weekly_xp DESC and assign ranks
+        let mut active_models: Vec<club_leaderboard::ActiveModel> = Vec::new();
+        for (division, mut div_members) in by_division {
+            div_members.sort_by(|a, b| b.weekly_xp.cmp(&a.weekly_xp));
+            for (idx, member) in div_members.iter().enumerate() {
+                let rank = (idx + 1) as i32;
+                active_models.push(club_leaderboard::ActiveModel {
                     club_id: Set(club_id.as_uuid()),
                     user_id: Set(member.user_id),
                     rank: Set(rank),
                     weekly_xp: Set(member.weekly_xp),
-                    division: Set(division as i32),
+                    division: Set(division),
                     refreshed_at: Set(now),
-                }
-            })
-            .collect();
+                });
+            }
+        }
 
+        // Batch insert (chunked for SQLite)
+        const INSERT_CHUNK_SIZE: usize = 150;
         for chunk in active_models.chunks(INSERT_CHUNK_SIZE) {
             club_leaderboard::Entity::insert_many(chunk.to_vec())
                 .exec(&txn)
@@ -235,7 +245,7 @@ impl ClubRepo for ClubRepoImpl {
             .await
             .map_err(|e| ClubError::Database(e.to_string()))?;
 
-        let elapsed = start.elapsed();
+        let elapsed = start_time.elapsed();
         tracing::info!(
             club_id = %club_id,
             member_count = members.len(),
@@ -253,6 +263,55 @@ impl ClubRepo for ClubRepoImpl {
             .map_err(|e| ClubError::Database(e.to_string()))?;
 
         Ok(all_clubs.into_iter().map(|c| ClubId::new(c.id)).collect())
+    }
+
+    async fn get_user_division(&self, club_id: ClubId, user_id: UserId) -> Result<Option<u32>, ClubError> {
+        let membership = club_memberships::Entity::find()
+            .filter(club_memberships::Column::ClubId.eq(club_id.as_uuid()))
+            .filter(club_memberships::Column::UserId.eq(user_id.as_uuid()))
+            .one(&self.db)
+            .await
+            .map_err(|e| ClubError::Database(e.to_string()))?;
+
+        Ok(membership.map(|m| m.division as u32))
+    }
+
+    async fn rebalance_divisions(&self, club_id: ClubId) -> Result<(), ClubError> {
+        let start_time = std::time::Instant::now();
+
+        // Get all members sorted by joined_at
+        let members = club_memberships::Entity::find()
+            .filter(club_memberships::Column::ClubId.eq(club_id.as_uuid()))
+            .order_by_asc(club_memberships::Column::JoinedAt)
+            .all(&self.db)
+            .await
+            .map_err(|e| ClubError::Database(e.to_string()))?;
+
+        // Reassign divisions in chunks of DIVISION_SIZE
+        for (idx, member) in members.iter().enumerate() {
+            let new_division = ((idx as u32) / DIVISION_SIZE) + 1;
+            if member.division != new_division as i32 {
+                let mut active: club_memberships::ActiveModel = member.clone().into();
+                active.division = Set(new_division as i32);
+                active.updated_at = Set(Utc::now());
+                ActiveModelTrait::update(active, &self.db)
+                    .await
+                    .map_err(|e| ClubError::Database(e.to_string()))?;
+            }
+        }
+
+        // Refresh leaderboard after rebalancing
+        self.refresh_leaderboard(club_id).await?;
+
+        let elapsed = start_time.elapsed();
+        tracing::info!(
+            club_id = %club_id,
+            member_count = members.len(),
+            elapsed_ms = elapsed.as_millis(),
+            "division rebalance completed"
+        );
+
+        Ok(())
     }
 }
 
