@@ -8,7 +8,8 @@ use sb_shared_types::{ClubId, RequestContext, UserId};
 use std::sync::Arc;
 
 use crate::models::{
-    CreateClubRequest, CreateClubResponse, GetLeaderboardResponse, JoinClubResponse,
+    CreateClubRequest, CreateClubResponse, GetLeaderboardResponse, GetUserDivisionResponse,
+    JoinClubResponse, RebalanceResponse,
 };
 
 #[derive(Clone)]
@@ -57,18 +58,57 @@ pub async fn join_club(
     Ok(Json(JoinClubResponse { success: true }))
 }
 
+#[derive(serde::Deserialize)]
+pub struct LeaderboardQuery {
+    pub division: Option<u32>,
+}
+
 pub async fn get_leaderboard(
     State(state): State<ClubState>,
     Extension(ctx): Extension<RequestContext>,
     Path(club_id): Path<ClubId>,
+    axum::extract::Query(query): axum::extract::Query<LeaderboardQuery>,
 ) -> Result<Json<GetLeaderboardResponse>, (StatusCode, String)> {
+    let division = query.division.unwrap_or(1);
     let page = state
         .service
-        .get_leaderboard(&ctx, club_id, 1)
+        .get_leaderboard(&ctx, club_id, division)
         .await
         .map_err(map_club_error)?;
 
     Ok(Json(GetLeaderboardResponse::from(page)))
+}
+
+pub async fn get_user_division(
+    State(state): State<ClubState>,
+    Extension(ctx): Extension<RequestContext>,
+    Path(club_id): Path<ClubId>,
+) -> Result<Json<GetUserDivisionResponse>, (StatusCode, String)> {
+    let user_id = extract_user_id(&ctx)?;
+
+    let division = state
+        .service
+        .get_user_division(&ctx, club_id, user_id)
+        .await
+        .map_err(map_club_error)?;
+
+    Ok(Json(GetUserDivisionResponse { division }))
+}
+
+pub async fn rebalance_divisions(
+    State(state): State<ClubState>,
+    Extension(ctx): Extension<RequestContext>,
+    Path(club_id): Path<ClubId>,
+) -> Result<Json<RebalanceResponse>, (StatusCode, String)> {
+    // TODO: Check if user is club owner before allowing rebalance
+
+    state
+        .service
+        .rebalance_divisions(&ctx, club_id)
+        .await
+        .map_err(map_club_error)?;
+
+    Ok(Json(RebalanceResponse { success: true }))
 }
 fn map_club_error(e: ClubError) -> (StatusCode, String) {
     match e {

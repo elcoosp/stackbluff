@@ -77,4 +77,32 @@ impl ClubService for ClubServiceImpl {
         );
         self.repo.increment_weekly_xp(club_id, user_id, xp).await
     }
+
+    async fn get_user_division(
+        &self,
+        ctx: &RequestContext,
+        club_id: ClubId,
+        user_id: UserId,
+    ) -> Result<Option<u32>, ClubError> {
+        tracing::debug!(
+            request_id = %ctx.request_id,
+            club_id = %club_id,
+            user_id = %user_id,
+            "get_user_division"
+        );
+        self.repo.get_user_division(club_id, user_id).await
+    }
+
+    async fn rebalance_divisions(
+        &self,
+        ctx: &RequestContext,
+        club_id: ClubId,
+    ) -> Result<(), ClubError> {
+        tracing::info!(
+            request_id = %ctx.request_id,
+            club_id = %club_id,
+            "rebalance_divisions"
+        );
+        self.repo.rebalance_divisions(club_id).await
+    }
 }
