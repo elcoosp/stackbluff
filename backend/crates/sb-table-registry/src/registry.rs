@@ -2,6 +2,7 @@ use crate::actor::{InternalCommand, LeaveResult, spawn_table_actor};
 use crate::connection_broker::ConnectionBroker;
 use crate::events::HandCompletedEvent;
 use crate::events::TableEvent;
+use crate::events::TableEvent;
 use crate::game_room::RoomMessage;
 use sb_contracts::stats_api::PlayerStatsRepo;
 use sb_contracts::{TableCommand, TableError, lobby_api::TableInfo};
@@ -444,7 +445,7 @@ impl Registry {
             .unwrap_or(false)
     }
 
-    pub fn event_sender(pub fn event_sender(&self) -> tokio::sync::broadcast::Sender<HandCompletedEvent>self) -> tokio::sync::broadcast::Sender<TableEvent> {
+    pub fn event_sender(pub fn event_sender(pub fn event_sender(&self) -> tokio::sync::broadcast::Sender<HandCompletedEvent>self) -> tokio::sync::broadcast::Sender<TableEvent>self) -> tokio::sync::broadcast::Sender<TableEvent> {
         self.event_tx.clone()
     }
 
