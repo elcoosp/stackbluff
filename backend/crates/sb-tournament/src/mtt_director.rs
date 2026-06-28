@@ -43,6 +43,12 @@ pub enum MttCommand {
         user_id: UserId,
         respond_to: oneshot::Sender<Option<TableId>>,
     },
+    SetNotificationService {
+        service: Arc<dyn sb_contracts::notification_api::NotificationService>,
+    },
+    SetClubRepo {
+        repo: Arc<dyn sb_contracts::ClubRepo>,
+    },
 }
 
 #[derive(Clone)]
@@ -92,6 +98,8 @@ pub struct MttDirector {
     user_repo: Option<Arc<dyn sb_contracts::repo_api::UserRepo>>,
 
     user_to_table: HashMap<UserId, TableId>,
+    notification_service: Option<Arc<dyn sb_contracts::notification_api::NotificationService>>,
+    club_repo: Option<Arc<dyn sb_contracts::ClubRepo>>,
 }
 
 impl MttDirector {
@@ -125,6 +133,8 @@ impl MttDirector {
             tournament_repo: None,
             user_repo: None,
             user_to_table: HashMap::new(),
+            notification_service: None,
+            club_repo: None,
         }
     }
 
@@ -197,6 +207,12 @@ impl MttDirector {
             } => {
                 let table_id = self.user_to_table.get(&user_id).copied();
                 let _ = respond_to.send(table_id);
+            }
+            MttCommand::SetNotificationService { service } => {
+                self.notification_service = Some(service);
+            }
+            MttCommand::SetClubRepo { repo } => {
+                self.club_repo = Some(repo);
             }
         }
     }

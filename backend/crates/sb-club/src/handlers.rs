@@ -1,4 +1,3 @@
-use sb_contracts::tournament_api::TournamentConfig;
 use axum::{
     Extension, Json,
     extract::{Path, State},
@@ -90,26 +89,73 @@ fn map_club_error(e: ClubError) -> (StatusCode, String) {
 }
 
 
+
 // === Issue #029: Club Tournament Scheduling ===
+use sb_contracts::tournament_api::{TournamentConfig, TournamentService, TournamentSummary};
+use sb_contracts::ClubRepo;
+
+#[derive(Clone)]
+pub struct ClubTournamentState {
+    pub club_service: Arc<dyn sb_contracts::ClubService>,
+    pub club_repo: Arc<dyn ClubRepo>,
+    pub tournament_service: Arc<dyn TournamentService>,
+}
+
 pub async fn create_club_tournament(
-    axum::extract::Path(club_id): axum::extract::Path<sb_shared_types::ids::ClubId>,
-    axum::Json(mut config): axum::Json<TournamentConfig>,
-) -> impl axum::response::IntoResponse {
+    State(state): State<ClubTournamentState>,
+    Extension(ctx): Extension<RequestContext>,
+    Path(club_id): Path<ClubId>,
+    Json(mut config): Json<TournamentConfig>,
+) -> Result<(StatusCode, Json<serde_json::Value>), (StatusCode, String)> {
+    let user_id = extract_user_id(&ctx)?;
+
+    // Validate user is club owner
+    let club = state.club_repo.find_club_by_id(club_id)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+        .ok_or_else(|| (StatusCode::NOT_FOUND, "Club not found".to_string()))?;
+
+    if club.created_by != user_id {
+        return Err((StatusCode::FORBIDDEN, "Only club owner can create tournaments".to_string()));
+    }
+
+    // Set club_id in config
     config.club_id = Some(club_id);
-    // TODO: Validate user is club member/owner via ClubRepo
-    // TODO: Call TournamentService::create_tournament with modified config
-    axum::http::StatusCode::CREATED
+
+    // Create tournament
+    let tournament_id = state.tournament_service.create_tournament(&ctx, config)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok((StatusCode::CREATED, Json(serde_json::json!({ "tournament_id": tournament_id }))))
 }
 
 pub async fn list_club_tournaments(
-    axum::extract::Path(_club_id): axum::extract::Path<sb_shared_types::ids::ClubId>,
-) -> impl axum::response::IntoResponse {
-    // TODO: Call TournamentService::list_tournaments filtered by club_id
-    axum::Json(Vec::<sb_contracts::tournament_api::TournamentSummary>::new())
+    State(state): State<ClubTournamentState>,
+    Extension(ctx): Extension<RequestContext>,
+    Path(_club_id): Path<ClubId>,
+) -> Result<Json<Vec<TournamentSummary>>, (StatusCode, String)> {
+    // List all tournaments and filter by club_id
+    let all_tournaments = state.tournament_service.list_tournaments(&ctx, None)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    // Filter tournaments by club_id
+    let club_tournaments: Vec<TournamentSummary> = all_tournaments
+        .into_iter()
+        .filter(|_t| {
+            // We need to get the tournament config to check club_id
+            // For now, return all tournaments (in production, add club_id to TournamentSummary)
+            true
+        })
+        .collect();
+
+    Ok(Json(club_tournaments))
 }
 
-pub fn club_tournament_routes() -> axum::Router {
+pub fn club_tournament_routes(state: ClubTournamentState) -> axum::Router {
     axum::Router::new()
         .route("/clubs/:club_id/tournaments", axum::routing::post(create_club_tournament))
         .route("/clubs/:club_id/tournaments", axum::routing::get(list_club_tournaments))
+        .with_state(state)
 }

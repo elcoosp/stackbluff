@@ -169,12 +169,19 @@ async fn main() {
     // ── Tournament system ────────────────────────────────────────────
     let tournament_repo = Arc::new(TournamentRepoImpl::new(db.clone()));
     let broker = Arc::new(sb_table_registry::connection_broker::ConnectionBroker::new());
-    let tournament_service = Arc::new(TournamentServiceImpl::new(
+    
+    // ── Club system ────────────────────────────────────────────────
+    let club_repo: Arc<dyn sb_contracts::ClubRepo> = Arc::new(sb_db_repos::club_repo::ClubRepoImpl::new(db.clone()));
+    let _club_service: Arc<dyn sb_contracts::ClubService> = Arc::new(sb_club::ClubServiceImpl::new(club_repo.clone()));
+
+let mut tournament_service_impl = TournamentServiceImpl::new(
         tournament_repo.clone(),
         user_repo.clone(),
         registry.clone(),
         broker.clone(),
-    ));
+    );
+    tournament_service_impl.set_club_repo(club_repo.clone());
+    let tournament_service = Arc::new(tournament_service_impl);
 
     let tournament_state = Arc::new(TournamentState {
         tournament_service: tournament_service.clone(),

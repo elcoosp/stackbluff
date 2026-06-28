@@ -61,6 +61,7 @@ impl ClubRepo for ClubRepoImpl {
             name: m.name,
             logo_url: m.logo_url,
             created_by: UserId::new(m.created_by),
+            telegram_chat_id: m.telegram_chat_id,
         }))
     }
 
@@ -254,6 +255,15 @@ impl ClubRepo for ClubRepoImpl {
 
         Ok(all_clubs.into_iter().map(|c| ClubId::new(c.id)).collect())
     }
+    async fn get_telegram_chat_id(&self, club_id: ClubId) -> Result<Option<i64>, ClubError> {
+        let model = clubs::Entity::find_by_id(club_id.as_uuid())
+            .one(&self.db)
+            .await
+            .map_err(|e| ClubError::Database(e.to_string()))?;
+
+        Ok(model.and_then(|m| m.telegram_chat_id))
+    }
+
 }
 
 /// Detect UNIQUE constraint violation from sea_orm::DbErr.
