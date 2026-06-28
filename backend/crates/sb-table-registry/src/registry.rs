@@ -444,7 +444,7 @@ impl Registry {
             .unwrap_or(false)
     }
 
-    pub fn event_sender(&self) -> tokio::sync::broadcast::Sender<HandCompletedEvent> {
+    pub fn event_sender(pub fn event_sender(&self) -> tokio::sync::broadcast::Sender<HandCompletedEvent>self) -> tokio::sync::broadcast::Sender<TableEvent> {
         self.event_tx.clone()
     }
 
