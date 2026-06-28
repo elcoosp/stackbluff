@@ -2,6 +2,7 @@ import { getPlatform, useUserStore } from '@stackbluff/shared';
 import { useEffect } from 'react';
 import { CookieConsentBanner } from '@/components/consent/CookieConsentBanner';
 import { NotificationPrompt } from '@/components/consent/NotificationPrompt';
+import { registerServiceWorker } from '@/lib/serviceWorker';
 
 function App() {
   const { user, loading, loadUser } = useUserStore();
@@ -9,6 +10,13 @@ function App() {
   useEffect(() => {
     loadUser();
   }, [loadUser]);
+
+  // Register service worker on app startup
+  useEffect(() => {
+    registerServiceWorker().catch((err) => {
+      console.error('Failed to register service worker:', err);
+    });
+  }, []);
 
   return (
     <div style={{ padding: '2rem', fontFamily: 'system-ui' }}>
