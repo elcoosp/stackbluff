@@ -1,3 +1,4 @@
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { useEffect, useState } from 'react';
 import { useParams } from '@tanstack/react-router';
 import { GlassPanel } from '@stackbluff/shared/ui/GlassPanel';
@@ -91,7 +92,8 @@ export function ClubPage() {
   ];
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
+    <ErrorBoundary>
+      <div className="container" mx-auto px-4 py-8 max-w-6xl">
       {/* Club Header */}
       <div className="mb-6">
         <div className="flex items-center gap-4">
@@ -144,5 +146,6 @@ export function ClubPage() {
         )}
       </GlassPanel>
     </div>
+    </ErrorBoundary>
   );
 }

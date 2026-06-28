@@ -173,7 +173,7 @@ function TournamentCard({
           <h3 className="text-xl font-semibold text-white mb-2">
             {tournament.name}
           </h3>
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-white/40 mb-1">Date & Time</p>
               <p className="text-white font-medium">

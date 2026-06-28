@@ -71,9 +71,9 @@ export function ClubLeaderboardTab({ clubId }: ClubLeaderboardTabProps) {
   if (!data || data.entries.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-white/60">No leaderboard data available yet.</p>
+        <p className="text-white/60">No tournament results yet.</p>
         <p className="text-white/40 text-sm mt-2">
-          Play some games to see the leaderboard!
+          Once tournaments are completed, the leaderboard will appear here.
         </p>
       </div>
     );
