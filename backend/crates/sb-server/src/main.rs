@@ -353,7 +353,7 @@ fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
 
 use tokio_cron_scheduler::{JobScheduler, Job};
 
-async fn start_gdpr_job(state: std::sync::Arc<crate::AppState>) {
+async fn start_gdpr_job(state: std::sync::Arc<sb_rest_router::AppState>) {
     let mut sched = JobScheduler::new().await.unwrap();
     sched.add(Job::new_async("0 0 2 * * *", move |_uuid, _l| {
         let state = state.clone();
@@ -373,6 +373,6 @@ async fn start_gdpr_job(state: std::sync::Arc<crate::AppState>) {
     sched.start().await.unwrap();
 }
 
-pub fn spawn_gdpr_scheduler(state: std::sync::Arc<crate::AppState>) {
+pub fn spawn_gdpr_scheduler(state: std::sync::Arc<sb_rest_router::AppState>) {
     tokio::spawn(start_gdpr_job(state));
 }
