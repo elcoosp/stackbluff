@@ -127,6 +127,8 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
         DbCommand::FindOrCreateByTelegram { ctx, .. } => ctx,
         DbCommand::CreateEmailUser { ctx, .. } => ctx,
         DbCommand::FindByEmail { ctx, .. } => ctx,
+        DbCommand::MarkEmailVerified { ctx, .. } => ctx,
+        DbCommand::UpdatePassword { ctx, .. } => ctx,
     };
 
     let request_id = ctx.request_id;
@@ -150,7 +152,7 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                 let new_user = user::ActiveModel {
                     id: Set(uuid::Uuid::new_v4()),
                     telegram_id: Set(Some(*telegram_id)),
-                    email: Set(Some(email.clone())),
+                    email: Set(email.clone()),
                     display_name: Set(display_name.clone()),
                     chip_balance: Set(INITIAL_CHIP_BALANCE),
                     streak_count: Set(0),
@@ -183,7 +185,7 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                 let profile = UserProfile {
                     id: UserId::new(model.id),
                     display_name: model.display_name,
-                    email: model.email,
+                    email: Some(model.email),
                     chip_balance: model.chip_balance,
                 };
 
@@ -273,7 +275,7 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                     let new_user = user::ActiveModel {
                         id: Set(uuid::Uuid::new_v4()),
                         telegram_id: Set(Some(*tg_id)),
-                        email: Set(Some(format!("telegram_{}@temp.local", tg_id))),
+                        email: Set(format!("telegram_{}@temp.local", tg_id)),
                         display_name: Set(format!("tg_user_{}", tg_id)),
                         chip_balance: Set(INITIAL_CHIP_BALANCE),
                         streak_count: Set(0),
@@ -298,7 +300,7 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                 use sea_orm::Set;
                 let new_user = user::ActiveModel {
                     id: Set(uuid::Uuid::new_v4()),
-                    email: Set(Some(email.clone())),
+                    email: Set(email.clone()),
                     display_name: Set(username.clone()),
                     password_hash: Set(Some(password_hash.clone())),
                     chip_balance: Set(INITIAL_CHIP_BALANCE),
@@ -311,6 +313,38 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                 let model = new_user.insert(conn).await.map_err(map_db_error)?;
                 let user_id = UserId::new(model.id);
                 Ok(Some(user_id.to_string()))
+            }
+            DbCommand::MarkEmailVerified { user_id, .. } => {
+                use sb_db_entities::user;
+                use sea_orm::Set;
+                let uid = user_id.as_uuid();
+                let model = user::Entity::find_by_id(uid)
+                    .one(conn)
+                    .await
+                    .map_err(map_db_error)?
+                    .ok_or(PersistenceError::NotFound)?;
+                let mut active: user::ActiveModel = model.into();
+                active.email_verified_at = Set(Some(chrono::Utc::now()));
+                active.update(conn).await.map_err(map_db_error)?;
+                Ok(None)
+            }
+            DbCommand::UpdatePassword {
+                user_id,
+                new_password_hash,
+                ..
+            } => {
+                use sb_db_entities::user;
+                use sea_orm::Set;
+                let uid = user_id.as_uuid();
+                let model = user::Entity::find_by_id(uid)
+                    .one(conn)
+                    .await
+                    .map_err(map_db_error)?
+                    .ok_or(PersistenceError::NotFound)?;
+                let mut active: user::ActiveModel = model.into();
+                active.password_hash = Set(Some(new_password_hash.clone()));
+                active.update(conn).await.map_err(map_db_error)?;
+                Ok(None)
             }
             DbCommand::FindByEmail { email, .. } => {
                 use sb_db_entities::user;
@@ -376,6 +410,10 @@ fn respond_ok(cmd: DbCommand, value: Option<String>) {
             };
             let _ = respond.send(Ok(id));
         }
+        DbCommand::MarkEmailVerified { respond, .. }
+        | DbCommand::UpdatePassword { respond, .. } => {
+            let _ = respond.send(Ok(()));
+        }
         DbCommand::FindByEmail { respond, .. } => {
             let id = value
                 .and_then(|s| s.parse::<uuid::Uuid>().ok())
@@ -433,6 +471,10 @@ fn respond_err(cmd: DbCommand, err: PersistenceError) {
         }
         DbCommand::CreateEmailUser { respond, .. } => {
             let _ = respond.send(Err(err));
+        }
+        DbCommand::MarkEmailVerified { respond, .. }
+        | DbCommand::UpdatePassword { respond, .. } => {
+            let _ = respond.send(Ok(()));
         }
         DbCommand::FindByEmail { respond, .. } => {
             let _ = respond.send(Err(err));
