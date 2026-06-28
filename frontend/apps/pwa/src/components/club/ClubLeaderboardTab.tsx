@@ -1,30 +1,31 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import type { LeaderboardResponse } from '../../types/club';
+import { LeaderboardResponseSchema } from '../../lib/schemas';
 import { apiRequest, handleApiError } from '../../lib/errorHandler';
 import { logger } from '../../lib/logger';
 import { LeaderboardSkeleton } from './LoadingSkeletons';
+import { API } from '../../lib/constants';
 
 interface ClubLeaderboardTabProps {
   clubId: string;
 }
 
-const MEMBERS_PER_DIVISION = 500;
-
 export function ClubLeaderboardTab({ clubId }: ClubLeaderboardTabProps) {
   const [currentDivision, setCurrentDivision] = useState(1);
 
-  const { data, isLoading, error, refetch, isFetching } = useQuery<LeaderboardResponse>({
+  const { data, isLoading, error, refetch, isFetching } = useQuery({
     queryKey: ['club-leaderboard', clubId, currentDivision],
-    queryFn: () =>
-      apiRequest<LeaderboardResponse>(
+    queryFn: async () => {
+      const rawData = await apiRequest<unknown>(
         `/clubs/${clubId}/leaderboard?division=${currentDivision}`,
         {},
         { clubId, division: currentDivision }
-      ),
-    refetchInterval: 5 * 60 * 1000,
-    staleTime: 60 * 1000,
-    retry: 2,
+      );
+      return LeaderboardResponseSchema.parse(rawData);
+    },
+    refetchInterval: API.STALE_TIME_LONG,
+    staleTime: API.STALE_TIME_MEDIUM,
+    retry: API.DEFAULT_RETRY_COUNT,
   });
 
   if (isLoading) {

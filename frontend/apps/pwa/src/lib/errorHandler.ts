@@ -1,8 +1,10 @@
 /**
  * Centralized error handling with differentiation by HTTP status
+ * Includes request correlation IDs for tracing
  */
 
 import { toast } from 'sonner';
+import { apiClient } from '@stackbluff/shared/api/client';
 import { logger } from './logger';
 
 export class AppError extends Error {
@@ -10,15 +12,27 @@ export class AppError extends Error {
     message: string,
     public statusCode?: number,
     public code?: string,
-    public context?: Record<string, unknown>
+    public context?: Record<string, unknown>,
+    public correlationId?: string
   ) {
     super(message);
     this.name = 'AppError';
   }
 }
 
+/**
+ * Generate a unique correlation ID for request tracing
+ */
+function generateCorrelationId(): string {
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+}
+
+/**
+ * Handle API errors with appropriate user feedback
+ */
 export function handleApiError(error: unknown, context: Record<string, unknown> = {}): void {
-  const loggerWithContext = logger.withContext(context);
+  const correlationId = context.correlationId as string || generateCorrelationId();
+  const loggerWithContext = logger.withContext({ ...context, correlationId });
 
   if (error instanceof AppError) {
     loggerWithContext.error(error.message, error, error.context);
@@ -28,7 +42,6 @@ export function handleApiError(error: unknown, context: Record<string, unknown> 
         toast.error('Authentication required', {
           description: 'Please log in to continue',
         });
-        // TODO: Redirect to login
         break;
       case 403:
         toast.error('Permission denied', {
@@ -75,19 +88,35 @@ export function handleApiError(error: unknown, context: Record<string, unknown> 
   }
 }
 
+/**
+ * Wrapper around apiClient with correlation ID tracking
+ */
 export async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {},
   context: Record<string, unknown> = {}
 ): Promise<T> {
+  const correlationId = generateCorrelationId();
+  const loggerWithContext = logger.withContext({ ...context, correlationId, endpoint });
+
   try {
-    const { apiClient } = await import('@stackbluff/shared/api/client');
-    return await apiClient<T>(endpoint, options);
+    const headers = new Headers(options.headers);
+    headers.set('X-Correlation-ID', correlationId);
+
+    const result = await apiClient<T>(endpoint, {
+      ...options,
+      headers,
+    });
+
+    loggerWithContext.info('API request successful');
+    return result;
   } catch (error) {
     if (error instanceof Error) {
       const statusMatch = error.message.match(/HTTP (\d+)/);
       const statusCode = statusMatch ? parseInt(statusMatch[1]) : undefined;
-      throw new AppError(error.message, statusCode, undefined, context);
+
+      loggerWithContext.error('API request failed', error, { statusCode });
+      throw new AppError(error.message, statusCode, undefined, context, correlationId);
     }
     throw error;
   }

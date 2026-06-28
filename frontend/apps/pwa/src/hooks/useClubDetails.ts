@@ -1,12 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
-import type { ClubDetails } from '../types/club';
+import { ClubDetailsSchema } from '../lib/schemas';
 import { apiRequest } from '../lib/errorHandler';
+import { API } from '../lib/constants';
 
 export function useClubDetails(clubId: string) {
-  return useQuery<ClubDetails>({
+  return useQuery({
     queryKey: ['club', clubId],
-    queryFn: () => apiRequest<ClubDetails>(`/clubs/${clubId}`, {}, { clubId }),
-    staleTime: 60 * 1000,
-    retry: 2,
+    queryFn: async () => {
+      const data = await apiRequest<unknown>(`/clubs/${clubId}`, {}, { clubId });
+      return ClubDetailsSchema.parse(data);
+    },
+    staleTime: API.STALE_TIME_MEDIUM,
+    retry: API.DEFAULT_RETRY_COUNT,
   });
 }

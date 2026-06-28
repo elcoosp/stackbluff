@@ -1,17 +1,22 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { TournamentsResponse, ScheduleTournamentRequest } from '../types/club';
+import { TournamentsResponseSchema, ScheduleTournamentRequestSchema } from '../lib/schemas';
+import type { TournamentsResponse, ScheduleTournamentRequest } from '../lib/schemas';
 import { apiRequest } from '../lib/errorHandler';
 import { logger } from '../lib/logger';
+import { API } from '../lib/constants';
 
 export function useClubTournaments(clubId: string) {
   const queryClient = useQueryClient();
 
   const query = useQuery<TournamentsResponse>({
     queryKey: ['club-tournaments', clubId],
-    queryFn: () => apiRequest<TournamentsResponse>(`/clubs/${clubId}/tournaments`, {}, { clubId }),
-    staleTime: 30 * 1000,
-    refetchInterval: 60 * 1000,
-    retry: 2,
+    queryFn: async () => {
+      const data = await apiRequest<unknown>(`/clubs/${clubId}/tournaments`, {}, { clubId });
+      return TournamentsResponseSchema.parse(data);
+    },
+    staleTime: API.STALE_TIME_SHORT,
+    refetchInterval: API.ONE_MINUTE,
+    retry: API.DEFAULT_RETRY_COUNT,
   });
 
   const registerMutation = useMutation({
@@ -20,6 +25,7 @@ export function useClubTournaments(clubId: string) {
     },
     onMutate: async (tournamentId) => {
       await queryClient.cancelQueries({ queryKey: ['club-tournaments', clubId] });
+
       const previousTournaments = queryClient.getQueryData<TournamentsResponse>(['club-tournaments', clubId]);
 
       queryClient.setQueryData<TournamentsResponse>(['club-tournaments', clubId], (old) => {
@@ -56,6 +62,7 @@ export function useClubTournaments(clubId: string) {
     },
     onMutate: async (tournamentId) => {
       await queryClient.cancelQueries({ queryKey: ['club-tournaments', clubId] });
+
       const previousTournaments = queryClient.getQueryData<TournamentsResponse>(['club-tournaments', clubId]);
 
       queryClient.setQueryData<TournamentsResponse>(['club-tournaments', clubId], (old) => {
@@ -88,9 +95,10 @@ export function useClubTournaments(clubId: string) {
 
   const scheduleMutation = useMutation({
     mutationFn: async (data: ScheduleTournamentRequest) => {
+      const validated = ScheduleTournamentRequestSchema.parse(data);
       return apiRequest(`/clubs/${clubId}/tournaments`, {
         method: 'POST',
-        body: JSON.stringify(data),
+        body: JSON.stringify(validated),
       }, { clubId });
     },
     onSuccess: () => {
