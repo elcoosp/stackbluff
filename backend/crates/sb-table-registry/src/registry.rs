@@ -2,6 +2,7 @@ use crate::actor::{InternalCommand, LeaveResult, spawn_table_actor};
 use crate::connection_broker::ConnectionBroker;
 use crate::events::HandCompletedEvent;
 use crate::events::TableEvent;
+use crate::events::TableEvent;
 use crate::game_room::RoomMessage;
 use sb_contracts::stats_api::PlayerStatsRepo;
 use sb_contracts::{TableCommand, TableError, lobby_api::TableInfo};
@@ -442,6 +443,8 @@ impl Registry {
     }
         self.event_tx.clone()
     }
+        self.event_tx.clone()
+    }
 
     /// Creates a tournament table and wires it into the registry.
     pub async fn create_tournament_table(
@@ -613,3 +616,4 @@ impl Registry {
             .map_err(|_| AppError::Internal("table actor disconnected".to_string()))?;
         Ok(())
     }
+}
