@@ -8,6 +8,7 @@ interface ClubTournamentsTabProps {
 }
 
 export function ClubTournamentsTab({ clubId, isOwner }: ClubTournamentsTabProps) {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const {
     data,
     isLoading,
@@ -75,7 +76,7 @@ export function ClubTournamentsTab({ clubId, isOwner }: ClubTournamentsTabProps)
           <button
             onClick={() => {
               // TODO: Open ScheduleTournamentDialog in next step
-              toast.info('Schedule Tournament dialog coming soon');
+              setIsDialogOpen(true);
             }}
             className="px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-lg text-white font-medium transition-all shadow-lg"
           >
@@ -136,6 +137,12 @@ export function ClubTournamentsTab({ clubId, isOwner }: ClubTournamentsTabProps)
           </div>
         </div>
       )}
+      {/* Schedule Tournament Dialog */}
+      <ScheduleTournamentDialog
+        clubId={clubId}
+        isOpen={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+      />
     </div>
   );
 }
