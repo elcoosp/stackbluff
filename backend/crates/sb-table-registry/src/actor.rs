@@ -2453,7 +2453,7 @@ impl TableActor {
             started_by: self.created_by,
             winner,
             winning_hand_description: hand_desc,
-            pot_amount: pot,
+            pot_amount: pot.unwrap_or_default(),
             chat_id: self.telegram_chat_id.clone(),
         };
 

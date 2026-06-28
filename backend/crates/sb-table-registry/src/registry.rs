@@ -103,7 +103,9 @@ impl Registry {
             self.event_tx.clone(),
             self.stats_repo.clone(),
             active_players.clone(),
-        , created_by, chat_id);
+            sb_shared_types::UserId::new(uuid::Uuid::nil()),
+            None,
+        );
 
         let room_entry = RoomEntry {
             table_id,
@@ -464,10 +466,12 @@ impl Registry {
             self.event_tx.clone(),
             self.stats_repo.clone(),
             active_players.clone(),
-        , created_by, chat_id);
+            sb_shared_types::UserId::new(uuid::Uuid::nil()),
+            None,
+        );
 
         // Enter tournament mode
-        cmd_tx
+        let _ = cmd_tx
             .send(InternalCommand::EnterTournamentMode {
                 parent: tournament_id,
                 broker: broker.clone(),

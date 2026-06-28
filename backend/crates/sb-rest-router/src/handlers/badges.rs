@@ -5,6 +5,7 @@ use axum::{
 use sb_contracts::badge_repo_api::{BadgeRepo, BadgeType};
 use sb_shared_types::ids::UserId;
 use std::sync::Arc;
+use crate::AppState;
 
 #[derive(serde::Serialize)]
 pub struct BadgeResponse {
@@ -24,49 +25,55 @@ pub struct FoundingMemberProgress {
     pub required: u64,
 }
 
-pub async fn get_my_badges<B: BadgeRepo>(
-    State(badge_repo): State<Arc<B>>,
-    axum::Extension(user_id): axum::Extension<UserId>,
-) -> Json<BadgesListResponse> {
-    let badges = badge_repo.list_badges(user_id).await.unwrap_or_default();
+pub async fn get_my_badges(
+    State(state): State<Arc<AppState>>,
+    axum::Extension(auth_user): axum::Extension<sb_auth::middleware::AuthUser>,
+) -> Result<Json<BadgesListResponse>, (axum::http::StatusCode, String)> {
+    let user_id = UserId::new(
+        uuid::Uuid::parse_str(&auth_user.user_id)
+            .map_err(|_| (axum::http::StatusCode::BAD_REQUEST, "Invalid user ID".to_string()))?
+    );
+
+    let badges = state.badge_repo.list_badges(user_id).await
+        .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     let mut response = BadgesListResponse {
-        badges: badges
-            .iter()
-            .map(|b| BadgeResponse {
-                badge_type: b.as_str().to_string(),
-                awarded_at: None,
-            })
-            .collect(),
+        badges: badges.iter().map(|b| BadgeResponse {
+            badge_type: b.as_str().to_string(),
+            awarded_at: None,
+        }).collect(),
         founding_member_progress: None,
     };
 
     if !badges.contains(&BadgeType::FoundingMember) {
-        // Progress will be filled by caller with referral stats; placeholder for now
-        response.founding_member_progress = Some(FoundingMemberProgress {
-            completed: 0,
-            required: 10,
-        });
+        if let Ok(count) = state.referral_repo.count_completed_referrals(user_id).await {
+            response.founding_member_progress = Some(FoundingMemberProgress {
+                completed: count,
+                required: 10,
+            });
+        }
     }
 
-    Json(response)
+    Ok(Json(response))
 }
 
-pub async fn get_user_badges<B: BadgeRepo>(
-    State(badge_repo): State<Arc<B>>,
-    Path(user_id): Path<uuid::Uuid>,
-) -> Json<BadgesListResponse> {
-    let uid = UserId::new(user_id);
-    let badges = badge_repo.list_badges(uid).await.unwrap_or_default();
+pub async fn get_user_badges(
+    State(state): State<Arc<AppState>>,
+    Path(user_id): Path<String>,
+) -> Result<Json<BadgesListResponse>, (axum::http::StatusCode, String)> {
+    let uid = UserId::new(
+        uuid::Uuid::parse_str(&user_id)
+            .map_err(|_| (axum::http::StatusCode::BAD_REQUEST, "Invalid user ID".to_string()))?
+    );
 
-    Json(BadgesListResponse {
-        badges: badges
-            .iter()
-            .map(|b| BadgeResponse {
-                badge_type: b.as_str().to_string(),
-                awarded_at: None,
-            })
-            .collect(),
+    let badges = state.badge_repo.list_badges(uid).await
+        .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(BadgesListResponse {
+        badges: badges.iter().map(|b| BadgeResponse {
+            badge_type: b.as_str().to_string(),
+            awarded_at: None,
+        }).collect(),
         founding_member_progress: None,
-    })
+    }))
 }
