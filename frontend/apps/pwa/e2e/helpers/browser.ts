@@ -5,7 +5,7 @@ let browser: Browser;
 
 export async function getBrowser() {
   if (!browser) {
-    browser = await puppeteer.launch({ headless: 'new' });
+    browser = await puppeteer.launch({ headless: true });
   }
   return browser;
 }
@@ -23,5 +23,10 @@ export const createCluster = (concurrency: number) =>
     // Use CONTEXT concurrency to isolate cookies per task
     concurrency: Cluster.CONCURRENCY_CONTEXT,
     maxConcurrency: concurrency,
-    puppeteerOptions: { headless: 'new' },
+    puppeteerOptions: { headless: true },
   });
+
+export async function closeBrowser(): Promise<void> {
+  // Placeholder - implement actual browser closing logic
+  console.log('Closing browser...');
+}
