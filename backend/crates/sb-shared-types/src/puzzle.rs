@@ -4,22 +4,14 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub enum PuzzleAction {
-    Fold,
-    Check,
-    Call,
-    Raise,
-    AllIn,
-}
+pub enum PuzzleAction { Fold, Check, Call, Raise, AllIn }
 
 impl std::fmt::Display for PuzzleAction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            PuzzleAction::Fold => write!(f, "fold"),
-            PuzzleAction::Check => write!(f, "check"),
-            PuzzleAction::Call => write!(f, "call"),
-            PuzzleAction::Raise => write!(f, "raise"),
-            PuzzleAction::AllIn => write!(f, "allin"),
+            Self::Fold => write!(f, "fold"), Self::Check => write!(f, "check"),
+            Self::Call => write!(f, "call"), Self::Raise => write!(f, "raise"),
+            Self::AllIn => write!(f, "allin"),
         }
     }
 }
@@ -28,12 +20,9 @@ impl std::str::FromStr for PuzzleAction {
     type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "fold" => Ok(PuzzleAction::Fold),
-            "check" => Ok(PuzzleAction::Check),
-            "call" => Ok(PuzzleAction::Call),
-            "raise" => Ok(PuzzleAction::Raise),
-            "allin" | "all-in" | "all_in" => Ok(PuzzleAction::AllIn),
-            _ => Err(format!("Invalid puzzle action: {}", s)),
+            "fold" => Ok(Self::Fold), "check" => Ok(Self::Check), "call" => Ok(Self::Call),
+            "raise" => Ok(Self::Raise), "allin" | "all-in" => Ok(Self::AllIn),
+            _ => Err(format!("Invalid action: {}", s)),
         }
     }
 }

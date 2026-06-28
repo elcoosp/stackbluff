@@ -31,9 +31,9 @@ sb-shared-types = { path = "../sb-shared-types" }
 sb-contracts = { path = "../sb-contracts" }
 sb-auth = { path = "../sb-auth" }
 sb-table-registry = { path = "../sb-table-registry" }
+prometheus.workspace = true
+sb-viral = { version = "0.1.0", path = "../sb-viral" }
 
-prometheus = { workspace = true }
-sb-viral = { path = "../sb-viral" }
 [dev-dependencies]
 axum-test = "20"
 mockall = "0.14.0"
