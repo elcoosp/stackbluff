@@ -8,7 +8,7 @@ pub struct Model {
     pub user_id: Uuid,
     #[sea_orm(primary_key, auto_increment = false)]
     pub badge_type: String,
-    pub awarded_at: DateTimeUtc,
+    pub awarded_at: DateTimeWithTimeZone,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

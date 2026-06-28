@@ -229,6 +229,11 @@ pub trait ReferralRepository: Send + Sync {
     async fn mark_bonus_awarded(&self, referred_id: UserId) -> Result<(), AppError>;
     async fn get_referrer_id(&self, referred_id: UserId) -> Result<Option<UserId>, AppError>;
     async fn get_referral_stats(&self, referrer_id: UserId) -> Result<ReferralStats, AppError>;
+    async fn count_completed_referrals(
+        &self,
+        db: &impl sea_orm::ConnectionTrait,
+        referrer_id: sb_shared_types::ids::UserId,
+    ) -> Result<i64, crate::persistence_error::PersistenceError>;
 }
 
 pub use UserRepository as UserRepo;

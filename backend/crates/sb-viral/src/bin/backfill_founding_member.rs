@@ -1,5 +1,5 @@
-use sea_orm::{Database, EntityTrait, QueryFilter, ColumnTrait};
-use sb_contracts::{BadgeRepo, BadgeType};
+use sea_orm::{Database, EntityTrait, QueryFilter, ColumnTrait, TransactionTrait};
+use sb_contracts::badge_repo_api::{BadgeRepo, BadgeType};
 use sb_db_repos::badge_repo::BadgeRepoImpl;
 use sb_shared_types::ids::UserId;
 use std::env;
@@ -10,7 +10,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or_else(|_| "sqlite:./stackbluff.db".to_string());
     let db = Database::connect(&database_url).await?;
 
-    let badge_repo = BadgeRepoImpl::new(db.clone());
+    let badge_repo = BadgeRepoImpl::new();
 
     use sb_db_entities::referral::{self, Entity as ReferralEntity};
 
@@ -30,7 +30,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         if count >= 10 {
             let uuid = uuid::Uuid::parse_str(&referrer_id_str)?;
             let user_id = UserId::new(uuid);
-            match badge_repo.award_badge(user_id, BadgeType::FoundingMember).await {
+
+            let txn = db.begin().await?;
+            match badge_repo.award_badge(&txn, user_id, BadgeType::FoundingMember).await {
                 Ok(true) => {
                     println!("Awarded founding_member badge to {}", referrer_id_str);
                     awarded += 1;
@@ -42,6 +44,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     eprintln!("Error awarding badge to {}: {}", referrer_id_str, e);
                 }
             }
+            txn.commit().await?;
         }
     }
 

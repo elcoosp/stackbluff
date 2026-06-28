@@ -129,4 +129,24 @@ impl ReferralRepository for ReferralRepositoryImpl {
             pending_bonus,
         })
     }
+
+    async fn count_completed_referrals(
+        &self,
+        db: &impl sea_orm::ConnectionTrait,
+        referrer_id: sb_shared_types::ids::UserId,
+    ) -> Result<i64, sb_contracts::persistence_error::PersistenceError> {
+        use sea_orm::{ColumnTrait, QueryFilter, PaginatorTrait};
+        use sb_db_entities::referral::{self, Entity as ReferralEntity};
+
+        let count = ReferralEntity::find()
+            .filter(referral::Column::ReferrerId.eq(referrer_id.0))
+            .filter(referral::Column::HandCount.gte(5))
+            .filter(referral::Column::BonusAwarded.eq(true))
+            .count(db)
+            .await
+            .map_err(|e| sb_contracts::persistence_error::PersistenceError::Database(e.to_string()))?;
+
+        Ok(count as i64)
+    }
+
 }

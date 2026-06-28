@@ -477,7 +477,7 @@ impl Registry {
                 broker: broker.clone(),
             })
             .await
-            .map_err(|_| AppError::Internal("table actor dropped".to_string()))?;
+            .ok();
 
         let room_entry = RoomEntry {
             table_id: room_id,

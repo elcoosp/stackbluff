@@ -18,7 +18,7 @@ use sb_shared_types::{ActionType, ChipAmount, PlayerId, StakeLevel, TableConfig,
 
 use crate::connection_broker::ConnectionBroker;
 use crate::events::HandCompletedEvent;
-use crate::events::{TableEvent, TableClosedEvent};
+use crate::events::{TableClosedEvent, TableEvent};
 use chrono::Utc;
 use sb_db_entities::hand_history_json::{
     HandAction, HandActions, HandPlayer, HandPlayers, HandResult, PotSplit, Winner,
@@ -586,6 +586,7 @@ pub struct TableActor {
 }
 
 impl TableActor {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         room_id: TableId,
         table_id: TableId,
@@ -2438,8 +2439,8 @@ impl TableActor {
     }
 
     fn emit_table_closed_event(&self) {
-        use sb_shared_types::{UserId, TableId, ChipAmount};
         use crate::events::{TableClosedEvent, TableEvent};
+        use sb_shared_types::{ChipAmount, TableId, UserId};
 
         // Placeholder: in a real implementation, retrieve from game state.
         // For now, use default values.
@@ -2470,6 +2471,7 @@ fn community_cards_to_array(hand: &ActiveHand) -> Option<[sb_shared_types::Card;
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn spawn_table_actor(
     room_id: TableId,
     table_id: TableId,
@@ -2495,4 +2497,3 @@ pub fn spawn_table_actor(
     let handle = tokio::spawn(actor.run(rx));
     (tx, handle)
 }
-

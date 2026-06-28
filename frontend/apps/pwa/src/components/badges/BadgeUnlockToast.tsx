@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { PlatformAPI } from "../../platform/PlatformAPI";
 
 interface Props {
   badgeType: string;
@@ -18,10 +17,13 @@ export const BadgeUnlockToast: React.FC<Props> = ({ badgeType, inviteLink }) => 
 
   const handleShare = () => {
     const message = `I just became a Founding Member of StackBluff by referring 10 friends who played 5+ hands! Join me: ${inviteLink || window.location.origin}`;
-    PlatformAPI.shareContent?.({ message }).catch(() => {
-      // Fallback: copy to clipboard
-      navigator.clipboard.writeText(message);
-    });
+
+    if (navigator.share) {
+      navigator.share({ title: "StackBluff Founding Member", text: message })
+        .catch(() => navigator.clipboard.writeText(message));
+    } else {
+      navigator.clipboard.writeText(message).catch(() => {});
+    }
   };
 
   return (
@@ -31,7 +33,7 @@ export const BadgeUnlockToast: React.FC<Props> = ({ badgeType, inviteLink }) => 
           <span className="text-2xl">🏆</span>
           <div className="flex-1">
             <p className="font-semibold text-sm">
-              You’ve unlocked the Founding Member badge!
+              You've unlocked the Founding Member badge!
             </p>
             <p className="text-xs text-muted-foreground mt-1">
               Share your achievement with friends.

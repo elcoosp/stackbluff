@@ -5,27 +5,33 @@ export interface Badge {
   awarded_at?: string;
 }
 
+export interface FoundingMemberProgress {
+  completed: number;
+  required: number;
+}
+
 export interface BadgesResponse {
   badges: Badge[];
-  founding_member_progress?: {
-    completed: number;
-    required: number;
-  };
+  founding_member_progress?: FoundingMemberProgress;
 }
 
 async function fetchBadges(): Promise<BadgesResponse> {
   const res = await fetch("/api/users/me/badges", {
     credentials: "include",
   });
-  if (!res.ok) throw new Error("Failed to fetch badges");
+  if (!res.ok) {
+    const body = await res.text().catch(() => "Unknown error");
+    throw new Error(`Failed to fetch badges: ${res.status} ${body}`);
+  }
   return res.json();
 }
 
 export function useBadges() {
-  return useQuery<BadgesResponse>({
+  return useQuery<BadgesResponse, Error>({
     queryKey: ["badges", "me"],
     queryFn: fetchBadges,
     staleTime: 5 * 60 * 1000,
+    retry: 2,
   });
 }
 

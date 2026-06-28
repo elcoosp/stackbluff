@@ -18,14 +18,14 @@ impl MigrationTrait for Migration {
                     )
                     .col(
                         ColumnDef::new(UserBadges::BadgeType)
-                            .string()
+                            .string_len(32)
                             .not_null(),
                     )
                     .col(
                         ColumnDef::new(UserBadges::AwardedAt)
-                            .timestamp()
+                            .timestamp_with_time_zone()
                             .not_null()
-                            .extra("DEFAULT CURRENT_TIMESTAMP".to_owned()),
+                            .default(Expr::current_timestamp()),
                     )
                     .primary_key(
                         Index::create()
@@ -39,6 +39,10 @@ impl MigrationTrait for Migration {
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
+                    .check(
+                        Expr::col(UserBadges::BadgeType)
+                            .is_in(["founding_member"]),
+                    )
                     .to_owned(),
             )
             .await?;
@@ -50,17 +54,6 @@ impl MigrationTrait for Migration {
                     .name("idx_user_badges_user_id")
                     .table(UserBadges::Table)
                     .col(UserBadges::UserId)
-                    .to_owned(),
-            )
-            .await?;
-
-        manager
-            .create_index(
-                Index::create()
-                    .if_not_exists()
-                    .name("idx_user_badges_badge_type")
-                    .table(UserBadges::Table)
-                    .col(UserBadges::BadgeType)
                     .to_owned(),
             )
             .await

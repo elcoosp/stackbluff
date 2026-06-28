@@ -15,11 +15,11 @@ pub mod user_resolution;
 pub use async_hooks::{HandCountObserver, ReplayCardObserver};
 pub use badge_repo_api::{BadgeRepo, BadgeType};
 pub use club_error::ClubError;
-pub use service_api::{
-    ClubService, HandResult, ReferralStats, ReplayCard, UserService, ViralService,
-};
 pub use repo_api::{
     ClubRepo, DIVISION_SIZE, HandHistoryRepository, HandSummary, LeaderboardPage, WinnerSummary,
+};
+pub use service_api::{
+    ClubService, HandResult, ReferralStats, ReplayCard, UserService, ViralService,
 };
 
 // ========== Table Registry contracts ==========

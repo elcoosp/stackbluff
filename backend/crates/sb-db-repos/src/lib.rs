@@ -20,3 +20,4 @@ pub use hand_history_repo::HandHistoryRepoImpl;
 pub use leaderboard_repo::{LeaderboardRepo, refresh_leaderboard_mv};
 pub use tournament_repo::TournamentRepoImpl;
 pub mod badge_repo;
+pub mod badge_engine;

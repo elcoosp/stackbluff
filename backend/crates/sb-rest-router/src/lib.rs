@@ -1,5 +1,5 @@
-pub mod leaderboard;
 pub mod handlers;
+pub mod leaderboard;
 use axum::{
     Router,
     extract::{Extension, Path, Query, State},
@@ -9,11 +9,11 @@ use axum::{
 };
 use base64::prelude::*;
 use chrono::{DateTime, Utc};
+use handlers::badges;
+use handlers::badges;
 use sb_auth::middleware::{AuthUser, auth_middleware};
 use sb_contracts::lobby_api::{TableInfo, TableRepo, TableService};
 use sb_contracts::repo_api::{HandHistoryRepository, HandSummary};
-use handlers::badges;
-use handlers::badges;
 use sb_shared_types::{RequestContext, StakeLevel, TableId, UserId};
 use sb_table_registry::registry::Registry;
 use serde::{Deserialize, Serialize};
