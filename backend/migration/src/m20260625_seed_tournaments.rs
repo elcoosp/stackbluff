@@ -108,8 +108,7 @@ impl MigrationTrait for Migration {
                 prize_pool: Set(0),
                 started_at: Set(None),
                 completed_at: Set(None),
-                scheduled_start: sea_orm::Set(None),
-                    created_at: Set(now),
+                created_at: Set(now),
             };
             active.insert(db).await?;
             println!("Seeded tournament: {}", name);
