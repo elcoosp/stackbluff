@@ -67,12 +67,11 @@ async fn reschedule_tournament_reminders(
     };
     let now = Utc::now();
     for tournament in &tournaments {
-        if tournament.status == TournamentStatus::Registering {
-            if let Some(start) = tournament.config.scheduled_start {
-                if start > now {
-                    sb_tournament::reminders::schedule_reminders(tournament.id, start, repo.clone(), notification_service.clone(), bot_handler.clone(), app_base_url.clone());
-                }
-            }
+        if tournament.status == TournamentStatus::Registering
+            && let Some(start) = tournament.config.scheduled_start
+            && start > now
+        {
+            sb_tournament::reminders::schedule_reminders(tournament.id, start, repo.clone(), notification_service.clone(), bot_handler.clone(), app_base_url.clone());
         }
     }
 }
