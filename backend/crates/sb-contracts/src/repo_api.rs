@@ -233,6 +233,7 @@ pub trait ReferralRepository: Send + Sync {
 
 pub use UserRepository as UserRepo;
 
+
 #[async_trait::async_trait]
 pub trait GdprRepo: Send + Sync {
     async fn request_deletion(&self, user_id: uuid::Uuid) -> Result<(), PersistenceError>;

@@ -350,6 +350,7 @@ fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
     )
 }
 
+
 use tokio_cron_scheduler::{JobScheduler, Job};
 
 async fn start_gdpr_job(state: std::sync::Arc<crate::AppState>) {

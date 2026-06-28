@@ -1,3 +1,18 @@
+
+#[allow(dead_code)]
+struct DummyGdprRepo;
+#[async_trait::async_trait]
+impl sb_contracts::repo_api::GdprRepo for DummyGdprRepo {
+    async fn request_deletion(&self, _: uuid::Uuid) -> Result<(), sb_contracts::repo_api::PersistenceError> { Ok(()) }
+    async fn get_pending_deletions(&self, _: i64) -> Result<Vec<sb_contracts::repo_api::DeletionRequestDto>, sb_contracts::repo_api::PersistenceError> { Ok(vec![]) }
+    async fn mark_deletion_completed(&self, _: uuid::Uuid) -> Result<(), sb_contracts::repo_api::PersistenceError> { Ok(()) }
+    async fn get_user_data(&self, _: uuid::Uuid) -> Result<sb_contracts::repo_api::UserDataExportDto, sb_contracts::repo_api::PersistenceError> {
+        Ok(sb_contracts::repo_api::UserDataExportDto { profile: serde_json::Value::Null, hand_history: serde_json::Value::Null, missions: serde_json::Value::Null })
+    }
+    async fn anonymize_user(&self, _: uuid::Uuid) -> Result<(), sb_contracts::repo_api::PersistenceError> { Ok(()) }
+    async fn invalidate_sessions(&self, _: uuid::Uuid) -> Result<(), sb_contracts::repo_api::PersistenceError> { Ok(()) }
+    async fn get_user_password_hash(&self, _: uuid::Uuid) -> Result<String, sb_contracts::repo_api::PersistenceError> { Ok(String::new()) }
+}
 pub mod leaderboard;
 use axum::{
     Router,
@@ -313,4 +328,5 @@ fn forbidden(msg: &str) -> (StatusCode, Json<ErrorResponse>) {
         }),
     )
 }
+
 pub mod gdpr_routes;
