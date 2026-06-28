@@ -188,3 +188,169 @@ async fn test_club_not_found() {
     let result = svc.get_leaderboard(&ctx, fake_club, 1).await;
     assert!(matches!(result, Err(ClubError::NotFound)));
 }
+
+#[tokio::test]
+async fn test_get_user_division() {
+    let (svc, _repo, db) = setup_db().await;
+    let ctx = test_ctx();
+    let owner_id = ctx.user_id.unwrap();
+    ensure_user(&db, owner_id).await;
+    let club_id = svc
+        .create_club(&ctx, "Division Test Club", None, owner_id)
+        .await
+        .expect("create");
+
+    // Owner joins (should be division 1)
+    svc.join_club(&ctx, club_id, owner_id)
+        .await
+        .expect("owner join");
+
+    let division = svc
+        .get_user_division(&ctx, club_id, owner_id)
+        .await
+        .expect("get division");
+    assert_eq!(division, Some(1));
+
+    // Add 499 more members to fill division 1
+    for _i in 0..499 {
+        let member_ctx = RequestContext {
+            request_id: Uuid::new_v4(),
+            user_id: Some(UserId(Uuid::new_v4())),
+            ip: "127.0.0.1".to_string(),
+        };
+        let member_id = member_ctx.user_id.unwrap();
+        ensure_user(&db, member_id).await;
+        svc.join_club(&member_ctx, club_id, member_id)
+            .await
+            .expect("join");
+    }
+
+    // 501st member should be in division 2
+    let member_501_ctx = RequestContext {
+        request_id: Uuid::new_v4(),
+        user_id: Some(UserId(Uuid::new_v4())),
+        ip: "127.0.0.1".to_string(),
+    };
+    let member_501_id = member_501_ctx.user_id.unwrap();
+    ensure_user(&db, member_501_id).await;
+    svc.join_club(&member_501_ctx, club_id, member_501_id)
+        .await
+        .expect("join 501st");
+
+    let division_501 = svc
+        .get_user_division(&member_501_ctx, club_id, member_501_id)
+        .await
+        .expect("get division 501");
+    assert_eq!(division_501, Some(2));
+}
+
+#[tokio::test]
+async fn test_rebalance_divisions() {
+    let (svc, _repo, db) = setup_db().await;
+    let ctx = test_ctx();
+    let owner_id = ctx.user_id.unwrap();
+    ensure_user(&db, owner_id).await;
+    let club_id = svc
+        .create_club(&ctx, "Rebalance Club", None, owner_id)
+        .await
+        .expect("create");
+
+    svc.join_club(&ctx, club_id, owner_id)
+        .await
+        .expect("owner join");
+
+    // Add 999 more members (total 1000)
+    for _i in 0..999 {
+        let member_ctx = RequestContext {
+            request_id: Uuid::new_v4(),
+            user_id: Some(UserId(Uuid::new_v4())),
+            ip: "127.0.0.1".to_string(),
+        };
+        let member_id = member_ctx.user_id.unwrap();
+        ensure_user(&db, member_id).await;
+        svc.join_club(&member_ctx, club_id, member_id)
+            .await
+            .expect("join");
+    }
+
+    // Verify we have 2 divisions
+    let page = svc
+        .get_leaderboard(&ctx, club_id, 1)
+        .await
+        .expect("get leaderboard");
+    assert_eq!(page.total_divisions, 2);
+
+    // Rebalance
+    svc.rebalance_divisions(&ctx, club_id)
+        .await
+        .expect("rebalance");
+
+    // After rebalance, both divisions should have 500 members
+    let div1 = svc
+        .get_leaderboard(&ctx, club_id, 1)
+        .await
+        .expect("get div1");
+    let div2 = svc
+        .get_leaderboard(&ctx, club_id, 2)
+        .await
+        .expect("get div2");
+
+    assert_eq!(div1.entries.len(), 500);
+    assert_eq!(div2.entries.len(), 500);
+}
+
+#[tokio::test]
+async fn test_division_assignment_edge_cases() {
+    let (svc, _repo, db) = setup_db().await;
+    let ctx = test_ctx();
+    let owner_id = ctx.user_id.unwrap();
+    ensure_user(&db, owner_id).await;
+    let club_id = svc
+        .create_club(&ctx, "Edge Case Club", None, owner_id)
+        .await
+        .expect("create");
+
+    // Test exactly 500 members (all in division 1)
+    svc.join_club(&ctx, club_id, owner_id)
+        .await
+        .expect("owner join");
+
+    for _i in 0..499 {
+        let member_ctx = RequestContext {
+            request_id: Uuid::new_v4(),
+            user_id: Some(UserId(Uuid::new_v4())),
+            ip: "127.0.0.1".to_string(),
+        };
+        let member_id = member_ctx.user_id.unwrap();
+        ensure_user(&db, member_id).await;
+        svc.join_club(&member_ctx, club_id, member_id)
+            .await
+            .expect("join");
+    }
+
+    let page = svc
+        .get_leaderboard(&ctx, club_id, 1)
+        .await
+        .expect("get leaderboard");
+    assert_eq!(page.total_members, 500);
+    assert_eq!(page.total_divisions, 1);
+
+    // Add one more (501st) - should create division 2
+    let member_501_ctx = RequestContext {
+        request_id: Uuid::new_v4(),
+        user_id: Some(UserId(Uuid::new_v4())),
+        ip: "127.0.0.1".to_string(),
+    };
+    let member_501_id = member_501_ctx.user_id.unwrap();
+    ensure_user(&db, member_501_id).await;
+    svc.join_club(&member_501_ctx, club_id, member_501_id)
+        .await
+        .expect("join 501st");
+
+    let page = svc
+        .get_leaderboard(&ctx, club_id, 1)
+        .await
+        .expect("get leaderboard after 501");
+    assert_eq!(page.total_members, 501);
+    assert_eq!(page.total_divisions, 2);
+}
