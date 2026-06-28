@@ -1,11 +1,11 @@
 /**
  * Device fingerprinting service for anti‑cheat collusion detection.
- * Collects browser/device characteristics, hashes them using SHA‑256,
+ * Collects stable browser/device characteristics, hashes them using SHA‑256,
  * and sends the hash to the backend on login and before game sessions.
  */
 
-// Components to include in fingerprint
-export async function collectFingerprintComponents(): Promise<string> {
+// Components to include in fingerprint (all synchronous and deterministic)
+export function collectFingerprintComponents(): string {
   const components: string[] = [];
 
   // Screen resolution
@@ -40,23 +40,8 @@ export async function collectFingerprintComponents(): Promise<string> {
     // ignore WebGL errors
   }
 
-  // Fonts (async, with timeout)
-  try {
-    const fontList = await Promise.race([
-      document.fonts.ready.then(() => {
-        const fonts: string[] = [];
-        for (const font of document.fonts.values()) {
-          fonts.push(font.family);
-        }
-        return fonts;
-      }),
-      new Promise<string[]>((_, reject) => setTimeout(() => reject(new Error('Font loading timeout')), 500))
-    ]);
-    components.push(`fonts:${fontList.join(',')}`);
-  } catch (_) {
-    // fallback: no fonts
-    components.push('fonts:');
-  }
+  // Omitted: fonts – they are asynchronous and can cause inconsistencies.
+  // If needed, they can be added later as an optional component.
 
   return components.join('|');
 }
@@ -77,16 +62,18 @@ export async function hashFingerprint(components: string): Promise<string> {
  * Call this on login and before each game session.
  */
 export async function submitFingerprint(hash: string): Promise<void> {
+  const token = localStorage.getItem('authToken') || '';
   const response = await fetch('/anti-cheat/fingerprint', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`,
+      'Authorization': `Bearer ${token}`,
     },
     body: JSON.stringify({ fingerprint_hash: hash }),
   });
   if (!response.ok) {
     console.error('Failed to submit fingerprint:', response.status);
+    // Optionally retry or notify user
   }
 }
 
@@ -94,7 +81,7 @@ export async function submitFingerprint(hash: string): Promise<void> {
  * Generate and submit fingerprint. Use this as a one‑stop function.
  */
 export async function generateAndSubmitFingerprint(): Promise<void> {
-  const components = await collectFingerprintComponents();
+  const components = collectFingerprintComponents();
   const hash = await hashFingerprint(components);
   await submitFingerprint(hash);
 }

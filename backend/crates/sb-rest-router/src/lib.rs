@@ -1,3 +1,4 @@
+use axum::extract::ConnectInfo;
 pub mod leaderboard;
 use axum::{
     Router,

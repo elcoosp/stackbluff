@@ -1,5 +1,5 @@
 use axum::{
-    extract::{State, Json},
+    extract::{ConnectInfo, State, Json},
     http::StatusCode,
     response::IntoResponse,
 };
@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use sb_auth::AuthUser;
 use sb_db_entities::entities::device_fingerprints;
 use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, Set};
+use std::net::SocketAddr;
 
 #[derive(Debug, Deserialize)]
 pub struct FingerprintRequest {
@@ -21,10 +22,10 @@ pub struct FingerprintResponse {
 pub async fn submit_fingerprint(
     State(db): State<DatabaseConnection>,
     user: AuthUser,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Json(req): Json<FingerprintRequest>,
 ) -> impl IntoResponse {
-    // TODO: extract real IP from request extensions
-    let ip = "127.0.0.1".to_string();
+    let ip = addr.ip().to_string();
 
     let existing = device_fingerprints::Entity::find()
         .filter(device_fingerprints::Column::UserId.eq(user.id))
