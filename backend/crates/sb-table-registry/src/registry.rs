@@ -103,7 +103,7 @@ impl Registry {
             self.event_tx.clone(),
             self.stats_repo.clone(),
             active_players.clone(),
-        );
+        , created_by, chat_id);
 
         let room_entry = RoomEntry {
             table_id,
@@ -464,7 +464,7 @@ impl Registry {
             self.event_tx.clone(),
             self.stats_repo.clone(),
             active_players.clone(),
-        );
+        , created_by, chat_id);
 
         // Enter tournament mode
         cmd_tx
