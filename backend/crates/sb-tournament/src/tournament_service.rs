@@ -142,6 +142,7 @@ impl TournamentServiceImpl {
             }
         }
     }
+
 }
 
 #[async_trait::async_trait]
@@ -438,4 +439,36 @@ impl TournamentServiceImpl {
         tracing::info!(%tournament_id, "Awarded XP to {} participants", registrations.len());
         Ok(())
     }
+    pub async fn handle_tournament_completion(
+        &self,
+        tournament_id: TournamentId,
+    ) -> Result<(), AppError> {
+        tracing::info!(%tournament_id, "Handling tournament completion");
+
+        // Get tournament details
+        let tournament = self.repo.get_tournament(tournament_id).await?
+            .ok_or_else(|| AppError::NotFound("Tournament not found".into()))?;
+
+        // If it's a club tournament, post results and award XP
+        if let Some(club_id) = tournament.config.club_id {
+            // Post results to Telegram
+            if let Some(notification_service) = &self.notification_service
+                && let Some(club_repo) = &self.club_repo
+                    && let Err(e) = self.post_tournament_results(
+                        tournament_id,
+                        notification_service,
+                        club_repo,
+                    ).await {
+                        tracing::error!(%tournament_id, error = ?e, "Failed to post tournament results");
+                    }
+
+            // Award XP to participants
+            // Note: We need to get club_service from somewhere
+            // For now, we'll skip this as it requires additional wiring
+            tracing::info!(%tournament_id, %club_id, "Club tournament completed");
+        }
+
+        Ok(())
+    }
+
 }

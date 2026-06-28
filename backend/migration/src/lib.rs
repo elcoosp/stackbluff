@@ -16,6 +16,7 @@ mod m20260617_add_table_name;
 mod m20260622_132958_mission_system;
 mod m20260624_create_tournament_tables;
 mod m20260625_seed_tournaments; // <-- new
+mod m20250701_000001_add_telegram_chat_id_to_clubs;
 
 use sea_orm_migration::prelude::*;
 
@@ -25,7 +26,7 @@ pub struct Migrator;
 impl MigratorTrait for Migrator {
     fn migrations() -> Vec<Box<dyn MigrationTrait>> {
         vec![
-            // 1. Core tables
+                        // 1. Core tables
             Box::new(m20260607_000001_create_all_tables::Migration),
             Box::new(m20260607_000002_create_clubs_tables::Migration),
             // 2. Add columns to existing tables
@@ -45,6 +46,8 @@ impl MigratorTrait for Migrator {
             // 5. Seed data (last)
             Box::new(m20260616_seed_base_tables::Migration),
             Box::new(m20260625_seed_tournaments::Migration), // <-- added here
+            // 6. Add telegram_chat_id to clubs
+            Box::new(m20250701_000001_add_telegram_chat_id_to_clubs::Migration),
         ]
     }
 }

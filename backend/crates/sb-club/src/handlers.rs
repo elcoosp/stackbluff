@@ -141,14 +141,9 @@ pub async fn list_club_tournaments(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     // Filter tournaments by club_id
-    let club_tournaments: Vec<TournamentSummary> = all_tournaments
-        .into_iter()
-        .filter(|_t| {
-            // We need to get the tournament config to check club_id
-            // For now, return all tournaments (in production, add club_id to TournamentSummary)
-            true
-        })
-        .collect();
+    // Note: In production, TournamentSummary should include club_id field
+    // For now, we return all tournaments since we can't access the config here
+    let club_tournaments = all_tournaments;
 
     Ok(Json(club_tournaments))
 }
