@@ -213,6 +213,10 @@ pub trait ClubRepo: Send + Sync {
     async fn refresh_leaderboard(&self, club_id: ClubId) -> ClubResult<()>;
 
     async fn get_all_club_ids(&self) -> ClubResult<Vec<ClubId>>;
+
+    async fn get_user_division(&self, club_id: ClubId, user_id: UserId) -> ClubResult<Option<u32>>;
+
+    async fn rebalance_divisions(&self, club_id: ClubId) -> ClubResult<()>;
 }
 
 #[async_trait::async_trait]
