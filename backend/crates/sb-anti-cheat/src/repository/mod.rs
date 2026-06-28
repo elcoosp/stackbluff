@@ -10,12 +10,21 @@ pub mod models;
 /// Repository for device fingerprint records.
 #[async_trait]
 pub trait FingerprintRepository: Send + Sync {
-    async fn get_latest_for_user(&self, user: UserId) -> Result<Option<models::DeviceFingerprint>, anyhow::Error>;
+    async fn get_latest_for_user(
+        &self,
+        user: UserId,
+    ) -> Result<Option<models::DeviceFingerprint>, anyhow::Error>;
     async fn get_latest_for_two_users(
         &self,
         user1: UserId,
         user2: UserId,
-    ) -> Result<(Option<models::DeviceFingerprint>, Option<models::DeviceFingerprint>), anyhow::Error>;
+    ) -> Result<
+        (
+            Option<models::DeviceFingerprint>,
+            Option<models::DeviceFingerprint>,
+        ),
+        anyhow::Error,
+    >;
     async fn upsert(&self, user: UserId, hash: String, ip: String) -> Result<(), anyhow::Error>;
 }
 
@@ -26,9 +35,12 @@ pub struct SeaFingerprintRepository {
 
 #[async_trait]
 impl FingerprintRepository for SeaFingerprintRepository {
-    async fn get_latest_for_user(&self, user: UserId) -> Result<Option<models::DeviceFingerprint>, anyhow::Error> {
-        use sea_orm::{EntityTrait, QueryFilter, QueryOrder};
+    async fn get_latest_for_user(
+        &self,
+        user: UserId,
+    ) -> Result<Option<models::DeviceFingerprint>, anyhow::Error> {
         use sb_db_entities::entities::device_fingerprints::{Column, Entity};
+        use sea_orm::{EntityTrait, QueryFilter, QueryOrder};
 
         let uid: Uuid = user.into();
         let record = Entity::find()
@@ -48,9 +60,15 @@ impl FingerprintRepository for SeaFingerprintRepository {
         &self,
         user1: UserId,
         user2: UserId,
-    ) -> Result<(Option<models::DeviceFingerprint>, Option<models::DeviceFingerprint>), anyhow::Error> {
-        use sea_orm::{EntityTrait, QueryFilter, QueryOrder};
+    ) -> Result<
+        (
+            Option<models::DeviceFingerprint>,
+            Option<models::DeviceFingerprint>,
+        ),
+        anyhow::Error,
+    > {
         use sb_db_entities::entities::device_fingerprints::{Column, Entity};
+        use sea_orm::{EntityTrait, QueryFilter, QueryOrder};
 
         let uid1: Uuid = user1.into();
         let uid2: Uuid = user2.into();
@@ -83,8 +101,8 @@ impl FingerprintRepository for SeaFingerprintRepository {
     }
 
     async fn upsert(&self, user: UserId, hash: String, ip: String) -> Result<(), anyhow::Error> {
-        use sea_orm::{ActiveModelTrait, EntityTrait, QueryFilter, Set};
         use sb_db_entities::entities::device_fingerprints::{ActiveModel, Column, Entity};
+        use sea_orm::{ActiveModelTrait, EntityTrait, QueryFilter, Set};
 
         let uid: Uuid = user.into();
         let existing = Entity::find()

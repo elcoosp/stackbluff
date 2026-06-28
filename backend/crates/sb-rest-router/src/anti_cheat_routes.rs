@@ -1,13 +1,13 @@
 use axum::{
-    extract::{ConnectInfo, State, Json},
+    extract::{ConnectInfo, Json, State},
     http::StatusCode,
     response::IntoResponse,
 };
-use serde::{Deserialize, Serialize};
+use sb_anti_cheat::repository::{FingerprintRepository, SeaFingerprintRepository};
 use sb_auth::AuthUser;
 use sea_orm::DatabaseConnection;
+use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
-use sb_anti_cheat::repository::{FingerprintRepository, SeaFingerprintRepository};
 
 #[derive(Debug, Deserialize)]
 pub struct FingerprintRequest {
@@ -29,7 +29,12 @@ pub async fn submit_fingerprint(
     let repo = SeaFingerprintRepository { db };
 
     match repo.upsert(user.id, req.fingerprint_hash, ip).await {
-        Ok(_) => Ok((StatusCode::OK, Json(FingerprintResponse { status: "ok".to_string() }))),
+        Ok(_) => Ok((
+            StatusCode::OK,
+            Json(FingerprintResponse {
+                status: "ok".to_string(),
+            }),
+        )),
         Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
     }
 }

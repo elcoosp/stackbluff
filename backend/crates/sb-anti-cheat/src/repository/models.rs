@@ -1,7 +1,7 @@
 //! Domain models for device fingerprinting.
 
-use sb_shared_types::UserId;
 use chrono::NaiveDateTime;
+use sb_shared_types::UserId;
 
 /// Device fingerprint record.
 #[derive(Debug, Clone)]
