@@ -613,4 +613,5 @@ impl Registry {
             })
             .await
             .map_err(|_| AppError::Internal("table actor disconnected".to_string()))?;
-        Ok(())}
+        Ok(())
+}
