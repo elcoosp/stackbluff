@@ -1,6 +1,6 @@
 use chrono::Utc;
 use sb_db_entities::{
-    enums::{Platform, TableStatus},
+    enums::{TableStatus},
     table, user,
 };
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, Set};
@@ -32,7 +32,7 @@ impl MigrationTrait for Migration {
                 display_name: Set("System".to_string()),
                 created_at: Set(now),
                 updated_at: Set(now),
-                platform: Set(Platform::Pwa),
+                platform: Set("pwa".to_string()),
                 ..Default::default()
             };
             new_user.insert(db).await?;
