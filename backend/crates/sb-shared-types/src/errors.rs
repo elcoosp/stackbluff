@@ -42,6 +42,10 @@ pub enum AppError {
 
     #[error("Request timed out")]
     Timeout,
+
+    #[error("Too many requests: {0}")]
+    TooManyRequests(String),
+
 }
 
 impl From<&str> for AppError {
