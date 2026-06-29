@@ -2,14 +2,13 @@ use axum::{
     extract::{Extension, Path, State},
     http::StatusCode,
     response::Json,
-    routing::get,
-    Router,
 };
 use sb_contracts::repo_api::BadgeRepo;
 use sb_shared_types::ids::UserId;
 use serde::Serialize;
 use std::sync::Arc;
 use uuid::Uuid;
+use crate::AppState;
 
 #[derive(Serialize)]
 struct BadgeResponse {
@@ -22,8 +21,8 @@ struct BadgeListResponse {
     badges: Vec<BadgeResponse>,
 }
 
-pub async fn get_my_badges<B: BadgeRepo>(
-    State(badge_repo): State<Arc<B>>,
+pub async fn get_my_badges(
+    State(state): State<Arc<AppState>>,
     Extension(auth_user): Extension<sb_auth::middleware::AuthUser>,
 ) -> Result<Json<BadgeListResponse>, StatusCode> {
     let user_id = UserId::new(
@@ -31,7 +30,8 @@ pub async fn get_my_badges<B: BadgeRepo>(
             .map_err(|_| StatusCode::BAD_REQUEST)?,
     );
 
-    let badges = badge_repo
+    let badges = state
+        .badge_repo
         .list_badges(user_id)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -44,11 +44,12 @@ pub async fn get_my_badges<B: BadgeRepo>(
     }))
 }
 
-pub async fn get_user_badges<B: BadgeRepo>(
-    State(badge_repo): State<Arc<B>>,
+pub async fn get_user_badges(
+    State(state): State<Arc<AppState>>,
     Path(user_id): Path<Uuid>,
 ) -> Result<Json<BadgeListResponse>, StatusCode> {
-    let badges = badge_repo
+    let badges = state
+        .badge_repo
         .list_badges(UserId::new(user_id))
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -59,10 +60,4 @@ pub async fn get_user_badges<B: BadgeRepo>(
             awarded_at: b.awarded_at.to_rfc3339(),
         }).collect(),
     }))
-}
-
-pub fn badge_routes<B: BadgeRepo + Clone + Send + Sync + 'static>() -> Router {
-    Router::new()
-        .route("/users/me/badges", get(get_my_badges::<B>))
-        .route("/users/{user_id}/badges", get(get_user_badges::<B>))
 }

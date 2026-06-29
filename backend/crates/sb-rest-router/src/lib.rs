@@ -109,6 +109,7 @@ pub struct AppState {
     registry: Arc<Registry>,
     hand_history_repo: Arc<dyn HandHistoryRepository + Send + Sync>,
     pub leaderboard_query: Arc<dyn sb_contracts::leaderboard::LeaderboardQuery + Send + Sync>,
+    pub badge_repo: Arc<dyn BadgeRepo + Send + Sync>,
 }
 
 pub fn create_router(
@@ -117,6 +118,7 @@ pub fn create_router(
     registry: Arc<Registry>,
     hand_history_repo: Arc<dyn HandHistoryRepository + Send + Sync>,
     leaderboard_query: Arc<dyn sb_contracts::leaderboard::LeaderboardQuery + Send + Sync>,
+    badge_repo: Arc<dyn BadgeRepo + Send + Sync>,
 ) -> Router {
     let state = Arc::new(AppState {
         table_service,
@@ -124,6 +126,7 @@ pub fn create_router(
         registry,
         hand_history_repo,
         leaderboard_query,
+        badge_repo,
     });
 
     let public_routes = Router::new().route("/api/tables", get(list_tables_public));
