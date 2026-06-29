@@ -5243,6 +5243,7 @@ dependencies = [
  "chrono",
  "migration",
  "parking_lot",
+ "prometheus",
  "sb-contracts",
  "sb-db-entities",
  "sb-db-repos",
@@ -5253,6 +5254,7 @@ dependencies = [
  "serde_json",
  "thiserror 2.0.18",
  "tokio",
+ "tower",
  "tracing",
  "uuid",
 ]

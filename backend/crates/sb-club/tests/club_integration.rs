@@ -550,3 +550,124 @@ async fn test_performance_large_club() {
         elapsed.as_millis()
     );
 }
+
+#[tokio::test]
+async fn test_concurrent_rebalance_attempts() {
+    let (svc, _repo, db) = setup_db().await;
+    let owner_ctx = test_ctx();
+    let owner_id = owner_ctx.user_id.unwrap();
+    ensure_user(&db, owner_id).await;
+    let club_id = svc
+        .create_club(&owner_ctx, "Concurrent Rebalance Club", None, owner_id)
+        .await
+        .expect("create");
+
+    // Add some members
+    for _ in 0..100 {
+        let member_ctx = RequestContext {
+            request_id: Uuid::new_v4(),
+            user_id: Some(UserId(Uuid::new_v4())),
+            ip: "127.0.0.1".to_string(),
+        };
+        let member_id = member_ctx.user_id.unwrap();
+        ensure_user(&db, member_id).await;
+        svc.join_club(&member_ctx, club_id, member_id)
+            .await
+            .expect("join");
+    }
+
+    // Attempt concurrent rebalances
+    let mut handles = vec![];
+    for _ in 0..5 {
+        let svc_clone = svc.clone();
+        let ctx_clone = owner_ctx.clone();
+        let club_id_clone = club_id;
+
+        let handle = tokio::spawn(async move {
+            svc_clone
+                .rebalance_divisions(&ctx_clone, club_id_clone, owner_id)
+                .await
+        });
+        handles.push(handle);
+    }
+
+    // All should succeed (transaction ensures atomicity)
+    for handle in handles {
+        let result = handle.await.expect("task panicked");
+        assert!(result.is_ok(), "Concurrent rebalance should succeed");
+    }
+}
+
+#[tokio::test]
+async fn test_large_scale_club_10000_members() {
+    use std::time::Instant;
+
+    let (svc, _repo, db) = setup_db().await;
+    let ctx = test_ctx();
+    let owner_id = ctx.user_id.unwrap();
+    ensure_user(&db, owner_id).await;
+    let club_id = svc
+        .create_club(&ctx, "Large Scale Club", None, owner_id)
+        .await
+        .expect("create");
+
+    svc.join_club(&ctx, club_id, owner_id)
+        .await
+        .expect("owner join");
+
+    // Add 9999 more members (total 10000)
+    let start = Instant::now();
+    for _ in 0..9999 {
+        let member_ctx = RequestContext {
+            request_id: Uuid::new_v4(),
+            user_id: Some(UserId(Uuid::new_v4())),
+            ip: "127.0.0.1".to_string(),
+        };
+        let member_id = member_ctx.user_id.unwrap();
+        ensure_user(&db, member_id).await;
+        svc.join_club(&member_ctx, club_id, member_id)
+            .await
+            .expect("join");
+    }
+    let join_time = start.elapsed();
+
+    println!("Time to add 10000 members: {:?}", join_time);
+
+    // Verify we have 20 divisions
+    let page = svc
+        .get_leaderboard(&ctx, club_id, 1)
+        .await
+        .expect("get leaderboard");
+    assert_eq!(page.total_divisions, 20);
+    assert_eq!(page.total_members, 10000);
+
+    // Test rebalance performance
+    let start = Instant::now();
+    svc.rebalance_divisions(&ctx, club_id, owner_id)
+        .await
+        .expect("rebalance");
+    let rebalance_time = start.elapsed();
+
+    println!("Time to rebalance 10000 members: {:?}", rebalance_time);
+
+    // Rebalance should complete in reasonable time (< 5 seconds for 10k members)
+    assert!(
+        rebalance_time.as_secs() < 5,
+        "Rebalance took too long: {:?}",
+        rebalance_time
+    );
+
+    // Verify all divisions have correct member counts
+    for div in 1..=20 {
+        let page = svc
+            .get_leaderboard(&ctx, club_id, div)
+            .await
+            .expect("get division");
+        assert_eq!(
+            page.entries.len(),
+            500,
+            "Division {} should have 500 members",
+            div
+        );
+    }
+}

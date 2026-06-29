@@ -5,6 +5,7 @@ edition = "2024"
 rust-version = "1.94"
 
 [dependencies]
+prometheus = { workspace = true }
 sb-contracts = { path = "../sb-contracts" }
 sb-shared-types = { path = "../sb-shared-types" }
 axum = { workspace = true }
@@ -18,6 +19,7 @@ chrono = { workspace = true }
 uuid = { workspace = true }
 
 [dev-dependencies]
+tower = { workspace = true }
 parking_lot = { workspace = true }
 tokio = { workspace = true }
 sb-db-repos = { path = "../sb-db-repos" }

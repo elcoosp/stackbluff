@@ -213,6 +213,7 @@ pub trait ClubService: Send + Sync {
         &self,
         ctx: &sb_shared_types::RequestContext,
         club_id: sb_shared_types::ClubId,
+        requested_by: sb_shared_types::UserId,
     ) -> Result<(), ClubError>;
 }
 
