@@ -70,6 +70,15 @@ pub async fn get_leaderboard(
     axum::extract::Query(query): axum::extract::Query<LeaderboardQuery>,
 ) -> Result<Json<GetLeaderboardResponse>, (StatusCode, String)> {
     let division = query.division.unwrap_or(1);
+
+    // Validate division parameter
+    if division == 0 {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            format!("Invalid division parameter: division must be >= 1, got {}", division),
+        ));
+    }
+
     let page = state
         .service
         .get_leaderboard(&ctx, club_id, division)
@@ -100,15 +109,23 @@ pub async fn rebalance_divisions(
     Extension(ctx): Extension<RequestContext>,
     Path(club_id): Path<ClubId>,
 ) -> Result<Json<RebalanceResponse>, (StatusCode, String)> {
-    // TODO: Check if user is club owner before allowing rebalance
+    let user_id = extract_user_id(&ctx)?;
 
-    state
-        .service
-        .rebalance_divisions(&ctx, club_id)
-        .await
-        .map_err(map_club_error)?;
+    // Add timeout for rebalance operation (30 seconds max)
+    let result = tokio::time::timeout(
+        std::time::Duration::from_secs(30),
+        state.service.rebalance_divisions(&ctx, club_id, user_id)
+    )
+    .await;
 
-    Ok(Json(RebalanceResponse { success: true }))
+    match result {
+        Ok(Ok(())) => Ok(Json(RebalanceResponse { success: true })),
+        Ok(Err(e)) => Err(map_club_error(e)),
+        Err(_) => Err((
+            StatusCode::REQUEST_TIMEOUT,
+            "Rebalance operation timed out. Please try again later.".to_string(),
+        )),
+    }
 }
 fn map_club_error(e: ClubError) -> (StatusCode, String) {
     match e {
