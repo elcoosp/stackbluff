@@ -23,6 +23,41 @@ function getVapidPublicKey(): string | null {
   return key;
 }
 
+/**
+ * Get existing push subscription (does NOT create).
+ * Returns null if no subscription exists.
+ */
+export async function getExistingSubscription(): Promise<PushSubscription | null> {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    notificationLogger.warn('Push API not supported');
+    return null;
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    notificationLogger.debug('Service worker ready', { scope: registration.scope });
+
+    const subscription = await registration.pushManager.getSubscription();
+
+    if (subscription) {
+      notificationLogger.info('Existing push subscription found', {
+        endpoint: subscription.endpoint
+      });
+      return subscription;
+    }
+
+    notificationLogger.debug('No existing push subscription');
+    return null;
+  } catch (error) {
+    notificationLogger.error('Failed to get push subscription', error);
+    return null;
+  }
+}
+
+/**
+ * Get or create push subscription.
+ * Creates a new subscription if one doesn't exist.
+ */
 export async function getPushSubscription(): Promise<PushSubscription | null> {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     notificationLogger.warn('Push API not supported');
@@ -78,7 +113,8 @@ export function subscriptionToJSON(subscription: PushSubscription): PushSubscrip
 
 export async function unsubscribeFromPush(): Promise<boolean> {
   try {
-    const subscription = await getPushSubscription();
+    // Only get existing subscription, don't create
+    const subscription = await getExistingSubscription();
     if (!subscription) {
       notificationLogger.info('No subscription to unsubscribe');
       return true;
