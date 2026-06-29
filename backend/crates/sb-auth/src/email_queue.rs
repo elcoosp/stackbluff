@@ -25,12 +25,14 @@ impl EmailQueue {
         Self { sender }
     }
 
+    #[tracing::instrument(skip(self, token), fields(email = to))]
     pub fn queue_verification_email(&self, to: String, token: String) {
         if let Err(e) = self.sender.send(EmailJob::Verification { to, token }) {
             error!("Failed to queue verification email: {}", e);
         }
     }
 
+    #[tracing::instrument(skip(self, token), fields(email = to))]
     pub fn queue_password_reset_email(&self, to: String, token: String) {
         if let Err(e) = self.sender.send(EmailJob::PasswordReset { to, token }) {
             error!("Failed to queue password reset email: {}", e);
