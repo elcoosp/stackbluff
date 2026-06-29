@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use chrono::Utc;
 use sb_contracts::{
     HandCountObserver, ReplayCardObserver,
-    repo_api::ReferralRepository,
+    repo_api::{ReferralRepository, BadgeRepo},
     service_api::{HandResult, ReferralStats, ReplayCard, UserService, ViralService},
 };
 use sb_shared_types::{AppError, ChipAmount, TableId, UserId};
@@ -16,6 +16,7 @@ use uuid::Uuid;
 pub struct ViralServiceImpl<R: ReferralRepository, U: UserService> {
     repo: Arc<R>,
     user_service: Arc<U>,
+    badge_repo: Option<Arc<dyn BadgeRepo + Send + Sync>>,
     base_url: String,
 }
 
@@ -24,8 +25,14 @@ impl<R: ReferralRepository, U: UserService> ViralServiceImpl<R, U> {
         Self {
             repo: Arc::new(repo),
             user_service,
+            badge_repo: None,
             base_url,
         }
+    }
+
+    pub fn with_badge_repo(mut self, badge_repo: Arc<dyn BadgeRepo + Send + Sync>) -> Self {
+        self.badge_repo = Some(badge_repo);
+        self
     }
 
     async fn award_bonus(&self, user_id: UserId, is_triple: bool) -> Result<(), AppError> {
@@ -99,12 +106,18 @@ impl<R: ReferralRepository, U: UserService> ViralService for ViralServiceImpl<R,
         self.award_bonus(referrer_id, triple).await?;
         self.repo.mark_bonus_awarded(user_id).await?;
 
-        // Check founding member badge eligibility
-        let stats = self.repo.get_referral_stats(referrer_id).await?;
-        if stats.bonus_earned >= 10 {
-            tracing::info!("User {} has {} completed referrals, checking founding_member badge", referrer_id, stats.bonus_earned);
-            // Badge awarding is handled by the caller via badge_award::check_founding_member_eligibility
-            // or by a separate service that watches for referral milestones
+        // Check and award founding member badge
+        if let Some(ref badge_repo) = self.badge_repo {
+            let stats = self.repo.get_referral_stats(referrer_id).await?;
+            if stats.bonus_earned >= 10 {
+                let newly_awarded = badge_repo
+                    .award_badge(referrer_id, "founding_member")
+                    .await
+                    .map_err(|e| AppError::Internal(e.to_string()))?;
+                if newly_awarded {
+                    info!(referrer = %referrer_id, "Awarded founding_member badge");
+                }
+            }
         }
 
         info!(referred = %user_id, referrer = %referrer_id, triple = triple, "Referral bonus awarded after 5 hands");
