@@ -28,6 +28,7 @@ use sb_db_repos::init_writer_loop;
 use sb_db_repos::player_stats_repo::PlayerStatsRepoImpl;
 use sb_db_repos::tournament_repo::TournamentRepoImpl;
 use sb_db_repos::user_repo::UserRepoImpl;
+use sb_db_repos::club_repo::ClubRepoImpl;
 use sb_rest_router::create_router;
 use sb_rest_router::player_stats::player_stats_routes;
 use sb_rest_router::tournament_routes::{self, TournamentState};
@@ -36,6 +37,7 @@ use sb_table_registry::buy_in_limits_for_stake;
 use sb_table_registry::registry::Registry;
 use sb_table_registry::spawn_history_recorder;
 use sb_table_registry::stats_aggregator::spawn_stats_aggregator;
+use sb_table_registry::connection_broker::ConnectionBroker;
 use sb_table_registry::table_service::TableServiceImpl;
 use sb_tournament::{
     MttCommand, MttDirector, SitGoCommand, SitGoTournament, TournamentServiceImpl,
@@ -156,6 +158,13 @@ async fn main() {
     let stats_event_rx = registry.event_sender().subscribe();
     spawn_stats_aggregator(stats_event_rx, stats_repo.clone());
 
+    // ── Club service ─────────────────────────────────────────────────
+    let club_repo: Arc<dyn sb_contracts::repo_api::ClubRepo + Send + Sync> =
+        Arc::new(ClubRepoImpl::new(db.clone()));
+    let club_service: Arc<dyn sb_contracts::service_api::ClubService + Send + Sync> =
+        Arc::new(sb_club::ClubServiceImpl::new(club_repo.clone(), user_repo.clone(), None));
+    let broker = Arc::new(ConnectionBroker::new());
+
     // ── REST router ──────────────────────────────────────────────────
     let rest_router = create_router(
         table_service.clone(),
@@ -163,6 +172,8 @@ async fn main() {
         registry.clone(),
         hand_history_repo.clone(),
         leaderboard_repo.clone(),
+        club_service.clone(),
+        broker.clone(),
     )
     .merge(player_stats_routes(stats_repo.clone(), user_repo.clone()));
 

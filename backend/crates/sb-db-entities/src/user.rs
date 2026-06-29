@@ -22,6 +22,8 @@ pub struct Model {
     pub email_verified_at: Option<DateTimeUtc>,
     pub password_hash: Option<String>,
     pub registration_order: Option<i64>,
+    #[sea_orm(nullable)]
+    pub club_pro_expires_at: Option<DateTimeUtc>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

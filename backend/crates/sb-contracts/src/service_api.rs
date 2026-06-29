@@ -201,6 +201,15 @@ pub trait ClubService: Send + Sync {
         user_id: sb_shared_types::UserId,
         xp: i64,
     ) -> Result<(), ClubError>;
+    async fn update_club_pro_settings(
+        &self,
+        club_id: sb_shared_types::ClubId,
+        owner_id: sb_shared_types::UserId,
+        request: sb_shared_types::club_pro_settings::UpdateClubProSettingsRequest,
+    ) -> Result<ClubProSettings, ClubError>;
+
+    async fn find_club_owner(&self, club_id: sb_shared_types::ClubId) -> Result<sb_shared_types::UserId, ClubError>;
+    async fn is_club_pro_active(&self, user_id: sb_shared_types::UserId) -> Result<bool, ClubError>;
 }
 
 // ========== Authentication contracts ==========
@@ -258,6 +267,7 @@ pub trait AuthService: Send + Sync {
 
 // ── Missions ──────────────────────────────────────────────────────────────
 use sb_shared_types::missions::{Mission, MissionId};
+use crate::repo_api::ClubProSettings;
 
 #[derive(Debug, serde::Serialize)]
 pub struct ClaimResult {

@@ -1,19 +1,25 @@
-use crate::events::HandCompletedEvent;
+use crate::events::TableEvent;
 use sb_contracts::stats_api::PlayerStatsRepo;
 use sb_shared_types::PlayerId;
 use sb_shared_types::player_stats::StatsDelta;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use tokio::sync::broadcast::Receiver;
 
 pub fn spawn_stats_aggregator(
-    mut event_rx: Receiver<HandCompletedEvent>,
+    mut event_rx: tokio::sync::broadcast::Receiver<TableEvent>,
     stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
 ) {
     tokio::spawn(async move {
         tracing::info!("Player stats aggregator started");
 
         while let Ok(event) = event_rx.recv().await {
+        let event = match event {
+            TableEvent::HandCompleted(e) => e,
+            other => {
+                tracing::debug!(event_type = ?std::mem::discriminant(&other), "Dropping non-hand-completed event in stats aggregator");
+                continue;
+            }
+        };
             let mut deltas: HashMap<String, StatsDelta> = HashMap::new();
             let mut player_to_user: HashMap<PlayerId, String> = HashMap::new();
 

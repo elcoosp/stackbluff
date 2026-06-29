@@ -1,3 +1,4 @@
+use sb_contracts::repo_api::ClubProSettings;
 use async_trait::async_trait;
 use chrono::Utc;
 use sb_contracts::ClubError;
@@ -254,6 +255,47 @@ impl ClubRepo for ClubRepoImpl {
 
         Ok(all_clubs.into_iter().map(|c| ClubId::new(c.id)).collect())
     }
+    async fn update_pro_settings(
+        &self,
+        club_id: ClubId,
+        settings: ClubProSettings,
+    ) -> Result<ClubProSettings, ClubError> {
+        let club = clubs::Entity::find_by_id(club_id.as_uuid())
+            .one(&self.db)
+            .await
+            .map_err(|e| ClubError::Database(e.to_string()))?
+            .ok_or(ClubError::NotFound)?;
+        let mut active: clubs::ActiveModel = club.clone().into();
+        let mut current = club.pro_settings_json.clone().unwrap_or_else(|| sb_db_entities::clubs::ClubProSettings { custom_banner: None, chip_design_preset: None, felt_color: None });
+        if settings.banner_url.is_some() {
+            current.custom_banner = settings.banner_url;
+        }
+        if settings.chip_preset_id.is_some() {
+            current.chip_design_preset = settings.chip_preset_id.map(|i| i.to_string());
+        }
+        if settings.felt_color.is_some() {
+            current.felt_color = settings.felt_color;
+        }
+        active.pro_settings_json = Set(Some(current));
+        let updated = clubs::ActiveModel::update(active, &self.db).await
+            .map_err(|e| ClubError::Database(e.to_string()))?;
+        let result = updated.pro_settings_json.map(|s| ClubProSettings {
+            banner_url: s.custom_banner,
+            chip_preset_id: s.chip_design_preset.and_then(|v| v.parse().ok()),
+            felt_color: s.felt_color,
+        }).unwrap_or_default();
+        Ok(result)
+    }
+
+    async fn find_club_owner(&self, club_id: ClubId) -> Result<UserId, ClubError> {
+        let club = clubs::Entity::find_by_id(club_id.as_uuid())
+            .one(&self.db)
+            .await
+            .map_err(|e| ClubError::Database(e.to_string()))?
+            .ok_or(ClubError::NotFound)?;
+        Ok(UserId::new(club.owner_id))
+    }
+
 }
 
 /// Detect UNIQUE constraint violation from sea_orm::DbErr.

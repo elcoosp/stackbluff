@@ -1,13 +1,19 @@
-use crate::service_api::ReferralStats;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sb_shared_types::TableId;
-use sb_shared_types::{AppError, UserId};
+use sb_shared_types::UserId;
 use sb_shared_types::{ClubId, RequestContext};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 pub use crate::club_error::ClubError;
+#[derive(Clone, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct ClubProSettings {
+    pub banner_url: Option<String>,
+    pub chip_preset_id: Option<i32>,
+    pub felt_color: Option<String>,
+}
+
 pub use crate::persistence_error::{PersistenceError, PersistenceResult};
 
 // ── Existing repository types ──────────────────────────────────
@@ -31,7 +37,7 @@ pub struct UserProfile {
 }
 
 #[async_trait]
-pub trait UserRepository: Send + Sync {
+pub trait UserRepo: Send + Sync {
     async fn create_user(
         &self,
         ctx: RequestContext,
@@ -81,6 +87,8 @@ pub trait UserRepository: Send + Sync {
         ctx: RequestContext,
         email: &str,
     ) -> PersistenceResult<Option<UserId>>;
+    async fn is_club_pro_active(&self, user_id: UserId) -> PersistenceResult<bool>;
+
 }
 
 #[async_trait]
@@ -213,22 +221,28 @@ pub trait ClubRepo: Send + Sync {
     async fn refresh_leaderboard(&self, club_id: ClubId) -> ClubResult<()>;
 
     async fn get_all_club_ids(&self) -> ClubResult<Vec<ClubId>>;
+    async fn update_pro_settings(
+        &self,
+        club_id: ClubId,
+        settings: ClubProSettings,
+    ) -> Result<ClubProSettings, ClubError>;
+
+    async fn find_club_owner(&self, club_id: ClubId) -> ClubResult<UserId>;
 }
 
-#[async_trait::async_trait]
+#[derive(Debug, Clone)]
+pub struct ReferralStats {
+    pub total_referred: i64,
+    pub bonus_earned: i64,
+    pub pending_bonus: i64,
+}
+
+#[async_trait]
 pub trait ReferralRepository: Send + Sync {
-    async fn record_referral(
-        &self,
-        referrer_id: UserId,
-        referred_id: UserId,
-    ) -> Result<(), AppError>;
-    async fn increment_hand_count_and_check_bonus(
-        &self,
-        referred_id: UserId,
-    ) -> Result<bool, AppError>;
-    async fn mark_bonus_awarded(&self, referred_id: UserId) -> Result<(), AppError>;
-    async fn get_referrer_id(&self, referred_id: UserId) -> Result<Option<UserId>, AppError>;
-    async fn get_referral_stats(&self, referrer_id: UserId) -> Result<ReferralStats, AppError>;
+    async fn record_referral(&self, referrer_id: UserId, referred_id: UserId) -> PersistenceResult<()>;
+    async fn get_referral_stats(&self, user_id: UserId) -> PersistenceResult<ReferralStats>;
+    async fn increment_hand_count_and_check_bonus(&self, referred_id: UserId) -> PersistenceResult<bool>;
+    async fn mark_bonus_awarded(&self, referred_id: UserId) -> PersistenceResult<()>;
+    async fn get_referrer_id(&self, referred_id: UserId) -> PersistenceResult<Option<UserId>>;
 }
 
-pub use UserRepository as UserRepo;

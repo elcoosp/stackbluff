@@ -82,7 +82,6 @@ impl Default for ConnectionBroker {
         Self::new()
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -140,4 +139,5 @@ mod tests {
             "no message expected after unsubscribe"
         );
     }
+
 }

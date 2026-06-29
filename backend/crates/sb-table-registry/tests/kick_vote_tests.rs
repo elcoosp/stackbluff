@@ -1,3 +1,4 @@
+use sb_table_registry::TableActorConfig;
 use async_trait::async_trait;
 use sb_contracts::{repo_api::PersistenceError, stats_api::PlayerStatsRepo};
 use sb_shared_types::{
@@ -37,14 +38,16 @@ async fn kick_vote_passes_and_refunds() {
         turn_time_limit_ms: 30000,
         variant: GameVariant::Holdem,
     };
-    let (actor_tx, _handle) = spawn_table_actor(
-        TableId::new(uuid::Uuid::new_v4()),
-        TableId::new(uuid::Uuid::new_v4()),
-        config.clone(),
+    let (actor_tx, _handle) = spawn_table_actor(TableActorConfig {
+        room_id: TableId::new(uuid::Uuid::new_v4()),
+        table_id: TableId::new(uuid::Uuid::new_v4()),
+        config: config.clone(),
         event_tx,
         stats_repo,
         active_players,
-    );
+        created_by: UserId::new(uuid::Uuid::nil()),
+        chat_id: None,
+    });
 
     async fn join_player(
         tx: &mpsc::Sender<InternalCommand>,

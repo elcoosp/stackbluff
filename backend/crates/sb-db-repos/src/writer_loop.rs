@@ -127,6 +127,7 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
         DbCommand::FindOrCreateByTelegram { ctx, .. } => ctx,
         DbCommand::CreateEmailUser { ctx, .. } => ctx,
         DbCommand::FindByEmail { ctx, .. } => ctx,
+        DbCommand::CheckClubPro { .. } => return Ok(None),
     };
 
     let request_id = ctx.request_id;
@@ -322,6 +323,9 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                 let user_id = user_model.map(|u| UserId::new(u.id));
                 Ok(user_id.map(|id: UserId| id.to_string()))
             }
+            DbCommand::CheckClubPro { user_id, .. } => {
+                check_club_pro(conn, *user_id).await.map(|b| Some(b.to_string()))
+            }
         };
 
         let rollback_sql = format!("ROLLBACK TO {}", sp_name);
@@ -405,6 +409,10 @@ fn respond_ok(cmd: DbCommand, value: Option<String>) {
         DbCommand::StoreHandHistory { respond, .. } | DbCommand::ExecuteRaw { respond, .. } => {
             let _ = respond.send(Ok(()));
         }
+        DbCommand::CheckClubPro { respond, .. } => {
+            let active = value.and_then(|s| s.parse::<bool>().ok()).unwrap_or(false);
+            let _ = respond.send(Ok(active));
+        }
     }
 }
 
@@ -437,5 +445,24 @@ fn respond_err(cmd: DbCommand, err: PersistenceError) {
         DbCommand::FindByEmail { respond, .. } => {
             let _ = respond.send(Err(err));
         }
+        DbCommand::CheckClubPro { respond, .. } => {
+            let _ = respond.send(Err(err));
+        }
     }
+}
+
+async fn check_club_pro<C: ConnectionTrait>(
+    db: &C,
+    user_id: UserId,
+) -> Result<bool, PersistenceError> {
+    use sea_orm::EntityTrait;
+    use sb_db_entities::user::Entity as UserEntity;
+    let user = UserEntity::find_by_id(user_id.as_uuid())
+        .one(db)
+        .await
+        .map_err(|e| PersistenceError::Database(e.to_string()))?
+        .ok_or(PersistenceError::NotFound)?;
+    let now = chrono::Utc::now();
+    let active = user.club_pro_expires_at.map(|dt| dt > now).unwrap_or(false);
+    Ok(active)
 }

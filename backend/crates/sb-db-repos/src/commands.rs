@@ -61,4 +61,9 @@ pub enum DbCommand {
         email: String,
         respond: ResponseSender<Option<UserId>>,
     },
+
+    CheckClubPro {
+        user_id: UserId,
+        respond: oneshot::Sender<PersistenceResult<bool>>,
+    },
 }

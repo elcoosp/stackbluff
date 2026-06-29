@@ -586,6 +586,7 @@ pub struct TableActor {
 }
 
 impl TableActor {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         room_id: TableId,
         table_id: TableId,
@@ -2445,7 +2446,7 @@ impl TableActor {
         // For now, use default values.
         let winner = None;
         let hand_desc = "Unknown".to_string();
-        let pot = ChipAmount::new(0);
+        let pot = zero();
 
         let event = TableClosedEvent {
             table_id: self.table_id,
@@ -2470,16 +2471,42 @@ fn community_cards_to_array(hand: &ActiveHand) -> Option<[sb_shared_types::Card;
     }
 }
 
+/// Configuration for spawning a table actor.
+///
+/// Using a struct avoids the clippy::too_many_arguments lint and makes
+/// call sites self-documenting.
+#[derive(Clone)]
+pub struct TableActorConfig {
+    pub room_id: TableId,
+    pub table_id: TableId,
+    pub config: TableConfig,
+    /// Broadcast sender for ALL table events.
+    ///
+    /// PERFORMANCE NOTE: This sends every table event (seat updates, chat, timers)
+    /// to ALL subscribers. Tournament actors and stats aggregator filter for
+    /// HandCompleted events only. At high table counts, consider a dedicated
+    /// HandCompleted channel to reduce noise.
+    pub event_tx: tokio::sync::broadcast::Sender<TableEvent>,
+    pub stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
+    pub active_players: Arc<AtomicU8>,
+    pub created_by: UserId,
+    pub chat_id: Option<String>,
+}
+
 pub fn spawn_table_actor(
-    room_id: TableId,
-    table_id: TableId,
-    config: TableConfig,
-    event_tx: tokio::sync::broadcast::Sender<TableEvent>,
-    stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
-    active_players: Arc<AtomicU8>,
-    created_by: sb_shared_types::UserId,
-    chat_id: Option<String>,
+    config: TableActorConfig,
 ) -> (mpsc::Sender<InternalCommand>, tokio::task::JoinHandle<()>) {
+    let TableActorConfig {
+        room_id,
+        table_id,
+        config,
+        event_tx,
+        stats_repo,
+        active_players,
+        created_by,
+        chat_id,
+    } = config;
+
     let (tx, rx) = mpsc::channel(32);
     let actor = TableActor::new(
         room_id,
@@ -2495,3 +2522,4 @@ pub fn spawn_table_actor(
     let handle = tokio::spawn(actor.run(rx));
     (tx, handle)
 }
+

@@ -75,7 +75,7 @@ impl<R: ReferralRepository, U: UserService> ViralService for ViralServiceImpl<R,
     ) -> Result<(), AppError> {
         let span = tracing::info_span!("record_referral", referrer_id = %referrer_id, referred_id = %referred_id);
         let _enter = span.enter();
-        self.repo.record_referral(referrer_id, referred_id).await
+        self.repo.record_referral(referrer_id, referred_id).await.map_err(|e| AppError::Internal(e.to_string()))
     }
 
     async fn on_hand_completed(&self, user_id: UserId) -> Result<(), AppError> {
@@ -84,11 +84,11 @@ impl<R: ReferralRepository, U: UserService> ViralService for ViralServiceImpl<R,
         let should_award = self
             .repo
             .increment_hand_count_and_check_bonus(user_id)
-            .await?;
+            .await.map_err(|e| AppError::Internal(e.to_string()))?;
         if !should_award {
             return Ok(());
         }
-        let referrer_id = match self.repo.get_referrer_id(user_id).await? {
+        let referrer_id = match self.repo.get_referrer_id(user_id).await.map_err(|e| AppError::Internal(e.to_string()))? {
             Some(id) => id,
             None => return Ok(()),
         };
@@ -96,13 +96,13 @@ impl<R: ReferralRepository, U: UserService> ViralService for ViralServiceImpl<R,
         let triple = order.is_some_and(|o| o <= 1000);
         self.award_bonus(user_id, triple).await?;
         self.award_bonus(referrer_id, triple).await?;
-        self.repo.mark_bonus_awarded(user_id).await?;
+        self.repo.mark_bonus_awarded(user_id).await.map_err(|e| AppError::Internal(e.to_string()))?;
         info!(referred = %user_id, referrer = %referrer_id, triple = triple, "Referral bonus awarded after 5 hands");
         Ok(())
     }
 
     async fn get_referral_stats(&self, user_id: UserId) -> Result<ReferralStats, AppError> {
-        self.repo.get_referral_stats(user_id).await
+        self.repo.get_referral_stats(user_id).await.map_err(|e| AppError::Internal(e.to_string())).map(|s| ReferralStats { total_referred: s.total_referred, bonus_earned: s.bonus_earned, pending_bonus: s.pending_bonus })
     }
 }
 

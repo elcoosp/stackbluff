@@ -164,6 +164,12 @@ pub enum RoomMessage {
         duration_secs: u32,
         required_votes: u32,
     },
+    ClubThemeUpdated {
+        club_id: sb_shared_types::ClubId,
+        banner_url: Option<String>,
+        chip_preset_id: Option<i32>,
+        felt_color: Option<String>,
+    },
     KickVoteUpdate {
         room_id: TableId,
         kick_vote_id: Uuid,

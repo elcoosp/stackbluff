@@ -1,3 +1,4 @@
+pub mod club_routes;
 pub mod leaderboard;
 use axum::{
     Router,
@@ -107,6 +108,8 @@ pub struct AppState {
     registry: Arc<Registry>,
     hand_history_repo: Arc<dyn HandHistoryRepository + Send + Sync>,
     pub leaderboard_query: Arc<dyn sb_contracts::leaderboard::LeaderboardQuery + Send + Sync>,
+    pub club_service: Arc<dyn sb_contracts::service_api::ClubService + Send + Sync>,
+    pub broker: Arc<sb_table_registry::connection_broker::ConnectionBroker>,
 }
 
 pub fn create_router(
@@ -115,6 +118,8 @@ pub fn create_router(
     registry: Arc<Registry>,
     hand_history_repo: Arc<dyn HandHistoryRepository + Send + Sync>,
     leaderboard_query: Arc<dyn sb_contracts::leaderboard::LeaderboardQuery + Send + Sync>,
+    club_service: Arc<dyn sb_contracts::service_api::ClubService + Send + Sync>,
+    broker: Arc<sb_table_registry::connection_broker::ConnectionBroker>,
 ) -> Router {
     let state = Arc::new(AppState {
         table_service,
@@ -122,6 +127,8 @@ pub fn create_router(
         registry,
         hand_history_repo,
         leaderboard_query,
+        club_service,
+        broker,
     });
 
     let public_routes = Router::new().route("/api/tables", get(list_tables_public));
@@ -130,6 +137,7 @@ pub fn create_router(
         .route("/lobby", get(lobby_handler))
         .route("/tables", post(create_table_handler))
         .route("/tables/{table_id}/history", get(table_history_handler))
+        .merge(club_routes::club_routes())
         .layer(axum::middleware::from_fn(auth_middleware));
 
     Router::new()

@@ -1,3 +1,4 @@
+use sb_table_registry::events::TableEvent;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Duration;
@@ -63,7 +64,7 @@ pub struct SitGoTournament {
     registry: Arc<Registry>,
     broker: Arc<ConnectionBroker>,
     cmd_rx: mpsc::Receiver<SitGoCommand>,
-    event_rx: tokio::sync::broadcast::Receiver<HandCompletedEvent>,
+    event_rx: tokio::sync::broadcast::Receiver<TableEvent>,
     table_cmd_tx: Option<mpsc::Sender<TableCommand>>,
     blind_scheduler: Option<BlindScheduler>,
     players_remaining: u32,
@@ -88,7 +89,7 @@ impl SitGoTournament {
         registry: Arc<Registry>,
         broker: Arc<ConnectionBroker>,
         cmd_rx: mpsc::Receiver<SitGoCommand>,
-        event_rx: tokio::sync::broadcast::Receiver<HandCompletedEvent>,
+        event_rx: tokio::sync::broadcast::Receiver<TableEvent>,
     ) -> Self {
         Self {
             tournament_id,
@@ -130,7 +131,9 @@ impl SitGoTournament {
                     self.handle_command(cmd).await;
                 }
                 Ok(event) = self.event_rx.recv() => {
-                    self.handle_hand_completed(event).await;
+                    if let TableEvent::HandCompleted(hand_event) = event {
+                        self.handle_hand_completed(hand_event).await;
+                    }
                 }
                 else => break,
             }
