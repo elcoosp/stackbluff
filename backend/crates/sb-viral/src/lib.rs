@@ -115,7 +115,7 @@ impl<R: ReferralRepository, U: UserService> ViralService for ViralServiceImpl<R,
                 if let Ok(newly_awarded) = self.badge_repo.award_badge(referrer_id, "founding_member").await {
                     if newly_awarded {
                         info!(referrer_id = %referrer_id, badge_type = "founding_member", completed = stats.bonus_earned, "Badge awarded");
-                        counter!("badge_awarded", 1);
+                        metrics::counter!("badge_awarded", 1);
                     }
                 }
             }
