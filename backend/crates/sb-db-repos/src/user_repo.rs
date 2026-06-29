@@ -150,6 +150,27 @@ impl UserRepository for UserRepoImpl {
             .map_err(|e| PersistenceError::Database(e.to_string()))?
     }
 
+    async fn update_password_with_timestamp(
+        &self,
+        ctx: RequestContext,
+        user_id: UserId,
+        new_password_hash: &str,
+    ) -> PersistenceResult<()> {
+        let (tx, rx) = oneshot::channel();
+        let cmd = DbCommand::UpdatePasswordWithTimestamp {
+            ctx,
+            user_id,
+            new_password_hash: new_password_hash.to_string(),
+            respond: tx,
+        };
+        self.sender
+            .send(cmd)
+            .map_err(|e| PersistenceError::Database(e.to_string()))?;
+        rx.await
+            .map_err(|e| PersistenceError::Database(e.to_string()))?
+    }
+
+
 
     async fn get_user(&self, ctx: RequestContext, id: UserId) -> PersistenceResult<String> {
         let (tx, rx) = oneshot::channel();
@@ -232,5 +253,23 @@ impl UserRepository for UserRepoImpl {
             .map_err(|e| PersistenceError::Database(e.to_string()))?;
 
         Ok(new_balance)
+    }
+
+    async fn is_email_verified(
+        &self,
+        ctx: RequestContext,
+        user_id: UserId,
+    ) -> PersistenceResult<bool> {
+        let (tx, rx) = oneshot::channel();
+        let cmd = DbCommand::IsEmailVerified {
+            ctx,
+            user_id,
+            respond: tx,
+        };
+        self.sender
+            .send(cmd)
+            .map_err(|e| PersistenceError::Database(e.to_string()))?;
+        rx.await
+            .map_err(|e| PersistenceError::Database(e.to_string()))?
     }
 }

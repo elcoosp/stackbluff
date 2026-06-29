@@ -111,6 +111,15 @@ pub trait UserRepository: Send + Sync {
         new_password_hash: &str,
     ) -> PersistenceResult<()>;
 
+    /// Update password and set password_changed_at to current time
+    /// This invalidates all existing JWTs issued before this timestamp
+    async fn update_password_with_timestamp(
+        &self,
+        ctx: RequestContext,
+        user_id: UserId,
+        new_password_hash: &str,
+    ) -> PersistenceResult<()>;
+
     async fn is_email_verified(
         &self,
         ctx: RequestContext,

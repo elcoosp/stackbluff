@@ -12,8 +12,7 @@ use argon2::PasswordHasher;
 use crate::config::AuthConfig;
 use crate::email_queue::EmailQueue;
 use crate::jwt::{
-    create_jwt, create_reset_token, create_verification_token, verify_jwt, verify_verification_token,
-};
+    create_jwt, verify_jwt, verify_verification_token};
 use crate::rate_limiter::RateLimiter;
 use sb_contracts::repo_api::{PersistenceError, UserProfile, UserRepo};
 use sb_contracts::service_api::{AuthResult, AuthService, TokenClaims};
@@ -27,9 +26,12 @@ const EMAIL_RATE_LIMIT_WINDOW_SECS: u64 = 3600;
 
 pub struct AuthServiceImpl {
     user_repo: std::sync::Arc<dyn UserRepo>,
-    config: AuthConfig,
+    config: Arc<AuthConfig>,
     email_queue: Option<Arc<EmailQueue>>,
     rate_limiter: Arc<RateLimiter>,
+    login_rate_limiter: Arc<crate::login_rate_limiter::LoginRateLimiter>,
+    email_verification_service: Option<Arc<crate::email_verification_service::EmailVerificationService>>,
+    password_reset_service: Option<Arc<crate::password_reset_service::PasswordResetService>>,
 }
 
 
@@ -45,8 +47,15 @@ impl AuthServiceImpl {
     pub fn new(user_repo: std::sync::Arc<dyn UserRepo>, config: AuthConfig) -> Self {
         Self {
             user_repo,
-            config,
+            config: Arc::new(config),
             email_queue: None,
+            login_rate_limiter: Arc::new(crate::login_rate_limiter::LoginRateLimiter::new(
+                5,
+                std::time::Duration::from_secs(900),
+                std::time::Duration::from_secs(3600),
+            )),
+            email_verification_service: None,
+            password_reset_service: None,
             rate_limiter: Arc::new(RateLimiter::new(
                 EMAIL_RATE_LIMIT_MAX,
                 Duration::from_secs(EMAIL_RATE_LIMIT_WINDOW_SECS),
@@ -56,15 +65,28 @@ impl AuthServiceImpl {
 
     /// Builder method to add email support after construction.
     pub fn with_email_support(mut self, email_queue: Arc<EmailQueue>) -> Self {
-        self.email_queue = Some(email_queue);
-        self
-    }
+        self.email_queue = Some(email_queue.clone());
 
-    /// Get the email queue, or return an error if not configured.
-    fn email_queue(&self) -> Result<&EmailQueue, AppError> {
-        self.email_queue
-            .as_deref()
-            .ok_or_else(|| AppError::Configuration("Email service not configured".into()))
+        // Initialize the focused services
+        self.email_verification_service = Some(Arc::new(
+            crate::email_verification_service::EmailVerificationService::new(
+                self.user_repo.clone(),
+                self.config.clone(),
+                email_queue.clone(),
+                self.rate_limiter.clone(),
+            )
+        ));
+
+        self.password_reset_service = Some(Arc::new(
+            crate::password_reset_service::PasswordResetService::new(
+                self.user_repo.clone(),
+                self.config.clone(),
+                email_queue,
+                self.rate_limiter.clone(),
+            )
+        ));
+
+        self
     }
 
     fn validate_telegram_init_data(&self, init_data: &str) -> Result<serde_json::Value, AppError> {
@@ -185,26 +207,16 @@ impl AuthService for AuthServiceImpl {
             .await
             .map_err(map_persistence_error)?;
 
-        // Queue verification email (fire-and-forget, don't fail registration)
-        if let Ok(queue) = self.email_queue() {
-            if self.rate_limiter.check_and_record(email) {
-                match create_verification_token(
-                    user_id.0,
-                    email,
-                    self.config.jwt_secret_str(),
-                    self.config.verification_token_ttl_seconds,
-                ) {
-                    Ok(token) => {
-                        queue.queue_verification_email(email.to_string(), token);
-                        tracing::info!(user_id = %user_id, "Verification email queued");
-                    }
-                    Err(e) => {
-                        tracing::error!(error = %e, "Failed to create verification token");
-                    }
+        // Queue verification email through the service (fire-and-forget)
+        if let Some(service) = &self.email_verification_service {
+            let service_clone = service.clone();
+            let ctx_clone = ctx.clone();
+            let user_id_clone = user_id;
+            tokio::spawn(async move {
+                if let Err(e) = service_clone.send_verification_email(&ctx_clone, user_id_clone).await {
+                    tracing::warn!(error = %e, "Failed to send verification email during registration");
                 }
-            } else {
-                tracing::warn!(email = %email, "Rate limit exceeded for verification email");
-            }
+            });
         }
 
         let token = create_jwt(
@@ -231,13 +243,34 @@ impl AuthService for AuthServiceImpl {
     ) -> Result<AuthResult, AppError> {
         use argon2::PasswordVerifier;
 
+        // Check if account is locked
+        if self.login_rate_limiter.is_locked(email) {
+            return Err(AppError::TooManyRequests(
+                "Account temporarily locked due to too many failed login attempts. Please try again later.".into(),
+            ));
+        }
+
         // Get user with password hash
         let user_with_hash = self
             .user_repo
             .find_by_email_with_hash(ctx.clone(), email)
             .await
-            .map_err(map_persistence_error)?
-            .ok_or_else(|| AppError::Unauthorized("Invalid email or password".into()))?;
+            .map_err(map_persistence_error)?;
+
+        // If user not found, still do password check to prevent timing attacks
+        let user_with_hash = match user_with_hash {
+            Some(u) => u,
+            None => {
+                // Perform dummy hash check to maintain consistent timing
+                let dummy_hash = "$argon2id$v=19$m=19456,t=2,p=1$dummy$dummy";
+                if let Ok(h) = argon2::PasswordHash::new(dummy_hash) {
+                    let _ = crate::config::argon2_instance().verify_password(password.as_bytes(), &h);
+                }
+
+                self.login_rate_limiter.record_failure(email);
+                return Err(AppError::Unauthorized("Invalid email or password".into()));
+            }
+        };
 
         // Verify password against stored hash
         let stored_hash = user_with_hash.password_hash.as_deref()
@@ -250,8 +283,17 @@ impl AuthService for AuthServiceImpl {
             .verify_password(password.as_bytes(), &parsed_hash)
             .is_err()
         {
+            let locked = self.login_rate_limiter.record_failure(email);
+            if locked {
+                return Err(AppError::TooManyRequests(
+                    "Account temporarily locked due to too many failed login attempts. Please try again later.".into(),
+                ));
+            }
             return Err(AppError::Unauthorized("Invalid email or password".into()));
         }
+
+        // Successful login - clear failure counter
+        self.login_rate_limiter.record_success(email);
 
         // For PWA users, we could track password_changed_at in the DB
         // For now, use None (all existing tokens remain valid)
@@ -302,40 +344,10 @@ impl AuthService for AuthServiceImpl {
         ctx: &RequestContext,
         user_id: UserId,
     ) -> Result<(), AppError> {
-        let queue = self.email_queue()?;
-        let profile = self
-            .user_repo
-            .get_user_profile(ctx.clone(), user_id)
-            .await
-            .map_err(map_persistence_error)?;
-
-        // Only PWA users need email verification
-        if profile.email.is_none() {
-            return Err(AppError::InvalidInput(
-                "User does not have an email address".into(),
-            ));
-        }
-
-        let email = profile.email.as_ref().unwrap();
-
-        // Check rate limit
-        if !self.rate_limiter.check_and_record(email) {
-            return Err(AppError::InvalidInput(
-                "Rate limit exceeded. Please try again later.".into(),
-            ));
-        }
-
-        let token = create_verification_token(
-            user_id.0,
-            email,
-            self.config.jwt_secret_str(),
-            self.config.verification_token_ttl_seconds,
-        )
-        .map_err(|e| AppError::Internal(format!("JWT error: {}", e)))?;
-
-        queue.queue_verification_email(email.clone(), token);
-        tracing::info!(user_id = %user_id, "Verification email queued via send_verification_email");
-        Ok(())
+        let service = self.email_verification_service
+            .as_ref()
+            .ok_or_else(|| AppError::Configuration("Email service not configured".into()))?;
+        service.send_verification_email(ctx, user_id).await
     }
 
     async fn verify_email(&self, token: &str) -> Result<(), AppError> {
@@ -365,42 +377,10 @@ impl AuthService for AuthServiceImpl {
         ctx: &RequestContext,
         email: &str,
     ) -> Result<(), AppError> {
-        let queue = self.email_queue()?;
-
-        // Look up user by email
-        let user_id = self
-            .user_repo
-            .find_by_email(ctx.clone(), email)
-            .await
-            .map_err(map_persistence_error)?;
-
-        // Silently succeed if user not found (don't leak user existence)
-        let user_id = match user_id {
-            Some(id) => id,
-            None => {
-                tracing::info!(email = %email, "Password reset requested for unknown email");
-                return Ok(());
-            }
-        };
-
-        // Check rate limit
-        if !self.rate_limiter.check_and_record(email) {
-            return Err(AppError::InvalidInput(
-                "Rate limit exceeded. Please try again later.".into(),
-            ));
-        }
-
-        let token = create_reset_token(
-            user_id.0,
-            email,
-            self.config.jwt_secret_str(),
-            self.config.reset_token_ttl_seconds,
-        )
-        .map_err(|e| AppError::Internal(format!("JWT error: {}", e)))?;
-
-        queue.queue_password_reset_email(email.to_string(), token);
-        tracing::info!(user_id = %user_id, "Password reset email queued");
-        Ok(())
+        let service = self.password_reset_service
+            .as_ref()
+            .ok_or_else(|| AppError::Configuration("Email service not configured".into()))?;
+        service.forgot_password(ctx, email).await
     }
 
     async fn reset_password(
@@ -408,34 +388,10 @@ impl AuthService for AuthServiceImpl {
         token: &str,
         new_password: &str,
     ) -> Result<(), AppError> {
-        if new_password.len() < 8 {
-            return Err(AppError::InvalidInput("Password too short".into()));
-        }
-
-        let claims = verify_verification_token(token, self.config.jwt_secret_str())
-            .map_err(|e| AppError::Unauthorized(format!("Invalid reset token: {}", e)))?;
-
-        if claims.purpose != "reset_password" {
-            return Err(AppError::Unauthorized(
-                "Token is not for password reset".into(),
-            ));
-        }
-
-        let hash = crate::config::argon2_instance()
-            .hash_password(new_password.as_bytes())
-            .map_err(|e| AppError::Internal(format!("Failed to hash password: {}", e)))?
-            .to_string();
-
-        let user_id = UserId(claims.sub);
-        let ctx = RequestContext::new(Uuid::new_v4(), None);
-
-        self.user_repo
-            .update_password(ctx, user_id, &hash)
-            .await
-            .map_err(map_persistence_error)?;
-
-        tracing::info!(user_id = %user_id, "Password reset successfully");
-        Ok(())
+        let service = self.password_reset_service
+            .as_ref()
+            .ok_or_else(|| AppError::Configuration("Email service not configured".into()))?;
+        service.reset_password(token, new_password).await
     }
 }
 

@@ -130,6 +130,7 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
         DbCommand::FindByEmailWithHash { ctx, .. } => ctx,
         DbCommand::MarkEmailVerified { ctx, .. } => ctx,
         DbCommand::UpdatePassword { ctx, .. } => ctx,
+        DbCommand::UpdatePasswordWithTimestamp { ctx, .. } => ctx,
         DbCommand::IsEmailVerified { ctx, .. } => ctx,
     };
 
@@ -320,7 +321,7 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
             }
             DbCommand::MarkEmailVerified { user_id, .. } => {
                 use sb_db_entities::user;
-                use sea_orm::{Set, UpdateMany};
+                use sea_orm::Set;
                 let uid = user_id.as_uuid();
 
                 // Use conditional update for true idempotency
@@ -353,6 +354,25 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                     .ok_or(PersistenceError::NotFound)?;
                 let mut active: user::ActiveModel = model.into();
                 active.password_hash = Set(Some(new_password_hash.clone()));
+                sea_orm::ActiveModelTrait::update(active, conn).await.map_err(map_db_error)?;
+                Ok(None)
+            }
+            DbCommand::UpdatePasswordWithTimestamp {
+                user_id,
+                new_password_hash,
+                ..
+            } => {
+                use sb_db_entities::user;
+                use sea_orm::Set;
+                let uid = user_id.as_uuid();
+                let model = user::Entity::find_by_id(uid)
+                    .one(conn)
+                    .await
+                    .map_err(map_db_error)?
+                    .ok_or(PersistenceError::NotFound)?;
+                let mut active: user::ActiveModel = model.into();
+                active.password_hash = Set(Some(new_password_hash.clone()));
+                active.password_changed_at = Set(Some(chrono::Utc::now()));
                 sea_orm::ActiveModelTrait::update(active, conn).await.map_err(map_db_error)?;
                 Ok(None)
             }
@@ -451,7 +471,8 @@ fn respond_ok(cmd: DbCommand, value: Option<String>) {
             let _ = respond.send(Ok(id));
         }
         DbCommand::MarkEmailVerified { respond, .. }
-        | DbCommand::UpdatePassword { respond, .. } => {
+        | DbCommand::UpdatePassword { respond, .. }
+        | DbCommand::UpdatePasswordWithTimestamp { respond, .. } => {
             let _ = respond.send(Ok(()));
         }
         DbCommand::IsEmailVerified { respond, .. } => {
@@ -526,7 +547,8 @@ fn respond_err(cmd: DbCommand, err: PersistenceError) {
             let _ = respond.send(Err(err));
         }
         DbCommand::MarkEmailVerified { respond, .. }
-        | DbCommand::UpdatePassword { respond, .. } => {
+        | DbCommand::UpdatePassword { respond, .. }
+        | DbCommand::UpdatePasswordWithTimestamp { respond, .. } => {
             let _ = respond.send(Err(err));
         }
         DbCommand::IsEmailVerified { respond, .. } => {

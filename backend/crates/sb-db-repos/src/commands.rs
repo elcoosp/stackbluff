@@ -67,6 +67,12 @@ pub enum DbCommand {
         new_password_hash: String,
         respond: ResponseSender<()>,
     },
+    UpdatePasswordWithTimestamp {
+        ctx: RequestContext,
+        user_id: UserId,
+        new_password_hash: String,
+        respond: ResponseSender<()>,
+    },
     IsEmailVerified {
         ctx: RequestContext,
         user_id: UserId,

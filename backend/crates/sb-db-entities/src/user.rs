@@ -20,6 +20,7 @@ pub struct Model {
     pub platform: Platform,
     pub email_verified_at: Option<DateTimeUtc>,
     pub password_hash: Option<String>,
+    pub password_changed_at: Option<DateTimeUtc>,
     pub registration_order: Option<i64>,
 }
 

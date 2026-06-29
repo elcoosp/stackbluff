@@ -100,6 +100,10 @@ mod tests {
             Ok(())
         }
 
+        async fn update_password_with_timestamp(&self, _ctx: RequestContext, _user_id: UserId, _new_password_hash: &str) -> PersistenceResult<()> {
+            Ok(())
+        }
+
         async fn is_email_verified(&self, _ctx: RequestContext, _user_id: UserId) -> PersistenceResult<bool> {
             Ok(false)
         }
