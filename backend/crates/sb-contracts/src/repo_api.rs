@@ -238,8 +238,6 @@ pub trait ReferralRepository: Send + Sync {
 
 pub use UserRepository as UserRepo;
 
-use async_trait::async_trait;
-use sb_shared_types::ids::UserId;
 
 #[derive(Clone, Debug)]
 pub struct BadgeRecord {
@@ -253,5 +251,4 @@ pub trait BadgeRepo: Send + Sync {
     async fn award_badge(&self, user_id: UserId, badge_type: &str) -> Result<bool, crate::persistence_error::PersistenceError>;
     async fn has_badge(&self, user_id: UserId, badge_type: &str) -> Result<bool, crate::persistence_error::PersistenceError>;
     async fn list_badges(&self, user_id: UserId) -> Result<Vec<BadgeRecord>, crate::persistence_error::PersistenceError>;
-    async fn count_completed_referrals(&self, referrer_id: UserId) -> Result<i64, crate::persistence_error::PersistenceError>;
 }
