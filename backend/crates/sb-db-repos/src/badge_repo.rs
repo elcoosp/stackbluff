@@ -1,95 +1,71 @@
 use async_trait::async_trait;
-use sea_orm::{ActiveModelTrait, 
-    ColumnTrait, ConnectionTrait, DatabaseTransaction, EntityTrait, PaginatorTrait, QueryFilter,
-    Set,
-};
-use sb_contracts::badge_repo_api::{BadgeRepo, BadgeRepoError, BadgeType};
+use sea_orm::{ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter, QuerySelect};
+use sb_contracts::repo_api::{BadgeRecord, BadgeRepo};
+use sb_contracts::persistence_error::PersistenceError;
 use sb_shared_types::ids::UserId;
-use std::collections::HashSet;
-use tracing::{debug, error, instrument};
-
 use sb_db_entities::user_badges::{self, Entity as UserBadgeEntity};
 
-#[derive(Debug)]
-pub struct BadgeRepoImpl;
+pub struct BadgeRepoImpl<DB: ConnectionTrait + Send + Sync> {
+    db: DB,
+}
 
-impl BadgeRepoImpl {
-    pub fn new() -> Self {
-        Self
+impl<DB: ConnectionTrait + Send + Sync> BadgeRepoImpl<DB> {
+    pub fn new(db: DB) -> Self {
+        Self { db }
     }
 }
 
 #[async_trait]
-impl BadgeRepo for BadgeRepoImpl {
-    #[instrument(skip(txn), fields(user_id = %user_id.0, badge_type = %badge_type.as_str()), err)]
-    async fn award_badge(
-        &self,
-        txn: &DatabaseTransaction,
-        user_id: UserId,
-        badge_type: BadgeType,
-    ) -> Result<bool, BadgeRepoError> {
+impl<DB: ConnectionTrait + Send + Sync> BadgeRepo for BadgeRepoImpl<DB> {
+    async fn award_badge(&self, user_id: UserId, badge_type: &str) -> Result<bool, PersistenceError> {
+        let existing = UserBadgeEntity::find()
+            .filter(user_badges::Column::UserId.eq(user_id.as_uuid()))
+            .filter(user_badges::Column::BadgeType.eq(badge_type))
+            .one(&self.db)
+            .await
+            .map_err(|e| PersistenceError::Other(e.to_string()))?;
+
+        if existing.is_some() {
+            return Ok(false); // Already has badge
+        }
+
         let active = user_badges::ActiveModel {
-            user_id: Set(user_id.0),
-            badge_type: Set(badge_type.as_str().to_owned()),
-            awarded_at: Set(chrono::Utc::now().into()),
+            user_id: sea_orm::ActiveValue::Set(user_id.as_uuid()),
+            badge_type: sea_orm::ActiveValue::Set(badge_type.to_string()),
+            awarded_at: sea_orm::ActiveValue::Set(chrono::Utc::now()),
         };
 
-        match active.insert(txn).await {
-            Ok(_) => {
-                debug!("badge awarded");
-                Ok(true)
-            }
-            Err(sea_orm::DbErr::RecordNotInserted) => {
-                debug!("badge already existed");
-                Ok(false)
-            }
-            Err(e) => {
-                error!(error = %e, "failed to award badge");
-                Err(BadgeRepoError::Database(e.to_string()))
-            }
-        }
+        active.insert(&self.db).await.map_err(|e| PersistenceError::Other(e.to_string()))?;
+        Ok(true)
     }
 
-    #[instrument(skip(db), fields(user_id = %user_id.0), err)]
-    async fn has_badge(
-        &self,
-        db: &impl ConnectionTrait,
-        user_id: UserId,
-        badge_type: &BadgeType,
-    ) -> Result<bool, BadgeRepoError> {
+    async fn has_badge(&self, user_id: UserId, badge_type: &str) -> Result<bool, PersistenceError> {
         let count = UserBadgeEntity::find()
-            .filter(user_badges::Column::UserId.eq(user_id.0))
-            .filter(user_badges::Column::BadgeType.eq(badge_type.as_str()))
-            .count(db)
+            .filter(user_badges::Column::UserId.eq(user_id.as_uuid()))
+            .filter(user_badges::Column::BadgeType.eq(badge_type))
+            .count(&self.db)
             .await
-            .map_err(|e| BadgeRepoError::Database(e.to_string()))?;
-
+            .map_err(|e| PersistenceError::Other(e.to_string()))?;
         Ok(count > 0)
     }
 
-    #[instrument(skip(db), fields(user_id = %user_id.0), err)]
-    async fn list_badges(
-        &self,
-        db: &impl ConnectionTrait,
-        user_id: UserId,
-    ) -> Result<HashSet<BadgeType>, BadgeRepoError> {
-        let rows: Vec<user_badges::Model> = UserBadgeEntity::find()
-            .filter(user_badges::Column::UserId.eq(user_id.0))
-            .all(db)
+    async fn list_badges(&self, user_id: UserId) -> Result<Vec<BadgeRecord>, PersistenceError> {
+        let models = UserBadgeEntity::find()
+            .filter(user_badges::Column::UserId.eq(user_id.as_uuid()))
+            .all(&self.db)
             .await
-            .map_err(|e| BadgeRepoError::Database(e.to_string()))?;
+            .map_err(|e| PersistenceError::Other(e.to_string()))?;
 
-        let mut badges = HashSet::with_capacity(rows.len());
-        for row in rows {
-            match BadgeType::try_from(row.badge_type.as_str()) {
-                Ok(badge) => {
-                    badges.insert(badge);
-                }
-                Err(e) => {
-                    error!(badge_type = %row.badge_type, error = %e, "unknown badge type in database");
-                }
-            }
-        }
-        Ok(badges)
+        Ok(models.into_iter().map(|m| BadgeRecord {
+            user_id: UserId::from_uuid(m.user_id),
+            badge_type: m.badge_type,
+            awarded_at: m.awarded_at,
+        }).collect())
+    }
+
+    async fn count_completed_referrals(&self, referrer_id: UserId) -> Result<i64, PersistenceError> {
+        // This will be implemented in referral_repo - delegating there
+        // For now, return 0 to allow compilation
+        Ok(0)
     }
 }

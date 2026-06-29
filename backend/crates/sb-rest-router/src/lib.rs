@@ -1,4 +1,3 @@
-pub mod handlers;
 pub mod leaderboard;
 use axum::{
     Router,
@@ -9,8 +8,6 @@ use axum::{
 };
 use base64::prelude::*;
 use chrono::{DateTime, Utc};
-use handlers::badges;
-use handlers::badges;
 use sb_auth::middleware::{AuthUser, auth_middleware};
 use sb_contracts::lobby_api::{TableInfo, TableRepo, TableService};
 use sb_contracts::repo_api::{HandHistoryRepository, HandSummary};
@@ -22,6 +19,7 @@ use tracing::error;
 use uuid::Uuid;
 
 pub mod oracle_routes;
+pub mod handlers;
 pub mod player_stats;
 pub mod rate_limit;
 pub mod tournament_routes;
@@ -110,8 +108,6 @@ pub struct AppState {
     registry: Arc<Registry>,
     hand_history_repo: Arc<dyn HandHistoryRepository + Send + Sync>,
     pub leaderboard_query: Arc<dyn sb_contracts::leaderboard::LeaderboardQuery + Send + Sync>,
-    pub badge_repo: Arc<dyn sb_contracts::badge_repo_api::BadgeRepo + Send + Sync>,
-    pub referral_repo: Arc<dyn sb_contracts::repo_api::ReferralRepo + Send + Sync>,
 }
 
 pub fn create_router(
@@ -120,8 +116,6 @@ pub fn create_router(
     registry: Arc<Registry>,
     hand_history_repo: Arc<dyn HandHistoryRepository + Send + Sync>,
     leaderboard_query: Arc<dyn sb_contracts::leaderboard::LeaderboardQuery + Send + Sync>,
-    badge_repo: Arc<dyn sb_contracts::badge_repo_api::BadgeRepo + Send + Sync>,
-    referral_repo: Arc<dyn sb_contracts::repo_api::ReferralRepo + Send + Sync>,
 ) -> Router {
     let state = Arc::new(AppState {
         table_service,
@@ -129,8 +123,6 @@ pub fn create_router(
         registry,
         hand_history_repo,
         leaderboard_query,
-        badge_repo,
-        referral_repo,
     });
 
     let public_routes = Router::new().route("/api/tables", get(list_tables_public));
@@ -139,8 +131,6 @@ pub fn create_router(
         .route("/lobby", get(lobby_handler))
         .route("/tables", post(create_table_handler))
         .route("/tables/{table_id}/history", get(table_history_handler))
-        .route("/users/me/badges", get(badges::get_my_badges))
-        .route("/users/{user_id}/badges", get(badges::get_user_badges))
         .layer(axum::middleware::from_fn(auth_middleware));
 
     Router::new()

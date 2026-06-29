@@ -2,39 +2,33 @@ import { useQuery } from "@tanstack/react-query";
 
 export interface Badge {
   badge_type: string;
-  awarded_at?: string;
-}
-
-export interface FoundingMemberProgress {
-  completed: number;
-  required: number;
-}
-
-export interface BadgesResponse {
-  badges: Badge[];
-  founding_member_progress?: FoundingMemberProgress;
-}
-
-async function fetchBadges(): Promise<BadgesResponse> {
-  const res = await fetch("/api/users/me/badges", {
-    credentials: "include",
-  });
-  if (!res.ok) {
-    const body = await res.text().catch(() => "Unknown error");
-    throw new Error(`Failed to fetch badges: ${res.status} ${body}`);
-  }
-  return res.json();
+  awarded_at: string;
 }
 
 export function useBadges() {
-  return useQuery<BadgesResponse, Error>({
-    queryKey: ["badges", "me"],
-    queryFn: fetchBadges,
-    staleTime: 5 * 60 * 1000,
-    retry: 2,
+  return useQuery<Badge[]>({
+    queryKey: ["badges"],
+    queryFn: async () => {
+      const res = await fetch("/api/users/me/badges", {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to fetch badges");
+      const data = await res.json();
+      return data.badges;
+    },
   });
 }
 
-export function useHasBadge(badgeType: string, badges?: Badge[]) {
-  return badges?.some((b) => b.badge_type === badgeType) ?? false;
+export function useUserBadges(userId: string) {
+  return useQuery<Badge[]>({
+    queryKey: ["badges", userId],
+    queryFn: async () => {
+      const res = await fetch(`/api/users/${userId}/badges`, {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to fetch user badges");
+      const data = await res.json();
+      return data.badges;
+    },
+  });
 }

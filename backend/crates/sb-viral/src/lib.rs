@@ -1,3 +1,4 @@
+pub mod badge_award;
 pub mod metrics;
 
 use async_trait::async_trait;
