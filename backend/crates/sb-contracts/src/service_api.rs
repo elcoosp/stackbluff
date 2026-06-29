@@ -87,6 +87,8 @@ pub trait UserService: Send + Sync {
     async fn award_chips(&self, user_id: UserId, amount: ChipAmount) -> Result<(), AppError>;
     async fn get_user_name(&self, user_id: UserId) -> Result<String, AppError>;
     async fn get_registration_order(&self, user_id: UserId) -> Result<Option<u64>, AppError>;
+    async fn is_email_verified(&self, user_id: UserId) -> Result<bool, AppError>;
+    async fn get_user_profile(&self, user_id: UserId) -> Result<crate::repo_api::UserProfile, AppError>;
 }
 
 #[async_trait]
