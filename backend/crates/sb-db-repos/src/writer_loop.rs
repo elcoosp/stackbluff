@@ -320,17 +320,23 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
             }
             DbCommand::MarkEmailVerified { user_id, .. } => {
                 use sb_db_entities::user;
-                use sea_orm::Set;
+                use sea_orm::{Set, UpdateMany};
                 let uid = user_id.as_uuid();
-                let model = user::Entity::find_by_id(uid)
-                    .one(conn)
+
+                // Use conditional update for true idempotency
+                let result = user::Entity::update_many()
+                    .filter(user::Column::Id.eq(uid))
+                    .filter(user::Column::EmailVerifiedAt.is_null())
+                    .set(user::ActiveModel {
+                        email_verified_at: Set(Some(chrono::Utc::now())),
+                        ..Default::default()
+                    })
+                    .exec(conn)
                     .await
-                    .map_err(map_db_error)?
-                    .ok_or(PersistenceError::NotFound)?;
-                let mut active: user::ActiveModel = model.into();
-                active.email_verified_at = Set(Some(chrono::Utc::now()));
-                sea_orm::ActiveModelTrait::update(active, conn).await.map_err(map_db_error)?;
-                Ok(None)
+                    .map_err(map_db_error)?;
+
+                // Return success even if 0 rows affected (already verified)
+                Ok(Some(result.rows_affected.to_string()))
             }
             DbCommand::UpdatePassword {
                 user_id,
@@ -383,7 +389,11 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                         password_hash: u.password_hash.clone(),
                         platform: u.platform.to_string(),
                     };
-                    serde_json::to_string(&with_hash).unwrap_or_default()
+                    serde_json::to_string(&with_hash)
+                        .unwrap_or_else(|e| {
+                            tracing::error!(error = %e, "Failed to serialize UserWithHash");
+                            String::new()
+                        })
                 }))
             }
         };

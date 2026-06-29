@@ -17,10 +17,16 @@ mod m20260622_132958_mission_system;
 mod m20260624_create_tournament_tables;
 mod m20260625_seed_tournaments; // <-- new
 mod m20260630_add_email_verified_at;
+mod m20260629162121_grandfather_existing_users;
 
 use sea_orm_migration::prelude::*;
 
 pub struct Migrator;
+
+// Auto-generated migration list
+pub static MIGRATIONS: &[&dyn MigrationTrait] = &[
+    // Add migrations here
+];
 
 #[async_trait::async_trait]
 impl MigratorTrait for Migrator {

@@ -3,6 +3,7 @@ use hmac::{Hmac, KeyInit, Mac};
 use sha2::Sha256;
 use std::sync::Arc;
 use std::time::Duration;
+use chrono::Utc;
 use url::form_urlencoded;
 use uuid::Uuid;
 
@@ -145,6 +146,7 @@ impl AuthService for AuthServiceImpl {
             "telegram",
             self.config.jwt_secret_str(),
             self.config.jwt_expiry_days,
+            None, // Telegram users don't have passwords
         )
         .map_err(|e| AppError::Internal(format!("JWT error: {}", e)))?;
 
@@ -210,6 +212,7 @@ impl AuthService for AuthServiceImpl {
             "pwa",
             self.config.jwt_secret_str(),
             self.config.jwt_expiry_days,
+            Some(Utc::now().timestamp() as usize), // New registration, password just set
         )
         .map_err(|e| AppError::Internal(format!("JWT error: {}", e)))?;
 
@@ -250,11 +253,15 @@ impl AuthService for AuthServiceImpl {
             return Err(AppError::Unauthorized("Invalid email or password".into()));
         }
 
+        // For PWA users, we could track password_changed_at in the DB
+        // For now, use None (all existing tokens remain valid)
+        // TODO: Add password_changed_at column to users table
         let token = create_jwt(
             user_with_hash.id.0,
             "pwa",
             self.config.jwt_secret_str(),
             self.config.jwt_expiry_days,
+            None,
         )
         .map_err(|e| AppError::Internal(format!("JWT error: {}", e)))?;
 

@@ -9,6 +9,7 @@ pub struct Claims {
     pub platform: String,
     pub exp: usize,
     pub iat: usize,
+    pub password_changed_at: Option<usize>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -25,6 +26,7 @@ pub fn create_jwt(
     platform: &str,
     secret: &str,
     expiry_days: i64,
+    password_changed_at: Option<usize>,
 ) -> Result<String, jsonwebtoken::errors::Error> {
     let now = Utc::now();
     let exp = now + Duration::days(expiry_days);
@@ -33,6 +35,7 @@ pub fn create_jwt(
         platform: platform.to_string(),
         exp: exp.timestamp() as usize,
         iat: now.timestamp() as usize,
+        password_changed_at,
     };
     encode(
         &Header::default(),
