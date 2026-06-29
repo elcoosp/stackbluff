@@ -15,3 +15,7 @@ pub use auth_service::AuthServiceImpl;
 pub use auth_service::Authenticator; // we'll add this trait in auth_service.rs
 
 pub type SharedAuthService = std::sync::Arc<dyn AuthService + Send + Sync>;
+
+
+#[cfg(test)]
+mod tests;

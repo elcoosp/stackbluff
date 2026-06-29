@@ -86,7 +86,6 @@ impl RateLimiter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::thread;
 
     #[test]
     fn test_rate_limiter_allows_under_limit() {

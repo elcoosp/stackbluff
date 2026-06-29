@@ -111,6 +111,12 @@ pub trait UserRepository: Send + Sync {
         new_password_hash: &str,
     ) -> PersistenceResult<()>;
 
+    async fn is_email_verified(
+        &self,
+        ctx: RequestContext,
+        user_id: UserId,
+    ) -> PersistenceResult<bool>;
+
 }
 
 #[async_trait]
