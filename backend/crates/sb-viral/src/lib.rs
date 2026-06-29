@@ -110,14 +110,15 @@ impl<R: ReferralRepository, U: UserService> ViralService for ViralServiceImpl<R,
         self.repo.mark_bonus_awarded(user_id).await?;
 
         // Check and award founding member badge
-        if let Ok(stats) = self.repo.get_referral_stats(referrer_id).await {
-            if stats.bonus_earned >= 10 {
-                if let Ok(newly_awarded) = self.badge_repo.award_badge(referrer_id, "founding_member").await {
-                    if newly_awarded {
-                        info!(referrer_id = %referrer_id, badge_type = "founding_member", completed = stats.bonus_earned, "Badge awarded");
-                    }
+        match self.repo.get_referral_stats(referrer_id).await {
+            Ok(stats) if stats.bonus_earned >= 10 => {
+                match self.badge_repo.award_badge(referrer_id, "founding_member").await {
+                    Ok(true) => info!("Badge awarded: founding_member to {}", referrer_id),
+                    Ok(false) => {}
+                    Err(e) => error!("Failed to award badge: {}", e),
                 }
             }
+            _ => {}
         }
 
         info!(referred = %user_id, referrer = %referrer_id, triple = triple, "Referral bonus awarded after 5 hands");
