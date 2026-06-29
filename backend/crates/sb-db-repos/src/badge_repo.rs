@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter,
+    ColumnTrait, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter,
     sea_query::OnConflict,
 };
 use sb_contracts::repo_api::{BadgeRecord, BadgeRepo};
