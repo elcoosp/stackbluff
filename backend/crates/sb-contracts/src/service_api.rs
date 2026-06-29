@@ -254,6 +254,26 @@ pub trait AuthService: Send + Sync {
         ctx: &sb_shared_types::RequestContext,
         user_id: sb_shared_types::UserId,
     ) -> Result<UserProfile, sb_shared_types::AppError>;
+    async fn send_verification_email(
+        &self,
+        ctx: &RequestContext,
+        user_id: UserId,
+    ) -> Result<(), AppError>;
+
+    async fn verify_email(&self, token: &str) -> Result<(), AppError>;
+
+    async fn forgot_password(
+        &self,
+        ctx: &RequestContext,
+        email: &str,
+    ) -> Result<(), AppError>;
+
+    async fn reset_password(
+        &self,
+        token: &str,
+        new_password: &str,
+    ) -> Result<(), AppError>;
+
 }
 
 // ── Missions ──────────────────────────────────────────────────────────────
