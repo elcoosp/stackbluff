@@ -1,0 +1,56 @@
+--- a/backend/crates/sb-tournament/src/sit_go_tournament.rs
++++ b/backend/crates/sb-tournament/src/sit_go_tournament.rs
+@@ -1,12 +1,11 @@
+ //! Sit&Go tournament actor.
+ use crate::tournament_actor::{TournamentCommand, TournamentState};
+ use sb_contracts::repo_api::UserRepo;
+-use sb_contracts::tournament_api::{TournamentConfig, TournamentType};
++use sb_contracts::tournament_api::{TournamentConfig};
+ use sb_shared_types::{AppError, ChipAmount, TableConfig, TableId, TournamentId, UserId};
+-use sb_table_registry::events::HandCompletedEvent;
++use sb_table_registry::events::{TableEvent, HandCompletedEvent};
+ use sb_table_registry::registry::Registry;
+ use std::collections::{HashMap, HashSet};
+-use std::collections::VecDeque;
+ use std::sync::Arc;
+ use tokio::sync::mpsc;
+ use tracing::{error, info, warn};
+@@ -32,7 +31,7 @@ pub struct SitGoTournament {
+     registry: Arc<Registry>,
+     broker: Arc<sb_table_registry::connection_broker::ConnectionBroker>,
+     cmd_rx: mpsc::Receiver<SitGoCommand>,
+-    event_rx: tokio::sync::broadcast::Receiver<HandCompletedEvent>,
++    event_rx: tokio::sync::broadcast::Receiver<TableEvent>,
+     state: TournamentState,
+     registered_players: HashSet<UserId>,
+     table_id: Option<TableId>,
+@@ -47,7 +46,7 @@ impl SitGoTournament {
+         registry: Arc<Registry>,
+         broker: Arc<sb_table_registry::connection_broker::ConnectionBroker>,
+         cmd_rx: mpsc::Receiver<SitGoCommand>,
+-        event_rx: tokio::sync::broadcast::Receiver<HandCompletedEvent>,
++        event_rx: tokio::sync::broadcast::Receiver<TableEvent>,
+     ) -> Self {
+         Self {
+             tournament_id,
+@@ -133,7 +132,9 @@ impl SitGoTournament {
+
+     async fn handle_event(&mut self, event: HandCompletedEvent) {
+         // For Sit&Go, we might track hand history, but we don't need to do anything special.
+-        // We could update statistics or check if the tournament should end.
++        // We could update statistics or check if the tournament should end. This is a placeholder.
++        // We'll just log it.
++        info!("Sit&Go hand completed: {:?}", event);
+     }
+
+     async fn register_player(&mut self, user_id: UserId) -> Result<(), AppError> {
+@@ -146,7 +147,9 @@ impl SitGoTournament {
+         self.registered_players.insert(user_id);
+         Ok(())
+     }
++}
+
++impl SitGoTournament {
+     async fn unregister_player(&mut self, user_id: UserId) {
+         self.registered_players.remove(&user_id);
+     }

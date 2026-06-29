@@ -40,10 +40,11 @@ impl TableService for TableServiceImpl {
             variant: GameVariant::Holdem,
             min_buy_in,
             max_buy_in,
-            turn_time_limit_ms: 30_000, // <-- ADDED (Default 30s)
+            turn_time_limit_ms: 30_000,
         };
+        let default_creator = sb_shared_types::UserId::new(uuid::Uuid::nil());
         self.registry
-            .register_existing_table(table_id, config)
+            .register_existing_table(table_id, config, default_creator, None)
             .await;
 
         Ok(table_id)

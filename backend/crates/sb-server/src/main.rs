@@ -48,7 +48,6 @@ use test_utils::notification_service::InMemoryNotificationService;
 use test_utils::table_service::InMemoryTableService;
 #[cfg(feature = "test-stubs")]
 use test_utils::user_resolution_service::InMemoryUserResolutionService;
-use sb_table_registry::events::{TableEvent, TableClosedEvent};
 mod hand_archive;
 
 #[tokio::main]
@@ -124,7 +123,8 @@ async fn main() {
             max_buy_in,
             turn_time_limit_ms: 30_000,
         };
-        registry.register_existing_table(t.table_id, config).await;
+        let default_creator = sb_shared_types::UserId::new(uuid::Uuid::nil());
+        registry.register_existing_table(t.table_id, config, default_creator, None).await;
         tracing::info!(table_id = %t.table_id, "Hydrated table config from DB");
     }
     tracing::info!(count = db_tables.len(), "Registry hydrated from DB");
@@ -135,6 +135,7 @@ async fn main() {
         Arc::new(TableServiceImpl::new(registry.clone(), table_repo.clone()));
 
     if db_tables.is_empty() {
+        let _default_creator = sb_shared_types::UserId::new(uuid::Uuid::nil());
         let default_table_id = table_service
             .create_cash_table(StakeLevel::Micro, 6)
             .await
@@ -154,8 +155,63 @@ async fn main() {
 
     spawn_hand_history_cleanup(db.clone()).await;
 
+    // ── Stats aggregator now receives TableEvent ─────────────────────
     let stats_event_rx = registry.event_sender().subscribe();
     spawn_stats_aggregator(stats_event_rx, stats_repo.clone());
+
+    // ── Spawn listener for TableClosedEvent to send Telegram summary ──
+    {
+        let event_tx = registry.event_sender();
+        let mut event_rx = event_tx.subscribe();
+        let bot_state_clone = bot_state.clone();
+        let user_repo_clone = user_repo.clone();
+        tokio::spawn(async move {
+            use sb_shared_types::RequestContext;
+            use sb_table_registry::events::TableEvent;
+            use tracing::{info, warn};
+            use uuid::Uuid;
+
+            while let Ok(event) = event_rx.recv().await {
+                if let TableEvent::TableClosed(closed) = event {
+                    info!("Table closed: {:?}", closed);
+                    let winner_name = if let Some(winner_id) = closed.winner {
+                        let ctx = RequestContext::new(Uuid::new_v4(), Some(winner_id));
+                        match user_repo_clone.get_user(ctx, winner_id).await {
+                            Ok(username) => format!("@{}", username),
+                            Err(_) => format!("User {}", winner_id),
+                        }
+                    } else {
+                        "No winner".to_string()
+                    };
+                    let hand_desc = closed.winning_hand_description;
+                    let pot = closed.pot_amount;
+                    let inviter_id = closed.started_by;
+                    let invite_link = format!("{}?ref={}", bot_state_clone.mini_app_url, inviter_id);
+
+                    let text = format!(
+                        "{} won {} chips with {}\nPlay again: {}",
+                        winner_name, pot, hand_desc, invite_link
+                    );
+
+                    // Use ref to avoid moving chat_id
+                    if let Some(ref chat_id_str) = closed.chat_id {
+                        if let Ok(chat_id) = chat_id_str.parse::<i64>() {
+                            if let Err(e) = bot_state_clone.notification_service
+                                .send_telegram_message(chat_id, text, None)
+                                .await
+                            {
+                                warn!("Failed to send Telegram message: {}", e);
+                            }
+                        } else {
+                            warn!("Invalid chat_id: {:?}", chat_id_str);
+                        }
+                    } else {
+                        warn!("No chat_id in TableClosedEvent");
+                    }
+                }
+            }
+        });
+    }
 
     // ── REST router ──────────────────────────────────────────────────
     let rest_router = create_router(
@@ -335,48 +391,6 @@ fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
         Arc::new(InMemoryUserResolutionService::new());
 
     Arc::new(sb_bot_handler::BotState::new(
-    // Spawn listener for TableClosedEvent
-    {
-        let registry = registry.clone();
-        let notification_service = notification_service.clone();
-        tokio::spawn(async move {
-            let mut rx = registry.subscribe();
-            while let Ok(event) = rx.recv().await {
-                if let TableEvent::TableClosed(closed_event) = event {
-                    tracing::info!(
-                        table_id = ?closed_event.table_id,
-                        started_by = ?closed_event.started_by,
-                        chat_id = ?closed_event.chat_id,
-                        "Received TableClosedEvent"
-                    );
-                    if let Some(chat_id) = closed_event.chat_id {
-                        let winner_name = closed_event.winner
-                            .map(|uid| format!("<a href=\"tg://user?id={}\">{}</a>", uid, uid))
-                            .unwrap_or_else(|| "Unknown".to_string());
-                        let pot = closed_event.pot_amount.0;
-                        let hand = closed_event.winning_hand_description;
-                        let invite_url = std::env::var("MINI_APP_URL")
-                            .map(|url| format!("{}?ref={}", url, closed_event.started_by))
-                            .unwrap_or_else(|_| {
-                                tracing::error!("MINI_APP_URL environment variable not set");
-                                "https://stackbluff.com".to_string()
-                            });
-                        let text = format!("{} won {} chips with {}\\n\\n[Play again]({})", winner_name, pot, hand, invite_url);
-                        match notification_service.send_telegram_message(chat_id, text, None).await {
-                            Ok(_) => {
-                                tracing::info!("Game summary posted to chat {}", chat_id);
-                            }
-                            Err(e) => {
-                                tracing::warn!("Failed to send game summary to chat {}: {:?}", chat_id, e);
-                            }
-                        }
-                    } else {
-                        tracing::debug!("TableClosedEvent has no chat_id, skipping");
-                    }
-                }
-            }
-        });
-    }
         table_service,
         notification_service,
         user_resolution,
