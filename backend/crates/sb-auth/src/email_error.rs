@@ -22,8 +22,6 @@ impl From<reqwest::Error> for EmailError {
     fn from(err: reqwest::Error) -> Self {
         if err.is_timeout() {
             EmailError::Timeout(err.to_string())
-        } else if err.is_connect() {
-            EmailError::Network(err.to_string())
         } else {
             EmailError::Network(err.to_string())
         }
