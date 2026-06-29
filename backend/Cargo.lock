@@ -5197,6 +5197,7 @@ dependencies = [
  "jsonwebtoken",
  "once_cell",
  "password-hash",
+ "reqwest",
  "sb-contracts",
  "sb-shared-types",
  "sea-orm",
@@ -5286,6 +5287,7 @@ dependencies = [
  "sea-orm-migration",
  "serde",
  "serde_json",
+ "strum 0.28.0",
  "tokio",
  "uuid",
 ]

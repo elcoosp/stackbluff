@@ -1,4 +1,4 @@
-use sb_contracts::repo_api::{PersistenceError, UserProfile};
+use sb_contracts::repo_api::{PersistenceError, UserWithHash, UserProfile};
 use sb_shared_types::UserId;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseConnection, EntityTrait, QueryFilter,
@@ -127,8 +127,10 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
         DbCommand::FindOrCreateByTelegram { ctx, .. } => ctx,
         DbCommand::CreateEmailUser { ctx, .. } => ctx,
         DbCommand::FindByEmail { ctx, .. } => ctx,
+        DbCommand::FindByEmailWithHash { ctx, .. } => ctx,
         DbCommand::MarkEmailVerified { ctx, .. } => ctx,
         DbCommand::UpdatePassword { ctx, .. } => ctx,
+        DbCommand::IsEmailVerified { ctx, .. } => ctx,
     };
 
     let request_id = ctx.request_id;
@@ -187,6 +189,8 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                     display_name: model.display_name,
                     email: Some(model.email),
                     chip_balance: model.chip_balance,
+                    email_verified_at: model.email_verified_at,
+                    platform: model.platform.to_string(),
                 };
 
                 Ok(Some(
@@ -207,7 +211,7 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                 let current = active.chip_balance.take().unwrap_or(0);
                 let new_balance = current + *delta;
                 active.chip_balance = Set(new_balance);
-                active.update(conn).await.map_err(map_db_error)?;
+                sea_orm::ActiveModelTrait::update(active, conn).await.map_err(map_db_error)?;
                 Ok(Some(new_balance.to_string()))
             }
             DbCommand::StoreHandHistory {
@@ -325,7 +329,7 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                     .ok_or(PersistenceError::NotFound)?;
                 let mut active: user::ActiveModel = model.into();
                 active.email_verified_at = Set(Some(chrono::Utc::now()));
-                active.update(conn).await.map_err(map_db_error)?;
+                sea_orm::ActiveModelTrait::update(active, conn).await.map_err(map_db_error)?;
                 Ok(None)
             }
             DbCommand::UpdatePassword {
@@ -343,8 +347,18 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                     .ok_or(PersistenceError::NotFound)?;
                 let mut active: user::ActiveModel = model.into();
                 active.password_hash = Set(Some(new_password_hash.clone()));
-                active.update(conn).await.map_err(map_db_error)?;
+                sea_orm::ActiveModelTrait::update(active, conn).await.map_err(map_db_error)?;
                 Ok(None)
+            }
+            DbCommand::IsEmailVerified { user_id, .. } => {
+                use sb_db_entities::user;
+                let uid = user_id.as_uuid();
+                let model = user::Entity::find_by_id(uid)
+                    .one(conn)
+                    .await
+                    .map_err(map_db_error)?
+                    .ok_or(PersistenceError::NotFound)?;
+                Ok(Some(model.email_verified_at.is_some().to_string()))
             }
             DbCommand::FindByEmail { email, .. } => {
                 use sb_db_entities::user;
@@ -355,6 +369,22 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                     .map_err(map_db_error)?;
                 let user_id = user_model.map(|u| UserId::new(u.id));
                 Ok(user_id.map(|id: UserId| id.to_string()))
+            }
+            DbCommand::FindByEmailWithHash { email, .. } => {
+                use sb_db_entities::user;
+                let user_model = user::Entity::find()
+                    .filter(user::Column::Email.eq(Some(email.clone())))
+                    .one(conn)
+                    .await
+                    .map_err(map_db_error)?;
+                Ok(user_model.map(|u| {
+                    let with_hash = UserWithHash {
+                        id: UserId::new(u.id),
+                        password_hash: u.password_hash.clone(),
+                        platform: u.platform.to_string(),
+                    };
+                    serde_json::to_string(&with_hash).unwrap_or_default()
+                }))
             }
         };
 
@@ -414,11 +444,24 @@ fn respond_ok(cmd: DbCommand, value: Option<String>) {
         | DbCommand::UpdatePassword { respond, .. } => {
             let _ = respond.send(Ok(()));
         }
+        DbCommand::IsEmailVerified { respond, .. } => {
+            let is_verified = match value {
+                Some(s) => s.parse::<bool>().unwrap_or(false),
+                None => false,
+            };
+            let _ = respond.send(Ok(is_verified));
+        }
         DbCommand::FindByEmail { respond, .. } => {
             let id = value
                 .and_then(|s| s.parse::<uuid::Uuid>().ok())
                 .map(UserId::new);
             let _ = respond.send(Ok(id));
+        }
+        DbCommand::FindByEmailWithHash { respond, .. } => {
+            let user = value.and_then(|s| {
+                if s.is_empty() { None } else { serde_json::from_str(&s).ok() }
+            });
+            let _ = respond.send(Ok(user));
         }
         DbCommand::GetUser { respond, .. } => {
             let _ = respond.send(Ok(value.unwrap_or_default()));
@@ -474,9 +517,15 @@ fn respond_err(cmd: DbCommand, err: PersistenceError) {
         }
         DbCommand::MarkEmailVerified { respond, .. }
         | DbCommand::UpdatePassword { respond, .. } => {
-            let _ = respond.send(Ok(()));
+            let _ = respond.send(Err(err));
+        }
+        DbCommand::IsEmailVerified { respond, .. } => {
+            let _ = respond.send(Err(err));
         }
         DbCommand::FindByEmail { respond, .. } => {
+            let _ = respond.send(Err(err));
+        }
+        DbCommand::FindByEmailWithHash { respond, .. } => {
             let _ = respond.send(Err(err));
         }
     }

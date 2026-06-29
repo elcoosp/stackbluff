@@ -55,6 +55,18 @@ impl PaymentService for RealPaymentService {
         provider: String,
         metadata: serde_json::Value,
     ) -> Result<String, AppError> {
+        // Check platform first - only PWA users need email verification
+        // Telegram users are verified through Telegram's own auth system
+        let profile = self.user_service.get_user_profile(user_id).await?;
+        if profile.platform == "pwa" {
+            let is_verified = self.user_service.is_email_verified(user_id).await?;
+            if !is_verified {
+                return Err(AppError::Forbidden(
+                    "Please verify your email address before making a purchase.".to_string(),
+                ));
+            }
+        }
+
         match provider.as_str() {
             "stripe" => {
                 let currency_enum = currency_from_str(&currency)?;

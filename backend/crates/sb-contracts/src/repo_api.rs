@@ -22,12 +22,23 @@ pub struct UserCreate {
     pub platform: String,
 }
 
+
+/// User with password hash for authentication (not exposed in UserProfile)
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct UserWithHash {
+    pub id: UserId,
+    pub password_hash: Option<String>,
+    pub platform: String,
+}
+
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct UserProfile {
     pub id: UserId,
     pub display_name: String,
     pub email: Option<String>,
     pub chip_balance: i64,
+    pub email_verified_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub platform: String,
 }
 
 #[async_trait]
@@ -81,6 +92,25 @@ pub trait UserRepository: Send + Sync {
         ctx: RequestContext,
         email: &str,
     ) -> PersistenceResult<Option<UserId>>;
+
+    async fn find_by_email_with_hash(
+        &self,
+        ctx: RequestContext,
+        email: &str,
+    ) -> PersistenceResult<Option<UserWithHash>>;
+    async fn mark_email_verified(
+        &self,
+        ctx: RequestContext,
+        user_id: UserId,
+    ) -> PersistenceResult<()>;
+
+    async fn update_password(
+        &self,
+        ctx: RequestContext,
+        user_id: UserId,
+        new_password_hash: &str,
+    ) -> PersistenceResult<()>;
+
 }
 
 #[async_trait]

@@ -46,6 +46,8 @@ pub enum AppError {
     #[error("Too many requests: {0}")]
     TooManyRequests(String),
 
+    #[error("Forbidden: {0}")]
+    Forbidden(String),
 }
 
 impl From<&str> for AppError {

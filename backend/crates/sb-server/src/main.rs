@@ -17,6 +17,7 @@ use tower_http::cors::CorsLayer;
 
 use sb_auth::{
     AuthServiceImpl, Authenticator, SharedAuthService, config::AuthConfig, routes::auth_router,
+    email::EmailService, email_queue::EmailQueue,
 };
 use sb_contracts::lobby_api::TableRepo;
 use sb_contracts::repo_api::{HandHistoryRepository, UserRepo};
@@ -89,7 +90,19 @@ async fn main() {
 
     // ── Auth ──────────────────────────────────────────────────────────
     let auth_config = AuthConfig::from_env();
-    let auth_impl = Arc::new(AuthServiceImpl::new(user_repo.clone(), auth_config));
+
+    // Initialize email service and queue
+    let email_service = Arc::new(EmailService::new(&auth_config));
+    let email_queue = Arc::new(EmailQueue::new(email_service));
+    tracing::info!("Email queue initialized");
+
+    let auth_impl = Arc::new(
+        AuthServiceImpl::new(user_repo.clone(), auth_config)
+            .with_email_support(email_queue)
+    );
+
+    // Spawn rate limiter cleanup task (runs every 5 minutes)
+    auth_impl.spawn_rate_limiter_cleanup(300);
     let auth_service: SharedAuthService = auth_impl.clone();
     let auth_authenticator: Arc<dyn Authenticator + Send + Sync> = auth_impl;
 

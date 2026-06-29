@@ -28,19 +28,28 @@ pub struct AuthServiceImpl {
     user_repo: std::sync::Arc<dyn UserRepo>,
     config: AuthConfig,
     email_queue: Option<Arc<EmailQueue>>,
-    rate_limiter: RateLimiter,
+    rate_limiter: Arc<RateLimiter>,
 }
 
+
 impl AuthServiceImpl {
+    /// Spawn background task to clean up rate limiter entries
+    pub fn spawn_rate_limiter_cleanup(self: &Arc<Self>, interval_secs: u64) {
+        let limiter = self.rate_limiter.clone();
+        tokio::spawn(async move {
+            limiter.spawn_cleanup(interval_secs).await.ok();
+        });
+    }
+
     pub fn new(user_repo: std::sync::Arc<dyn UserRepo>, config: AuthConfig) -> Self {
         Self {
             user_repo,
             config,
             email_queue: None,
-            rate_limiter: RateLimiter::new(
+            rate_limiter: Arc::new(RateLimiter::new(
                 EMAIL_RATE_LIMIT_MAX,
                 Duration::from_secs(EMAIL_RATE_LIMIT_WINDOW_SECS),
-            ),
+            )),
         }
     }
 
@@ -217,28 +226,42 @@ impl AuthService for AuthServiceImpl {
         email: &str,
         password: &str,
     ) -> Result<AuthResult, AppError> {
-        let user_id = self
+        use argon2::PasswordVerifier;
+
+        // Get user with password hash
+        let user_with_hash = self
             .user_repo
-            .find_by_email(ctx.clone(), email)
+            .find_by_email_with_hash(ctx.clone(), email)
             .await
             .map_err(map_persistence_error)?
             .ok_or_else(|| AppError::Unauthorized("Invalid email or password".into()))?;
 
-        // TODO: verify password against stored hash (will be done in next step)
-        let _ = password;
+        // Verify password against stored hash
+        let stored_hash = user_with_hash.password_hash.as_deref()
+            .ok_or_else(|| AppError::Unauthorized("Invalid email or password".into()))?;
+
+        let parsed_hash = argon2::PasswordHash::new(stored_hash)
+            .map_err(|e| AppError::Internal(format!("Invalid password hash: {}", e)))?;
+
+        if crate::config::argon2_instance()
+            .verify_password(password.as_bytes(), &parsed_hash)
+            .is_err()
+        {
+            return Err(AppError::Unauthorized("Invalid email or password".into()));
+        }
 
         let token = create_jwt(
-            user_id.0,
+            user_with_hash.id.0,
             "pwa",
             self.config.jwt_secret_str(),
             self.config.jwt_expiry_days,
         )
         .map_err(|e| AppError::Internal(format!("JWT error: {}", e)))?;
 
-        tracing::info!(user_id = %user_id, "Email login success");
+        tracing::info!(user_id = %user_with_hash.id, "Email login success");
         Ok(AuthResult {
             jwt: token,
-            user_id,
+            user_id: user_with_hash.id,
         })
     }
 

@@ -3,7 +3,6 @@ use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "users")]
 pub struct Model {
@@ -11,7 +10,7 @@ pub struct Model {
     pub id: Uuid,
     pub telegram_id: Option<i64>,
     #[sea_orm(unique)]
-    pub email: Option<String>,
+    pub email: String,
     pub display_name: String,
     #[sea_orm(column_type = "BigInteger")]
     pub chip_balance: i64,
@@ -23,5 +22,8 @@ pub struct Model {
     pub password_hash: Option<String>,
     pub registration_order: Option<i64>,
 }
+
+#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+pub enum Relation {}
 
 impl ActiveModelBehavior for ActiveModel {}

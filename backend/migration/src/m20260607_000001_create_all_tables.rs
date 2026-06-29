@@ -34,7 +34,7 @@ impl MigrationTrait for Migration {
                             .not_null()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(user::Column::TelegramId).big_integer())
+                    .col(ColumnDef::new(Alias::new("telegram_id")).big_integer())
                     .col(ColumnDef::new(user::Column::Email).string().unique_key())
                     .col(
                         ColumnDef::new(user::Column::DisplayName)
@@ -42,13 +42,13 @@ impl MigrationTrait for Migration {
                             .not_null(),
                     )
                     .col(
-                        ColumnDef::new(user::Column::ChipBalance)
+                        ColumnDef::new(Alias::new("chip_balance"))
                             .big_integer()
                             .not_null()
                             .default(0),
                     )
                     .col(
-                        ColumnDef::new(user::Column::StreakCount)
+                        ColumnDef::new(Alias::new("streak_count"))
                             .integer()
                             .not_null()
                             .default(0),
@@ -75,7 +75,7 @@ impl MigrationTrait for Migration {
                             .default(Platform::Pwa.to_value()),
                     )
                     .col(ColumnDef::new(user::Column::EmailVerifiedAt).date_time())
-                    .check(Expr::col(user::Column::ChipBalance).gte(0))
+                    .check(Expr::col(Alias::new("chip_balance")).gte(0))
                     .to_owned(),
             )
             .await?;
@@ -620,7 +620,7 @@ impl MigrationTrait for Migration {
                 Index::create()
                     .name("idx_users_telegram_id")
                     .table(user::Entity)
-                    .col(user::Column::TelegramId)
+                    .col(Alias::new("telegram_id"))
                     .to_owned(),
             )
             .await?;
