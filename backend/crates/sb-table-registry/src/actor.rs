@@ -586,6 +586,7 @@ pub struct TableActor {
 }
 
 impl TableActor {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         room_id: TableId,
         table_id: TableId,
@@ -2453,7 +2454,7 @@ impl TableActor {
             started_by: self.created_by,
             winner,
             winning_hand_description: hand_desc,
-            pot_amount: pot,
+            pot_amount: pot.unwrap_or_else(|| sb_shared_types::ChipAmount::new(0).unwrap()),
             chat_id: self.telegram_chat_id.clone(),
         };
 
@@ -2470,6 +2471,7 @@ fn community_cards_to_array(hand: &ActiveHand) -> Option<[sb_shared_types::Card;
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn spawn_table_actor(
     room_id: TableId,
     table_id: TableId,
