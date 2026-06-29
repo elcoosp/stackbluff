@@ -157,6 +157,7 @@ async fn main() {
     spawn_stats_aggregator(stats_event_rx, stats_repo.clone());
 
     // ── REST router ──────────────────────────────────────────────────
+    let badge_repo = Arc::new(sb_db_repos::badge_repo::BadgeRepoImpl::new(db_conn.clone()));
     let rest_router = create_router(
         table_service.clone(),
         table_repo.clone(),
