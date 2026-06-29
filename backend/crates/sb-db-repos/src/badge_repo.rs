@@ -1,5 +1,8 @@
 use async_trait::async_trait;
-use sea_orm::{ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter,
+    sea_query::OnConflict,
+};
 use sb_contracts::repo_api::{BadgeRecord, BadgeRepo};
 use sb_contracts::persistence_error::PersistenceError;
 use sb_shared_types::ids::UserId;
@@ -22,28 +25,27 @@ impl<DB: ConnectionTrait + Send + Sync> BadgeRepo for BadgeRepoImpl<DB> {
         user_id: UserId,
         badge_type: &str,
     ) -> Result<bool, PersistenceError> {
-        let existing = UserBadgeEntity::find()
-            .filter(user_badges::Column::UserId.eq(user_id.as_uuid()))
-            .filter(user_badges::Column::BadgeType.eq(badge_type))
-            .one(&self.db)
-            .await
-            .map_err(|e| PersistenceError::Database(e.to_string()))?;
-
-        if existing.is_some() {
-            return Ok(false);
-        }
-
+        // Use ON CONFLICT DO NOTHING to handle race conditions atomically
         let active = user_badges::ActiveModel {
             user_id: sea_orm::ActiveValue::Set(user_id.as_uuid()),
             badge_type: sea_orm::ActiveValue::Set(badge_type.to_string()),
             awarded_at: sea_orm::ActiveValue::Set(chrono::Utc::now()),
         };
 
-        active
-            .insert(&self.db)
-            .await
-            .map_err(|e| PersistenceError::Database(e.to_string()))?;
-        Ok(true)
+        let result = UserBadgeEntity::insert(active)
+            .on_conflict(
+                OnConflict::columns([user_badges::Column::UserId, user_badges::Column::BadgeType])
+                    .do_nothing()
+                    .to_owned(),
+            )
+            .exec(&self.db)
+            .await;
+
+        match result {
+            Ok(_) => Ok(true),
+            Err(sea_orm::DbErr::RecordNotInserted) => Ok(false),
+            Err(e) => Err(PersistenceError::Database(e.to_string())),
+        }
     }
 
     async fn has_badge(

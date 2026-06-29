@@ -1,11 +1,10 @@
-pub mod badge_award;
 pub mod metrics;
 
 use async_trait::async_trait;
 use chrono::Utc;
 use sb_contracts::{
     HandCountObserver, ReplayCardObserver,
-    repo_api::{ReferralRepository, BadgeRepo},
+    repo_api::{BadgeRepo, ReferralRepository},
     service_api::{HandResult, ReferralStats, ReplayCard, UserService, ViralService},
 };
 use sb_shared_types::{AppError, ChipAmount, TableId, UserId};
@@ -13,10 +12,10 @@ use std::sync::Arc;
 use tracing::{error, info};
 use uuid::Uuid;
 
-pub struct ViralServiceImpl<R: ReferralRepository, U: UserService> {
+pub struct ViralServiceImpl<R: ReferralRepository, U: UserService, B: BadgeRepo = sb_contracts::repo_api::NoopBadgeRepo> {
     repo: Arc<R>,
     user_service: Arc<U>,
-    badge_repo: Option<Arc<dyn BadgeRepo + Send + Sync>>,
+    badge_repo: Arc<B>,
     base_url: String,
 }
 
@@ -25,14 +24,18 @@ impl<R: ReferralRepository, U: UserService> ViralServiceImpl<R, U> {
         Self {
             repo: Arc::new(repo),
             user_service,
-            badge_repo: None,
+            badge_repo: Arc::new(sb_contracts::repo_api::NoopBadgeRepo),
             base_url,
         }
     }
 
-    pub fn with_badge_repo(mut self, badge_repo: Arc<dyn BadgeRepo + Send + Sync>) -> Self {
-        self.badge_repo = Some(badge_repo);
-        self
+    pub fn with_badge_repo<B2: BadgeRepo>(self, badge_repo: B2) -> ViralServiceImpl<R, U, B2> {
+        ViralServiceImpl {
+            repo: self.repo,
+            user_service: self.user_service,
+            badge_repo: Arc::new(badge_repo),
+            base_url: self.base_url,
+        }
     }
 
     async fn award_bonus(&self, user_id: UserId, is_triple: bool) -> Result<(), AppError> {
@@ -107,15 +110,13 @@ impl<R: ReferralRepository, U: UserService> ViralService for ViralServiceImpl<R,
         self.repo.mark_bonus_awarded(user_id).await?;
 
         // Check and award founding member badge
-        if let Some(ref badge_repo) = self.badge_repo {
-            let stats = self.repo.get_referral_stats(referrer_id).await?;
+        if let Ok(stats) = self.repo.get_referral_stats(referrer_id).await {
             if stats.bonus_earned >= 10 {
-                let newly_awarded = badge_repo
-                    .award_badge(referrer_id, "founding_member")
-                    .await
-                    .map_err(|e| AppError::Internal(e.to_string()))?;
-                if newly_awarded {
-                    info!(referrer = %referrer_id, "Awarded founding_member badge");
+                if let Ok(newly_awarded) = self.badge_repo.award_badge(referrer_id, "founding_member").await {
+                    if newly_awarded {
+                        info!(referrer_id = %referrer_id, badge_type = "founding_member", completed = stats.bonus_earned, "Badge awarded");
+                        metrics::counter!("badge_awarded", 1);
+                    }
                 }
             }
         }

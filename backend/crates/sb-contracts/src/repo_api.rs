@@ -252,3 +252,19 @@ pub trait BadgeRepo: Send + Sync {
     async fn has_badge(&self, user_id: UserId, badge_type: &str) -> Result<bool, crate::persistence_error::PersistenceError>;
     async fn list_badges(&self, user_id: UserId) -> Result<Vec<BadgeRecord>, crate::persistence_error::PersistenceError>;
 }
+
+#[derive(Clone)]
+pub struct NoopBadgeRepo;
+
+#[async_trait::async_trait]
+impl BadgeRepo for NoopBadgeRepo {
+    async fn award_badge(&self, _user_id: UserId, _badge_type: &str) -> Result<bool, PersistenceError> {
+        Ok(false)
+    }
+    async fn has_badge(&self, _user_id: UserId, _badge_type: &str) -> Result<bool, PersistenceError> {
+        Ok(false)
+    }
+    async fn list_badges(&self, _user_id: UserId) -> Result<Vec<BadgeRecord>, PersistenceError> {
+        Ok(vec![])
+    }
+}
