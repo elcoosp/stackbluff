@@ -13,6 +13,9 @@ use crate::SharedAuthService;
 use sb_shared_types::errors::AppError;
 use sb_shared_types::request_context::RequestContext;
 
+/// Create a request context for the current request
+/// TODO: Extract from Axum middleware/extensions for proper request tracing
+/// Currently creates a new UUID per request, losing correlation with upstream services
 fn dummy_ctx() -> RequestContext {
     RequestContext::new(Uuid::new_v4(), None)
 }
