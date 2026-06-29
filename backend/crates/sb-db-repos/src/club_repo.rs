@@ -355,6 +355,15 @@ impl ClubRepo for ClubRepoImpl {
 
         Ok(())
     }
+
+    async fn is_club_owner(&self, club_id: ClubId, user_id: UserId) -> Result<bool, ClubError> {
+        let club = clubs::Entity::find_by_id(club_id.as_uuid())
+            .one(&self.db)
+            .await
+            .map_err(|e| ClubError::Database(e.to_string()))?;
+
+        Ok(club.map(|c| c.owner_id == user_id.as_uuid()).unwrap_or(false))
+    }
 }
 
 /// Detect UNIQUE constraint violation from sea_orm::DbErr.

@@ -217,6 +217,8 @@ pub trait ClubRepo: Send + Sync {
     async fn get_user_division(&self, club_id: ClubId, user_id: UserId) -> ClubResult<Option<u32>>;
 
     async fn rebalance_divisions(&self, club_id: ClubId) -> ClubResult<()>;
+
+    async fn is_club_owner(&self, club_id: ClubId, user_id: UserId) -> ClubResult<bool>;
 }
 
 #[async_trait::async_trait]

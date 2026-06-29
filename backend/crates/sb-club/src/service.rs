@@ -1,3 +1,24 @@
+//! Club service implementation with division sharding support.
+//!
+//! # Division Sharding
+//! Clubs with more than 500 members are automatically split into divisions.
+//! Each division maintains its own leaderboard ranked by weekly XP.
+//!
+//! # Performance Optimizations
+//! - Owner authorization checks are cached (5 minute TTL)
+//! - Leaderboard queries are instrumented with Prometheus metrics
+//! - Rebalance operations use single UPDATE with CTE for O(1) DB operations
+//!
+//! # Metrics
+//! - `club_leaderboard_queries_total`: Total leaderboard queries
+//! - `club_leaderboard_query_duration_seconds`: Leaderboard query latency
+//! - `club_rebalance_operations_total`: Total rebalance operations
+//! - `club_rebalance_duration_seconds`: Rebalance operation latency
+//!
+//! # Caching
+//! - Owner cache: 5 minute TTL, 10,000 max entries
+//! - Automatically reduces database load for repeated authorization checks
+
 use sb_contracts::{ClubError, ClubRepo, ClubService, LeaderboardPage};
 use sb_shared_types::{ClubId, RequestContext, UserId};
 use std::sync::Arc;
@@ -52,11 +73,17 @@ fn get_rebalance_duration() -> &'static Histogram {
 
 pub struct ClubServiceImpl {
     repo: Arc<dyn ClubRepo>,
+    owner_cache: moka::future::Cache<(ClubId, UserId), bool>,
 }
 
 impl ClubServiceImpl {
     pub fn new(repo: Arc<dyn ClubRepo>) -> Self {
-        Self { repo }
+        let owner_cache = moka::future::Cache::builder()
+            .max_capacity(10_000)
+            .time_to_live(std::time::Duration::from_secs(300)) // 5 minutes
+            .build();
+
+        Self { repo, owner_cache }
     }
 }
 
@@ -162,18 +189,24 @@ impl ClubService for ClubServiceImpl {
             "rebalance_divisions"
         );
 
-        // Check if user is the club owner
-        let club = self.repo.find_club_by_id(club_id).await?;
-        match club {
-            Some(c) if c.created_by == requested_by => {
-                // User is the owner, proceed
-            }
-            Some(_) => {
-                return Err(ClubError::PermissionDenied);
-            }
+        // Check if user is the club owner using cache
+        let cache_key = (club_id, requested_by);
+        let is_owner = match self.owner_cache.get(&cache_key).await {
+            Some(cached) => cached,
             None => {
+                let is_owner = self.repo.is_club_owner(club_id, requested_by).await?;
+                self.owner_cache.insert(cache_key, is_owner).await;
+                is_owner
+            }
+        };
+
+        if !is_owner {
+            // Check if club exists to return appropriate error
+            let club_exists = self.repo.find_club_by_id(club_id).await?.is_some();
+            if !club_exists {
                 return Err(ClubError::not_found(club_id));
             }
+            return Err(ClubError::PermissionDenied);
         }
 
         let start = std::time::Instant::now();
