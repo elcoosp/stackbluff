@@ -16,7 +16,10 @@ pub fn spawn_stats_aggregator(
         loop {
             match rx.recv().await {
                 Ok(TableEvent::HandCompleted(hand_event)) => {
-                    // Stats updates are currently disabled to avoid trait method errors.
+                    // Stats updates are intentionally disabled because the PlayerStatsRepo trait
+        // does not yet expose the required methods (increment_hand_count, add_winnings,
+        // increment_busts). These should be re-enabled when the trait is extended.
+        // For now, we only log the event.
                     // In a real implementation, these would be uncommented.
                     info!("Hand completed event received (stats aggregator): table_id={}", hand_event.table_id);
                 }
