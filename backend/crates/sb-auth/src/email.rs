@@ -101,3 +101,19 @@ impl EmailService {
         Ok(())
     }
 }
+
+
+#[async_trait::async_trait]
+impl crate::email_service_trait::EmailSender for EmailService {
+    async fn send_verification_email(&self, to: &str, token: &str) -> Result<(), sb_shared_types::AppError> {
+        self.send_verification_email(to, token)
+            .await
+            .map_err(|e| sb_shared_types::AppError::External(e.to_string()))
+    }
+
+    async fn send_password_reset_email(&self, to: &str, token: &str) -> Result<(), sb_shared_types::AppError> {
+        self.send_password_reset_email(to, token)
+            .await
+            .map_err(|e| sb_shared_types::AppError::External(e.to_string()))
+    }
+}
