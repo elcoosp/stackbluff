@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useConsentStore } from '@/stores/consentStore';
 import {
   isPushSupported,
@@ -8,13 +8,21 @@ import {
   resyncSubscription,
 } from '@/services/notifications';
 import { notificationLogger } from '@/lib/logger';
+import { StatusBadge } from './notifications/StatusBadge';
+import { ToggleButton } from './notifications/ToggleButton';
+import { ResyncButton } from './notifications/ResyncButton';
+import { BlockedHelp } from './notifications/BlockedHelp';
+import { UnsupportedMessage } from './notifications/UnsupportedMessage';
+import { MessageFeedback } from './notifications/MessageFeedback';
+import type { PermissionDisplay } from './notifications/types';
 
 const logger = notificationLogger.child({ component: 'NotificationsSettings' });
 
-type PermissionDisplay = 'enabled' | 'blocked' | 'not_set' | 'unsupported';
+// Memoize feature detection
+const pushSupported = typeof window !== 'undefined' && isPushSupported();
 
 function getPermissionDisplay(): PermissionDisplay {
-  if (!isPushSupported()) return 'unsupported';
+  if (!pushSupported) return 'unsupported';
   const permission = getPermissionStatus();
   if (permission === 'granted') return 'enabled';
   if (permission === 'denied') return 'blocked';
@@ -23,7 +31,7 @@ function getPermissionDisplay(): PermissionDisplay {
 
 /**
  * Notifications settings section for the settings page.
- * Uses Tailwind CSS (no inline styles).
+ * Composed of focused sub-components for maintainability.
  */
 export function NotificationsSettings() {
   const [permissionDisplay, setPermissionDisplay] = useState<PermissionDisplay>(
@@ -36,7 +44,7 @@ export function NotificationsSettings() {
 
   const notificationConsent = useConsentStore((s) => s.notificationConsent);
 
-  // Refresh status on mount and when consent changes
+  // Refresh status when consent changes
   useEffect(() => {
     setPermissionDisplay(getPermissionDisplay());
   }, [notificationConsent]);
@@ -45,7 +53,7 @@ export function NotificationsSettings() {
   const isBlocked = permissionDisplay === 'blocked';
   const isUnsupported = permissionDisplay === 'unsupported';
 
-  const handleToggle = async () => {
+  const handleToggle = useCallback(async () => {
     setIsProcessing(true);
     setMessage(null);
 
@@ -63,8 +71,7 @@ export function NotificationsSettings() {
         logger.warn('Cannot enable: blocked in browser settings');
         setMessage({
           type: 'error',
-          text:
-            'Notifications are blocked in your browser settings. Please enable them in your browser and try again.',
+          text: 'Notifications are blocked in your browser settings. Please enable them in your browser and try again.',
         });
       } else {
         logger.info('Enabling notifications');
@@ -86,9 +93,9 @@ export function NotificationsSettings() {
     } finally {
       setIsProcessing(false);
     }
-  };
+  }, [isEnabled, isBlocked]);
 
-  const handleResync = async () => {
+  const handleResync = useCallback(async () => {
     setIsProcessing(true);
     setMessage(null);
 
@@ -106,27 +113,11 @@ export function NotificationsSettings() {
     } finally {
       setIsProcessing(false);
     }
-  };
-
-  const statusLabel = {
-    enabled: '✅ Enabled',
-    blocked: '🚫 Blocked',
-    not_set: '⚪ Not set',
-    unsupported: '⚠️ Not supported',
-  }[permissionDisplay];
-
-  const statusColorClass = {
-    enabled: 'bg-green-500/20 text-green-400',
-    blocked: 'bg-red-500/20 text-red-400',
-    not_set: 'bg-white/10 text-white/80',
-    unsupported: 'bg-yellow-500/20 text-yellow-400',
-  }[permissionDisplay];
+  }, []);
 
   return (
     <section className="p-6 rounded-xl bg-white/5 border border-white/10">
-      <h3 className="text-lg font-semibold mb-2">
-        🔔 Notifications
-      </h3>
+      <h3 className="text-lg font-semibold mb-2">🔔 Notifications</h3>
       <p className="text-sm text-gray-400 mb-4">
         Receive tournament reminders, streak alerts, and game updates.
       </p>
@@ -134,78 +125,27 @@ export function NotificationsSettings() {
       {/* Status */}
       <div className="flex items-center justify-between mb-4">
         <span className="text-sm">Status:</span>
-        <span className={`text-sm font-medium px-3 py-1 rounded-full ${statusColorClass}`}>
-          {statusLabel}
-        </span>
+        <StatusBadge status={permissionDisplay} />
       </div>
 
-      {/* Toggle button */}
-      {!isUnsupported && (
-        <button
-          type="button"
-          onClick={handleToggle}
-          disabled={isProcessing}
-          data-testid="notifications-toggle"
-          className={`w-full px-4 py-3 rounded-lg border-none text-white text-sm font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed mb-3 ${
-            isEnabled
-              ? 'bg-red-500 hover:bg-red-600'
-              : 'bg-blue-500 hover:bg-blue-600'
-          }`}
-        >
-          {isProcessing
-            ? 'Processing...'
-            : isEnabled
-              ? 'Disable Notifications'
-              : isBlocked
-                ? 'Enable in Browser Settings'
-                : 'Enable Notifications'}
-        </button>
-      )}
+      {/* Toggle */}
+      <ToggleButton
+        status={permissionDisplay}
+        isProcessing={isProcessing}
+        onClick={handleToggle}
+      />
 
-      {/* Resync button (only if enabled) */}
+      {/* Resync (only if enabled) */}
       {isEnabled && (
-        <button
-          type="button"
-          onClick={handleResync}
-          disabled={isProcessing}
-          data-testid="notifications-resync"
-          className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-transparent text-white text-sm font-medium hover:bg-white/10 transition-colors disabled:opacity-60 disabled:cursor-not-allowed mb-3"
-        >
-          🔄 Re-sync Subscription
-        </button>
+        <ResyncButton isProcessing={isProcessing} onClick={handleResync} />
       )}
 
-      {/* Blocked help text */}
-      {isBlocked && (
-        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-xs leading-relaxed mb-3">
-          <strong>How to enable:</strong>
-          <br />
-          Click the lock/info icon in your browser&apos;s address bar → Site settings →
-          Notifications → Allow
-        </div>
-      )}
+      {/* Contextual help */}
+      {isBlocked && <BlockedHelp />}
+      {isUnsupported && <UnsupportedMessage />}
 
-      {/* Unsupported message */}
-      {isUnsupported && (
-        <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-xs leading-relaxed">
-          Push notifications are not supported in this browser. Try using Chrome, Firefox, or
-          Safari 16.4+.
-        </div>
-      )}
-
-      {/* Message feedback */}
-      {message && (
-        <div
-          className={`mt-3 p-2.5 px-3 rounded text-xs ${
-            message.type === 'success'
-              ? 'bg-green-500/15 text-green-400'
-              : 'bg-red-500/15 text-red-400'
-          }`}
-          data-testid="notifications-message"
-        >
-          {message.text}
-        </div>
-      )}
+      {/* Feedback */}
+      <MessageFeedback message={message} />
     </section>
   );
 }

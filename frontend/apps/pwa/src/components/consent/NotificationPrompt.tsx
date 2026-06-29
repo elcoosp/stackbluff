@@ -1,31 +1,55 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useConsentStore } from '@/stores/consentStore';
 import { isPushSupported, subscribeToPushNotifications } from '@/services/notifications';
 import { consentLogger } from '@/lib/logger';
+import { useInterval } from '@/hooks/useInterval';
+import { FIRST_HAND_PLAYED_KEY, MAYBE_LATER_COOLDOWN_MS } from '@/lib/consent/constants';
 
 interface NotificationPromptProps {
-  /**
-   * Callback when the user makes a decision.
-   */
   onDecision?: (decision: 'allowed' | 'denied' | 'later') => void;
 }
 
+// Memoize feature detection - it doesn't change during runtime
+const pushSupported = typeof window !== 'undefined' && isPushSupported();
+
 /**
  * Non-intrusive notification permission prompt.
- * Unified visibility: reads directly from consent store.
+ * Uses reactive cooldown: checks every minute if cooldown has expired.
  */
 export function NotificationPrompt({ onDecision }: NotificationPromptProps) {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [, forceUpdate] = useState(0); // Force re-render for cooldown check
 
   const canShowPrompt = useConsentStore((s) => s.canShowNotificationPrompt());
-  const notificationConsent = useConsentStore((s) => s.notificationConsent);
-  const markPromptShown = useConsentStore((s) => s.setNotificationConsent);
   const dismissPrompt = useConsentStore((s) => s.dismissNotificationPrompt);
+  const setNotificationConsent = useConsentStore((s) => s.setNotificationConsent);
+  const notificationPromptDismissedAt = useConsentStore((s) => s.notificationPromptDismissedAt);
 
-  // Unified visibility: only show if store says we can
-  const isVisible = canShowPrompt && isPushSupported();
+  // Check if first hand has been played
+  const hasPlayedFirstHand = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem(FIRST_HAND_PLAYED_KEY) === 'true';
+  }, []);
 
-  // Log visibility changes
+  // Reactive cooldown: check every 60 seconds if we should show the prompt
+  // Only active if there's a dismissed timestamp and cooldown hasn't expired
+  const shouldCheckCooldown = notificationPromptDismissedAt !== null;
+  useInterval(
+    useCallback(() => {
+      if (notificationPromptDismissedAt) {
+        const elapsed = Date.now() - notificationPromptDismissedAt;
+        if (elapsed >= MAYBE_LATER_COOLDOWN_MS) {
+          consentLogger.info('Cooldown expired, re-evaluating prompt visibility');
+          forceUpdate((n) => n + 1);
+        }
+      }
+    }, [notificationPromptDismissedAt]),
+    shouldCheckCooldown ? 60_000 : null // Check every minute, null to disable
+  );
+
+  // Unified visibility: only show if all conditions are met
+  const isVisible = pushSupported && canShowPrompt && hasPlayedFirstHand;
+
   useEffect(() => {
     if (isVisible) {
       consentLogger.info('Notification prompt shown');
@@ -59,13 +83,13 @@ export function NotificationPrompt({ onDecision }: NotificationPromptProps) {
 
   const handleDeny = () => {
     consentLogger.info('User explicitly denied notifications');
-    useConsentStore.getState().setNotificationConsent('denied');
+    setNotificationConsent('denied');
     onDecision?.('denied');
   };
 
   const handleMaybeLater = () => {
     consentLogger.info('User dismissed notification prompt (maybe later)');
-    dismissPrompt(); // Sets cooldown timer (24 hours)
+    dismissPrompt();
     onDecision?.('later');
   };
 

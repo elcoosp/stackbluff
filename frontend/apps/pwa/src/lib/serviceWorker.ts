@@ -4,9 +4,11 @@ const swLogger = logger.child({ component: 'serviceWorker' });
 
 /**
  * Service worker registration and management utilities.
+ * Uses Page Visibility API to pause updates when tab is hidden.
  */
 
 let updateInterval: number | null = null;
+let isTabVisible = true;
 
 /**
  * Register the service worker.
@@ -27,11 +29,34 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
 
     swLogger.info('Service worker registered successfully', { scope: registration.scope });
 
-    // Check for updates periodically (with cleanup)
-    updateInterval = window.setInterval(() => {
-      swLogger.debug('Checking for service worker updates');
-      registration.update();
-    }, 60 * 60 * 1000); // Every hour
+    // Visibility-aware update interval
+    // Only check for updates when tab is visible
+    const startUpdateInterval = () => {
+      if (updateInterval !== null) return;
+
+      updateInterval = window.setInterval(() => {
+        if (isTabVisible) {
+          swLogger.debug('Checking for service worker updates');
+          registration.update();
+        }
+      }, 60 * 60 * 1000); // Every hour
+    };
+
+    // Listen for visibility changes
+    const handleVisibilityChange = () => {
+      isTabVisible = !document.hidden;
+      swLogger.debug('Tab visibility changed', { isTabVisible });
+
+      if (isTabVisible) {
+        // When tab becomes visible, check for updates immediately
+        swLogger.debug('Tab visible, checking for updates');
+        registration.update();
+        startUpdateInterval();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    startUpdateInterval();
 
     // Handle updates
     registration.addEventListener('updatefound', () => {
@@ -43,7 +68,6 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
       newWorker.addEventListener('statechange', () => {
         if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
           swLogger.info('New service worker version available');
-          // Could show an update prompt here
         }
       });
     });
@@ -57,7 +81,7 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
 
 /**
  * Cleanup service worker resources.
- * Should be called when the app unmounts (for SSR/testing).
+ * Should be called when the app unmounts.
  */
 export function cleanupServiceWorker(): void {
   if (updateInterval !== null) {

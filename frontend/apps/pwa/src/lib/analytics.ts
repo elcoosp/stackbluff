@@ -3,7 +3,7 @@ import { analyticsLogger } from '@/lib/logger';
 
 /**
  * Fire an analytics event only if the user has given cookie consent.
- * Wraps Plausible or other analytics providers with consent checking.
+ * Includes user context (userId, sessionId) for segmentation.
  */
 export function trackEvent(
   eventName: string,
@@ -22,13 +22,20 @@ export function trackEvent(
     return;
   }
 
-  analyticsLogger.info('Firing analytics event', { eventName, props: options?.props });
+  // Enrich with user context
+  const enrichedProps = {
+    ...options?.props,
+    // Add user context if available (from auth store or session)
+    ...(typeof window !== 'undefined' && (window as any).__USER_CONTEXT__ || {}),
+  };
+
+  analyticsLogger.info('Firing analytics event', { eventName, props: enrichedProps });
 
   // Plausible analytics
   const plausible = (window as any).plausible;
   if (typeof plausible === 'function') {
     try {
-      plausible(eventName, options);
+      plausible(eventName, { ...options, props: enrichedProps });
       analyticsLogger.debug('Plausible event fired', { eventName });
     } catch (error) {
       analyticsLogger.error('Failed to fire Plausible event', error, { eventName });
@@ -39,7 +46,7 @@ export function trackEvent(
       window.dataLayer = window.dataLayer || [];
       window.dataLayer.push({
         event: eventName,
-        ...options?.props,
+        ...enrichedProps,
       });
       analyticsLogger.debug('DataLayer event pushed', { eventName });
     } catch (error) {
@@ -66,10 +73,25 @@ export function trackPageView(url?: string): void {
   });
 }
 
-// Extend Window type for Plausible
+/**
+ * Set user context for analytics enrichment.
+ * Should be called when user logs in/out.
+ */
+export function setAnalyticsUserContext(context: {
+  userId?: string;
+  sessionId?: string;
+  [key: string]: string | number | boolean | undefined;
+}): void {
+  if (typeof window === 'undefined') return;
+  (window as any).__USER_CONTEXT__ = context;
+  analyticsLogger.info('Analytics user context set', { userId: context.userId });
+}
+
+// Extend Window type
 declare global {
   interface Window {
     plausible?: (eventName: string, options?: any) => void;
     dataLayer?: any[];
+    __USER_CONTEXT__?: Record<string, string | number | boolean>;
   }
 }

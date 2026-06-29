@@ -1,5 +1,6 @@
 import { notificationLogger } from '@/lib/logger';
 import { VAPID_PUBLIC_KEY_ENV } from '@/lib/consent/constants';
+import { urlBase64ToUint8Array } from '@/lib/crypto/base64url';
 
 /**
  * Push subscription management.
@@ -14,13 +15,23 @@ interface PushSubscriptionJSON {
   };
 }
 
-function getVapidPublicKey(): string | null {
-  const key = import.meta.env[VAPID_PUBLIC_KEY_ENV];
+/**
+ * Get the VAPID public key as a Uint8Array suitable for PushManager.subscribe().
+ * Returns null if not configured or invalid.
+ */
+function getVapidPublicKeyAsUint8Array(): Uint8Array | null {
+  const key = import.meta.env[VAPID_PUBLIC_KEY_ENV] as string | undefined;
   if (!key) {
     notificationLogger.warn('VAPID public key not configured', { envVar: VAPID_PUBLIC_KEY_ENV });
     return null;
   }
-  return key;
+
+  try {
+    return urlBase64ToUint8Array(key);
+  } catch (error) {
+    notificationLogger.error('Failed to decode VAPID public key', error, { keyLength: key.length });
+    return null;
+  }
 }
 
 /**
@@ -57,6 +68,7 @@ export async function getExistingSubscription(): Promise<PushSubscription | null
 /**
  * Get or create push subscription.
  * Creates a new subscription if one doesn't exist.
+ * Uses proper VAPID key encoding (Uint8Array, not string).
  */
 export async function getPushSubscription(): Promise<PushSubscription | null> {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
@@ -77,17 +89,17 @@ export async function getPushSubscription(): Promise<PushSubscription | null> {
       return subscription;
     }
 
-    // Create a new subscription
-    const vapidKey = getVapidPublicKey();
-    if (!vapidKey) {
-      notificationLogger.error('Cannot subscribe: VAPID key missing');
+    // Create a new subscription with properly encoded VAPID key
+    const vapidKeyBytes = getVapidPublicKeyAsUint8Array();
+    if (!vapidKeyBytes) {
+      notificationLogger.error('Cannot subscribe: VAPID key missing or invalid');
       return null;
     }
 
     notificationLogger.info('Creating new push subscription');
     subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: vapidKey,
+      applicationServerKey: vapidKeyBytes, // Uint8Array, not string
     });
 
     notificationLogger.info('Push subscription created', {

@@ -8,16 +8,21 @@ const logger = consentLogger.child({ component: 'useGameHandCompletion' });
 
 /**
  * Hook to detect when a user completes their first game hand.
+ * Co-located with TablePage since it's only used there.
  *
- * This monitors the game state and triggers the notification prompt
- * after the first hand completes. Uses the actual game store state
- * to detect hand completion (showdown phase ending).
+ * Monitors the game state via showdownReveal transitions:
+ * - showdownReveal goes from non-null → null (hand ended)
+ * - AND handInProgress goes from true → false (hand fully complete)
+ *
+ * This properly tracks the object lifecycle rather than boolean comparison.
  */
 export function useGameHandCompletion() {
   const activeRoom = useActiveRoom();
   const notificationConsent = useConsentStore((s) => s.notificationConsent);
 
-  const prevShowdownRef = useRef<boolean | undefined>(undefined);
+  // Track previous state using refs
+  const prevShowdownRef = useRef<unknown>(undefined);
+  const prevHandInProgressRef = useRef<boolean | undefined>(undefined);
   const prevRoomIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -27,26 +32,42 @@ export function useGameHandCompletion() {
 
     const currentRoomId = activeRoom.id;
     const currentShowdown = activeRoom.showdownReveal;
+    const currentHandInProgress = activeRoom.handInProgress;
 
     // Reset tracking when room changes
     if (prevRoomIdRef.current !== currentRoomId) {
       logger.debug('Room changed, resetting hand tracking', { roomId: currentRoomId });
       prevShowdownRef.current = currentShowdown;
+      prevHandInProgressRef.current = currentHandInProgress;
       prevRoomIdRef.current = currentRoomId;
       return;
     }
 
-    // Detect hand completion: showdown was true, now it's false/undefined
-    const handJustCompleted =
-      prevShowdownRef.current === true &&
-      (currentShowdown === false || currentShowdown === undefined);
+    // Detect hand completion:
+    // - showdownReveal was non-null (showdown happened) and is now null (cleared)
+    // - OR handInProgress was true and is now false
+    const showdownCleared =
+      prevShowdownRef.current != null &&
+      currentShowdown == null;
+
+    const handEnded =
+      prevHandInProgressRef.current === true &&
+      currentHandInProgress === false;
+
+    const handJustCompleted = showdownCleared || handEnded;
 
     if (handJustCompleted) {
-      logger.info('Hand completion detected');
+      logger.info('Hand completion detected', {
+        showdownCleared,
+        handEnded,
+        roomId: currentRoomId,
+      });
       markFirstHandComplete();
     }
 
+    // Update refs for next comparison
     prevShowdownRef.current = currentShowdown;
+    prevHandInProgressRef.current = currentHandInProgress;
   }, [activeRoom, notificationConsent]);
 }
 
@@ -55,12 +76,10 @@ export function useGameHandCompletion() {
  * This enables the notification prompt to show.
  */
 function markFirstHandComplete(): void {
-  // Check if this is the first hand by looking at localStorage
   const hasPlayedBefore = localStorage.getItem(FIRST_HAND_PLAYED_KEY);
 
   if (!hasPlayedBefore) {
     logger.info('Marking first hand as complete');
     localStorage.setItem(FIRST_HAND_PLAYED_KEY, 'true');
-    // The prompt will show on next render if conditions are met
   }
 }

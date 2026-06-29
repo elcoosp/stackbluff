@@ -7,7 +7,7 @@ import {
 
 /**
  * HTTP transport for notification subscriptions.
- * Uses the shared apiClient with proper authentication.
+ * Uses the shared apiClient (fetch-based) with proper authentication.
  */
 
 interface PushSubscriptionPayload {
