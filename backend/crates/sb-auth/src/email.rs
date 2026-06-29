@@ -2,6 +2,7 @@ use crate::config::AuthConfig;
 use reqwest::Client;
 use serde::Serialize;
 use tracing::{error, info};
+use crate::email_error::EmailError;
 
 #[derive(Clone)]
 pub struct EmailService {
@@ -29,7 +30,7 @@ impl EmailService {
         }
     }
 
-    pub async fn send_verification_email(&self, to: &str, token: &str) -> Result<(), String> {
+    pub async fn send_verification_email(&self, to: &str, token: &str) -> Result<(), EmailError> {
         let verify_url = format!("{}/verify-email?token={}", self.app_base_url, token);
         let html = format!(
             r#"<html><body>
@@ -45,7 +46,7 @@ impl EmailService {
         self.send_email(to, "Verify your email address", html).await
     }
 
-    pub async fn send_password_reset_email(&self, to: &str, token: &str) -> Result<(), String> {
+    pub async fn send_password_reset_email(&self, to: &str, token: &str) -> Result<(), EmailError> {
         let reset_url = format!("{}/reset-password?token={}", self.app_base_url, token);
         let html = format!(
             r#"<html><body>
@@ -61,10 +62,10 @@ impl EmailService {
         self.send_email(to, "Reset your password", html).await
     }
 
-    async fn send_email(&self, to: &str, subject: &str, html: String) -> Result<(), String> {
+    async fn send_email(&self, to: &str, subject: &str, html: String) -> Result<(), EmailError> {
         if self.api_key.is_empty() {
             error!("Resend API key not configured, skipping email send");
-            return Err("Email service not configured".to_string());
+            return Err(EmailError::Config("Resend API key not configured".to_string()));
         }
 
         let email_request = ResendEmailRequest {
@@ -81,8 +82,7 @@ impl EmailService {
             .header("Content-Type", "application/json")
             .json(&email_request)
             .send()
-            .await
-            .map_err(|e| format!("Failed to send email: {}", e))?;
+            .await?;
 
         if !response.status().is_success() {
             let status = response.status();
@@ -91,7 +91,10 @@ impl EmailService {
                 "Resend API error: status={}, error={}",
                 status, error_text
             );
-            return Err(format!("Email send failed with status: {}", status));
+            return Err(EmailError::Api {
+                status: status.as_u16(),
+                message: error_text,
+            });
         }
 
         info!("Email sent successfully to {}", to);
