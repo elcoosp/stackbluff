@@ -93,7 +93,7 @@ impl ClubService for ClubServiceImpl {
         owner_id: UserId,
         request: UpdateClubProSettingsRequest,
     ) -> Result<ClubProSettings, ClubError> {
-        request.validate().map_err(|e| ClubError::validation(e))?;
+        request.validate().map_err(ClubError::validation)?;
 
         let club_owner = self.repo.find_club_owner(club_id).await?;
         if club_owner != owner_id {
