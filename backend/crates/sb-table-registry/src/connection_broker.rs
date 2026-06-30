@@ -141,3 +141,16 @@ mod tests {
     }
 
 }
+impl ConnectionBroker {
+    pub async fn broadcast_to_club(
+        &self,
+        table_ids: Vec<TableId>,
+        message: RoomMessage,
+    ) {
+        for table_id in table_ids {
+            if let Some(tx) = self.room_senders.get(&table_id) {
+                let _ = tx.send(message.clone());
+            }
+        }
+    }
+}
