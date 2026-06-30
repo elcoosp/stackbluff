@@ -303,3 +303,65 @@ fn is_unique_violation(db_err: &sea_orm::DbErr) -> bool {
     let msg = db_err.to_string().to_lowercase();
     msg.contains("unique") || msg.contains("constraint") || msg.contains("duplicate")
 }
+
+#[async_trait]
+impl ClubRepo for ClubRepoImpl {
+    async fn update_club_pro_settings(
+        &self,
+        club_id: ClubId,
+        settings: serde_json::Value,
+    ) -> PersistenceResult<()> {
+        use sb_db_entities::clubs::{ActiveModel, Entity};
+        use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
+
+        let club = Entity::find()
+            .filter(sb_db_entities::clubs::Column::Id.eq(club_id))
+            .one(&self.db)
+            .await
+            .map_err(PersistenceError::from)?;
+
+        let Some(model) = club else {
+            return Err(PersistenceError::NotFound("club".to_string()));
+        };
+
+        let mut active: ActiveModel = model.into();
+        active.pro_settings_json = Set(Some(
+            serde_json::from_value(settings).map_err(|e| PersistenceError::InvalidData(e.to_string()))?
+        ));
+
+        active.update(&self.db).await.map_err(PersistenceError::from)?;
+        Ok(())
+    }
+
+    async fn get_club_pro_settings(
+        &self,
+        club_id: ClubId,
+    ) -> PersistenceResult<Option<serde_json::Value>> {
+        use sb_db_entities::clubs::Entity;
+        use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
+
+        let club = Entity::find()
+            .filter(sb_db_entities::clubs::Column::Id.eq(club_id))
+            .one(&self.db)
+            .await
+            .map_err(PersistenceError::from)?;
+
+        Ok(club.and_then(|c| c.pro_settings_json.map(|s| serde_json::to_value(s).unwrap_or_default())))
+    }
+
+    async fn get_tables_by_club_id(
+        &self,
+        club_id: ClubId,
+    ) -> PersistenceResult<Vec<TableId>> {
+        use sb_db_entities::tables::{Column, Entity};
+        use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
+
+        let tables = Entity::find()
+            .filter(Column::ClubId.eq(Some(club_id)))
+            .all(&self.db)
+            .await
+            .map_err(PersistenceError::from)?;
+
+        Ok(tables.into_iter().map(|t| t.id).collect())
+    }
+}
