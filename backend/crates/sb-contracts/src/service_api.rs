@@ -296,3 +296,36 @@ pub trait MissionApi: Send + Sync + 'static {
     ) -> Result<Mission, AppError>;
     async fn claim_daily_reward(&self, ctx: &RequestContext) -> Result<ClaimResult, AppError>;
 }
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ClubProSettings {
+    pub banner_url: Option<String>,
+    pub chip_preset_id: Option<i32>,
+    pub felt_color: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct UpdateClubSettingsRequest {
+    pub banner_url: Option<String>,
+    pub chip_preset_id: Option<i32>,
+    pub felt_color: Option<String>,
+}
+
+#[async_trait]
+pub trait ClubService: Send + Sync {
+    async fn update_pro_settings(
+        &self,
+        ctx: RequestContext,
+        club_id: ClubId,
+        settings: UpdateClubSettingsRequest,
+    ) -> Result<ClubProSettings, AppError>;
+
+    async fn get_pro_settings(
+        &self,
+        club_id: ClubId,
+    ) -> Result<Option<ClubProSettings>, AppError>;
+
+    async fn is_club_pro_active(
+        &self,
+        user_id: UserId,
+    ) -> Result<bool, AppError>;
+}

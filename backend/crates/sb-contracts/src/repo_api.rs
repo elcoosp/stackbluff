@@ -246,3 +246,22 @@ pub trait ReferralRepository: Send + Sync {
     async fn get_referrer_id(&self, referred_id: UserId) -> PersistenceResult<Option<UserId>>;
 }
 
+
+#[async_trait]
+pub trait ClubRepo: Send + Sync {
+    async fn update_club_pro_settings(
+        &self,
+        club_id: ClubId,
+        settings: serde_json::Value,
+    ) -> PersistenceResult<()>;
+
+    async fn get_club_pro_settings(
+        &self,
+        club_id: ClubId,
+    ) -> PersistenceResult<Option<serde_json::Value>>;
+
+    async fn get_tables_by_club_id(
+        &self,
+        club_id: ClubId,
+    ) -> PersistenceResult<Vec<TableId>>;
+}
