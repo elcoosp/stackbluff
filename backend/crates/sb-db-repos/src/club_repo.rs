@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use chrono::Utc;
-use sb_contracts::ClubError;
 use sb_contracts::repo_api::{Club, ClubRepo, DIVISION_SIZE, LeaderboardEntry, LeaderboardPage, PersistenceError, PersistenceResult};
 use sb_db_entities::{club_leaderboard, club_memberships, clubs};
 use sb_shared_types::{ClubId, UserId};
@@ -18,13 +17,13 @@ pub struct ClubRepoImpl {
 impl ClubRepoImpl {
     pub fn new(db: DatabaseConnection) -> Self {
         Self { db }
-    }
+n    }
 }
 
 #[async_trait]
 impl ClubRepo for ClubRepoImpl {
     async fn find_by_id(&self, club_id: ClubId) -> PersistenceResult<Club> {
-        use sb_db_entities::clubs::{Entity, Model};
+        use sb_db_entities::clubs::Entity;
         use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 
         let model = Entity::find()
@@ -57,11 +56,7 @@ impl ClubRepo for ClubRepoImpl {
 
         active.insert(&self.db).await.map_err(PersistenceError::from)?;
 
-        Ok(Club {
-            id,
-            name: active.name.unwrap(),
-            owner_id: active.owner_id.unwrap(),
-        })
+        Ok(Club { id, name: active.name.unwrap(), owner_id: active.owner_id.unwrap() })
     }
 
     async fn get_leaderboard(
