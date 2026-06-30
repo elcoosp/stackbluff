@@ -5,6 +5,7 @@ use sb_db_entities::user;
 use sea_orm::{ActiveModelTrait, Database, EntityTrait, IntoActiveModel, ModelTrait};
 use sea_orm_migration::migrator::MigratorTrait;
 use uuid::Uuid;
+use sea_orm::Set;
 
 #[tokio::test]
 async fn test_migration_and_basic_ops() {
