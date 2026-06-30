@@ -203,20 +203,20 @@ pub trait ClubService: Send + Sync {
     ) -> Result<(), ClubError>;
     async fn update_pro_settings(
         &self,
-        ctx: RequestContext,
+        ctx: &RequestContext,
         club_id: ClubId,
         settings: UpdateClubSettingsRequest,
-    ) -> Result<ClubProSettings, AppError>;
+    ) -> Result<ClubProSettings, ClubError>;
     
     async fn get_pro_settings(
         &self,
         club_id: ClubId,
-    ) -> Result<Option<ClubProSettings>, AppError>;
+    ) -> Result<Option<ClubProSettings>, ClubError>;
     
     async fn is_club_pro_active(
         &self,
         user_id: UserId,
-    ) -> Result<bool, AppError>;
+    ) -> Result<bool, ClubError>;
 }
 
 // ========== Authentication contracts ==========
