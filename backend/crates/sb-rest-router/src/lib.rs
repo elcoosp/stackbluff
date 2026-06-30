@@ -2,6 +2,8 @@ pub mod club_routes;
 pub mod leaderboard;
 use axum::{
     Router,
+    routing::{get, post, patch},
+    Router,
     extract::{Extension, Path, Query, State},
     http::StatusCode,
     response::Json,
