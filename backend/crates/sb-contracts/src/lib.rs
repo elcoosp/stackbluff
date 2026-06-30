@@ -1,3 +1,5 @@
+Python processing failed for repo_api.rs
+No changes to commit for: fix(contracts): add ClubRepo methods to original repo_api
 pub mod leaderboard;
 pub mod lobby_api;
 
@@ -66,3 +68,5 @@ pub enum TableCommand {
 pub use lobby_api::TableInfo;
 pub mod notification;
 pub mod tournament_api;
+No changes to commit for: fix(migration): clean up duplicate migrations
+=== Reading original files from main ===
