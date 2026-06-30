@@ -1,5 +1,4 @@
 Python processing failed for repo_api.rs
-No changes to commit for: fix(contracts): add ClubRepo methods to original repo_api
 pub mod leaderboard;
 pub mod lobby_api;
 
