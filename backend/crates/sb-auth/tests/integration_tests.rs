@@ -4,7 +4,6 @@
 //! They are marked as ignored by default and can be run with:
 //! `cargo test --test integration_tests -- --ignored`
 
-
 // Integration tests for auth routes
 // These would require setting up a test server with mocked dependencies
 

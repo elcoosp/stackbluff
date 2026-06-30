@@ -16,8 +16,8 @@ use tower_cookies::CookieManagerLayer;
 use tower_http::cors::CorsLayer;
 
 use sb_auth::{
-    AuthServiceImpl, Authenticator, SharedAuthService, config::AuthConfig, routes::auth_router,
-    email::EmailService, email_queue::EmailQueue,
+    AuthServiceImpl, Authenticator, SharedAuthService, config::AuthConfig, email::EmailService,
+    email_queue::EmailQueue, routes::auth_router,
 };
 use sb_contracts::lobby_api::TableRepo;
 use sb_contracts::repo_api::{HandHistoryRepository, UserRepo};
@@ -97,8 +97,7 @@ async fn main() {
     tracing::info!("Email queue initialized");
 
     let auth_impl = Arc::new(
-        AuthServiceImpl::new(user_repo.clone(), auth_config)
-            .with_email_support(email_queue)
+        AuthServiceImpl::new(user_repo.clone(), auth_config).with_email_support(email_queue),
     );
 
     // Spawn rate limiter cleanup task (runs every 5 minutes)

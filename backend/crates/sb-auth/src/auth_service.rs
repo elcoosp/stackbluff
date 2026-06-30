@@ -1,9 +1,9 @@
 use async_trait::async_trait;
+use chrono::Utc;
 use hmac::{Hmac, KeyInit, Mac};
 use sha2::Sha256;
 use std::sync::Arc;
 use std::time::Duration;
-use chrono::Utc;
 use url::form_urlencoded;
 use uuid::Uuid;
 
@@ -11,8 +11,7 @@ use argon2::PasswordHasher;
 
 use crate::config::AuthConfig;
 use crate::email_queue::EmailQueue;
-use crate::jwt::{
-    create_jwt, verify_jwt, verify_verification_token};
+use crate::jwt::{create_jwt, verify_jwt, verify_verification_token};
 use crate::rate_limiter::RateLimiter;
 use sb_contracts::repo_api::{PersistenceError, UserProfile, UserRepo};
 use sb_contracts::service_api::{AuthResult, AuthService, TokenClaims};
@@ -30,10 +29,10 @@ pub struct AuthServiceImpl {
     email_queue: Option<Arc<EmailQueue>>,
     rate_limiter: Arc<RateLimiter>,
     login_rate_limiter: Arc<crate::login_rate_limiter::LoginRateLimiter>,
-    email_verification_service: Option<Arc<crate::email_verification_service::EmailVerificationService>>,
+    email_verification_service:
+        Option<Arc<crate::email_verification_service::EmailVerificationService>>,
     password_reset_service: Option<Arc<crate::password_reset_service::PasswordResetService>>,
 }
-
 
 impl AuthServiceImpl {
     /// Spawn background task to clean up rate limiter entries
@@ -74,7 +73,7 @@ impl AuthServiceImpl {
                 self.config.clone(),
                 email_queue.clone(),
                 self.rate_limiter.clone(),
-            )
+            ),
         ));
 
         self.password_reset_service = Some(Arc::new(
@@ -83,7 +82,7 @@ impl AuthServiceImpl {
                 self.config.clone(),
                 email_queue,
                 self.rate_limiter.clone(),
-            )
+            ),
         ));
 
         self
@@ -213,7 +212,10 @@ impl AuthService for AuthServiceImpl {
             let ctx_clone = ctx.clone();
             let user_id_clone = user_id;
             tokio::spawn(async move {
-                if let Err(e) = service_clone.send_verification_email(&ctx_clone, user_id_clone).await {
+                if let Err(e) = service_clone
+                    .send_verification_email(&ctx_clone, user_id_clone)
+                    .await
+                {
                     tracing::warn!(error = %e, "Failed to send verification email during registration");
                 }
             });
@@ -264,7 +266,8 @@ impl AuthService for AuthServiceImpl {
                 // Perform dummy hash check to maintain consistent timing
                 let dummy_hash = "$argon2id$v=19$m=19456,t=2,p=1$dummy$dummy";
                 if let Ok(h) = argon2::PasswordHash::new(dummy_hash) {
-                    let _ = crate::config::argon2_instance().verify_password(password.as_bytes(), &h);
+                    let _ =
+                        crate::config::argon2_instance().verify_password(password.as_bytes(), &h);
                 }
 
                 self.login_rate_limiter.record_failure(email);
@@ -273,7 +276,9 @@ impl AuthService for AuthServiceImpl {
         };
 
         // Verify password against stored hash
-        let stored_hash = user_with_hash.password_hash.as_deref()
+        let stored_hash = user_with_hash
+            .password_hash
+            .as_deref()
             .ok_or_else(|| AppError::Unauthorized("Invalid email or password".into()))?;
 
         let parsed_hash = argon2::PasswordHash::new(stored_hash)
@@ -344,7 +349,8 @@ impl AuthService for AuthServiceImpl {
         ctx: &RequestContext,
         user_id: UserId,
     ) -> Result<(), AppError> {
-        let service = self.email_verification_service
+        let service = self
+            .email_verification_service
             .as_ref()
             .ok_or_else(|| AppError::Configuration("Email service not configured".into()))?;
         service.send_verification_email(ctx, user_id).await
@@ -372,23 +378,17 @@ impl AuthService for AuthServiceImpl {
         Ok(())
     }
 
-    async fn forgot_password(
-        &self,
-        ctx: &RequestContext,
-        email: &str,
-    ) -> Result<(), AppError> {
-        let service = self.password_reset_service
+    async fn forgot_password(&self, ctx: &RequestContext, email: &str) -> Result<(), AppError> {
+        let service = self
+            .password_reset_service
             .as_ref()
             .ok_or_else(|| AppError::Configuration("Email service not configured".into()))?;
         service.forgot_password(ctx, email).await
     }
 
-    async fn reset_password(
-        &self,
-        token: &str,
-        new_password: &str,
-    ) -> Result<(), AppError> {
-        let service = self.password_reset_service
+    async fn reset_password(&self, token: &str, new_password: &str) -> Result<(), AppError> {
+        let service = self
+            .password_reset_service
             .as_ref()
             .ok_or_else(|| AppError::Configuration("Email service not configured".into()))?;
         service.reset_password(token, new_password).await

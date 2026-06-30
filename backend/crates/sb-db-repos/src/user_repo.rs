@@ -1,6 +1,6 @@
 use crate::commands::DbCommand;
 use sb_contracts::repo_api::{
-    PersistenceError, PersistenceResult, UserCreate, UserWithHash, UserProfile, UserRepository,
+    PersistenceError, PersistenceResult, UserCreate, UserProfile, UserRepository, UserWithHash,
 };
 use sb_shared_types::{RequestContext, UserId};
 use tokio::sync::{mpsc, oneshot};
@@ -169,8 +169,6 @@ impl UserRepository for UserRepoImpl {
         rx.await
             .map_err(|e| PersistenceError::Database(e.to_string()))?
     }
-
-
 
     async fn get_user(&self, ctx: RequestContext, id: UserId) -> PersistenceResult<String> {
         let (tx, rx) = oneshot::channel();

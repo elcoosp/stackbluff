@@ -1,6 +1,6 @@
+use argon2::PasswordHasher;
 use std::sync::Arc;
 use uuid::Uuid;
-use argon2::PasswordHasher;
 
 use crate::config::AuthConfig;
 use crate::email_queue::EmailQueue;
@@ -33,11 +33,7 @@ impl PasswordResetService {
     }
 
     /// Initiate password reset by sending email
-    pub async fn forgot_password(
-        &self,
-        ctx: &RequestContext,
-        email: &str,
-    ) -> Result<(), AppError> {
+    pub async fn forgot_password(&self, ctx: &RequestContext, email: &str) -> Result<(), AppError> {
         let user_id = self
             .user_repo
             .find_by_email(ctx.clone(), email)
@@ -67,17 +63,14 @@ impl PasswordResetService {
         )
         .map_err(|e| AppError::Internal(format!("JWT error: {}", e)))?;
 
-        self.email_queue.queue_password_reset_email(email.to_string(), token);
+        self.email_queue
+            .queue_password_reset_email(email.to_string(), token);
         tracing::info!(user_id = %user_id, "Password reset email queued");
         Ok(())
     }
 
     /// Complete password reset with new password
-    pub async fn reset_password(
-        &self,
-        token: &str,
-        new_password: &str,
-    ) -> Result<(), AppError> {
+    pub async fn reset_password(&self, token: &str, new_password: &str) -> Result<(), AppError> {
         if new_password.len() < 8 {
             return Err(AppError::InvalidInput("Password too short".into()));
         }

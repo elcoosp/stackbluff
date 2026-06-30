@@ -75,7 +75,6 @@ struct MessageResponse {
     message: String,
 }
 
-
 #[derive(Serialize)]
 struct AuthUserResponse {
     id: String,
@@ -250,7 +249,6 @@ async fn me_handler(
         Err(e) => error_response(e),
     }
 }
-
 
 async fn verify_email_handler(
     axum::extract::Query(params): axum::extract::Query<VerifyEmailQuery>,

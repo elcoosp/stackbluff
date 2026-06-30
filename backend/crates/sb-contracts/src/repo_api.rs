@@ -22,7 +22,6 @@ pub struct UserCreate {
     pub platform: String,
 }
 
-
 /// User with password hash for authentication (not exposed in UserProfile)
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct UserWithHash {
@@ -125,7 +124,6 @@ pub trait UserRepository: Send + Sync {
         ctx: RequestContext,
         user_id: UserId,
     ) -> PersistenceResult<bool>;
-
 }
 
 #[async_trait]

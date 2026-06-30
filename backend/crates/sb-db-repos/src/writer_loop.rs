@@ -1,4 +1,4 @@
-use sb_contracts::repo_api::{PersistenceError, UserWithHash, UserProfile};
+use sb_contracts::repo_api::{PersistenceError, UserProfile, UserWithHash};
 use sb_shared_types::UserId;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseConnection, EntityTrait, QueryFilter,
@@ -212,7 +212,9 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                 let current = active.chip_balance.take().unwrap_or(0);
                 let new_balance = current + *delta;
                 active.chip_balance = Set(new_balance);
-                sea_orm::ActiveModelTrait::update(active, conn).await.map_err(map_db_error)?;
+                sea_orm::ActiveModelTrait::update(active, conn)
+                    .await
+                    .map_err(map_db_error)?;
                 Ok(Some(new_balance.to_string()))
             }
             DbCommand::StoreHandHistory {
@@ -354,7 +356,9 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                     .ok_or(PersistenceError::NotFound)?;
                 let mut active: user::ActiveModel = model.into();
                 active.password_hash = Set(Some(new_password_hash.clone()));
-                sea_orm::ActiveModelTrait::update(active, conn).await.map_err(map_db_error)?;
+                sea_orm::ActiveModelTrait::update(active, conn)
+                    .await
+                    .map_err(map_db_error)?;
                 Ok(None)
             }
             DbCommand::UpdatePasswordWithTimestamp {
@@ -373,7 +377,9 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                 let mut active: user::ActiveModel = model.into();
                 active.password_hash = Set(Some(new_password_hash.clone()));
                 active.password_changed_at = Set(Some(chrono::Utc::now()));
-                sea_orm::ActiveModelTrait::update(active, conn).await.map_err(map_db_error)?;
+                sea_orm::ActiveModelTrait::update(active, conn)
+                    .await
+                    .map_err(map_db_error)?;
                 Ok(None)
             }
             DbCommand::IsEmailVerified { user_id, .. } => {
@@ -409,11 +415,10 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                         password_hash: u.password_hash.clone(),
                         platform: u.platform.to_string(),
                     };
-                    serde_json::to_string(&with_hash)
-                        .unwrap_or_else(|e| {
-                            tracing::error!(error = %e, "Failed to serialize UserWithHash");
-                            String::new()
-                        })
+                    serde_json::to_string(&with_hash).unwrap_or_else(|e| {
+                        tracing::error!(error = %e, "Failed to serialize UserWithHash");
+                        String::new()
+                    })
                 }))
             }
         };
@@ -490,7 +495,11 @@ fn respond_ok(cmd: DbCommand, value: Option<String>) {
         }
         DbCommand::FindByEmailWithHash { respond, .. } => {
             let user = value.and_then(|s| {
-                if s.is_empty() { None } else { serde_json::from_str(&s).ok() }
+                if s.is_empty() {
+                    None
+                } else {
+                    serde_json::from_str(&s).ok()
+                }
             });
             let _ = respond.send(Ok(user));
         }

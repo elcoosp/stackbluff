@@ -19,8 +19,9 @@ impl MigrationTrait for Migration {
              SET email_verified_at = created_at
              WHERE platform = 'pwa'
              AND email_verified_at IS NULL
-             AND created_at < datetime('now', '-1 day')"
-        ).await?;
+             AND created_at < datetime('now', '-1 day')",
+        )
+        .await?;
 
         // For Telegram users, they don't need email verification
         // (handled by platform check in payment service)
@@ -36,8 +37,9 @@ impl MigrationTrait for Migration {
             "UPDATE users
              SET email_verified_at = NULL
              WHERE platform = 'pwa'
-             AND email_verified_at = created_at"
-        ).await?;
+             AND email_verified_at = created_at",
+        )
+        .await?;
 
         Ok(())
     }

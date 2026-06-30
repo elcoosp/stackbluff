@@ -88,7 +88,10 @@ pub trait UserService: Send + Sync {
     async fn get_user_name(&self, user_id: UserId) -> Result<String, AppError>;
     async fn get_registration_order(&self, user_id: UserId) -> Result<Option<u64>, AppError>;
     async fn is_email_verified(&self, user_id: UserId) -> Result<bool, AppError>;
-    async fn get_user_profile(&self, user_id: UserId) -> Result<crate::repo_api::UserProfile, AppError>;
+    async fn get_user_profile(
+        &self,
+        user_id: UserId,
+    ) -> Result<crate::repo_api::UserProfile, AppError>;
 }
 
 #[async_trait]
@@ -264,18 +267,9 @@ pub trait AuthService: Send + Sync {
 
     async fn verify_email(&self, token: &str) -> Result<(), AppError>;
 
-    async fn forgot_password(
-        &self,
-        ctx: &RequestContext,
-        email: &str,
-    ) -> Result<(), AppError>;
+    async fn forgot_password(&self, ctx: &RequestContext, email: &str) -> Result<(), AppError>;
 
-    async fn reset_password(
-        &self,
-        token: &str,
-        new_password: &str,
-    ) -> Result<(), AppError>;
-
+    async fn reset_password(&self, token: &str, new_password: &str) -> Result<(), AppError>;
 }
 
 // ── Missions ──────────────────────────────────────────────────────────────

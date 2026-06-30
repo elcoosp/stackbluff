@@ -41,7 +41,10 @@ impl LoginRateLimiter {
         let now = Instant::now();
         let cutoff = now - self.attempt_window;
 
-        let mut entry = self.failed_attempts.entry(email.to_string()).or_insert((0, now));
+        let mut entry = self
+            .failed_attempts
+            .entry(email.to_string())
+            .or_insert((0, now));
         let (count, first_time) = entry.value_mut();
 
         if *first_time < cutoff {

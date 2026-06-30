@@ -1,12 +1,12 @@
 pub mod auth_service;
-pub mod email_verification_service;
-pub mod password_reset_service;
 pub mod email;
-pub mod email_service_trait;
 pub mod email_error;
 pub mod email_queue;
-pub mod rate_limiter;
+pub mod email_service_trait;
+pub mod email_verification_service;
 pub mod login_rate_limiter;
+pub mod password_reset_service;
+pub mod rate_limiter;
 use sb_contracts::service_api::AuthService;
 pub mod config;
 pub mod error;
@@ -19,7 +19,6 @@ pub use auth_service::AuthServiceImpl;
 pub use auth_service::Authenticator; // we'll add this trait in auth_service.rs
 
 pub type SharedAuthService = std::sync::Arc<dyn AuthService + Send + Sync>;
-
 
 #[cfg(test)]
 mod tests;

@@ -10,9 +10,10 @@ impl MigrationTrait for Migration {
         let db = manager.get_connection();
 
         // Try to add column, ignore if it already exists
-        match db.execute_unprepared(
-            "ALTER TABLE users ADD COLUMN password_changed_at TIMESTAMP NULL;"
-        ).await {
+        match db
+            .execute_unprepared("ALTER TABLE users ADD COLUMN password_changed_at TIMESTAMP NULL;")
+            .await
+        {
             Ok(_) => Ok(()),
             Err(e) if e.to_string().contains("duplicate column") => Ok(()),
             Err(e) => Err(e),

@@ -68,12 +68,15 @@ impl RateLimiter {
     }
 }
 
-
 impl RateLimiter {
     /// Spawn a background task that periodically cleans up expired entries
-    pub fn spawn_cleanup(self: std::sync::Arc<Self>, interval_secs: u64) -> tokio::task::JoinHandle<()> {
+    pub fn spawn_cleanup(
+        self: std::sync::Arc<Self>,
+        interval_secs: u64,
+    ) -> tokio::task::JoinHandle<()> {
         tokio::spawn(async move {
-            let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(interval_secs));
+            let mut interval =
+                tokio::time::interval(tokio::time::Duration::from_secs(interval_secs));
             loop {
                 interval.tick().await;
                 self.cleanup();

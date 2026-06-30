@@ -4,14 +4,17 @@ mod tests {
     use crate::email_error::EmailError;
     use crate::jwt::{create_reset_token, create_verification_token, verify_verification_token};
     use crate::rate_limiter::RateLimiter;
-    use sb_contracts::repo_api::{PersistenceError, PersistenceResult, UserCreate, UserWithHash, UserProfile, UserRepository};
+    use sb_contracts::repo_api::{
+        PersistenceError, PersistenceResult, UserCreate, UserProfile, UserRepository, UserWithHash,
+    };
     use sb_shared_types::{RequestContext, UserId};
     use std::sync::Arc;
     use uuid::Uuid;
 
     // Mock UserRepository for testing
     struct MockUserRepo {
-        users: std::sync::Mutex<std::collections::HashMap<UserId, (String, Option<String>, String)>>,
+        users:
+            std::sync::Mutex<std::collections::HashMap<UserId, (String, Option<String>, String)>>,
     }
 
     impl MockUserRepo {
@@ -21,14 +24,27 @@ mod tests {
             }
         }
 
-        fn add_user(&self, id: UserId, email: String, password_hash: Option<String>, platform: String) {
-            self.users.lock().unwrap().insert(id, (email, password_hash, platform));
+        fn add_user(
+            &self,
+            id: UserId,
+            email: String,
+            password_hash: Option<String>,
+            platform: String,
+        ) {
+            self.users
+                .lock()
+                .unwrap()
+                .insert(id, (email, password_hash, platform));
         }
     }
 
     #[async_trait::async_trait]
     impl UserRepository for MockUserRepo {
-        async fn create_user(&self, _ctx: RequestContext, _create: UserCreate) -> PersistenceResult<UserId> {
+        async fn create_user(
+            &self,
+            _ctx: RequestContext,
+            _create: UserCreate,
+        ) -> PersistenceResult<UserId> {
             unimplemented!()
         }
 
@@ -36,7 +52,11 @@ mod tests {
             unimplemented!()
         }
 
-        async fn get_user_profile(&self, _ctx: RequestContext, id: UserId) -> PersistenceResult<UserProfile> {
+        async fn get_user_profile(
+            &self,
+            _ctx: RequestContext,
+            id: UserId,
+        ) -> PersistenceResult<UserProfile> {
             let users = self.users.lock().unwrap();
             if let Some((email, _hash, platform)) = users.get(&id) {
                 Ok(UserProfile {
@@ -52,23 +72,48 @@ mod tests {
             }
         }
 
-        async fn update_chip_balance(&self, _ctx: RequestContext, _user_id: UserId, _delta: i64) -> PersistenceResult<i64> {
+        async fn update_chip_balance(
+            &self,
+            _ctx: RequestContext,
+            _user_id: UserId,
+            _delta: i64,
+        ) -> PersistenceResult<i64> {
             unimplemented!()
         }
 
-        async fn update_chip_balance_with_conn(&self, _conn: &sea_orm::DatabaseConnection, _ctx: RequestContext, _user_id: UserId, _delta: i64) -> PersistenceResult<i64> {
+        async fn update_chip_balance_with_conn(
+            &self,
+            _conn: &sea_orm::DatabaseConnection,
+            _ctx: RequestContext,
+            _user_id: UserId,
+            _delta: i64,
+        ) -> PersistenceResult<i64> {
             unimplemented!()
         }
 
-        async fn find_or_create_by_telegram(&self, _ctx: RequestContext, _tg_id: i64) -> PersistenceResult<UserId> {
+        async fn find_or_create_by_telegram(
+            &self,
+            _ctx: RequestContext,
+            _tg_id: i64,
+        ) -> PersistenceResult<UserId> {
             unimplemented!()
         }
 
-        async fn create_email_user(&self, _ctx: RequestContext, _username: &str, _email: &str, _password_hash: &str) -> PersistenceResult<UserId> {
+        async fn create_email_user(
+            &self,
+            _ctx: RequestContext,
+            _username: &str,
+            _email: &str,
+            _password_hash: &str,
+        ) -> PersistenceResult<UserId> {
             Ok(UserId::new(Uuid::new_v4()))
         }
 
-        async fn find_by_email(&self, _ctx: RequestContext, email: &str) -> PersistenceResult<Option<UserId>> {
+        async fn find_by_email(
+            &self,
+            _ctx: RequestContext,
+            email: &str,
+        ) -> PersistenceResult<Option<UserId>> {
             let users = self.users.lock().unwrap();
             for (id, (e, _, _)) in users.iter() {
                 if e == email {
@@ -78,7 +123,11 @@ mod tests {
             Ok(None)
         }
 
-        async fn find_by_email_with_hash(&self, _ctx: RequestContext, email: &str) -> PersistenceResult<Option<UserWithHash>> {
+        async fn find_by_email_with_hash(
+            &self,
+            _ctx: RequestContext,
+            email: &str,
+        ) -> PersistenceResult<Option<UserWithHash>> {
             let users = self.users.lock().unwrap();
             for (id, (e, hash, platform)) in users.iter() {
                 if e == email {
@@ -92,19 +141,37 @@ mod tests {
             Ok(None)
         }
 
-        async fn mark_email_verified(&self, _ctx: RequestContext, _user_id: UserId) -> PersistenceResult<()> {
+        async fn mark_email_verified(
+            &self,
+            _ctx: RequestContext,
+            _user_id: UserId,
+        ) -> PersistenceResult<()> {
             Ok(())
         }
 
-        async fn update_password(&self, _ctx: RequestContext, _user_id: UserId, _new_password_hash: &str) -> PersistenceResult<()> {
+        async fn update_password(
+            &self,
+            _ctx: RequestContext,
+            _user_id: UserId,
+            _new_password_hash: &str,
+        ) -> PersistenceResult<()> {
             Ok(())
         }
 
-        async fn update_password_with_timestamp(&self, _ctx: RequestContext, _user_id: UserId, _new_password_hash: &str) -> PersistenceResult<()> {
+        async fn update_password_with_timestamp(
+            &self,
+            _ctx: RequestContext,
+            _user_id: UserId,
+            _new_password_hash: &str,
+        ) -> PersistenceResult<()> {
             Ok(())
         }
 
-        async fn is_email_verified(&self, _ctx: RequestContext, _user_id: UserId) -> PersistenceResult<bool> {
+        async fn is_email_verified(
+            &self,
+            _ctx: RequestContext,
+            _user_id: UserId,
+        ) -> PersistenceResult<bool> {
             Ok(false)
         }
     }
@@ -133,7 +200,8 @@ mod tests {
             email,
             config.jwt_secret_str(),
             config.verification_token_ttl_seconds,
-        ).unwrap();
+        )
+        .unwrap();
 
         let claims = verify_verification_token(&token, config.jwt_secret_str()).unwrap();
         assert_eq!(claims.sub, user_id);
@@ -152,7 +220,8 @@ mod tests {
             email,
             config.jwt_secret_str(),
             config.reset_token_ttl_seconds,
-        ).unwrap();
+        )
+        .unwrap();
 
         let claims = verify_verification_token(&token, config.jwt_secret_str()).unwrap();
         assert_eq!(claims.sub, user_id);
@@ -187,8 +256,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_password_verification() {
-        use argon2::PasswordHasher;
         use crate::auth_service::AuthServiceImpl;
+        use argon2::PasswordHasher;
         use sb_contracts::service_api::AuthService;
 
         let config = test_config();
@@ -203,7 +272,12 @@ mod tests {
             .to_string();
 
         // Add user with hash
-        user_repo.add_user(user_id, "test@example.com".to_string(), Some(hash), "pwa".to_string());
+        user_repo.add_user(
+            user_id,
+            "test@example.com".to_string(),
+            Some(hash),
+            "pwa".to_string(),
+        );
 
         let auth_service = AuthServiceImpl::new(user_repo.clone(), config);
 
@@ -213,7 +287,9 @@ mod tests {
         assert!(result.is_ok());
 
         // Test wrong password
-        let result = auth_service.login(&ctx, "test@example.com", "wrongpassword").await;
+        let result = auth_service
+            .login(&ctx, "test@example.com", "wrongpassword")
+            .await;
         assert!(result.is_err());
     }
 
@@ -225,7 +301,12 @@ mod tests {
         let user_id = UserId::new(Uuid::new_v4());
 
         // Add PWA user (not verified)
-        user_repo.add_user(user_id, "test@example.com".to_string(), None, "pwa".to_string());
+        user_repo.add_user(
+            user_id,
+            "test@example.com".to_string(),
+            None,
+            "pwa".to_string(),
+        );
 
         // Mock UserService implementation for payment check
         struct TestUserService {
@@ -234,25 +315,44 @@ mod tests {
 
         #[async_trait::async_trait]
         impl UserService for TestUserService {
-            async fn award_chips(&self, _user_id: UserId, _amount: sb_shared_types::ChipAmount) -> Result<(), sb_shared_types::AppError> {
+            async fn award_chips(
+                &self,
+                _user_id: UserId,
+                _amount: sb_shared_types::ChipAmount,
+            ) -> Result<(), sb_shared_types::AppError> {
                 Ok(())
             }
 
-            async fn get_user_name(&self, _user_id: UserId) -> Result<String, sb_shared_types::AppError> {
+            async fn get_user_name(
+                &self,
+                _user_id: UserId,
+            ) -> Result<String, sb_shared_types::AppError> {
                 Ok("Test".to_string())
             }
 
-            async fn get_registration_order(&self, _user_id: UserId) -> Result<Option<u64>, sb_shared_types::AppError> {
+            async fn get_registration_order(
+                &self,
+                _user_id: UserId,
+            ) -> Result<Option<u64>, sb_shared_types::AppError> {
                 Ok(None)
             }
 
-            async fn is_email_verified(&self, _user_id: UserId) -> Result<bool, sb_shared_types::AppError> {
+            async fn is_email_verified(
+                &self,
+                _user_id: UserId,
+            ) -> Result<bool, sb_shared_types::AppError> {
                 Ok(false)
             }
 
-            async fn get_user_profile(&self, user_id: UserId) -> Result<UserProfile, sb_shared_types::AppError> {
+            async fn get_user_profile(
+                &self,
+                user_id: UserId,
+            ) -> Result<UserProfile, sb_shared_types::AppError> {
                 let ctx = RequestContext::new(Uuid::new_v4(), None);
-                self.repo.get_user_profile(ctx, user_id).await.map_err(|e| sb_shared_types::AppError::Database(e.to_string()))
+                self.repo
+                    .get_user_profile(ctx, user_id)
+                    .await
+                    .map_err(|e| sb_shared_types::AppError::Database(e.to_string()))
             }
         }
 
@@ -272,7 +372,10 @@ mod tests {
         let err = EmailError::Config("test error".to_string());
         assert_eq!(format!("{}", err), "Configuration error: test error");
 
-        let err = EmailError::Api { status: 401, message: "Unauthorized".to_string() };
+        let err = EmailError::Api {
+            status: 401,
+            message: "Unauthorized".to_string(),
+        };
         assert!(format!("{}", err).contains("401"));
     }
 }

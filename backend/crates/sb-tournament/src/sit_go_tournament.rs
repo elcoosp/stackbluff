@@ -11,10 +11,10 @@ use sb_contracts::tournament_api::{
     TournamentConfig, TournamentResult, TournamentStatus, TournamentType,
 };
 use sb_shared_types::{AppError, ChipAmount, PlayerId, TableConfig, TableId, TournamentId, UserId};
-use sb_table_registry::events::TableEvent;
 use sb_table_registry::actor::InternalCommand as TableCommand;
 use sb_table_registry::connection_broker::ConnectionBroker;
 use sb_table_registry::events::HandCompletedEvent;
+use sb_table_registry::events::TableEvent;
 use sb_table_registry::registry::Registry;
 
 use crate::blind_scheduler::BlindScheduler;

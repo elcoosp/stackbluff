@@ -49,7 +49,10 @@ impl EmailVerificationService {
             ));
         }
 
-        let email = profile.email.as_ref().ok_or_else(|| AppError::InvalidInput("User does not have an email address".into()))?;
+        let email = profile
+            .email
+            .as_ref()
+            .ok_or_else(|| AppError::InvalidInput("User does not have an email address".into()))?;
 
         if !self.rate_limiter.check_and_record(email) {
             return Err(AppError::TooManyRequests(
@@ -65,7 +68,8 @@ impl EmailVerificationService {
         )
         .map_err(|e| AppError::Internal(format!("JWT error: {}", e)))?;
 
-        self.email_queue.queue_verification_email(email.clone(), token);
+        self.email_queue
+            .queue_verification_email(email.clone(), token);
         tracing::info!(user_id = %user_id, "Verification email queued");
         Ok(())
     }

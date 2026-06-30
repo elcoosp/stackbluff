@@ -1,8 +1,8 @@
 use crate::config::AuthConfig;
+use crate::email_error::EmailError;
 use reqwest::Client;
 use serde::Serialize;
 use tracing::{error, info};
-use crate::email_error::EmailError;
 
 #[derive(Clone)]
 pub struct EmailService {
@@ -65,7 +65,9 @@ impl EmailService {
     async fn send_email(&self, to: &str, subject: &str, html: String) -> Result<(), EmailError> {
         if self.api_key.is_empty() {
             error!("Resend API key not configured, skipping email send");
-            return Err(EmailError::Config("Resend API key not configured".to_string()));
+            return Err(EmailError::Config(
+                "Resend API key not configured".to_string(),
+            ));
         }
 
         let email_request = ResendEmailRequest {
@@ -87,10 +89,7 @@ impl EmailService {
         if !response.status().is_success() {
             let status = response.status();
             let error_text = response.text().await.unwrap_or_default();
-            error!(
-                "Resend API error: status={}, error={}",
-                status, error_text
-            );
+            error!("Resend API error: status={}, error={}", status, error_text);
             return Err(EmailError::Api {
                 status: status.as_u16(),
                 message: error_text,
@@ -102,16 +101,23 @@ impl EmailService {
     }
 }
 
-
 #[async_trait::async_trait]
 impl crate::email_service_trait::EmailSender for EmailService {
-    async fn send_verification_email(&self, to: &str, token: &str) -> Result<(), sb_shared_types::AppError> {
+    async fn send_verification_email(
+        &self,
+        to: &str,
+        token: &str,
+    ) -> Result<(), sb_shared_types::AppError> {
         self.send_verification_email(to, token)
             .await
             .map_err(|e| sb_shared_types::AppError::External(e.to_string()))
     }
 
-    async fn send_password_reset_email(&self, to: &str, token: &str) -> Result<(), sb_shared_types::AppError> {
+    async fn send_password_reset_email(
+        &self,
+        to: &str,
+        token: &str,
+    ) -> Result<(), sb_shared_types::AppError> {
         self.send_password_reset_email(to, token)
             .await
             .map_err(|e| sb_shared_types::AppError::External(e.to_string()))
