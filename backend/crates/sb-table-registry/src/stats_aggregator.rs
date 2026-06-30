@@ -1,4 +1,4 @@
-use crate::events::HandCompletedEvent;
+use crate::events::TableEvent;
 use sb_contracts::stats_api::PlayerStatsRepo;
 use sb_shared_types::PlayerId;
 use sb_shared_types::player_stats::StatsDelta;
@@ -7,13 +7,19 @@ use std::sync::Arc;
 use tokio::sync::broadcast::Receiver;
 
 pub fn spawn_stats_aggregator(
-    mut event_rx: Receiver<HandCompletedEvent>,
+    mut event_rx: Receiver<TableEvent>,
     stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
 ) {
     tokio::spawn(async move {
         tracing::info!("Player stats aggregator started");
 
         while let Ok(event) = event_rx.recv().await {
+            // Extract HandCompletedEvent from TableEvent
+            let event = match event {
+                TableEvent::HandCompleted(e) => e,
+                TableEvent::TableClosed(_) => continue, // Ignore table closed events
+            };
+
             let mut deltas: HashMap<String, StatsDelta> = HashMap::new();
             let mut player_to_user: HashMap<PlayerId, String> = HashMap::new();
 

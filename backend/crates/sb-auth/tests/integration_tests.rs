@@ -4,8 +4,6 @@
 //! They are marked as ignored by default and can be run with:
 //! `cargo test --test integration_tests -- --ignored`
 
-use axum::http::StatusCode;
-use serde_json::json;
 
 // Integration tests for auth routes
 // These would require setting up a test server with mocked dependencies

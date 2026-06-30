@@ -11,7 +11,7 @@ impl MigrationTrait for Migration {
 
         // Try to add column, ignore if it already exists
         match db.execute_unprepared(
-            "ALTER TABLE users ADD COLUMN email_verified_at TIMESTAMP NULL;"
+            "ALTER TABLE users ADD COLUMN password_changed_at TIMESTAMP NULL;"
         ).await {
             Ok(_) => Ok(()),
             Err(e) if e.to_string().contains("duplicate column") => Ok(()),

@@ -10,7 +10,7 @@ pub struct Model {
     pub id: Uuid,
     pub telegram_id: Option<i64>,
     #[sea_orm(unique)]
-    pub email: String,
+    pub email: Option<String>,
     pub display_name: String,
     #[sea_orm(column_type = "BigInteger")]
     pub chip_balance: i64,

@@ -14,7 +14,7 @@ async fn test_migration_and_basic_ops() {
     let user_active = user::ActiveModel {
         id: sea_orm::ActiveValue::Set(Uuid::now_v7()),
         telegram_id: sea_orm::ActiveValue::Set(Some(123456789)),
-        email: sea_orm::ActiveValue::Set(None),
+        email: sea_orm::ActiveValue::Set("test@example.com".to_string()),
         display_name: sea_orm::ActiveValue::Set("tester".to_string()),
         chip_balance: sea_orm::ActiveValue::Set(1000),
         streak_count: sea_orm::ActiveValue::Set(0),
@@ -22,6 +22,7 @@ async fn test_migration_and_basic_ops() {
         updated_at: sea_orm::ActiveValue::Set(Utc::now()),
         platform: sea_orm::ActiveValue::Set(Platform::Telegram),
         email_verified_at: sea_orm::ActiveValue::Set(None),
+        password_changed_at: sea_orm::ActiveValue::Set(None),
         password_hash: sea_orm::ActiveValue::Set(None),
         registration_order: sea_orm::ActiveValue::Set(None),
     };

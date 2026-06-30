@@ -1,7 +1,7 @@
-use sea_orm::schema::Table;
 use sea_orm_migration::prelude::*;
 
 #[derive(DeriveMigrationName)]
+#[allow(dead_code)]
 pub struct Migration;
 
 #[async_trait::async_trait]

@@ -44,6 +44,8 @@ async fn kick_vote_passes_and_refunds() {
         event_tx,
         stats_repo,
         active_players,
+        UserId::new(uuid::Uuid::nil()),
+        None,
     );
 
     async fn join_player(

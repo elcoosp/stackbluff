@@ -155,7 +155,7 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                 let new_user = user::ActiveModel {
                     id: Set(uuid::Uuid::new_v4()),
                     telegram_id: Set(Some(*telegram_id)),
-                    email: Set(email.clone()),
+                    email: Set(Some(email.clone())),
                     display_name: Set(display_name.clone()),
                     chip_balance: Set(INITIAL_CHIP_BALANCE),
                     streak_count: Set(0),
@@ -188,7 +188,7 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                 let profile = UserProfile {
                     id: UserId::new(model.id),
                     display_name: model.display_name,
-                    email: Some(model.email),
+                    email: model.email,
                     chip_balance: model.chip_balance,
                     email_verified_at: model.email_verified_at,
                     platform: model.platform.to_string(),
@@ -280,7 +280,7 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                     let new_user = user::ActiveModel {
                         id: Set(uuid::Uuid::new_v4()),
                         telegram_id: Set(Some(*tg_id)),
-                        email: Set(format!("telegram_{}@temp.local", tg_id)),
+                        email: Set(Some(format!("telegram_{}@temp.local", tg_id))),
                         display_name: Set(format!("tg_user_{}", tg_id)),
                         chip_balance: Set(INITIAL_CHIP_BALANCE),
                         streak_count: Set(0),
@@ -305,7 +305,7 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                 use sea_orm::Set;
                 let new_user = user::ActiveModel {
                     id: Set(uuid::Uuid::new_v4()),
-                    email: Set(email.clone()),
+                    email: Set(Some(email.clone())),
                     display_name: Set(username.clone()),
                     password_hash: Set(Some(password_hash.clone())),
                     chip_balance: Set(INITIAL_CHIP_BALANCE),

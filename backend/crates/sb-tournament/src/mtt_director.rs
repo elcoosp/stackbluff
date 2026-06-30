@@ -11,6 +11,7 @@ use sb_contracts::tournament_api::{
     TournamentConfig, TournamentResult, TournamentStatus, TournamentType,
 };
 use sb_shared_types::{AppError, ChipAmount, PlayerId, TableConfig, TableId, TournamentId, UserId};
+use sb_table_registry::events::TableEvent;
 use sb_table_registry::actor::InternalCommand as TableCommand;
 use sb_table_registry::connection_broker::ConnectionBroker;
 use sb_table_registry::events::HandCompletedEvent;
@@ -78,7 +79,7 @@ pub struct MttDirector {
     registry: Arc<Registry>,
     broker: Arc<ConnectionBroker>,
     cmd_rx: mpsc::Receiver<MttCommand>,
-    event_rx: tokio::sync::broadcast::Receiver<HandCompletedEvent>,
+    event_rx: tokio::sync::broadcast::Receiver<TableEvent>,
 
     tables: Vec<TableInfo>,
     blind_scheduler: Option<BlindScheduler>,
@@ -102,7 +103,7 @@ impl MttDirector {
         registry: Arc<Registry>,
         broker: Arc<ConnectionBroker>,
         cmd_rx: mpsc::Receiver<MttCommand>,
-        event_rx: tokio::sync::broadcast::Receiver<HandCompletedEvent>,
+        event_rx: tokio::sync::broadcast::Receiver<TableEvent>,
     ) -> Self {
         Self {
             tournament_id,
@@ -136,7 +137,11 @@ impl MttDirector {
                     self.handle_command(cmd).await;
                 }
                 Ok(event) = self.event_rx.recv() => {
-                    self.handle_hand_completed(event).await;
+                    if let TableEvent::HandCompleted(hand_event) = event {
+
+                        self.handle_hand_completed(hand_event).await;
+
+                    }
                 }
                 else => break,
             }
