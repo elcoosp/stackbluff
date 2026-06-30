@@ -22,15 +22,12 @@ impl ClubProSettings {
             "#1a6b42", "#2d7a5a", "#3d8b6b", "#4a9c7a",
             "#5aad8a", "#0f4c3a", "#1e5945", "#2a6650",
         ];
-        if let Some(id) = self.chip_preset_id {
-            if id < 1 || id > 5 { return Err("chip_preset_id must be 1-5"); }
-        }
-        if let Some(ref c) = self.felt_color {
-            if !VALID_COLORS.contains(&c.as_str()) { return Err("invalid felt_color"); }
-        }
-        if let Some(ref u) = self.banner_url {
-            if !u.starts_with("https://") { return Err("banner_url must be HTTPS"); }
-        }
+        if let Some(id) = self.chip_preset_id
+            && !(1..=5).contains(&id) { return Err("chip_preset_id must be 1-5"); }
+        if let Some(ref c) = self.felt_color
+            && !VALID_COLORS.contains(&c.as_str()) { return Err("invalid felt_color"); }
+        if let Some(ref u) = self.banner_url
+            && !u.starts_with("https://") { return Err("banner_url must be HTTPS"); }
         Ok(())
     }
 }
