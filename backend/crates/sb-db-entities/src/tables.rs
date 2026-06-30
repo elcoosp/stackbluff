@@ -2,24 +2,15 @@ use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult)]
-pub struct ClubProSettings {
-    pub banner_url: Option<String>,
-    pub chip_preset_id: Option<i32>,
-    pub felt_color: Option<String>,
-}
-
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize, Deserialize)]
-#[sea_orm(table_name = "clubs")]
+#[sea_orm(table_name = "tables")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: Uuid,
     pub name: String,
-    pub owner_id: Uuid,
+    pub club_id: Option<Uuid>,
     pub created_at: DateTimeWithTimeZone,
     pub updated_at: DateTimeWithTimeZone,
-    #[sea_orm(column_type = "JsonBinary", nullable)]
-    pub pro_settings_json: Option<ClubProSettings>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
