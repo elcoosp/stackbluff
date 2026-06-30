@@ -1,4 +1,4 @@
-use crate::repo_api::ClubProSettings;
+use crate::service_api::ClubProSettings;
 use crate::service_api::HandResult;
 use async_trait::async_trait;
 use sb_shared_types::{TableId, UserId};
