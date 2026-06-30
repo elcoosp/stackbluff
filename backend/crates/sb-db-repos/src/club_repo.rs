@@ -266,7 +266,7 @@ impl ClubRepo for ClubRepoImpl {
             .map_err(|e| ClubError::Database(e.to_string()))?
             .ok_or(ClubError::NotFound)?;
         let mut active: clubs::ActiveModel = club.clone().into();
-        let mut current = club.pro_settings_json.clone().unwrap_or_else(|| sb_db_entities::clubs::ClubProSettings { custom_banner: None, chip_design_preset: None, felt_color: None });
+        let mut current = club.pro_settings_json.clone().unwrap_or(sb_db_entities::clubs::ClubProSettings { custom_banner: None, chip_design_preset: None, felt_color: None });
         if settings.banner_url.is_some() {
             current.custom_banner = settings.banner_url;
         }
