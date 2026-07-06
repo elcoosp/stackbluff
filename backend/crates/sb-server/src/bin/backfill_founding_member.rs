@@ -1,19 +1,18 @@
-use sea_orm::{Database, EntityTrait, QueryFilter, ColumnTrait, PaginatorTrait};
-use sb_db_entities::{referral, user_badges, users};
-use sb_db_repos::badge_repo::BadgeRepoImpl;
 use sb_contracts::repo_api::BadgeRepo;
+use sb_db_entities::{referral, user}; // changed users -> user
+use sb_db_repos::badge_repo::BadgeRepoImpl;
+use sea_orm::{ColumnTrait, Database, EntityTrait, PaginatorTrait, QueryFilter};
 
 const FOUNDING_MEMBER_THRESHOLD: i64 = 10;
 const COMPLETED_REFERRAL_HANDS: i32 = 5;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let database_url = std::env::var("DATABASE_URL")
-        .expect("DATABASE_URL must be set");
+    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
 
     let db = Database::connect(&database_url).await?;
 
-    let all_users = users::Entity::find().all(&db).await?;
+    let all_users = user::Entity::find().all(&db).await?; // changed users -> user
 
     for user in all_users {
         let count: u64 = referral::Entity::find()
@@ -24,9 +23,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .await?;
 
         if count >= FOUNDING_MEMBER_THRESHOLD as u64 {
-            let badge_repo = BadgeRepoImpl::new(&db);
+            let badge_repo = BadgeRepoImpl::new(db.clone()); // removed &, use clone
             let newly_awarded = badge_repo
-                .award_badge(sb_shared_types::ids::UserId::new(user.id), "founding_member")
+                .award_badge(
+                    sb_shared_types::ids::UserId::new(user.id),
+                    "founding_member",
+                )
                 .await?;
 
             if newly_awarded {

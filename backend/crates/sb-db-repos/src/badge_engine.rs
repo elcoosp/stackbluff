@@ -1,8 +1,9 @@
 use async_trait::async_trait;
-use sea_orm::DatabaseTransaction;
 use sb_contracts::badge_repo_api::{BadgeEngine, BadgeRepo, BadgeRepoError, BadgeType};
+use sb_contracts::persistence_error::PersistenceError; // add this import
 use sb_contracts::repo_api::ReferralRepository;
 use sb_shared_types::ids::UserId;
+use sea_orm::DatabaseTransaction;
 use std::sync::Arc;
 use tracing::{info, instrument};
 
@@ -13,7 +14,10 @@ pub struct BadgeEngineImpl<R, B> {
 
 impl<R, B> BadgeEngineImpl<R, B> {
     pub fn new(referral_repo: Arc<R>, badge_repo: Arc<B>) -> Self {
-        Self { referral_repo, badge_repo }
+        Self {
+            referral_repo,
+            badge_repo,
+        }
     }
 }
 
@@ -33,7 +37,7 @@ where
             .referral_repo
             .count_completed_referrals(txn, referrer_id)
             .await
-            .map_err(|e| BadgeRepoError::Transaction(e.to_string()))?;
+            .map_err(|e: PersistenceError| BadgeRepoError::Transaction(e.to_string()))?; // explicit type
 
         if count < 10 {
             return Ok(false);

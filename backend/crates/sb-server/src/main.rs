@@ -14,7 +14,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tower_cookies::CookieManagerLayer;
 use tower_http::cors::CorsLayer;
-use uuid::Uuid; // added for nil UUID
+use uuid::Uuid;
 
 use sb_auth::{
     AuthServiceImpl, Authenticator, SharedAuthService, config::AuthConfig, routes::auth_router,
@@ -32,7 +32,7 @@ use sb_db_repos::user_repo::UserRepoImpl;
 use sb_rest_router::create_router;
 use sb_rest_router::player_stats::player_stats_routes;
 use sb_rest_router::tournament_routes::{self, TournamentState};
-use sb_shared_types::{GameVariant, StakeLevel, TableConfig, TournamentId, UserId}; // added UserId
+use sb_shared_types::{GameVariant, StakeLevel, TableConfig, TournamentId, UserId};
 use sb_table_registry::buy_in_limits_for_stake;
 use sb_table_registry::registry::Registry;
 use sb_table_registry::spawn_history_recorder;
@@ -152,24 +152,23 @@ async fn main() {
         HandHistoryRepoImpl::new(writer_handle.sender.clone(), db.clone()),
     );
 
-    // spawn_history_recorder expects Receiver<TableEvent> – we pass that directly
     let event_rx = registry.event_sender().subscribe();
     spawn_history_recorder(event_rx, hand_history_repo.clone());
 
     spawn_hand_history_cleanup(db.clone()).await;
 
-    // spawn_stats_aggregator now expects Receiver<TableEvent> – we pass directly
     let stats_event_rx = registry.event_sender().subscribe();
     spawn_stats_aggregator(stats_event_rx, stats_repo.clone());
 
     // ── REST router ──────────────────────────────────────────────────
-    let badge_repo = Arc::new(sb_db_repos::badge_repo::BadgeRepoImpl::new(db_conn.clone()));
+    let badge_repo = Arc::new(sb_db_repos::badge_repo::BadgeRepoImpl::new(db.clone()));
     let rest_router = create_router(
         table_service.clone(),
         table_repo.clone(),
         registry.clone(),
         hand_history_repo.clone(),
         leaderboard_repo.clone(),
+        badge_repo,
     )
     .merge(player_stats_routes(stats_repo.clone(), user_repo.clone()));
 
@@ -268,7 +267,7 @@ async fn load_existing_tournaments(
 
     tracing::info!(count = records.len(), "Loading active tournaments");
 
-    let system_user = UserId::new(Uuid::nil()); // default creator for restored tournaments
+    let system_user = UserId::new(Uuid::nil());
 
     for record in records {
         let tournament_id = TournamentId::new(record.id);
@@ -290,8 +289,8 @@ async fn load_existing_tournaments(
                     state.broker.clone(),
                     cmd_rx,
                     event_rx,
-                    system_user, // created_by
-                    None,        // chat_id
+                    system_user,
+                    None,
                 );
                 tokio::spawn(actor.run());
                 state
@@ -315,8 +314,8 @@ async fn load_existing_tournaments(
                     state.broker.clone(),
                     cmd_rx,
                     event_rx,
-                    system_user, // created_by
-                    None,        // chat_id
+                    system_user,
+                    None,
                 );
                 tokio::spawn(actor.run());
                 state
@@ -363,29 +362,41 @@ fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
     )
 }
 
-
-use tokio_cron_scheduler::{JobScheduler, Job};
-
+// ── GDPR scheduler (if needed, but it's not used in main) ──
+// I'll keep it as a separate function; you can call it if you want.
+#[allow(dead_code)]
 async fn start_gdpr_job(state: std::sync::Arc<sb_rest_router::AppState>) {
+    use tokio_cron_scheduler::{Job, JobScheduler};
     let sched = JobScheduler::new().await.unwrap();
-    sched.add(Job::new_async("0 0 2 * * *", move |_uuid, _l| {
-        let state = state.clone();
-        Box::pin(async move {
-            tracing::info!("Running daily GDPR deletion job...");
-            if let Ok(pending) = state.gdpr_repo.get_pending_deletions(30).await {
-                for req in pending {
-                    if let Err(e) = state.gdpr_repo.anonymize_user(req.user_id).await {
-                        tracing::error!("Failed to anonymize user {}: {:?}", req.user_id, e);
-                        continue;
+    sched
+        .add(
+            Job::new_async("0 0 2 * * *", move |_uuid, _l| {
+                let state = state.clone();
+                Box::pin(async move {
+                    tracing::info!("Running daily GDPR deletion job...");
+                    if let Ok(pending) = state.gdpr_repo.get_pending_deletions(30).await {
+                        for req in pending {
+                            if let Err(e) = state.gdpr_repo.anonymize_user(req.user_id).await {
+                                tracing::error!(
+                                    "Failed to anonymize user {}: {:?}",
+                                    req.user_id,
+                                    e
+                                );
+                                continue;
+                            }
+                            let _ = state.gdpr_repo.mark_deletion_completed(req.user_id).await;
+                        }
                     }
-                    let _ = state.gdpr_repo.mark_deletion_completed(req.user_id).await;
-                }
-            }
-        })
-    }).unwrap()).await.unwrap();
+                })
+            })
+            .unwrap(),
+        )
+        .await
+        .unwrap();
     sched.start().await.unwrap();
 }
 
+#[allow(dead_code)]
 pub fn spawn_gdpr_scheduler(state: std::sync::Arc<sb_rest_router::AppState>) {
     tokio::spawn(start_gdpr_job(state));
 }
