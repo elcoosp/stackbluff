@@ -54,6 +54,32 @@ mod hand_archive;
 mod r2_storage;
 mod season_card_generator;
 
+async fn reschedule_tournament_reminders(
+    repo: std::sync::Arc<dyn sb_contracts::tournament_api::TournamentRepo>,
+    notification_service: std::sync::Arc<dyn sb_contracts::notification::NotificationService>,
+    bot_handler: Option<std::sync::Arc<dyn sb_contracts::notification_api::ClubNotifier>>,
+    app_base_url: String,
+) {
+    use sb_contracts::tournament_api::TournamentStatus;
+    use chrono::Utc;
+    let tournaments = match repo.list_tournaments(None).await {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::error!("Failed to list tournaments for reminders: {:?}", e);
+            return;
+        }
+    };
+    let now = Utc::now();
+    for tournament in &tournaments {
+        if tournament.status == TournamentStatus::Registering
+            && let Some(start) = tournament.config.scheduled_start
+            && start > now
+        {
+            sb_tournament::reminders::schedule_reminders(tournament.id, start, repo.clone(), notification_service.clone(), bot_handler.clone(), app_base_url.clone());
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() {
     dotenvy::dotenv().expect("Failed to load .env");
@@ -178,16 +204,30 @@ async fn main() {
     // ── Tournament system ────────────────────────────────────────────
     let tournament_repo = Arc::new(TournamentRepoImpl::new(db.clone()));
     let broker = Arc::new(sb_table_registry::connection_broker::ConnectionBroker::new());
-    
+
+    // ── Notification service ────────────────────────────────────────
+    #[cfg(feature = "test-stubs")]
+    let in_memory_notif = Arc::new(test_utils::notification_service::InMemoryNotificationService::new());
+    #[cfg(feature = "test-stubs")]
+    let notification_service: Arc<dyn sb_contracts::notification::NotificationService> = in_memory_notif.clone();
+    #[cfg(not(feature = "test-stubs"))]
+    let notification_service: Arc<dyn sb_contracts::notification::NotificationService> =
+        panic!("Production notification service not implemented");
+    let bot_handler: Option<Arc<dyn sb_contracts::notification_api::ClubNotifier>> = Some(bot_state.clone());
+    let app_base_url = std::env::var("APP_BASE_URL").unwrap_or_else(|_| "https://app.stackbluff.com".to_string());
+
     // ── Club system ────────────────────────────────────────────────
     let club_repo: Arc<dyn sb_contracts::ClubRepo> = Arc::new(sb_db_repos::club_repo::ClubRepoImpl::new(db.clone()));
     let _club_service: Arc<dyn sb_contracts::ClubService> = Arc::new(sb_club::ClubServiceImpl::new(club_repo.clone()));
 
-let mut tournament_service_impl = TournamentServiceImpl::new(
+    let mut tournament_service_impl = TournamentServiceImpl::new(
         tournament_repo.clone(),
         user_repo.clone(),
         registry.clone(),
         broker.clone(),
+        notification_service.clone(),
+        bot_handler.clone(),
+        app_base_url.clone(),
     );
     tournament_service_impl.set_club_repo(club_repo.clone());
     let tournament_service = Arc::new(tournament_service_impl);
@@ -262,6 +302,9 @@ let mut tournament_service_impl = TournamentServiceImpl::new(
             eprintln!("Scheduler error: {e}");
         }
     });
+
+    reschedule_tournament_reminders(tournament_repo.clone(), notification_service.clone(), bot_handler.clone(), app_base_url.clone()).await;
+
     // Season end background processor (MVP - no notifications)
     let season_processor = std::sync::Arc::new(season_card_generator::SeasonCardGenerator::new(
         db.clone(),
@@ -367,14 +410,14 @@ async fn load_existing_tournaments(
 fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
     let table_service: Arc<dyn sb_contracts::service_api::TableService> =
         Arc::new(InMemoryTableService::new());
-    let notification_service: Arc<dyn sb_contracts::notification_api::NotificationService> =
+    let notification_api_service: Arc<dyn sb_contracts::notification_api::NotificationService> =
         Arc::new(InMemoryNotificationService::new());
     let user_resolution: Arc<dyn sb_contracts::user_resolution::UserResolutionService> =
         Arc::new(InMemoryUserResolutionService::new());
 
     Arc::new(sb_bot_handler::BotState::new(
         table_service,
-        notification_service,
+        notification_api_service,
         user_resolution,
         std::env::var("TELEGRAM_BOT_TOKEN").unwrap_or_default(),
         std::env::var("MINI_APP_URL").unwrap_or_else(|_| "http://localhost:5173/".to_string()),

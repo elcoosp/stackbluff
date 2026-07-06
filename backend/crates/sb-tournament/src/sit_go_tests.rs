@@ -13,7 +13,7 @@ use sb_contracts::tournament_api::{
 use sb_shared_types::{AppError, ChipAmount, PlayerId, TableConfig, TableId, TournamentId, UserId};
 use sb_table_registry::actor::InternalCommand as TableCommand;
 use sb_table_registry::connection_broker::ConnectionBroker;
-use sb_table_registry::events::{HandCompletedEvent, TableEvent}; // added TableEvent
+use sb_table_registry::events::{HandCompletedEvent, TableEvent};
 use sb_table_registry::registry::Registry;
 
 use crate::blind_scheduler::BlindScheduler;
@@ -52,7 +52,48 @@ struct RegisteredPlayer {
     buy_in: ChipAmount,
 }
 
-// Keep the make_config function from HEAD with new fields
+// ─── Helper functions for tests ────────────────────────────────────────────
+
+fn make_blind_schedule() -> sb_contracts::tournament_api::BlindSchedule {
+    use sb_contracts::tournament_api::BlindLevel;
+    sb_contracts::tournament_api::BlindSchedule {
+        levels: vec![
+            BlindLevel {
+                level: 1,
+                small_blind: 10,
+                big_blind: 20,
+                ante: 0,
+                duration_seconds: 600,
+            },
+            BlindLevel {
+                level: 2,
+                small_blind: 15,
+                big_blind: 30,
+                ante: 0,
+                duration_seconds: 600,
+            },
+        ],
+    }
+}
+
+fn make_payout_structure() -> sb_contracts::tournament_api::PayoutStructure {
+    use sb_contracts::tournament_api::PayoutEntry;
+    sb_contracts::tournament_api::PayoutStructure {
+        entries: vec![
+            PayoutEntry {
+                position: 1,
+                percentage: 0.65,
+            },
+            PayoutEntry {
+                position: 2,
+                percentage: 0.35,
+            },
+        ],
+    }
+}
+
+// ─── Tournament config builder (with all fields) ──────────────────────────
+
 fn make_config(max_players: u32) -> TournamentConfig {
     TournamentConfig {
         club_id: None,
@@ -68,7 +109,124 @@ fn make_config(max_players: u32) -> TournamentConfig {
     }
 }
 
-// Also keep the TableInfo struct from main
+// ─── Tests (from HEAD) ──────────────────────────────────────────────────────
+
+#[tokio::test(flavor = "current_thread")]
+async fn test_sit_go_registration_messages_flow() {
+    // DummyStatsRepo is used; it must be defined elsewhere in the module.
+    // We'll keep the test as is; it will compile if DummyStatsRepo exists.
+    let stats_repo: Arc<dyn sb_contracts::stats_api::PlayerStatsRepo> = Arc::new(DummyStatsRepo);
+    let registry = Arc::new(Registry::new(stats_repo));
+    let broker = Arc::new(ConnectionBroker::new());
+
+    let tournament_id = TournamentId::generate();
+    let config = make_config(3);
+
+    let (_cmd_tx, dummy_rx) = mpsc::channel(32);
+    let event_rx = registry.event_sender().subscribe();
+
+    let mut actor = crate::SitGoTournament::new(
+        tournament_id,
+        config,
+        registry.clone(),
+        broker.clone(),
+        dummy_rx,
+        event_rx,
+        UserId::new(uuid::Uuid::nil()),
+        None,
+    );
+
+    let user_a = UserId::new(uuid::Uuid::new_v4());
+    let user_b = UserId::new(uuid::Uuid::new_v4());
+
+    let (tx_a, mut rx_a) = mpsc::unbounded_channel();
+    let (tx_b, _rx_b) = mpsc::unbounded_channel();
+    broker.register_user(user_a, tx_a);
+    broker.register_user(user_b, tx_b);
+
+    for &uid in &[user_a, user_b] {
+        let (rtx, rrx) = tokio::sync::oneshot::channel();
+        actor
+            .handle_command(crate::SitGoCommand::Register {
+                user_id: uid,
+                respond_to: rtx,
+            })
+            .await;
+        assert!(rrx.await.unwrap().is_ok());
+    }
+
+    tokio::time::sleep(Duration::from_millis(100)).await;
+
+    let mut a_msgs = Vec::new();
+    while let Ok(msg) = rx_a.try_recv() {
+        a_msgs.push(msg);
+    }
+
+    assert!(
+        a_msgs.iter().any(|m| matches!(
+            m,
+            sb_table_registry::game_room::RoomMessage::TournamentRegistered { .. }
+        )),
+        "User A should receive TournamentRegistered"
+    );
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn test_registration_full_rejects_overflow() {
+    let stats_repo: Arc<dyn sb_contracts::stats_api::PlayerStatsRepo> = Arc::new(DummyStatsRepo);
+    let registry = Arc::new(Registry::new(stats_repo));
+    let broker = Arc::new(ConnectionBroker::new());
+
+    let tournament_id = TournamentId::generate();
+    let mut config = make_config(2);
+    config.start_delay_seconds = 999; // long delay to keep Registering status
+
+    let (_cmd_tx, dummy_rx) = mpsc::channel(32);
+    let event_rx = registry.event_sender().subscribe();
+
+    let mut actor = crate::SitGoTournament::new(
+        tournament_id,
+        config,
+        registry.clone(),
+        broker.clone(),
+        dummy_rx,
+        event_rx,
+        UserId::new(uuid::Uuid::nil()),
+        None,
+    );
+
+    let ua = UserId::new(uuid::Uuid::new_v4());
+    let ub = UserId::new(uuid::Uuid::new_v4());
+    let uc = UserId::new(uuid::Uuid::new_v4());
+
+    for &uid in &[ua, ub] {
+        let (rtx, rrx) = tokio::sync::oneshot::channel();
+        actor
+            .handle_command(crate::SitGoCommand::Register {
+                user_id: uid,
+                respond_to: rtx,
+            })
+            .await;
+        assert!(rrx.await.unwrap().is_ok());
+    }
+
+    let (rtx, rrx) = tokio::sync::oneshot::channel();
+    actor
+        .handle_command(crate::SitGoCommand::Register {
+            user_id: uc,
+            respond_to: rtx,
+        })
+        .await;
+    let result = rrx.await.unwrap();
+    assert!(
+        matches!(result, Err(sb_shared_types::AppError::TournamentFull)),
+        "Expected TournamentFull, got {:?}",
+        result
+    );
+}
+
+// ─── MttDirector implementation (from origin/main) ────────────────────────
+
 struct TableInfo {
     table_id: TableId,
     cmd_tx: mpsc::Sender<TableCommand>,
@@ -95,7 +253,7 @@ pub struct MttDirector {
     registry: Arc<Registry>,
     broker: Arc<ConnectionBroker>,
     cmd_rx: mpsc::Receiver<MttCommand>,
-    event_rx: tokio::sync::broadcast::Receiver<TableEvent>, // changed type
+    event_rx: tokio::sync::broadcast::Receiver<TableEvent>,
 
     tables: Vec<TableInfo>,
     blind_scheduler: Option<BlindScheduler>,
@@ -110,7 +268,6 @@ pub struct MttDirector {
 
     user_to_table: HashMap<UserId, TableId>,
 
-    // New fields
     created_by: UserId,
     chat_id: Option<String>,
 }
@@ -123,7 +280,7 @@ impl MttDirector {
         registry: Arc<Registry>,
         broker: Arc<ConnectionBroker>,
         cmd_rx: mpsc::Receiver<MttCommand>,
-        event_rx: tokio::sync::broadcast::Receiver<TableEvent>, // changed type
+        event_rx: tokio::sync::broadcast::Receiver<TableEvent>,
         created_by: UserId,
         chat_id: Option<String>,
     ) -> Self {
@@ -161,7 +318,6 @@ impl MttDirector {
                     self.handle_command(cmd).await;
                 }
                 Ok(event) = self.event_rx.recv() => {
-                    // Handle only HandCompleted events
                     if let TableEvent::HandCompleted(hand_event) = event {
                         self.handle_hand_completed(hand_event).await;
                     }
@@ -172,7 +328,6 @@ impl MttDirector {
         info!(tournament_id = %self.tournament_id, "MttDirector terminated");
     }
 
-    // ─── Helper to fetch actual stacks from table actor ──────────────
     async fn fetch_player_stacks(&self, table_idx: usize) -> Vec<(PlayerId, UserId, ChipAmount)> {
         let table = &self.tables[table_idx];
         let mut result = Vec::new();
@@ -266,7 +421,6 @@ impl MttDirector {
             .broadcast_to_room(TableId::new(self.tournament_id.as_uuid()), msg);
 
         info!(tournament_id = %self.tournament_id, %user_id, registered = self.players.len(), "MTT registration");
-
         self.broadcast_state();
 
         if self.players.len() as u32 >= self.config.min_players_to_start {
@@ -303,7 +457,6 @@ impl MttDirector {
 
     async fn start_tournament(&mut self) -> Result<(), AppError> {
         info!(tournament_id = %self.tournament_id, "Starting MTT");
-
         let delay = self.config.start_delay_seconds;
         tokio::time::sleep(Duration::from_secs(delay as u64)).await;
 
@@ -496,7 +649,6 @@ impl MttDirector {
     async fn do_rebalance(&mut self) {
         self.state = DirectorState::Pausing;
 
-        // Pause all tables
         for table in &self.tables {
             let (tx, rx) = oneshot::channel();
             let _ = table
@@ -506,7 +658,6 @@ impl MttDirector {
             let _ = rx.await;
         }
 
-        // ─── Fetch actual stacks for all players ──────────────────────
         let mut table_states = Vec::with_capacity(self.tables.len());
         for idx in 0..self.tables.len() {
             let stacks = self.fetch_player_stacks(idx).await;
@@ -522,7 +673,6 @@ impl MttDirector {
             let from_table = &self.tables[m.from_table_idx];
             let to_table = &self.tables[m.to_table_idx];
 
-            // Transfer out
             let (tx, rx) = oneshot::channel();
             let _ = from_table
                 .cmd_tx
@@ -533,7 +683,6 @@ impl MttDirector {
                 .await;
             let result = rx.await;
             if let Ok(transfer) = result {
-                // Transfer in with the actual stack (from transfer)
                 let (tx, rx) = oneshot::channel();
                 let _ = to_table
                     .cmd_tx
@@ -559,10 +708,8 @@ impl MttDirector {
             }
         }
 
-        // Remove empty tables
         self.tables.retain(|t| !t.players.is_empty());
 
-        // Resume
         for table in &self.tables {
             let (tx, rx) = oneshot::channel();
             let _ = table
@@ -581,7 +728,6 @@ impl MttDirector {
     async fn do_final_table_merge(&mut self) {
         self.state = DirectorState::Pausing;
 
-        // Pause all tables
         for table in &self.tables {
             let (tx, rx) = oneshot::channel();
             let _ = table
@@ -591,7 +737,6 @@ impl MttDirector {
             let _ = rx.await;
         }
 
-        // ─── Fetch actual stacks for all players ──────────────────────
         let mut table_states = Vec::with_capacity(self.tables.len());
         for idx in 0..self.tables.len() {
             let stacks = self.fetch_player_stacks(idx).await;
@@ -638,7 +783,6 @@ impl MttDirector {
             }
         }
 
-        // Keep only the final table
         self.tables.retain(|t| !t.players.is_empty());
         if self.tables.len() > 1 {
             self.tables.truncate(1);

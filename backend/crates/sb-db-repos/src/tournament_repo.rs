@@ -163,6 +163,7 @@ impl TournamentRepo for TournamentRepoImpl {
             prize_pool: Set(0),
             started_at: Set(None),
             completed_at: Set(None),
+            scheduled_start: Set(config.scheduled_start),
             created_at: Set(now),
         };
         active

@@ -14,3 +14,4 @@ pub use tournament_service::TournamentServiceImpl;
 
 #[cfg(test)]
 mod sit_go_tests;
+pub mod reminders;

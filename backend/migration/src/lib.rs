@@ -20,6 +20,7 @@ mod m20260625_seed_tournaments;
 mod m20260628_000001_gdpr_deletion;
 mod m20260628_161024_create_user_badges_table;
 mod m20260628_add_processed_to_seasons;
+mod m20260628_add_scheduled_start_to_tournaments;
 mod m20260628_create_user_season_cards;
 mod m20260629_000001_add_division_to_club_memberships;
 
@@ -52,6 +53,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260624_create_tournament_tables::Migration),
             // 5. Seed data
             Box::new(m20260616_seed_base_tables::Migration),
+            Box::new(m20260628_add_scheduled_start_to_tournaments::Migration),
             Box::new(m20260625_seed_tournaments::Migration),
             // 6. Additional from HEAD
             Box::new(m20250701_000001_add_telegram_chat_id_to_clubs::Migration),
