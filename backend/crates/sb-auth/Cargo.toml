@@ -28,8 +28,10 @@ uuid = { workspace = true }
 axum.workspace = true
 jsonwebtoken.workspace = true
 serde.workspace = true
+thiserror = { workspace = true }
 tower.workspace = true
 sea-orm = { workspace = true, features = ["sqlx-sqlite", "runtime-tokio-rustls"] }
+reqwest = { workspace = true }
 tokio = { workspace = true }
 
 [dev-dependencies]

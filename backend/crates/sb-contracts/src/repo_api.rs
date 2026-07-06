@@ -22,16 +22,25 @@ pub struct UserCreate {
     pub platform: String,
 }
 
+/// User with password hash for authentication (not exposed in UserProfile)
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct UserWithHash {
+    pub id: UserId,
+    pub password_hash: Option<String>,
+    pub platform: String,
+}
+
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct UserProfile {
     pub id: UserId,
     pub display_name: String,
     pub email: Option<String>,
     pub chip_balance: i64,
+    pub email_verified_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub platform: String,
     pub club_pro_expires_at: Option<chrono::DateTime<chrono::Utc>>,
     pub season_pass_id: Option<uuid::Uuid>,
     pub season_pass_expires_at: Option<chrono::DateTime<chrono::Utc>>,
-
 }
 
 #[async_trait]
@@ -89,6 +98,39 @@ pub trait UserRepository: Send + Sync {
         ctx: RequestContext,
         email: &str,
     ) -> PersistenceResult<Option<UserId>>;
+
+    async fn find_by_email_with_hash(
+        &self,
+        ctx: RequestContext,
+        email: &str,
+    ) -> PersistenceResult<Option<UserWithHash>>;
+    async fn mark_email_verified(
+        &self,
+        ctx: RequestContext,
+        user_id: UserId,
+    ) -> PersistenceResult<()>;
+
+    async fn update_password(
+        &self,
+        ctx: RequestContext,
+        user_id: UserId,
+        new_password_hash: &str,
+    ) -> PersistenceResult<()>;
+
+    /// Update password and set password_changed_at to current time
+    /// This invalidates all existing JWTs issued before this timestamp
+    async fn update_password_with_timestamp(
+        &self,
+        ctx: RequestContext,
+        user_id: UserId,
+        new_password_hash: &str,
+    ) -> PersistenceResult<()>;
+
+    async fn is_email_verified(
+        &self,
+        ctx: RequestContext,
+        user_id: UserId,
+    ) -> PersistenceResult<bool>;
 }
 
 #[async_trait]
@@ -223,10 +265,7 @@ pub trait ClubRepo: Send + Sync {
         club_id: ClubId,
     ) -> PersistenceResult<Option<serde_json::Value>>;
 
-    async fn get_tables_by_club_id(
-        &self,
-        club_id: ClubId,
-    ) -> PersistenceResult<Vec<TableId>>;
+    async fn get_tables_by_club_id(&self, club_id: ClubId) -> PersistenceResult<Vec<TableId>>;
 
     async fn get_user_division(&self, club_id: ClubId, user_id: UserId) -> ClubResult<Option<u32>>;
 

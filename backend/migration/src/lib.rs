@@ -17,6 +17,13 @@ mod m20260617_add_table_name;
 mod m20260622_132958_mission_system;
 mod m20260624_create_tournament_tables;
 mod m20260625_seed_tournaments;
+<<<<<<< HEAD
+mod m20260629162121_grandfather_existing_users;
+mod m20260630_add_email_verified_at;
+mod m20260630_add_password_changed_at;
+||||||| 84ca6e9
+mod m20260625_seed_tournaments; // <-- new
+=======
 mod m20260626_000001_add_club_pro_expires_at_to_users;
 mod m20260627_add_season_pass_columns;
 mod m20260628_000001_gdpr_deletion;
@@ -26,6 +33,7 @@ mod m20260628_add_scheduled_start_to_tournaments;
 mod m20260628_create_user_season_cards;
 mod m20260629_000001_add_division_to_club_memberships;
 
+>>>>>>> origin/main
 
 use sea_orm_migration::prelude::*;
 
@@ -38,15 +46,27 @@ impl MigratorTrait for Migrator {
             // 1. Core tables
             Box::new(m20260607_000001_create_all_tables::Migration),
             Box::new(m20260607_000002_create_clubs_tables::Migration),
+<<<<<<< HEAD
+            // 2. Add columns to existing tables (MUST run before data migrations)
+||||||| 84ca6e9
+            // 2. Add columns to existing tables
+=======
             // 2. Add columns to existing tables (MUST BE BEFORE SEEDING)
+>>>>>>> origin/main
             Box::new(m20260617_add_table_name::Migration),
             Box::new(m20260615_add_password_hash_to_users::Migration),
+<<<<<<< HEAD
+            Box::new(m20260630_add_email_verified_at::Migration),
+            Box::new(m20260630_add_password_changed_at::Migration),
+||||||| 84ca6e9
+=======
             Box::new(m20260626_000001_add_club_pro_expires_at_to_users::Migration),
             Box::new(m20260627_add_season_pass_columns::Migration),
             Box::new(m20260628_000001_gdpr_deletion::Migration), // Adds deleted_at
             Box::new(m20260629_000001_add_division_to_club_memberships::Migration),
             Box::new(m20250701_000001_add_telegram_chat_id_to_clubs::Migration),
             Box::new(m20260628_add_processed_to_seasons::Migration),
+>>>>>>> origin/main
             // 3. Additional tables
             Box::new(m20250614_create_payment_intents::Migration),
             Box::new(m20260614_145806_add_referrals_and_counters::Migration),
@@ -60,10 +80,23 @@ impl MigratorTrait for Migrator {
             Box::new(m20260628_161024_create_user_badges_table::Migration),
             // 4. Tournament tables
             Box::new(m20260624_create_tournament_tables::Migration),
+<<<<<<< HEAD
+            // 5. Seed data
+||||||| 84ca6e9
+            // 5. Seed data (last)
+=======
             Box::new(m20260628_add_scheduled_start_to_tournaments::Migration),
             // 5. Seed data (LAST)
+>>>>>>> origin/main
             Box::new(m20260616_seed_base_tables::Migration),
             Box::new(m20260625_seed_tournaments::Migration),
+<<<<<<< HEAD
+            // 6. Data migrations (MUST run AFTER all columns exist)
+            Box::new(m20260629162121_grandfather_existing_users::Migration),
+||||||| 84ca6e9
+            Box::new(m20260625_seed_tournaments::Migration), // <-- added here
+=======
+>>>>>>> origin/main
         ]
     }
 }

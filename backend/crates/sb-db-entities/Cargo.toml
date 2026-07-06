@@ -11,6 +11,7 @@ serde_json = { workspace = true }
 uuid = { workspace = true, features = ["v7", "serde"] }
 chrono = { workspace = true, features = ["serde"] }
 derive_more = { workspace = true }
+strum = { workspace = true }
 sb-shared-types = { path = "../sb-shared-types" }
 sb-contracts = { path = "../sb-contracts" }
 

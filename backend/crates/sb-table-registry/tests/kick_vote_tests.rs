@@ -45,10 +45,18 @@ async fn kick_vote_passes_and_refunds() {
         event_tx,
         stats_repo,
         active_players,
+<<<<<<< HEAD
+        UserId::new(uuid::Uuid::nil()),
+        None,
+    );
+||||||| 84ca6e9
+    );
+=======
         created_by: UserId::new(uuid::Uuid::nil()),
         chat_id: None,
     });
 
+>>>>>>> origin/main
 
     async fn join_player(
         tx: &mpsc::Sender<InternalCommand>,

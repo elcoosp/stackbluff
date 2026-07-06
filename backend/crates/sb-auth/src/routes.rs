@@ -13,6 +13,9 @@ use crate::SharedAuthService;
 use sb_shared_types::errors::AppError;
 use sb_shared_types::request_context::RequestContext;
 
+/// Create a request context for the current request
+/// TODO: Extract from Axum middleware/extensions for proper request tracing
+/// Currently creates a new UUID per request, losing correlation with upstream services
 fn dummy_ctx() -> RequestContext {
     RequestContext::new(Uuid::new_v4(), None)
 }
@@ -33,7 +36,9 @@ fn app_error_to_status(e: &AppError) -> StatusCode {
         | AppError::InvalidSeat => StatusCode::BAD_REQUEST,
         AppError::External(_) => StatusCode::BAD_GATEWAY,
         AppError::Timeout => StatusCode::GATEWAY_TIMEOUT,
-        AppError::ValidationError(_) => StatusCode::BAD_REQUEST, // <-- NEW ARM
+        AppError::TooManyRequests(_) => StatusCode::TOO_MANY_REQUESTS,
+        AppError::Forbidden(_) => StatusCode::FORBIDDEN,
+        AppError::ValidationError(_) => StatusCode::BAD_REQUEST,
     }
 }
 
@@ -53,6 +58,22 @@ struct RegisterRequest {
 struct EmailPasswordRequest {
     email: String,
     password: String,
+}
+
+#[derive(Deserialize)]
+struct ForgotPasswordRequest {
+    email: String,
+}
+
+#[derive(Deserialize)]
+struct ResetPasswordRequest {
+    token: String,
+    new_password: String,
+}
+
+#[derive(Serialize)]
+struct MessageResponse {
+    message: String,
 }
 
 #[derive(Serialize)]
@@ -230,11 +251,108 @@ async fn me_handler(
     }
 }
 
+async fn verify_email_handler(
+    axum::extract::Query(params): axum::extract::Query<VerifyEmailQuery>,
+    State(svc): State<SharedAuthService>,
+) -> impl IntoResponse {
+    match svc.verify_email(&params.token).await {
+        Ok(()) => (
+            StatusCode::OK,
+            Json(MessageResponse {
+                message: "Email verified successfully".to_string(),
+            }),
+        )
+            .into_response(),
+        Err(e) => error_response(e),
+    }
+}
+
+#[derive(Deserialize)]
+struct VerifyEmailQuery {
+    token: String,
+}
+
+async fn forgot_password(
+    State(svc): State<SharedAuthService>,
+    Json(req): Json<ForgotPasswordRequest>,
+) -> impl IntoResponse {
+    let ctx = dummy_ctx();
+    match svc.forgot_password(&ctx, &req.email).await {
+        Ok(()) => (
+            StatusCode::OK,
+            Json(MessageResponse {
+                message: "If the email exists, a reset link has been sent".to_string(),
+            }),
+        )
+            .into_response(),
+        Err(e) => error_response(e),
+    }
+}
+
+async fn reset_password(
+    State(svc): State<SharedAuthService>,
+    Json(req): Json<ResetPasswordRequest>,
+) -> impl IntoResponse {
+    match svc.reset_password(&req.token, &req.new_password).await {
+        Ok(()) => (
+            StatusCode::OK,
+            Json(MessageResponse {
+                message: "Password reset successfully".to_string(),
+            }),
+        )
+            .into_response(),
+        Err(e) => error_response(e),
+    }
+}
+
+async fn resend_verification(
+    cookies: Cookies,
+    headers: HeaderMap,
+    State(svc): State<SharedAuthService>,
+) -> impl IntoResponse {
+    let token = cookies
+        .get("token")
+        .map(|c| c.value().to_string())
+        .or_else(|| {
+            headers
+                .get(header::AUTHORIZATION)
+                .and_then(|h| h.to_str().ok())
+                .and_then(|h| h.strip_prefix("Bearer "))
+                .map(|s| s.to_string())
+        });
+
+    let token = match token {
+        Some(t) => t,
+        None => {
+            return error_response(AppError::Unauthorized("Missing token".to_string()));
+        }
+    };
+
+    let ctx = dummy_ctx();
+    match svc.validate_token(&token).await {
+        Ok(user_id) => match svc.send_verification_email(&ctx, user_id).await {
+            Ok(()) => (
+                StatusCode::OK,
+                Json(MessageResponse {
+                    message: "Verification email sent".to_string(),
+                }),
+            )
+                .into_response(),
+            Err(e) => error_response(e),
+        },
+        Err(e) => error_response(e),
+    }
+}
+
 pub fn auth_router(svc: SharedAuthService) -> Router {
     Router::new()
         .route("/auth/telegram", post(telegram_auth))
         .route("/auth/register", post(register))
         .route("/auth/login", post(login))
         .route("/auth/me", get(me_handler))
+        .route("/auth/verify-email", get(verify_email_handler))
+        .route("/auth/forgot-password", post(forgot_password))
+        .route("/auth/reset-password", post(reset_password))
+        .route("/auth/resend-verification", post(resend_verification))
         .with_state(svc)
 }

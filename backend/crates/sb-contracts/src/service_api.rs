@@ -71,6 +71,11 @@ pub trait UserService: Send + Sync {
     async fn award_chips(&self, user_id: UserId, amount: ChipAmount) -> Result<(), AppError>;
     async fn get_user_name(&self, user_id: UserId) -> Result<String, AppError>;
     async fn get_registration_order(&self, user_id: UserId) -> Result<Option<u64>, AppError>;
+    async fn is_email_verified(&self, user_id: UserId) -> Result<bool, AppError>;
+    async fn get_user_profile(
+        &self,
+        user_id: UserId,
+    ) -> Result<crate::repo_api::UserProfile, AppError>;
 }
 
 #[async_trait]
@@ -274,6 +279,17 @@ pub trait AuthService: Send + Sync {
         ctx: &sb_shared_types::RequestContext,
         user_id: sb_shared_types::UserId,
     ) -> Result<UserProfile, sb_shared_types::AppError>;
+    async fn send_verification_email(
+        &self,
+        ctx: &RequestContext,
+        user_id: UserId,
+    ) -> Result<(), AppError>;
+
+    async fn verify_email(&self, token: &str) -> Result<(), AppError>;
+
+    async fn forgot_password(&self, ctx: &RequestContext, email: &str) -> Result<(), AppError>;
+
+    async fn reset_password(&self, token: &str, new_password: &str) -> Result<(), AppError>;
 }
 
 // ── Missions ──────────────────────────────────────────────────────────────

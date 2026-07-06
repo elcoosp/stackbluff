@@ -1,6 +1,6 @@
 use crate::commands::DbCommand;
 use sb_contracts::repo_api::{
-    PersistenceError, PersistenceResult, UserCreate, UserProfile, UserRepository,
+    PersistenceError, PersistenceResult, UserCreate, UserProfile, UserRepository, UserWithHash,
 };
 use sb_shared_types::{RequestContext, UserId};
 use tokio::sync::oneshot;
@@ -15,15 +15,6 @@ impl UserRepoImpl {
     }
 }
 
-#[async_trait::async_trait]
-#[async_trait::async_trait]
-#[async_trait::async_trait]
-#[async_trait::async_trait]
-#[async_trait::async_trait]
-#[async_trait::async_trait]
-#[async_trait::async_trait]
-#[async_trait::async_trait]
-#[async_trait::async_trait]
 #[async_trait::async_trait]
 impl UserRepository for UserRepoImpl {
     async fn create_user(
@@ -120,6 +111,82 @@ impl UserRepository for UserRepoImpl {
             })?
     }
 
+    async fn find_by_email_with_hash(
+        &self,
+        ctx: RequestContext,
+        email: &str,
+    ) -> PersistenceResult<Option<UserWithHash>> {
+        let (tx, rx) = oneshot::channel();
+        let cmd = DbCommand::FindByEmailWithHash {
+            ctx,
+            email: email.to_string(),
+            respond: tx,
+        };
+        self.sender
+            .send(cmd)
+            .map_err(|e| PersistenceError::Database(e.to_string()))?;
+        rx.await
+            .map_err(|e| PersistenceError::Database(e.to_string()))?
+    }
+
+    async fn mark_email_verified(
+        &self,
+        ctx: RequestContext,
+        user_id: UserId,
+    ) -> PersistenceResult<()> {
+        let (tx, rx) = oneshot::channel();
+        let cmd = DbCommand::MarkEmailVerified {
+            ctx,
+            user_id,
+            respond: tx,
+        };
+        self.sender
+            .send(cmd)
+            .map_err(|e| PersistenceError::Database(e.to_string()))?;
+        rx.await
+            .map_err(|e| PersistenceError::Database(e.to_string()))?
+    }
+
+    async fn update_password(
+        &self,
+        ctx: RequestContext,
+        user_id: UserId,
+        new_password_hash: &str,
+    ) -> PersistenceResult<()> {
+        let (tx, rx) = oneshot::channel();
+        let cmd = DbCommand::UpdatePassword {
+            ctx,
+            user_id,
+            new_password_hash: new_password_hash.to_string(),
+            respond: tx,
+        };
+        self.sender
+            .send(cmd)
+            .map_err(|e| PersistenceError::Database(e.to_string()))?;
+        rx.await
+            .map_err(|e| PersistenceError::Database(e.to_string()))?
+    }
+
+    async fn update_password_with_timestamp(
+        &self,
+        ctx: RequestContext,
+        user_id: UserId,
+        new_password_hash: &str,
+    ) -> PersistenceResult<()> {
+        let (tx, rx) = oneshot::channel();
+        let cmd = DbCommand::UpdatePasswordWithTimestamp {
+            ctx,
+            user_id,
+            new_password_hash: new_password_hash.to_string(),
+            respond: tx,
+        };
+        self.sender
+            .send(cmd)
+            .map_err(|e| PersistenceError::Database(e.to_string()))?;
+        rx.await
+            .map_err(|e| PersistenceError::Database(e.to_string()))?
+    }
+
     async fn get_user(&self, ctx: RequestContext, id: UserId) -> PersistenceResult<String> {
         let (tx, rx) = oneshot::channel();
         let cmd = DbCommand::GetUser {
@@ -192,7 +259,7 @@ impl UserRepository for UserRepoImpl {
         delta: i64,
     ) -> PersistenceResult<i64> {
         use sb_db_entities::user;
-        use sea_orm::{ActiveModelTrait, EntityTrait, Set};
+        use sea_orm::{EntityTrait, Set};
 
         let user_model = user::Entity::find_by_id(user_id.as_uuid())
             .one(conn)
@@ -208,13 +275,31 @@ impl UserRepository for UserRepoImpl {
         let mut active: user::ActiveModel = user_model.into();
         active.chip_balance = Set(new_balance);
         active.updated_at = Set(chrono::Utc::now());
-        active
-            .update(conn)
+        sea_orm::ActiveModelTrait::update(active, conn)
             .await
             .map_err(|e| PersistenceError::Database(e.to_string()))?;
 
         Ok(new_balance)
     }
+
+    async fn is_email_verified(
+        &self,
+        ctx: RequestContext,
+        user_id: UserId,
+    ) -> PersistenceResult<bool> {
+        let (tx, rx) = oneshot::channel();
+        let cmd = DbCommand::IsEmailVerified {
+            ctx,
+            user_id,
+            respond: tx,
+        };
+        self.sender
+            .send(cmd)
+            .map_err(|e| PersistenceError::Database(e.to_string()))?;
+        rx.await
+            .map_err(|e| PersistenceError::Database(e.to_string()))?
+    }
+
     async fn has_active_season_pass(
         &self,
         ctx: RequestContext,

@@ -3,7 +3,6 @@ use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "users")]
 pub struct Model {
@@ -21,6 +20,7 @@ pub struct Model {
     pub platform: Platform,
     pub email_verified_at: Option<DateTimeUtc>,
     pub password_hash: Option<String>,
+    pub password_changed_at: Option<DateTimeUtc>,
     pub registration_order: Option<i64>,
     #[sea_orm(nullable)]
     pub club_pro_expires_at: Option<DateTimeUtc>,
@@ -29,5 +29,8 @@ pub struct Model {
     pub deleted_at: Option<chrono::NaiveDateTime>,
 
 }
+
+#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+pub enum Relation {}
 
 impl ActiveModelBehavior for ActiveModel {}

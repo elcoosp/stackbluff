@@ -1,7 +1,7 @@
 #[allow(unused_imports)]
 use chrono::{DateTime, Utc};
 use sb_contracts::repo_api::PersistenceResult;
-use sb_contracts::repo_api::UserProfile;
+use sb_contracts::repo_api::{UserProfile, UserWithHash};
 use sb_shared_types::{RequestContext, UserId};
 use tokio::sync::oneshot;
 use uuid::Uuid;
@@ -58,14 +58,44 @@ pub enum DbCommand {
         password_hash: String,
         respond: ResponseSender<UserId>,
     },
+    MarkEmailVerified {
+        ctx: RequestContext,
+        user_id: UserId,
+        respond: ResponseSender<()>,
+    },
+    UpdatePassword {
+        ctx: RequestContext,
+        user_id: UserId,
+        new_password_hash: String,
+        respond: ResponseSender<()>,
+    },
+    UpdatePasswordWithTimestamp {
+        ctx: RequestContext,
+        user_id: UserId,
+        new_password_hash: String,
+        respond: ResponseSender<()>,
+    },
+    IsEmailVerified {
+        ctx: RequestContext,
+        user_id: UserId,
+        respond: ResponseSender<bool>,
+    },
     FindByEmail {
         ctx: RequestContext,
         email: String,
         respond: ResponseSender<Option<UserId>>,
     },
+<<<<<<< HEAD
+    FindByEmailWithHash {
+        ctx: RequestContext,
+        email: String,
+        respond: ResponseSender<Option<UserWithHash>>,
+||||||| 84ca6e9
+=======
 
     CheckClubPro {
         user_id: UserId,
         respond: oneshot::Sender<PersistenceResult<bool>>,
+>>>>>>> origin/main
     },
 }

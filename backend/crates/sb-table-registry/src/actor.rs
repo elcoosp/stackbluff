@@ -2444,9 +2444,6 @@ impl TableActor {
     }
 
     fn emit_table_closed_event(&self) {
-        use crate::events::{TableClosedEvent, TableEvent};
-        use sb_shared_types::{ChipAmount, TableId, UserId};
-
         let (winner, hand_desc, pot) = match &self.last_hand_result {
             Some((uid, desc, pot)) => (Some(*uid), desc.clone(), *pot),
             None => (
@@ -2455,7 +2452,6 @@ impl TableActor {
                 ChipAmount::new(0).unwrap(),
             ),
         };
-
 
         let event = TableClosedEvent {
             table_id: self.table_id,
@@ -2502,7 +2498,6 @@ pub struct TableActorConfig {
     pub chat_id: Option<String>,
 }
 
-
 pub fn spawn_table_actor(
     config: TableActorConfig,
 ) -> (mpsc::Sender<InternalCommand>, tokio::task::JoinHandle<()>) {
@@ -2532,4 +2527,3 @@ pub fn spawn_table_actor(
     let handle = tokio::spawn(actor.run(rx));
     (tx, handle)
 }
-
