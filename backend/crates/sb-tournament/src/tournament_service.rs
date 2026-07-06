@@ -19,7 +19,8 @@ pub struct TournamentServiceImpl {
     user_repo: Arc<dyn UserRepo>,
     registry: Arc<Registry>,
     broker: Arc<ConnectionBroker>,
-    notification_service: Arc<dyn sb_contracts::notification::NotificationService>,
+    // Use the trait that actually has send_telegram_message
+    notification_service: Arc<dyn sb_contracts::notification_api::NotificationService>,
     club_notifier: Option<Arc<dyn sb_contracts::notification_api::ClubNotifier>>,
     app_base_url: String,
     sit_go_actors: Arc<DashMap<TournamentId, mpsc::Sender<SitGoCommand>>>,
@@ -33,7 +34,7 @@ impl TournamentServiceImpl {
         user_repo: Arc<dyn UserRepo>,
         registry: Arc<Registry>,
         broker: Arc<ConnectionBroker>,
-        notification_service: Arc<dyn sb_contracts::notification::NotificationService>,
+        notification_service: Arc<dyn sb_contracts::notification_api::NotificationService>,
         club_notifier: Option<Arc<dyn sb_contracts::notification_api::ClubNotifier>>,
         app_base_url: String,
     ) -> Self {
@@ -169,7 +170,7 @@ impl TournamentService for TournamentServiceImpl {
                 id,
                 start,
                 self.repo.clone(),
-                self.notification_service.clone(),
+                self.notification_service.clone(), // now the correct type
                 self.club_notifier.clone(),
                 self.app_base_url.clone(),
             );
@@ -306,13 +307,12 @@ impl TournamentService for TournamentServiceImpl {
     ) -> Result<Vec<TournamentSummary>, AppError> {
         let records = self.repo.list_tournaments(type_filter).await?;
         let mut summaries = Vec::new();
-        // We need to get live data from actors, but for now return DB data.
         for r in records {
             summaries.push(TournamentSummary {
                 id: r.id,
                 tournament_type: r.config.tournament_type,
                 status: r.status,
-                registered: 0, // TODO: get from actor
+                registered: 0,
                 max_players: r.config.max_players,
                 buy_in: r.config.buy_in,
                 prize_pool: r.prize_pool,
@@ -366,15 +366,14 @@ impl TournamentService for TournamentServiceImpl {
     }
 }
 
-// === Issue #029: Club Tournament Integration ===
+// === Club Tournament Integration ===
 impl TournamentServiceImpl {
+    /// Post results to Telegram using the main notification service.
     pub async fn post_tournament_results(
         &self,
         tournament_id: TournamentId,
-        notification_service: &Arc<dyn sb_contracts::notification_api::NotificationService>,
         club_repo: &Arc<dyn sb_contracts::ClubRepo>,
     ) -> Result<(), AppError> {
-        // Get tournament results
         let results = self.repo.list_results(tournament_id).await?;
         let tournament = self
             .repo
@@ -387,17 +386,14 @@ impl TournamentServiceImpl {
             .club_id
             .ok_or_else(|| AppError::Internal("Not a club tournament".into()))?;
 
-        // Get club's telegram chat ID
         let telegram_chat_id = club_repo
             .get_telegram_chat_id(club_id)
             .await
             .map_err(|e| AppError::Internal(e.to_string()))?;
 
         if let Some(chat_id) = telegram_chat_id {
-            // Build result message
             let mut message = "🏆 *Tournament Results*\n\n".to_string();
 
-            // Top 3 placements
             for (idx, result) in results.iter().take(3).enumerate() {
                 let medal = match idx {
                     0 => "🥇",
@@ -411,8 +407,7 @@ impl TournamentServiceImpl {
                 );
             }
 
-            // Send to Telegram
-            notification_service
+            self.notification_service
                 .send_telegram_message(chat_id, message, None)
                 .await
                 .map_err(|e| AppError::Internal(e.to_string()))?;
@@ -439,11 +434,8 @@ impl TournamentServiceImpl {
             .club_id
             .ok_or_else(|| AppError::Internal("Not a club tournament".into()))?;
 
-        // Get all participants
         let registrations = self.repo.list_registrations(tournament_id).await?;
-
-        // Award XP: 5 XP per hand played (simplified)
-        let xp_per_player = 50; // Base XP for participating
+        let xp_per_player = 50;
 
         for reg in &registrations {
             let ctx = RequestContext {
@@ -468,28 +460,19 @@ impl TournamentServiceImpl {
     ) -> Result<(), AppError> {
         tracing::info!(%tournament_id, "Handling tournament completion");
 
-        // Get tournament details
         let tournament = self
             .repo
             .get_tournament(tournament_id)
             .await?
             .ok_or_else(|| AppError::NotFound("Tournament not found".into()))?;
 
-        // If it's a club tournament, post results and award XP
         if let Some(club_id) = tournament.config.club_id {
-            // Post results to Telegram
-            if let Some(notification_service) = &self.club_notifier
-                && let Some(club_repo) = &self.club_repo
-                && let Err(e) = self
-                    .post_tournament_results(tournament_id, notification_service, club_repo)
-                    .await
-            {
-                tracing::error!(%tournament_id, error = ?e, "Failed to post tournament results");
+            if let Some(club_repo) = &self.club_repo {
+                if let Err(e) = self.post_tournament_results(tournament_id, club_repo).await {
+                    tracing::error!(%tournament_id, error = ?e, "Failed to post tournament results");
+                }
             }
 
-            // Award XP to participants
-            // Note: We need to get club_service from somewhere
-            // For now, we'll skip this as it requires additional wiring
             tracing::info!(%tournament_id, %club_id, "Club tournament completed");
         }
 

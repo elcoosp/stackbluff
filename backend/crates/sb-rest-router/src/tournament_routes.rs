@@ -4,7 +4,7 @@ use axum::{
     http::StatusCode,
     routing::{get, post},
 };
-use sb_contracts::tournament_api::TournamentService; // <-- import the trait
+use sb_contracts::tournament_api::TournamentService;
 use sb_shared_types::{AppError, TournamentId, UserId};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -91,8 +91,6 @@ async fn create_tournament(
             .unwrap_or(sb_contracts::tournament_api::PayoutStructure { entries: vec![] }),
         start_delay_seconds: req.start_delay_seconds.unwrap_or(5),
         min_players_to_start: req.min_players_to_start.unwrap_or(req.max_players),
-        scheduled_start: None,
-        club_id: None,
     };
 
     let ctx = sb_shared_types::RequestContext::new(uuid::Uuid::new_v4(), None);

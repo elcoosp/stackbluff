@@ -1,10 +1,9 @@
-use std::sync::Arc;
-use chrono::{DateTime, Utc, Duration};
+use chrono::{DateTime, Duration, Utc};
+use sb_contracts::notification_api::{ClubNotifier, NotificationService};
 use sb_contracts::tournament_api::{TournamentRepo, TournamentStatus};
-use sb_contracts::notification::{NotificationService, NotificationEvent};
-use sb_contracts::notification_api::ClubNotifier;
 use sb_shared_types::TournamentId;
-use tokio::time::{sleep_until, Instant};
+use std::sync::Arc;
+use tokio::time::{Instant, sleep_until};
 
 pub fn schedule_reminders(
     tournament_id: TournamentId,
@@ -72,15 +71,17 @@ async fn send_reminder(
     let tournament_name = format!("{:?}", tournament.config.tournament_type);
     let start_time = tournament.config.scheduled_start.unwrap().to_rfc3339();
 
-    let ctx = sb_shared_types::RequestContext::new(uuid::Uuid::new_v4(), None);
+    let message = format!(
+        "🔔 Tournament \"{}\" starts at {}! Join: {}",
+        tournament_name, start_time, deep_link
+    );
 
     for reg in registrations {
-        let event = NotificationEvent::TournamentReminder {
-            tournament_name: tournament_name.clone(),
-            start_time: start_time.clone(),
-            deep_link: deep_link.clone(),
-        };
-        if let Err(e) = notification_service.send(&ctx, reg.user_id, event).await {
+        // Use the new API method – send a direct Telegram message to the user
+        if let Err(e) = notification_service
+            .send_telegram_message_to_user(reg.user_id, message.clone(), None)
+            .await
+        {
             tracing::warn!(user_id = %reg.user_id, error = %e, "Failed to send tournament reminder");
         }
     }

@@ -56,12 +56,12 @@ mod season_card_generator;
 
 async fn reschedule_tournament_reminders(
     repo: std::sync::Arc<dyn sb_contracts::tournament_api::TournamentRepo>,
-    notification_service: std::sync::Arc<dyn sb_contracts::notification::NotificationService>,
+    notification_service: std::sync::Arc<dyn sb_contracts::notification_api::NotificationService>,
     bot_handler: Option<std::sync::Arc<dyn sb_contracts::notification_api::ClubNotifier>>,
     app_base_url: String,
 ) {
-    use sb_contracts::tournament_api::TournamentStatus;
     use chrono::Utc;
+    use sb_contracts::tournament_api::TournamentStatus;
     let tournaments = match repo.list_tournaments(None).await {
         Ok(t) => t,
         Err(e) => {
@@ -75,7 +75,14 @@ async fn reschedule_tournament_reminders(
             && let Some(start) = tournament.config.scheduled_start
             && start > now
         {
-            sb_tournament::reminders::schedule_reminders(tournament.id, start, repo.clone(), notification_service.clone(), bot_handler.clone(), app_base_url.clone());
+            sb_tournament::reminders::schedule_reminders(
+                tournament.id,
+                start,
+                repo.clone(),
+                notification_service.clone(),
+                bot_handler.clone(),
+                app_base_url.clone(),
+            );
         }
     }
 }
@@ -207,18 +214,24 @@ async fn main() {
 
     // ── Notification service ────────────────────────────────────────
     #[cfg(feature = "test-stubs")]
-    let in_memory_notif = Arc::new(test_utils::notification_service::InMemoryNotificationService::new());
+    let in_memory_notif =
+        Arc::new(test_utils::notification_service::InMemoryNotificationService::new());
     #[cfg(feature = "test-stubs")]
-    let notification_service: Arc<dyn sb_contracts::notification::NotificationService> = in_memory_notif.clone();
+    let notification_service: Arc<dyn sb_contracts::notification_api::NotificationService> =
+        in_memory_notif.clone();
     #[cfg(not(feature = "test-stubs"))]
-    let notification_service: Arc<dyn sb_contracts::notification::NotificationService> =
+    let notification_service: Arc<dyn sb_contracts::notification_api::NotificationService> =
         panic!("Production notification service not implemented");
-    let bot_handler: Option<Arc<dyn sb_contracts::notification_api::ClubNotifier>> = Some(bot_state.clone());
-    let app_base_url = std::env::var("APP_BASE_URL").unwrap_or_else(|_| "https://app.stackbluff.com".to_string());
+    let bot_handler: Option<Arc<dyn sb_contracts::notification_api::ClubNotifier>> =
+        Some(bot_state.clone());
+    let app_base_url =
+        std::env::var("APP_BASE_URL").unwrap_or_else(|_| "https://app.stackbluff.com".to_string());
 
     // ── Club system ────────────────────────────────────────────────
-    let club_repo: Arc<dyn sb_contracts::ClubRepo> = Arc::new(sb_db_repos::club_repo::ClubRepoImpl::new(db.clone()));
-    let _club_service: Arc<dyn sb_contracts::ClubService> = Arc::new(sb_club::ClubServiceImpl::new(club_repo.clone()));
+    let club_repo: Arc<dyn sb_contracts::ClubRepo> =
+        Arc::new(sb_db_repos::club_repo::ClubRepoImpl::new(db.clone()));
+    let _club_service: Arc<dyn sb_contracts::ClubService> =
+        Arc::new(sb_club::ClubServiceImpl::new(club_repo.clone()));
 
     let mut tournament_service_impl = TournamentServiceImpl::new(
         tournament_repo.clone(),
@@ -303,7 +316,13 @@ async fn main() {
         }
     });
 
-    reschedule_tournament_reminders(tournament_repo.clone(), notification_service.clone(), bot_handler.clone(), app_base_url.clone()).await;
+    reschedule_tournament_reminders(
+        tournament_repo.clone(),
+        notification_service.clone(),
+        bot_handler.clone(),
+        app_base_url.clone(),
+    )
+    .await;
 
     // Season end background processor (MVP - no notifications)
     let season_processor = std::sync::Arc::new(season_card_generator::SeasonCardGenerator::new(
