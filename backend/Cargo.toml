@@ -50,7 +50,7 @@ tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 sb-server = { path = "crates/sb-server" }
 sb-club = { path = "crates/sb-club" }
 futures = { version = "0.3.32", default-features = false, features = ["std", "async-await"] }
-moka = { version = "0.12.5", features = ["sync"] }
+moka = { version = "0.12.5", features = ["sync", "future"] }
 parking_lot = "0.12.3"
 sb-bot-handler = { path = "crates/sb-bot-handler" }
 teloxide = { version = "0.17", features = ["webhooks", "axum"] }
