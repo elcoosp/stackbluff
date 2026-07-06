@@ -90,7 +90,13 @@ impl TournamentServiceImpl {
         }
     }
 
-    async fn spawn_actor(&self, config: &TournamentConfig, id: TournamentId) {
+    async fn spawn_actor(
+        &self,
+        config: &TournamentConfig,
+        id: TournamentId,
+        created_by: UserId,
+        chat_id: Option<String>,
+    ) {
         let repo = self.repo.clone();
         let user_repo = self.user_repo.clone();
         match config.tournament_type {
@@ -103,13 +109,14 @@ impl TournamentServiceImpl {
                     self.broker.clone(),
                     rx,
                     self.registry.event_sender().subscribe(),
+                    created_by,
+                    chat_id.clone(),
                 );
                 let handle = tokio::spawn(actor.run());
                 self.sit_go_actors.insert(id, tx.clone());
                 tokio::spawn(async move {
                     let _ = handle.await;
                 });
-                // ─── Send SetRepoHandle to the actor ────────────────────
                 let _ = tx
                     .send(SitGoCommand::SetRepoHandle {
                         repo: repo.clone(),
@@ -126,13 +133,14 @@ impl TournamentServiceImpl {
                     self.broker.clone(),
                     rx,
                     self.registry.event_sender().subscribe(),
+                    created_by,
+                    chat_id.clone(),
                 );
                 let handle = tokio::spawn(actor.run());
                 self.mtt_actors.insert(id, tx.clone());
                 tokio::spawn(async move {
                     let _ = handle.await;
                 });
-                // ─── Send SetRepoHandle to the actor ────────────────────
                 let _ = tx
                     .send(MttCommand::SetRepoHandle {
                         repo: repo.clone(),
@@ -149,15 +157,27 @@ impl TournamentServiceImpl {
 impl TournamentService for TournamentServiceImpl {
     async fn create_tournament(
         &self,
-        _ctx: &RequestContext,
+        ctx: &RequestContext,
         config: TournamentConfig,
     ) -> Result<TournamentId, AppError> {
         let id = self.repo.insert_tournament(&config).await?;
-        self.spawn_actor(&config, id).await;
-        info!(tournament_id = %id, tournament_type = ?config.tournament_type, max_players = config.max_players, buy_in = config.buy_in.as_i64(), "tournament created and actor spawned");
+        // FIXED: access field, not method
+        let created_by = ctx
+            .user_id
+            .unwrap_or_else(|| UserId::new(uuid::Uuid::nil()));
+        let chat_id = None;
+        self.spawn_actor(&config, id, created_by, chat_id).await;
+        info!(
+            tournament_id = %id,
+            tournament_type = ?config.tournament_type,
+            max_players = config.max_players,
+            buy_in = config.buy_in.as_i64(),
+            "tournament created and actor spawned"
+        );
         Ok(id)
     }
 
+    // All other methods remain unchanged:
     async fn register(
         &self,
         _ctx: &RequestContext,

@@ -1,21 +1,25 @@
+pub mod async_hooks;
+pub mod badge_repo_api;
+pub mod club_error;
 pub mod leaderboard;
 pub mod lobby_api;
-
-pub mod async_hooks;
+pub mod notification;
 pub mod notification_api;
 pub mod persistence_error;
 pub mod repo_api;
 pub mod service_api;
 pub mod stats_api;
+pub mod tournament_api;
 pub mod user_resolution;
-pub use service_api::{
-    ClubService, HandResult, ReferralStats, ReplayCard, UserService, ViralService,
-};
-pub mod club_error;
+
 pub use async_hooks::{HandCountObserver, ReplayCardObserver};
-pub use club_error::ClubError; // Add to the existing repo_api re-exports:
+pub use badge_repo_api::{BadgeRepo, BadgeType};
+pub use club_error::ClubError;
 pub use repo_api::{
     ClubRepo, DIVISION_SIZE, HandHistoryRepository, HandSummary, LeaderboardPage, WinnerSummary,
+};
+pub use service_api::{
+    ClubService, HandResult, ReferralStats, ReplayCard, UserService, ViralService,
 };
 
 // ========== Table Registry contracts ==========
@@ -64,5 +68,7 @@ pub enum TableCommand {
     },
 }
 pub use lobby_api::TableInfo;
+
 pub mod notification;
+pub mod puzzle_repo;
 pub mod tournament_api;

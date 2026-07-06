@@ -1,8 +1,9 @@
 #![allow(clippy::needless_update)]
 #![allow(clippy::enum_variant_names)]
-// backend/migration/src/lib.rs
+
 mod m20250101_000001_add_participants_to_hand_history;
 mod m20250614_create_payment_intents;
+mod m20250701_000001_add_telegram_chat_id_to_clubs;
 mod m20260101_000008_player_statistics;
 mod m20260607_000001_create_all_tables;
 mod m20260607_000002_create_clubs_tables;
@@ -15,8 +16,10 @@ mod m20260616_seed_base_tables;
 mod m20260617_add_table_name;
 mod m20260622_132958_mission_system;
 mod m20260624_create_tournament_tables;
-mod m20260625_seed_tournaments; // <-- new
-mod m20250701_000001_add_telegram_chat_id_to_clubs;
+mod m20260625_seed_tournaments;
+mod m20260628_000001_gdpr_deletion;
+mod m20260628_161024_create_user_badges_table;
+mod m20260629_000001_add_division_to_club_memberships;
 
 use sea_orm_migration::prelude::*;
 
@@ -26,7 +29,7 @@ pub struct Migrator;
 impl MigratorTrait for Migrator {
     fn migrations() -> Vec<Box<dyn MigrationTrait>> {
         vec![
-                        // 1. Core tables
+            // 1. Core tables
             Box::new(m20260607_000001_create_all_tables::Migration),
             Box::new(m20260607_000002_create_clubs_tables::Migration),
             // 2. Add columns to existing tables
@@ -43,11 +46,17 @@ impl MigratorTrait for Migrator {
             Box::new(m20260622_132958_mission_system::Migration),
             // 4. Tournament tables
             Box::new(m20260624_create_tournament_tables::Migration),
-            // 5. Seed data (last)
+            // 5. Seed data
             Box::new(m20260616_seed_base_tables::Migration),
-            Box::new(m20260625_seed_tournaments::Migration), // <-- added here
-            // 6. Add telegram_chat_id to clubs
+            Box::new(m20260625_seed_tournaments::Migration),
+            // 6. Additional from HEAD
             Box::new(m20250701_000001_add_telegram_chat_id_to_clubs::Migration),
+            // 7. Additional from main
+            Box::new(m20260628_000001_gdpr_deletion::Migration),
+            Box::new(m20260628_161024_create_user_badges_table::Migration),
+            Box::new(m20260629_000001_add_division_to_club_memberships::Migration),
         ]
     }
 }
+
+pub mod m20260628_000001_create_puzzle_submissions;
