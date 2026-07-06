@@ -133,11 +133,9 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
         DbCommand::UpdatePasswordWithTimestamp { ctx, .. } => ctx,
         DbCommand::IsEmailVerified { ctx, .. } => ctx,
         DbCommand::CheckClubPro { .. } => {
-            // This command doesn't use a context, we'll handle it separately.
-            // But we need a ctx for the span; we'll create a dummy one.
-            // However, the command doesn't have a ctx, so we can't match it.
-            // We'll handle it outside the match.
-            unimplemented!("CheckClubPro should be handled in its own branch");
+            // This command doesn't need a context; we'll still create a dummy for the span.
+            // We'll handle it separately.
+            unimplemented!("CheckClubPro is handled in its own branch");
         }
     };
 
@@ -426,20 +424,22 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                     })
                 }))
             }
-            DbCommand::CheckClubPro { user_id, respond } => {
-                // This command doesn't use the savepoint – we just check a field.
-                // We'll handle it outside the savepoint logic.
-                // Actually we need to implement it. For now, we'll return a dummy.
-                // In real implementation, query the user's club_pro_expires_at.
-                // We'll put a placeholder.
-                let result = Ok(Some("false".to_string())); // dummy
-                // But we need to send the response here.
-                // We'll handle it in respond_ok.
-                // For now, return a dummy.
-                // We'll properly implement in a follow-up.
-                return Err(PersistenceError::Database(
-                    "CheckClubPro not implemented in savepoint".to_string(),
-                ));
+            DbCommand::CheckClubPro { user_id, .. } => {
+                use sb_db_entities::user;
+                use sea_orm::ColumnTrait;
+                use sea_orm::EntityTrait;
+                use sea_orm::QueryFilter;
+                let uid = user_id.as_uuid();
+                let model = user::Entity::find()
+                    .filter(user::Column::Id.eq(uid))
+                    .one(conn)
+                    .await
+                    .map_err(map_db_error)?;
+                let is_active = model
+                    .and_then(|u| u.club_pro_expires_at)
+                    .map(|exp| exp > chrono::Utc::now())
+                    .unwrap_or(false);
+                Ok(Some(is_active.to_string()))
             }
         };
 
@@ -547,7 +547,6 @@ fn respond_ok(cmd: DbCommand, value: Option<String>) {
             let _ = respond.send(Ok(()));
         }
         DbCommand::CheckClubPro { respond, .. } => {
-            // value is "true" or "false" as string
             let is_active = value
                 .map(|s| s.parse::<bool>().unwrap_or(false))
                 .unwrap_or(false);

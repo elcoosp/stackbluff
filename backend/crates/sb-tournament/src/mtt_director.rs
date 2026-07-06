@@ -13,14 +13,7 @@ use sb_contracts::tournament_api::{
 use sb_shared_types::{AppError, ChipAmount, PlayerId, TableConfig, TableId, TournamentId, UserId};
 use sb_table_registry::actor::InternalCommand as TableCommand;
 use sb_table_registry::connection_broker::ConnectionBroker;
-<<<<<<< HEAD
-use sb_table_registry::events::HandCompletedEvent;
-use sb_table_registry::events::TableEvent;
-||||||| 84ca6e9
-use sb_table_registry::events::HandCompletedEvent;
-=======
 use sb_table_registry::events::{HandCompletedEvent, TableEvent};
->>>>>>> origin/main
 use sb_table_registry::registry::Registry;
 
 use crate::blind_scheduler::BlindScheduler;
@@ -122,14 +115,8 @@ impl MttDirector {
         broker: Arc<ConnectionBroker>,
         cmd_rx: mpsc::Receiver<MttCommand>,
         event_rx: tokio::sync::broadcast::Receiver<TableEvent>,
-<<<<<<< HEAD
-||||||| 84ca6e9
-        event_rx: tokio::sync::broadcast::Receiver<HandCompletedEvent>,
-=======
         created_by: UserId,
         chat_id: Option<String>,
-
->>>>>>> origin/main
     ) -> Self {
         Self {
             tournament_id,
@@ -167,21 +154,9 @@ impl MttDirector {
                     self.handle_command(cmd).await;
                 }
                 Ok(event) = self.event_rx.recv() => {
-<<<<<<< HEAD
-                    if let TableEvent::HandCompleted(hand_event) = event {
-
-                        self.handle_hand_completed(hand_event).await;
-
-                    }
-||||||| 84ca6e9
-                    self.handle_hand_completed(event).await;
-=======
-                    // Handle only HandCompleted events
                     if let TableEvent::HandCompleted(hand_event) = event {
                         self.handle_hand_completed(hand_event).await;
                     }
-
->>>>>>> origin/main
                 }
                 else => break,
             }

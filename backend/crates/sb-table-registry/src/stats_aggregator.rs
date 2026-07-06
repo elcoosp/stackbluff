@@ -1,11 +1,5 @@
-<<<<<<< HEAD
-||||||| 84ca6e9
-use crate::events::HandCompletedEvent;
-=======
 //! Aggregates player statistics from hand completion events.
 
-
->>>>>>> origin/main
 use crate::events::TableEvent;
 use sb_contracts::stats_api::PlayerStatsRepo;
 use sb_shared_types::PlayerId;
@@ -16,44 +10,19 @@ use std::sync::Arc;
 use tokio::sync::broadcast;
 use tracing::{error, info, warn};
 
-
 /// Spawns a background task that listens for hand completion events
 /// and updates player statistics.
 pub fn spawn_stats_aggregator(
-<<<<<<< HEAD
-    mut event_rx: Receiver<TableEvent>,
-||||||| 84ca6e9
-    mut event_rx: Receiver<HandCompletedEvent>,
-=======
     mut rx: broadcast::Receiver<TableEvent>,
-
->>>>>>> origin/main
     stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
 ) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
         info!("Player stats aggregator started");
 
-<<<<<<< HEAD
-        while let Ok(event) = event_rx.recv().await {
-            // Extract HandCompletedEvent from TableEvent
-            let event = match event {
-                TableEvent::HandCompleted(e) => e,
-                TableEvent::TableClosed(_) => continue, // Ignore table closed events
-            };
-
-            let mut deltas: HashMap<String, StatsDelta> = HashMap::new();
-            let mut player_to_user: HashMap<PlayerId, String> = HashMap::new();
-||||||| 84ca6e9
-        while let Ok(event) = event_rx.recv().await {
-            let mut deltas: HashMap<String, StatsDelta> = HashMap::new();
-            let mut player_to_user: HashMap<PlayerId, String> = HashMap::new();
-=======
         loop {
             match rx.recv().await {
                 Ok(TableEvent::HandCompleted(hand_event)) => {
                     let event = hand_event;
->>>>>>> origin/main
-
 
                     let mut deltas: HashMap<String, StatsDelta> = HashMap::new();
                     let mut player_to_user: HashMap<PlayerId, String> = HashMap::new();
@@ -64,7 +33,6 @@ pub fn spawn_stats_aggregator(
                     let mut pfr_players: HashSet<PlayerId> = HashSet::new();
                     let mut all_in_players: HashSet<PlayerId> = HashSet::new();
 
-                    // FIX: Removed `mut` as this map is only read, never written to.
                     let total_wagered_map: HashMap<PlayerId, i64> = HashMap::new();
 
                     let mut bets_map: HashMap<PlayerId, i32> = HashMap::new();
