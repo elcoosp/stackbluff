@@ -4,10 +4,11 @@ version = "0.1.0"
 edition.workspace = true
 
 [dependencies]
+sb-db-repos = { path = "../sb-db-repos" }
 sb-shared-types = { workspace = true }
 sb-contracts = { workspace = true }
 sb-db-entities = { workspace = true }
-tokio = { workspace = true, features = ["rt", "sync"] }
+tokio = { workspace = true, features = ["rt", "rt-multi-thread", "sync"] }
 async-trait = { workspace = true }
 sea-orm = { workspace = true, features = ["sqlx-sqlite", "runtime-tokio-rustls", "macros"] }
 serde = { workspace = true, features = ["derive"] }

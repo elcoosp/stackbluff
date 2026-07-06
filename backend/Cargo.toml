@@ -28,6 +28,7 @@ edition = "2024"
 rust-version = "1.94"
 
 [workspace.dependencies]
+tokio-cron-scheduler = "0.11"
 sb-notification = { path = "crates/sb-notification" }
 figment = { version = "0.10", features = ["toml", "env"] }
 wiremock = { version = "0.6",}
@@ -49,7 +50,7 @@ tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 sb-server = { path = "crates/sb-server" }
 sb-club = { path = "crates/sb-club" }
 futures = { version = "0.3.32", default-features = false, features = ["std", "async-await"] }
-moka = { version = "0.12.5", features = ["sync"] }
+moka = { version = "0.12.5", features = ["sync", "future"] }
 parking_lot = "0.12.3"
 sb-bot-handler = { path = "crates/sb-bot-handler" }
 teloxide = { version = "0.17", features = ["webhooks", "axum"] }

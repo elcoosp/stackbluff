@@ -6,6 +6,7 @@ export interface LeaderboardEntry {
     display_name: string;
     total_chips_won: number;
     rank: number;
+    badges?: string[];
 }
 
 export const LEADERBOARD_QUERY_KEY = ['leaderboard', 'global'] as const;

@@ -201,6 +201,20 @@ pub trait ClubService: Send + Sync {
         user_id: sb_shared_types::UserId,
         xp: i64,
     ) -> Result<(), ClubError>;
+
+    async fn get_user_division(
+        &self,
+        ctx: &sb_shared_types::RequestContext,
+        club_id: sb_shared_types::ClubId,
+        user_id: sb_shared_types::UserId,
+    ) -> Result<Option<u32>, ClubError>;
+
+    async fn rebalance_divisions(
+        &self,
+        ctx: &sb_shared_types::RequestContext,
+        club_id: sb_shared_types::ClubId,
+        requested_by: sb_shared_types::UserId,
+    ) -> Result<(), ClubError>;
 }
 
 // ========== Authentication contracts ==========

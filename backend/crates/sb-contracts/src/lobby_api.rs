@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use sb_shared_types::{AppError, StakeLevel, TableId};
+use sb_shared_types::{AppError, StakeLevel, TableId, UserId}; // added UserId
 use serde::{Deserialize, Serialize};
 
 /// Public information about a table, used for lobby listing.
@@ -32,5 +32,7 @@ pub trait TableService: Send + Sync {
         &self,
         stake_level: StakeLevel,
         max_players: u32,
+        created_by: UserId,      // new parameter
+        chat_id: Option<String>, // new parameter
     ) -> Result<TableId, AppError>;
 }
