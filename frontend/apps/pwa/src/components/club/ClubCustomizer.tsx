@@ -1,10 +1,9 @@
-import { useAuthStore } from '../../stores/authStore';
+import { useHasActiveClubPro } from '../../hooks/useEntitlements';
 
 export function ClubCustomizer() {
-  const clubProExpiresAt = useAuthStore((s) => s.clubProExpiresAt);
-  const isClubProActive = clubProExpiresAt ? new Date(clubProExpiresAt) > new Date() : false;
+  const hasActiveClubPro = useHasActiveClubPro();
 
-  if (!isClubProActive) return null;
+  if (!hasActiveClubPro) return null;
 
   return (
     <div className="mt-4 rounded-lg bg-indigo-900/30 p-4">
