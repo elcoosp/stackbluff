@@ -1,4 +1,4 @@
-import { clubWebSocket } from '../../lib/websocket';
+import { clubWebSocket } from '../lib/websocket';
 import { create } from 'zustand';
 import { apiClient } from '../api/client';
 
@@ -18,7 +18,6 @@ interface AuthState {
   setAuth: (user: User, token: string, balance?: number) => void;
   loadUser: () => Promise<void>;
   logout: () => void;
-    clubWebSocket.disconnect();
   updateBalance: (amount: number) => void;
 }
 
@@ -46,7 +45,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         id: string;
         username: string;
         email?: string;
-  club_pro_expires_at?: string;
+        club_pro_expires_at?: string;
         chip_balance: number;
       }>('/auth/me', { method: 'GET' });
 
@@ -64,7 +63,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: () => {
-    clubWebSocket.disconnect();
+    clubWebSocket.disconnect();   // ✅ now inside the logout method
     localStorage.removeItem('auth_token');
     set({ user: null, token: null, balance: 0, isAuthenticated: false, isLoading: false });
   },
