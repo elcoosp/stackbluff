@@ -11,6 +11,7 @@ use base64::prelude::*;
 use chrono::{DateTime, Utc};
 use sb_auth::middleware::{AuthUser, auth_middleware};
 use sb_contracts::lobby_api::{TableInfo, TableRepo, TableService};
+use sb_contracts::repo_api::BadgeRepo;
 use sb_contracts::repo_api::{HandHistoryRepository, HandSummary};
 use sb_shared_types::{RequestContext, StakeLevel, TableId, UserId};
 use sb_table_registry::registry::Registry;
@@ -19,13 +20,70 @@ use std::sync::Arc;
 use tracing::error;
 use uuid::Uuid;
 
+pub mod handlers;
 pub mod oracle_routes;
 pub mod player_stats;
 pub mod rate_limit;
 pub mod tournament_routes;
 
-pub use oracle_routes::oracle_router;
+pub use oracle_routes::oracle_routes;
 pub use rate_limit::rate_limit_middleware;
+
+#[allow(dead_code)]
+struct DummyGdprRepo;
+#[async_trait::async_trait]
+impl sb_contracts::repo_api::GdprRepo for DummyGdprRepo {
+    async fn request_deletion(
+        &self,
+        _: uuid::Uuid,
+    ) -> Result<(), sb_contracts::repo_api::PersistenceError> {
+        Ok(())
+    }
+    async fn get_pending_deletions(
+        &self,
+        _: i64,
+    ) -> Result<
+        Vec<sb_contracts::repo_api::DeletionRequestDto>,
+        sb_contracts::repo_api::PersistenceError,
+    > {
+        Ok(vec![])
+    }
+    async fn mark_deletion_completed(
+        &self,
+        _: uuid::Uuid,
+    ) -> Result<(), sb_contracts::repo_api::PersistenceError> {
+        Ok(())
+    }
+    async fn get_user_data(
+        &self,
+        _: uuid::Uuid,
+    ) -> Result<sb_contracts::repo_api::UserDataExportDto, sb_contracts::repo_api::PersistenceError>
+    {
+        Ok(sb_contracts::repo_api::UserDataExportDto {
+            profile: serde_json::Value::Null,
+            hand_history: serde_json::Value::Null,
+            missions: serde_json::Value::Null,
+        })
+    }
+    async fn anonymize_user(
+        &self,
+        _: uuid::Uuid,
+    ) -> Result<(), sb_contracts::repo_api::PersistenceError> {
+        Ok(())
+    }
+    async fn invalidate_sessions(
+        &self,
+        _: uuid::Uuid,
+    ) -> Result<(), sb_contracts::repo_api::PersistenceError> {
+        Ok(())
+    }
+    async fn get_user_password_hash(
+        &self,
+        _: uuid::Uuid,
+    ) -> Result<String, sb_contracts::repo_api::PersistenceError> {
+        Ok(String::new())
+    }
+}
 
 #[derive(Debug, Serialize)]
 pub struct LobbyTableInfo {
@@ -110,8 +168,12 @@ pub struct AppState {
     pub leaderboard_query: Arc<dyn sb_contracts::leaderboard::LeaderboardQuery + Send + Sync>,
     pub club_service: Arc<dyn sb_contracts::service_api::ClubService + Send + Sync>,
     pub broker: Arc<sb_table_registry::connection_broker::ConnectionBroker>,
+    pub badge_repo: Arc<dyn BadgeRepo + Send + Sync>,
+    pub gdpr_repo: Arc<dyn sb_contracts::repo_api::GdprRepo + Send + Sync>,
+
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn create_router(
     table_service: Arc<dyn TableService + Send + Sync>,
     table_repo: Arc<dyn TableRepo + Send + Sync>,
@@ -120,6 +182,8 @@ pub fn create_router(
     leaderboard_query: Arc<dyn sb_contracts::leaderboard::LeaderboardQuery + Send + Sync>,
     club_service: Arc<dyn sb_contracts::service_api::ClubService + Send + Sync>,
     broker: Arc<sb_table_registry::connection_broker::ConnectionBroker>,
+    badge_repo: Arc<dyn BadgeRepo + Send + Sync>,
+
 ) -> Router {
     let state = Arc::new(AppState {
         table_service,
@@ -129,15 +193,23 @@ pub fn create_router(
         leaderboard_query,
         club_service,
         broker,
+        badge_repo,
+        gdpr_repo: Arc::new(DummyGdprRepo),
+
     });
 
     let public_routes = Router::new().route("/api/tables", get(list_tables_public));
-
     let protected_routes = Router::new()
         .route("/lobby", get(lobby_handler))
         .route("/tables", post(create_table_handler))
         .route("/tables/{table_id}/history", get(table_history_handler))
         .merge(club_routes::club_routes())
+        .route("/users/me/badges", get(handlers::badges::get_my_badges))
+        .route(
+            "/users/{user_id}/badges",
+            get(handlers::badges::get_user_badges),
+        )
+
         .layer(axum::middleware::from_fn(auth_middleware));
 
     Router::new()
@@ -190,7 +262,7 @@ async fn lobby_handler(
 
 #[axum::debug_handler]
 async fn create_table_handler(
-    Extension(_auth_user): Extension<AuthUser>,
+    Extension(auth_user): Extension<AuthUser>,
     State(state): State<Arc<AppState>>,
     Json(req): Json<CreateTableRequest>,
 ) -> Result<Json<CreateTableResponse>, (StatusCode, Json<ErrorResponse>)> {
@@ -200,9 +272,14 @@ async fn create_table_handler(
             "max_players must be between 2 and 9",
         ));
     }
+    // Parse the authenticated user's ID
+    let user_id = UserId::new(
+        Uuid::parse_str(&auth_user.user_id)
+            .map_err(|_| bad_request("INVALID_USER", "Invalid user ID"))?,
+    );
     let table_id = state
         .table_service
-        .create_cash_table(req.stake_level, req.max_players)
+        .create_cash_table(req.stake_level, req.max_players, user_id, None)
         .await
         .map_err(internal_error)?;
     Ok(Json(CreateTableResponse { table_id }))
@@ -318,4 +395,15 @@ fn forbidden(msg: &str) -> (StatusCode, Json<ErrorResponse>) {
             },
         }),
     )
+}
+
+pub mod anti_cheat_routes;
+// Removed duplicate `use axum::routing::post;`
+
+pub mod gdpr_routes;
+pub mod routes;
+pub mod season_card;
+
+pub fn register_metrics(registry: &prometheus::Registry) {
+    sb_viral::puzzle::service::register_metrics(registry);
 }

@@ -187,6 +187,9 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                     email: model.email,
                     chip_balance: model.chip_balance,
                     club_pro_expires_at: model.club_pro_expires_at,
+                    season_pass_id: model.season_pass_id,
+                    season_pass_expires_at: model.season_pass_expires_at,
+
                 };
 
                 Ok(Some(

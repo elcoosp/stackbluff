@@ -1,4 +1,3 @@
-use sb_table_registry::events::TableEvent;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Duration;
@@ -14,7 +13,7 @@ use sb_contracts::tournament_api::{
 use sb_shared_types::{AppError, ChipAmount, PlayerId, TableConfig, TableId, TournamentId, UserId};
 use sb_table_registry::actor::InternalCommand as TableCommand;
 use sb_table_registry::connection_broker::ConnectionBroker;
-use sb_table_registry::events::HandCompletedEvent;
+use sb_table_registry::events::{HandCompletedEvent, TableEvent};
 use sb_table_registry::registry::Registry;
 
 use crate::blind_scheduler::BlindScheduler;
@@ -79,6 +78,10 @@ pub struct SitGoTournament {
 
     table_id: Option<TableId>,
     user_to_table: HashMap<UserId, TableId>,
+
+    // NEW FIELDS
+    created_by: UserId,
+    chat_id: Option<String>,
 }
 
 impl SitGoTournament {
@@ -90,6 +93,9 @@ impl SitGoTournament {
         broker: Arc<ConnectionBroker>,
         cmd_rx: mpsc::Receiver<SitGoCommand>,
         event_rx: tokio::sync::broadcast::Receiver<TableEvent>,
+        created_by: UserId,
+        chat_id: Option<String>,
+
     ) -> Self {
         Self {
             tournament_id,
@@ -114,6 +120,8 @@ impl SitGoTournament {
             pending_start: false,
             table_id: None,
             user_to_table: HashMap::new(),
+            created_by,
+            chat_id,
         }
     }
 
@@ -131,6 +139,8 @@ impl SitGoTournament {
                     self.handle_command(cmd).await;
                 }
                 Ok(event) = self.event_rx.recv() => {
+                    // Handle only HandCompleted events
+
                     if let TableEvent::HandCompleted(hand_event) = event {
                         self.handle_hand_completed(hand_event).await;
                     }
@@ -286,9 +296,16 @@ impl SitGoTournament {
             turn_time_limit_ms: 30_000,
         };
 
+        // Pass created_by and chat_id
         let (cmd_tx, table_id) = self
             .registry
-            .create_tournament_table(table_config, self.tournament_id, self.broker.clone())
+            .create_tournament_table(
+                table_config,
+                self.tournament_id,
+                self.broker.clone(),
+                self.created_by,
+                self.chat_id.clone(),
+            )
             .await?;
 
         self.table_id = Some(table_id);

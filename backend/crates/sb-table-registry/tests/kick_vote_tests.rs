@@ -49,6 +49,7 @@ async fn kick_vote_passes_and_refunds() {
         chat_id: None,
     });
 
+
     async fn join_player(
         tx: &mpsc::Sender<InternalCommand>,
         user_id: UserId,

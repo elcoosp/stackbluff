@@ -26,3 +26,15 @@ pub trait ConnectionBroker: Send + Sync {
         &self, club_id: ClubId, settings: ClubProSettings,
     ) -> Result<(), AppError>;
 }
+
+#[derive(Clone, Debug)]
+pub struct BadgeUnlockedEvent {
+    pub user_id: UserId,
+    pub badge_type: String,
+    pub awarded_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[async_trait::async_trait]
+pub trait BadgeEventNotifier: Send + Sync {
+    async fn notify_badge_unlocked(&self, event: BadgeUnlockedEvent) -> Result<(), crate::persistence_error::PersistenceError>;
+}

@@ -4,17 +4,19 @@ use async_trait::async_trait;
 use chrono::Utc;
 use sb_contracts::{
     HandCountObserver, ReplayCardObserver,
-    repo_api::ReferralRepository,
+    repo_api::{BadgeRepo, ReferralRepository},
     service_api::{ReferralStats, ReplayCard, UserService, ViralService},
+
 };
 use sb_shared_types::{AppError, ChipAmount, TableId, UserId, game_types::HandResult};
 use std::sync::Arc;
 use tracing::{error, info};
 use uuid::Uuid;
 
-pub struct ViralServiceImpl<R: ReferralRepository, U: UserService> {
+pub struct ViralServiceImpl<R: ReferralRepository, U: UserService, B: BadgeRepo = sb_contracts::repo_api::NoopBadgeRepo> {
     repo: Arc<R>,
     user_service: Arc<U>,
+    badge_repo: Arc<B>,
     base_url: String,
 }
 
@@ -23,7 +25,17 @@ impl<R: ReferralRepository, U: UserService> ViralServiceImpl<R, U> {
         Self {
             repo: Arc::new(repo),
             user_service,
+            badge_repo: Arc::new(sb_contracts::repo_api::NoopBadgeRepo),
             base_url,
+        }
+    }
+
+    pub fn with_badge_repo<B2: BadgeRepo>(self, badge_repo: B2) -> ViralServiceImpl<R, U, B2> {
+        ViralServiceImpl {
+            repo: self.repo,
+            user_service: self.user_service,
+            badge_repo: Arc::new(badge_repo),
+            base_url: self.base_url,
         }
     }
 
@@ -96,7 +108,21 @@ impl<R: ReferralRepository, U: UserService> ViralService for ViralServiceImpl<R,
         let triple = order.is_some_and(|o| o <= 1000);
         self.award_bonus(user_id, triple).await?;
         self.award_bonus(referrer_id, triple).await?;
-        self.repo.mark_bonus_awarded(user_id).await.map_err(|e| AppError::Internal(e.to_string()))?;
+        self.repo.mark_bonus_awarded(user_id).await?;
+
+        // Check and award founding member badge
+        match self.repo.get_referral_stats(referrer_id).await {
+            Ok(stats) if stats.bonus_earned >= 10 => {
+                match self.badge_repo.award_badge(referrer_id, "founding_member").await {
+                    Ok(true) => info!("Badge awarded: founding_member to {}", referrer_id),
+                    Ok(false) => {}
+                    Err(e) => error!("Failed to award badge: {}", e),
+                }
+            }
+            _ => {}
+        }
+
+
         info!(referred = %user_id, referrer = %referrer_id, triple = triple, "Referral bonus awarded after 5 hands");
         Ok(())
     }
@@ -135,3 +161,5 @@ impl<R: ReferralRepository + Send + Sync, U: UserService + Send + Sync> HandCoun
         }
     }
 }
+pub mod puzzle;
+

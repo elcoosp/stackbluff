@@ -13,6 +13,7 @@ async fn test_migration_and_basic_ops() {
     Migrator::up(&db, None).await.unwrap();
 
     let user_active = user::ActiveModel {
+        deleted_at: sea_orm::ActiveValue::Set(None),
         club_pro_expires_at: Set(None),
         id: sea_orm::ActiveValue::Set(Uuid::now_v7()),
         telegram_id: sea_orm::ActiveValue::Set(Some(123456789)),
@@ -22,6 +23,8 @@ async fn test_migration_and_basic_ops() {
         streak_count: sea_orm::ActiveValue::Set(0),
         created_at: sea_orm::ActiveValue::Set(Utc::now()),
         updated_at: sea_orm::ActiveValue::Set(Utc::now()),
+        season_pass_id: sea_orm::ActiveValue::Set(None),
+        season_pass_expires_at: sea_orm::ActiveValue::Set(None),
         platform: sea_orm::ActiveValue::Set(Platform::Telegram),
         email_verified_at: sea_orm::ActiveValue::Set(None),
         password_hash: sea_orm::ActiveValue::Set(None),
@@ -35,6 +38,7 @@ async fn test_migration_and_basic_ops() {
     assert!(err.to_string().contains("CHECK constraint"));
 
     let season = sb_db_entities::season::ActiveModel {
+        processed: Set(false),
         id: sea_orm::ActiveValue::Set(1),
         name: sea_orm::ActiveValue::Set("Season 1".to_string()),
         starts_at: sea_orm::ActiveValue::Set(Utc::now()),

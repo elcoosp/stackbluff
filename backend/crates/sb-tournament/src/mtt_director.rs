@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use chrono::Utc;
-use rand::prelude::*; // imports Rng, SliceRandom, etc.
+use rand::prelude::*;
 use tokio::sync::{mpsc, oneshot};
 use tracing::info;
 
@@ -42,6 +42,12 @@ pub enum MttCommand {
     GetMyTable {
         user_id: UserId,
         respond_to: oneshot::Sender<Option<TableId>>,
+    },
+    SetNotificationService {
+        service: Arc<dyn sb_contracts::notification_api::NotificationService>,
+    },
+    SetClubRepo {
+        repo: Arc<dyn sb_contracts::ClubRepo>,
     },
 }
 
@@ -92,6 +98,12 @@ pub struct MttDirector {
     user_repo: Option<Arc<dyn sb_contracts::repo_api::UserRepo>>,
 
     user_to_table: HashMap<UserId, TableId>,
+    notification_service: Option<Arc<dyn sb_contracts::notification_api::NotificationService>>,
+    club_repo: Option<Arc<dyn sb_contracts::ClubRepo>>,
+
+    // New fields from main
+    created_by: UserId,
+    chat_id: Option<String>,
 }
 
 impl MttDirector {
@@ -103,6 +115,9 @@ impl MttDirector {
         broker: Arc<ConnectionBroker>,
         cmd_rx: mpsc::Receiver<MttCommand>,
         event_rx: tokio::sync::broadcast::Receiver<TableEvent>,
+        created_by: UserId,
+        chat_id: Option<String>,
+
     ) -> Self {
         Self {
             tournament_id,
@@ -125,6 +140,10 @@ impl MttDirector {
             tournament_repo: None,
             user_repo: None,
             user_to_table: HashMap::new(),
+            notification_service: None,
+            club_repo: None,
+            created_by,
+            chat_id,
         }
     }
 
@@ -135,8 +154,12 @@ impl MttDirector {
                 Some(cmd) = self.cmd_rx.recv() => {
                     self.handle_command(cmd).await;
                 }
-                Ok(TableEvent::HandCompleted(event)) = self.event_rx.recv() => {
-                    self.handle_hand_completed(event).await;
+                Ok(event) = self.event_rx.recv() => {
+                    // Handle only HandCompleted events
+                    if let TableEvent::HandCompleted(hand_event) = event {
+                        self.handle_hand_completed(hand_event).await;
+                    }
+
                 }
                 else => break,
             }
@@ -197,6 +220,12 @@ impl MttDirector {
             } => {
                 let table_id = self.user_to_table.get(&user_id).copied();
                 let _ = respond_to.send(table_id);
+            }
+            MttCommand::SetNotificationService { service } => {
+                self.notification_service = Some(service);
+            }
+            MttCommand::SetClubRepo { repo } => {
+                self.club_repo = Some(repo);
             }
         }
     }
@@ -313,6 +342,8 @@ impl MttDirector {
                     table_config.clone(),
                     self.tournament_id,
                     self.broker.clone(),
+                    self.created_by,
+                    self.chat_id.clone(),
                 )
                 .await?;
             self.tables.push(TableInfo {

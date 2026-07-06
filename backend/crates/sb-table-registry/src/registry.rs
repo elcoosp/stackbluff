@@ -2,6 +2,7 @@ use crate::TableActorConfig;
 use crate::events::TableEvent;
 use crate::actor::{InternalCommand, LeaveResult, spawn_table_actor};
 use crate::connection_broker::ConnectionBroker;
+
 use crate::game_room::RoomMessage;
 use sb_contracts::stats_api::PlayerStatsRepo;
 use sb_contracts::{TableCommand, TableError, lobby_api::TableInfo};
@@ -29,12 +30,16 @@ struct RoomEntry {
 #[derive(Clone)]
 pub struct Registry {
     table_configs: Arc<RwLock<HashMap<TableId, TableConfig>>>,
+    table_creators: Arc<RwLock<HashMap<TableId, UserId>>>,
+    table_chat_ids: Arc<RwLock<HashMap<TableId, Option<String>>>>,
     table_rooms: Arc<RwLock<HashMap<TableId, Vec<TableId>>>>,
     rooms: Arc<RwLock<HashMap<TableId, RoomEntry>>>,
     users_at_table: Arc<RwLock<HashMap<TableId, HashSet<UserId>>>>,
     user_room_map: Arc<RwLock<HashMap<UserId, HashSet<TableId>>>>,
     event_tx: tokio::sync::broadcast::Sender<TableEvent>,
     stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
+    #[allow(clippy::type_complexity)]
+    table_metadata: Arc<RwLock<HashMap<TableId, (UserId, Option<String>)>>>,
 }
 
 impl Registry {
@@ -42,27 +47,56 @@ impl Registry {
         let (event_tx, _) = tokio::sync::broadcast::channel(1024);
         Self {
             table_configs: Arc::new(RwLock::new(HashMap::new())),
+            table_creators: Arc::new(RwLock::new(HashMap::new())),
+            table_chat_ids: Arc::new(RwLock::new(HashMap::new())),
             table_rooms: Arc::new(RwLock::new(HashMap::new())),
             rooms: Arc::new(RwLock::new(HashMap::new())),
             users_at_table: Arc::new(RwLock::new(HashMap::new())),
             user_room_map: Arc::new(RwLock::new(HashMap::new())),
             event_tx,
             stats_repo,
+            table_metadata: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
-    pub async fn create_table(&self, config: TableConfig) -> TableId {
+    pub async fn create_table(
+        &self,
+        config: TableConfig,
+        created_by: UserId,
+        chat_id: Option<String>,
+    ) -> TableId {
         let table_id = TableId::new(uuid::Uuid::new_v4());
-        self.register_existing_table(table_id, config).await;
+        self.register_existing_table(table_id, config, created_by, chat_id)
+            .await;
         table_id
     }
 
-    pub async fn register_existing_table(&self, table_id: TableId, config: TableConfig) {
+    pub async fn register_existing_table(
+        &self,
+        table_id: TableId,
+        config: TableConfig,
+        created_by: UserId,
+        chat_id: Option<String>,
+    ) {
         if self.table_configs.read().await.contains_key(&table_id) {
             return;
         }
         self.table_configs.write().await.insert(table_id, config);
+        self.table_creators
+            .write()
+            .await
+            .insert(table_id, created_by);
+
+        // FIX: Cloned chat_id to prevent "use of moved value" error
+        self.table_chat_ids
+            .write()
+            .await
+            .insert(table_id, chat_id.clone());
         self.table_rooms.write().await.entry(table_id).or_default();
+        self.table_metadata
+            .write()
+            .await
+            .insert(table_id, (created_by, chat_id));
         info!(%table_id, "Registered table config in Registry");
     }
 
@@ -79,12 +113,13 @@ impl Registry {
             .ok_or(TableError::NotFound(table_id))?
             .clone();
 
+        // FIX: Removed unused `created_by` and `chat_id` variables that were shadowed later.
+
         let mut table_rooms = self.table_rooms.write().await;
         let mut rooms = self.rooms.write().await;
 
         if let Some(room_ids) = table_rooms.get(&table_id) {
             for room_id in room_ids {
-                // Ignore les rooms dans lesquelles le joueur est déjà
                 if !exclude_rooms.contains(room_id)
                     && let Some(room) = rooms.get(room_id)
                     && room.active_players.load(Ordering::Relaxed) < config.max_players
@@ -97,6 +132,14 @@ impl Registry {
         let new_room_id = TableId::new(uuid::Uuid::new_v4());
         let active_players = Arc::new(AtomicU8::new(0));
 
+        let (created_by, chat_id) = self
+            .table_metadata
+            .read()
+            .await
+            .get(&table_id)
+            .cloned()
+            .unwrap_or_else(|| (UserId::new(uuid::Uuid::nil()), None));
+
         let (cmd_tx, _) = spawn_table_actor(TableActorConfig {
             room_id: new_room_id,
             table_id,
@@ -104,9 +147,10 @@ impl Registry {
             event_tx: self.event_tx.clone(),
             stats_repo: self.stats_repo.clone(),
             active_players: active_players.clone(),
-            created_by: UserId::new(uuid::Uuid::nil()),
-            chat_id: None,
+            created_by,
+            chat_id,
         });
+
 
         let room_entry = RoomEntry {
             table_id,
@@ -148,8 +192,6 @@ impl Registry {
             let entry = guard.get(&room_id).ok_or(TableError::NotFound(room_id))?;
             entry.table_id
         };
-
-        // LA VERIFICATION "Already seated" A ÉTÉ COMPLÈTEMENT SUPPRIMÉE ICI POUR AUTORISER LE MULTI-TABLING
 
         let (tx, rx) = tokio::sync::oneshot::channel();
 
@@ -450,12 +492,34 @@ impl Registry {
         self.event_tx.clone()
     }
 
-    /// Creates a tournament table and wires it into the registry.
+    // 5-arg version (backward compatible wrapper)
     pub async fn create_tournament_table(
         &self,
         config: TableConfig,
         tournament_id: sb_shared_types::TournamentId,
         broker: Arc<ConnectionBroker>,
+        created_by: UserId,
+        chat_id: Option<String>,
+    ) -> Result<(mpsc::Sender<InternalCommand>, TableId), AppError> {
+        // FIX: Actually pass the provided `created_by` and `chat_id` instead of hardcoding defaults
+        self.create_tournament_table_with_metadata(
+            config,
+            tournament_id,
+            broker,
+            created_by,
+            chat_id,
+        )
+        .await
+    }
+
+    // 5-arg version with metadata
+    pub async fn create_tournament_table_with_metadata(
+        &self,
+        config: TableConfig,
+        tournament_id: sb_shared_types::TournamentId,
+        broker: Arc<ConnectionBroker>,
+        created_by: UserId,
+        chat_id: Option<String>,
     ) -> Result<(mpsc::Sender<InternalCommand>, TableId), AppError> {
         let room_id = TableId::new(uuid::Uuid::new_v4());
         let active_players = Arc::new(AtomicU8::new(0));
@@ -467,11 +531,11 @@ impl Registry {
             event_tx: self.event_tx.clone(),
             stats_repo: self.stats_repo.clone(),
             active_players: active_players.clone(),
-            created_by: UserId::new(uuid::Uuid::nil()),
-            chat_id: None,
+            created_by,
+            chat_id,
         });
 
-        // Enter tournament mode
+
         cmd_tx
             .send(InternalCommand::EnterTournamentMode {
                 parent: tournament_id,
@@ -498,6 +562,7 @@ impl Registry {
         info!(%room_id, %tournament_id, "Tournament table created");
         Ok((cmd_tx, room_id))
     }
+
     /// Remove a room from the registry.
     pub async fn remove_room(&self, room_id: TableId) {
         if let Some(entry) = self.rooms.write().await.remove(&room_id) {
@@ -590,6 +655,15 @@ impl Registry {
     }
 
     /// Subscribe a user to a room's broadcast (for spectating).
+    pub async fn subscribe_to_room(&self, room_id: TableId, user_id: UserId) {
+        self.user_room_map
+            .write()
+            .await
+            .entry(user_id)
+            .or_default()
+            .insert(room_id);
+    }
+
     /// Remove a user from a room's broadcast.
     pub async fn unsubscribe_from_room(&self, room_id: TableId, user_id: UserId) {
         if let Some(set) = self.user_room_map.write().await.get_mut(&user_id) {
@@ -598,15 +672,6 @@ impl Registry {
                 self.user_room_map.write().await.remove(&user_id);
             }
         }
-    }
-
-    pub async fn subscribe_to_room(&self, room_id: TableId, user_id: UserId) {
-        self.user_room_map
-            .write()
-            .await
-            .entry(user_id)
-            .or_default()
-            .insert(room_id);
     }
 
     pub async fn set_sitting_out(
@@ -630,3 +695,4 @@ impl Registry {
         Ok(())
     }
 }
+

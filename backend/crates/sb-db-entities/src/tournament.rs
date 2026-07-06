@@ -16,6 +16,7 @@ pub struct Model {
     pub started_at: Option<DateTimeUtc>,
     pub completed_at: Option<DateTimeUtc>,
     pub created_at: DateTimeUtc,
+    pub scheduled_start: Option<DateTimeUtc>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

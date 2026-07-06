@@ -1,3 +1,4 @@
+import { useGameHandCompletion } from '@/hooks/useGameHandCompletion';
 import { useParams, useSearch } from '@tanstack/react-router';
 import { useGameWebSocket } from '../hooks/useGameWebSocket';
 import { usePreAction } from '../hooks/usePreAction';
@@ -224,6 +225,7 @@ function useDelayedBoolean(value: boolean, delayMs: number): boolean {
    TablePage
    ═══════════════════════════════════════════════════════════════════ */
 export function TablePage() {
+  useGameHandCompletion();
   const { tableId } = useParams({ from: '/table/$tableId' });
   const search = useSearch({ from: '/table/$tableId' });
   const navigate = useNavigate();

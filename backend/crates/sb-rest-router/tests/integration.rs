@@ -42,7 +42,7 @@ mockall::mock! {
     pub TableService { }
     #[async_trait::async_trait]
     impl TableService for TableService {
-        async fn create_cash_table(&self, stake_level: StakeLevel, max_players: u32) -> Result<TableId, AppError>;
+        async fn create_cash_table(&self, stake_level: StakeLevel, max_players: u32, _user_id: UserId, _chat_id: Option<String>) -> Result<TableId, AppError>;
     }
 }
 
@@ -100,6 +100,7 @@ async fn test_unauthenticated_returns_401() {
         leaderboard_query,
         club_service,
         Arc::new(sb_table_registry::connection_broker::ConnectionBroker::new()),
+        Arc::new(sb_contracts::repo_api::NoopBadgeRepo),
     );
 
     let server = TestServer::new(app);

@@ -16,9 +16,10 @@ pub struct CreateTableInput {
     pub club_id: Option<ClubId>,
     pub stake_level: StakeLevel,
     pub variant: GameVariant,
-    pub created_by: UserId,
     pub is_private: bool,
     pub invited_users: Vec<UserId>,
+    pub created_by: sb_shared_types::UserId,
+    pub telegram_chat_id: Option<String>,
 }
 
 /// Service for managing poker tables.
@@ -184,27 +185,42 @@ pub trait ClubService: Send + Sync {
         user_id: sb_shared_types::UserId,
         xp: i64,
     ) -> Result<(), ClubError>;
+
     async fn update_pro_settings(
         &self,
-        ctx: &RequestContext,
-        club_id: ClubId,
+        ctx: &sb_shared_types::RequestContext,
+        club_id: sb_shared_types::ClubId,
         settings: UpdateClubSettingsRequest,
     ) -> Result<ClubProSettings, ClubError>;
-    
+
     async fn get_pro_settings(
         &self,
-        club_id: ClubId,
+        club_id: sb_shared_types::ClubId,
     ) -> Result<Option<ClubProSettings>, ClubError>;
-    
+
     async fn find_club_owner(
         &self,
-        club_id: ClubId,
-    ) -> Result<Option<UserId>, ClubError>;
+        club_id: sb_shared_types::ClubId,
+    ) -> Result<Option<sb_shared_types::UserId>, ClubError>;
 
     async fn is_club_pro_active(
         &self,
-        user_id: UserId,
+        user_id: sb_shared_types::UserId,
     ) -> Result<bool, ClubError>;
+
+    async fn get_user_division(
+        &self,
+        ctx: &sb_shared_types::RequestContext,
+        club_id: sb_shared_types::ClubId,
+        user_id: sb_shared_types::UserId,
+    ) -> Result<Option<u32>, ClubError>;
+
+    async fn rebalance_divisions(
+        &self,
+        ctx: &sb_shared_types::RequestContext,
+        club_id: sb_shared_types::ClubId,
+        requested_by: sb_shared_types::UserId,
+    ) -> Result<(), ClubError>;
 }
 
 // ========== Authentication contracts ==========

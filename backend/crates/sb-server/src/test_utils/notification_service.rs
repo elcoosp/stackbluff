@@ -60,3 +60,18 @@ impl NotificationService for InMemoryNotificationService {
         Ok(())
     }
 }
+
+
+
+#[async_trait::async_trait]
+impl sb_contracts::notification::NotificationService for InMemoryNotificationService {
+    async fn send(
+        &self,
+        _ctx: &sb_shared_types::RequestContext,
+        user_id: sb_shared_types::UserId,
+        event: sb_contracts::notification::NotificationEvent,
+    ) -> Result<(), sb_shared_types::errors::AppError> {
+        tracing::info!(?user_id, ?event, "InMemoryNotificationService::send");
+        Ok(())
+    }
+}

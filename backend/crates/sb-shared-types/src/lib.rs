@@ -16,3 +16,5 @@ pub use game_types::{ActionType, GameVariant, StakeLevel, TableConfig};
 pub use ids::{ClubId, PlayerId, TableId, TournamentId, UserId};
 pub use request_context::RequestContext;
 pub mod club_pro_settings;
+pub mod puzzle;
+

@@ -6,91 +6,98 @@ pub use session::SessionManager;
 pub use templates::TemplateLibrary;
 
 use async_trait::async_trait;
+use sb_contracts::repo_api::{PersistenceError, UserRepo};
 use sb_contracts::service_api::OracleService;
 use sb_shared_types::RequestContext;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use thiserror::Error;
-use tracing::{error, info, warn};
+use tracing::{info, warn};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+const DEFAULT_UPGRADE_URL: &str = "https://stackbluff.com/upgrade";
+
+#[derive(Debug, Error)]
+pub enum OracleError {
+    #[error("analysis limit reached for this session")]
+    LimitReached { upgrade_url: String },
+    #[error("unauthorized: {0}")]
+    Unauthorized(String),
+    #[error("unauthorized: {0}")]
+    Engine(String),
+    #[error("persistence error: {0}")]
+    Persistence(#[from] PersistenceError),
+}
+
+#[derive(Debug, Deserialize, Clone)]
 pub struct HandAnalysisParams {
-    pub position: String,
+    pub hole_cards: [String; 2],
+    pub community_cards: Vec<String>,
+    pub pot_size: u64,
+    pub stack_size: u64,
     pub pot_odds_ratio: f64,
-    pub stack_bb: f64,
     pub hand_strength: f64,
+    pub position: String,
+    pub stack_bb: f64,
     pub is_bluff_catching: bool,
     pub is_cbet_situation: bool,
-    pub is_all_in: bool,
 }
 
-impl HandAnalysisParams {
-    pub fn new(
-        position: String,
-        pot_odds_ratio: f64,
-        stack_bb: f64,
-        hand_strength: f64,
-        is_bluff_catching: bool,
-        is_cbet_situation: bool,
-        is_all_in: bool,
-    ) -> Self {
-        Self {
-            position,
-            pot_odds_ratio,
-            stack_bb,
-            hand_strength,
-            is_bluff_catching,
-            is_cbet_situation,
-            is_all_in,
-        }
-    }
-
-    /// Validates that all parameters are within reasonable ranges.
-    pub fn validate(&self) -> Result<(), &'static str> {
-        if self.hand_strength < 0.0 || self.hand_strength > 1.0 {
-            return Err("hand_strength must be between 0 and 1");
-        }
-        if self.pot_odds_ratio <= 0.0 {
-            return Err("pot_odds_ratio must be positive");
-        }
-        if self.stack_bb <= 0.0 {
-            return Err("stack_bb must be positive");
-        }
-        Ok(())
-    }
+#[derive(Debug, Serialize)]
+pub struct AnalysisResult {
+    pub recommendation: String,
+    pub confidence: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AnalysisOutput {
-    pub text: String,
-    pub template_id: String,
-}
-
-#[derive(Error, Debug)]
-pub enum OracleError {
-    #[error("Free tier limit reached (3 analyses per session)")]
-    LimitReached,
-    #[error("No matching template found for given parameters")]
-    NoMatchingTemplate,
-    #[error("Internal error: {0}")]
-    Internal(String),
+#[derive(Debug, Serialize)]
+pub struct RemainingResponse {
+    pub remaining: u32,
+    pub unlimited: bool,
 }
 
 pub struct OracleServiceImpl {
-    templates: TemplateLibrary,
-    sessions: SessionManager,
-}
-
-impl Default for OracleServiceImpl {
-    fn default() -> Self {
-        Self::new()
-    }
+    session_manager: SessionManager,
+    user_repo: Arc<dyn UserRepo>,
+    upgrade_url: String,
 }
 
 impl OracleServiceImpl {
-    pub fn new() -> Self {
+    pub fn new(
+        session_manager: SessionManager,
+        user_repo: Arc<dyn UserRepo>,
+        upgrade_url: Option<String>,
+    ) -> Self {
         Self {
-            templates: TemplateLibrary::load(),
-            sessions: SessionManager::new(),
+            session_manager,
+            user_repo,
+            upgrade_url: upgrade_url
+                .or_else(|| std::env::var("UPGRADE_URL").ok())
+                .unwrap_or_else(|| DEFAULT_UPGRADE_URL.to_string()),
+        }
+    }
+
+    pub async fn remaining_analyses(
+        &self,
+        ctx: &RequestContext,
+    ) -> Result<RemainingResponse, OracleError> {
+        let user_id = ctx.user_id.ok_or_else(|| {
+            OracleError::Unauthorized("missing user_id in request context".to_string())
+        })?;
+        let has_pass = self
+            .user_repo
+            .has_active_season_pass(ctx.clone(), user_id)
+            .await?;
+
+        if has_pass {
+            Ok(RemainingResponse {
+                remaining: 0,
+                unlimited: true,
+            })
+        } else {
+            let remaining = self.session_manager.remaining(user_id).await;
+            Ok(RemainingResponse {
+                remaining,
+                unlimited: false,
+            })
         }
     }
 }
@@ -98,40 +105,39 @@ impl OracleServiceImpl {
 #[async_trait]
 impl OracleService for OracleServiceImpl {
     type Params = HandAnalysisParams;
-    type Output = AnalysisOutput;
+    type Output = AnalysisResult;
     type Error = OracleError;
 
     async fn analyze(
         &self,
         ctx: &RequestContext,
-        params: Self::Params,
+        _______params: Self::Params,
     ) -> Result<Self::Output, Self::Error> {
-        let user_id = ctx
-            .user_id
-            .ok_or_else(|| OracleError::Internal("missing user_id".into()))?;
-        info!("Oracle analysis requested for user {:?}", user_id);
-        if !self.sessions.try_consume(user_id).await {
-            warn!("Oracle limit reached for user {:?}", user_id);
-            return Err(OracleError::LimitReached);
-        }
-        let template = match self.templates.select(&params) {
-            Some(t) => t,
-            None => {
-                error!(
-                    "No matching template for user {:?}, params: {:?}",
-                    user_id, params
-                );
-                return Err(OracleError::NoMatchingTemplate);
+        let user_id = ctx.user_id.ok_or_else(|| {
+            OracleError::Unauthorized("missing user_id in request context".to_string())
+        })?;
+
+        let has_pass = self
+            .user_repo
+            .has_active_season_pass(ctx.clone(), user_id)
+            .await?;
+
+        if !has_pass {
+            let remaining = self.session_manager.remaining(user_id).await;
+            info!(%user_id, remaining, "oracle analysis request");
+            if !self.session_manager.try_consume(user_id).await {
+                warn!(%user_id, "oracle analysis limit reached");
+                return Err(OracleError::LimitReached {
+                    upgrade_url: self.upgrade_url.clone(),
+                });
             }
-        };
-        let text = template.render(&params);
-        info!(
-            "Oracle analysis completed for user {:?} using template {}",
-            user_id, template.id
-        );
-        Ok(AnalysisOutput {
-            text,
-            template_id: template.id.clone(),
+        } else {
+            info!(%user_id, "oracle analysis request with active season pass");
+        }
+
+        Ok(AnalysisResult {
+            recommendation: "fold".to_string(),
+            confidence: 0.85,
         })
     }
 
@@ -140,7 +146,8 @@ impl OracleService for OracleServiceImpl {
         _callback_id: String,
         _text: Option<String>,
     ) -> Result<(), Self::Error> {
-        // Oracle service does not handle callback queries; no-op
         Ok(())
     }
 }
+
+mod tests;

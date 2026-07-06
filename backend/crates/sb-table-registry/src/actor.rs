@@ -18,7 +18,7 @@ use sb_shared_types::{ActionType, ChipAmount, PlayerId, StakeLevel, TableConfig,
 
 use crate::connection_broker::ConnectionBroker;
 use crate::events::HandCompletedEvent;
-use crate::events::{TableEvent, TableClosedEvent};
+use crate::events::{TableClosedEvent, TableEvent};
 use chrono::Utc;
 use sb_db_entities::hand_history_json::{
     HandAction, HandActions, HandPlayer, HandPlayers, HandResult, PotSplit, Winner,
@@ -583,8 +583,12 @@ pub struct TableActor {
     paused: bool,
     timeout_handle: Option<tokio::task::JoinHandle<()>>,
     busted_players_cache: Option<Vec<(UserId, ChipAmount)>>,
+
+    // ── NEW: store last hand result for TableClosedEvent ──────────────
+    last_hand_result: Option<(UserId, String, ChipAmount)>,
 }
 
+#[allow(clippy::too_many_arguments)]
 impl TableActor {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
@@ -625,6 +629,7 @@ impl TableActor {
             paused: false,
             timeout_handle: None,
             busted_players_cache: None,
+            last_hand_result: None,
         }
     }
 
@@ -647,8 +652,6 @@ impl TableActor {
         }
     }
 
-    /// Broadcast a message to all players at this table.
-    /// Uses the broker if in tournament mode, otherwise falls back to direct user senders.
     fn broadcast(&self, msg: RoomMessage) {
         if let Some(broker) = &self.broker {
             broker.broadcast_to_room(self.room_id, msg);
@@ -659,8 +662,6 @@ impl TableActor {
         }
     }
 
-    /// Send a message to a specific user.
-    /// Uses the broker if available, otherwise uses the direct sender map.
     fn send_to_player(&self, user_id: &UserId, msg: RoomMessage) {
         if let Some(broker) = &self.broker {
             broker.send_to_user(*user_id, msg);
@@ -756,7 +757,6 @@ impl TableActor {
                 self.timeout_kick_vote(kick_vote_id).await;
             }
 
-            // ── Tournament commands ────────────────────────────────────────
             InternalCommand::GetPlayerStack {
                 user_id,
                 respond_to,
@@ -878,9 +878,6 @@ impl TableActor {
         }
         true
     }
-
-    // (rest of the methods remain unchanged but will use self.broadcast/self.send_to_player
-    //  instead of Self::send_to_all/Self::send_to_user)
 
     async fn handle_reconnect(
         &mut self,
@@ -1868,8 +1865,17 @@ impl TableActor {
         }
     }
 
+    #[allow(clippy::collapsible_if)]
     async fn process_winners(&mut self, hand: &ActiveHand) {
         let winners = hand.state.calculate_pot_winners();
+
+        if let Some(first_winner) = winners.first() {
+            if let Some(user_id) = hand.user_by_player_id.get(&first_winner.player_id) {
+                let hand_desc = first_winner.hand_rank.name().to_string();
+                let pot = hand.state.current_pot();
+                self.last_hand_result = Some((*user_id, hand_desc, pot));
+            }
+        }
 
         for winner in &winners {
             if let Some(user) = hand.user_by_player_id.get(&winner.player_id)
@@ -1912,7 +1918,6 @@ impl TableActor {
         self.last_dealer_index = Some(hand.dealer_index);
         self.current_hand = None;
 
-        // ── Tournament elimination detection ────────────────────────────
         let busted: Vec<(UserId, ChipAmount)> = if let TableMode::Tournament { .. } = &self.mode {
             let busted_pids = hand.state.get_busted_players();
             busted_pids
@@ -2439,14 +2444,18 @@ impl TableActor {
     }
 
     fn emit_table_closed_event(&self) {
-        use sb_shared_types::{UserId, TableId, ChipAmount};
         use crate::events::{TableClosedEvent, TableEvent};
+        use sb_shared_types::{ChipAmount, TableId, UserId};
 
-        // Placeholder: in a real implementation, retrieve from game state.
-        // For now, use default values.
-        let winner = None;
-        let hand_desc = "Unknown".to_string();
-        let pot = zero();
+        let (winner, hand_desc, pot) = match &self.last_hand_result {
+            Some((uid, desc, pot)) => (Some(*uid), desc.clone(), *pot),
+            None => (
+                None,
+                "No hand completed".to_string(),
+                ChipAmount::new(0).unwrap(),
+            ),
+        };
+
 
         let event = TableClosedEvent {
             table_id: self.table_id,
@@ -2492,6 +2501,7 @@ pub struct TableActorConfig {
     pub created_by: UserId,
     pub chat_id: Option<String>,
 }
+
 
 pub fn spawn_table_actor(
     config: TableActorConfig,
