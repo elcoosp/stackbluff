@@ -22,6 +22,12 @@ pub struct Model {
     pub password_hash: Option<String>,
     pub password_changed_at: Option<DateTimeUtc>,
     pub registration_order: Option<i64>,
+    #[sea_orm(nullable)]
+    pub club_pro_expires_at: Option<DateTimeUtc>,
+    pub season_pass_id: Option<Uuid>,
+    pub season_pass_expires_at: Option<DateTimeUtc>,
+    pub deleted_at: Option<chrono::NaiveDateTime>,
+
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

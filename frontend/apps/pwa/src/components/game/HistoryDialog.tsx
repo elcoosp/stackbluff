@@ -1,3 +1,4 @@
+import { useAuthStore } from '../stores/authStore';
 import { useRef } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useVirtualizer } from '@tanstack/react-virtual';

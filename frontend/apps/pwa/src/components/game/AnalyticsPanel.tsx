@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
 import { Minimize2, Maximize2 } from 'lucide-react';
+import { useHasActiveSeasonPass } from '../../hooks/useEntitlements';
 
 const glassPanel: React.CSSProperties = {
   background: 'rgba(10, 10, 10, 0.75)',
@@ -69,6 +70,11 @@ export const TacticalOracle = ({
       transition={{ delay: 0.2, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       className="fixed bottom-5 left-5 z-[460] pointer-events-auto"
     >
+        {hasActiveSeasonPass() && (
+          <span className="ml-2 inline-flex items-center rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-medium text-amber-400">
+            Unlimited
+          </span>
+        )}
       <div style={glassPanel} className="rounded-xl px-4 py-3 min-w-[180px] flex flex-col">
         <div className="flex items-center justify-between gap-3 w-full">
           {!expanded ? (

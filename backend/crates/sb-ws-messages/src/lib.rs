@@ -50,3 +50,11 @@ pub struct Card {
     pub suit: String,
     pub rank: String,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClubThemeUpdated {
+    pub club_id: String,
+    pub banner_url: Option<String>,
+    pub chip_preset_id: Option<i32>,
+    pub felt_color: Option<String>,
+}

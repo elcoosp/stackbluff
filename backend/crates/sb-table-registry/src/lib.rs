@@ -1,4 +1,5 @@
 pub mod actor;
+pub use actor::TableActorConfig;
 pub mod connection_broker;
 pub mod events;
 pub mod game_room;

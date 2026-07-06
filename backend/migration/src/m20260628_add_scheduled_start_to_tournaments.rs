@@ -1,0 +1,41 @@
+use sea_orm_migration::prelude::*;
+
+#[derive(DeriveMigrationName)]
+pub struct Migration;
+
+#[async_trait::async_trait]
+impl MigrationTrait for Migration {
+    async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        manager
+            .alter_table(
+                Table::alter()
+                    .table(Tournament::Table)
+                    .add_column(
+                        ColumnDef::new(Tournament::ScheduledStart)
+                            .timestamp_with_time_zone()
+                            .null()
+                    )
+                    .to_owned(),
+            )
+            .await
+    }
+
+    async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        manager
+            .alter_table(
+                Table::alter()
+                    .table(Tournament::Table)
+                    .drop_column(Tournament::ScheduledStart)
+                    .to_owned(),
+            )
+            .await
+    }
+}
+
+#[derive(Iden)]
+pub enum Tournament {
+    #[iden = "tournaments"]
+    Table,
+    #[iden = "scheduled_start"]
+    ScheduledStart,
+}

@@ -38,6 +38,7 @@ fn app_error_to_status(e: &AppError) -> StatusCode {
         AppError::Timeout => StatusCode::GATEWAY_TIMEOUT,
         AppError::TooManyRequests(_) => StatusCode::TOO_MANY_REQUESTS,
         AppError::Forbidden(_) => StatusCode::FORBIDDEN,
+        AppError::ValidationError(_) => StatusCode::BAD_REQUEST,
     }
 }
 

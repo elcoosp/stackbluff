@@ -8,7 +8,6 @@ use sb_shared_types::{AppError, StakeLevel, TableId, UserId};
 use sb_table_registry::Registry;
 use std::sync::Arc;
 
-// Dummy stats repo – implements required methods
 struct DummyStatsRepo;
 #[async_trait::async_trait]
 impl sb_contracts::stats_api::PlayerStatsRepo for DummyStatsRepo {
@@ -42,7 +41,7 @@ mockall::mock! {
     pub TableService { }
     #[async_trait::async_trait]
     impl TableService for TableService {
-        async fn create_cash_table(&self, stake_level: StakeLevel, max_players: u32) -> Result<TableId, AppError>;
+        async fn create_cash_table(&self, stake_level: StakeLevel, max_players: u32, created_by: UserId, chat_id: Option<String>) -> Result<TableId, AppError>;
     }
 }
 
@@ -85,6 +84,15 @@ async fn test_unauthenticated_returns_401() {
 
     let hand_history_repo = Arc::new(MockHandHistoryRepo::new());
     let leaderboard_query = Arc::new(MockLeaderboardQueryMock::new());
+    let badge_repo = Arc::new(sb_contracts::repo_api::NoopBadgeRepo);
+
+    let (_db_cmd_tx, _db_cmd_rx) =
+        tokio::sync::mpsc::unbounded_channel::<sb_db_repos::commands::DbCommand>();
+    let club_service: Arc<dyn sb_contracts::service_api::ClubService + Send + Sync> = Arc::new(
+        sb_club::ClubServiceImpl::new(Arc::new(sb_db_repos::club_repo::ClubRepoImpl::new(
+            sea_orm::Database::connect("sqlite::memory:").await.unwrap(),
+        ))),
+    );
 
     let app = create_router(
         Arc::new(mock_service),
@@ -92,6 +100,9 @@ async fn test_unauthenticated_returns_401() {
         registry,
         hand_history_repo,
         leaderboard_query,
+        club_service,
+        Arc::new(sb_table_registry::connection_broker::ConnectionBroker::new()),
+        badge_repo,
     );
 
     let server = TestServer::new(app);
@@ -101,6 +112,4 @@ async fn test_unauthenticated_returns_401() {
 
 #[tokio::test]
 #[ignore = "JWT token validation fails in CI; to be fixed separately"]
-async fn test_create_and_list_table() {
-    // Test body remains but will not be executed.
-}
+async fn test_create_and_list_table() {}

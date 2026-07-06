@@ -4,7 +4,7 @@ use axum::{
     http::StatusCode,
     routing::{get, post},
 };
-use sb_contracts::tournament_api::TournamentService; // <-- import the trait
+use sb_contracts::tournament_api::TournamentService;
 use sb_shared_types::{AppError, TournamentId, UserId};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -65,6 +65,9 @@ async fn create_tournament(
     use sb_contracts::tournament_api::TournamentConfig;
 
     let config = TournamentConfig {
+        club_id: None,
+        scheduled_start: None,
+        blind_schedule_id: None,
         tournament_type: match req.tournament_type.as_str() {
             "SitAndGo" | "sit_and_go" => sb_contracts::tournament_api::TournamentType::SitAndGo,
             "Mtt" | "mtt" => sb_contracts::tournament_api::TournamentType::Mtt,

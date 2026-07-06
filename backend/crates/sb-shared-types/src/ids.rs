@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// Unique identifier for a user. Use `UserId::new(uuid)` to construct, `.as_uuid()` to extract.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, PartialOrd)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, PartialOrd, Default)]
 pub struct UserId(pub Uuid);
 
 impl UserId {
@@ -132,5 +132,11 @@ impl std::str::FromStr for TournamentId {
     type Err = uuid::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(TournamentId(Uuid::parse_str(s)?))
+    }
+}
+
+impl From<UserId> for uuid::Uuid {
+    fn from(user_id: UserId) -> Self {
+        user_id.0
     }
 }

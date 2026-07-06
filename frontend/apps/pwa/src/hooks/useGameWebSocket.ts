@@ -1,3 +1,6 @@
+import { useEntitlementsStore } from '../stores/entitlementsStore';
+import { UserUpdatedPayloadSchema } from '../lib/wsMessages';
+import { useAuthStore } from '../stores/authStore';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useGameStore, TableState, ActionRequired } from '@stackbluff/shared/stores/gameStore';
 import { toast } from 'sonner';
@@ -270,6 +273,8 @@ export function useGameWebSocket(tableId: string) {
     const url = token ? `${baseWs}/ws/game?token=${encodeURIComponent(token)}` : `${baseWs}/ws/game`;
 
     const ws = new WebSocket(url);
+    
+
     wsRef.current = ws;
 
     ws.onopen = () => {
@@ -295,6 +300,31 @@ export function useGameWebSocket(tableId: string) {
       if (!mountedRef.current) return;
       try {
         const data = JSON.parse(event.data);
+        // Handle payment-driven entitlement updates
+        if (data.type === 'user.updated') {
+          const parsed = UserUpdatedPayloadSchema.safeParse(data);
+          if (!parsed.success) {
+            console.warn('[WS] Ignored malformed user.updated message:', parsed.error.format());
+          } else {
+            const msg = parsed.data;
+            const payload = msg.payload ?? msg.data ?? {};
+            if (typeof payload.balance === 'number') {
+              useAuthStore.getState().setBalance(payload.balance);
+              console.info('[WS] Balance updated:', payload.balance);
+            }
+            if (payload.season_pass_expires_at !== undefined) {
+              useEntitlementsStore.getState().setSeasonPassExpiresAt(payload.season_pass_expires_at);
+            }
+            if (payload.club_pro_expires_at !== undefined) {
+              useEntitlementsStore.getState().setClubProExpiresAt(payload.club_pro_expires_at);
+            }
+            if (typeof payload.is_club_owner === 'boolean') {
+              useEntitlementsStore.getState().setIsClubOwner(payload.is_club_owner);
+            }
+          }
+          return;
+        }
+
         console.debug('[WS Hook] Message received:', data);
 
         if (data.type === 'Error') {

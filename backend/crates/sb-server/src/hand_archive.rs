@@ -182,3 +182,30 @@ pub async fn get_hand(
         serde_json::from_str(&json_str).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(Json(json))
 }
+
+#[allow(dead_code)]
+pub async fn upload_club_banner(
+    r2: &RealR2,
+    club_id: sb_shared_types::ClubId,
+    data: bytes::Bytes,
+) -> Result<String, sb_shared_types::AppError> {
+    let key = format!("club_banners/{}/banner.png", club_id);
+    r2.put_object(&key, data.to_vec()).await
+        .map_err(|e| sb_shared_types::AppError::Internal(e.to_string()))?;
+    Ok(format!("https://cdn.stackbluff.com/{}", key))
+}
+
+#[allow(dead_code)]
+pub struct NoOpR2;
+
+#[async_trait::async_trait]
+impl R2Storage for NoOpR2 {
+    async fn put_object(&self, _key: &str, _data: Vec<u8>) -> Result<(), String> {
+        Ok(())
+    }
+
+    async fn get_object(&self, _key: &str) -> Result<Vec<u8>, String> {
+        Err("not found".to_string())
+    }
+
+}

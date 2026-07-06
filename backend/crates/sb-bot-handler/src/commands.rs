@@ -83,6 +83,7 @@ pub async fn handle_poker_command(ctx: &RequestContext, state: &Arc<BotState>, m
         created_by: user_id,
         is_private: false,
         invited_users: vec![],
+        telegram_chat_id: Some(chat_id.0.to_string()),
     };
 
     let table_id = match timeout(
@@ -204,6 +205,7 @@ pub async fn handle_challenge_command(
         created_by: challenger_id,
         is_private: true,
         invited_users: vec![challenger_id, challenged_id],
+        telegram_chat_id: Some(chat_id.0.to_string()),
     };
 
     let table_id = match timeout(

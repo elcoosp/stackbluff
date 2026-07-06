@@ -10,6 +10,7 @@ pub struct Model {
     pub weekly_xp: i64,
     pub joined_at: DateTimeUtc,
     pub updated_at: DateTimeUtc,
+    pub division: i32,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

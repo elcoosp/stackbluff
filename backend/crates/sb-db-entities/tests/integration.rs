@@ -2,6 +2,7 @@ use chrono::Utc;
 use migration::Migrator;
 use sb_db_entities::enums::Platform;
 use sb_db_entities::user;
+use sea_orm::Set;
 use sea_orm::{ActiveModelTrait, Database, EntityTrait, IntoActiveModel, ModelTrait};
 use sea_orm_migration::migrator::MigratorTrait;
 use uuid::Uuid;
@@ -20,11 +21,16 @@ async fn test_migration_and_basic_ops() {
         streak_count: sea_orm::ActiveValue::Set(0),
         created_at: sea_orm::ActiveValue::Set(Utc::now()),
         updated_at: sea_orm::ActiveValue::Set(Utc::now()),
+        season_pass_id: sea_orm::ActiveValue::Set(None),
+        season_pass_expires_at: sea_orm::ActiveValue::Set(None),
         platform: sea_orm::ActiveValue::Set(Platform::Telegram),
         email_verified_at: sea_orm::ActiveValue::Set(None),
         password_changed_at: sea_orm::ActiveValue::Set(None),
         password_hash: sea_orm::ActiveValue::Set(None),
         registration_order: sea_orm::ActiveValue::Set(None),
+        deleted_at: sea_orm::ActiveValue::Set(None),
+        // FIX: Added the missing club_pro_expires_at field
+        club_pro_expires_at: sea_orm::ActiveValue::Set(None),
     };
     let user = user_active.insert(&db).await.unwrap();
 
@@ -34,6 +40,7 @@ async fn test_migration_and_basic_ops() {
     assert!(err.to_string().contains("CHECK constraint"));
 
     let season = sb_db_entities::season::ActiveModel {
+        processed: Set(false),
         id: sea_orm::ActiveValue::Set(1),
         name: sea_orm::ActiveValue::Set("Season 1".to_string()),
         starts_at: sea_orm::ActiveValue::Set(Utc::now()),
@@ -49,7 +56,6 @@ async fn test_migration_and_basic_ops() {
     };
     rank.insert(&db).await.unwrap();
 
-    // Delete user using method on model
     user.delete(&db).await.unwrap();
     let ranks = sb_db_entities::player_rank::Entity::find()
         .all(&db)

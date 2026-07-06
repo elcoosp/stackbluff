@@ -5,12 +5,13 @@ edition = "2024"
 rust-version = "1.94"
 
 [dependencies]
+chrono = { workspace = true }
 sb-contracts = { workspace = true }
 sb-shared-types = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
-tokio = { workspace = true, features = ["time", "sync"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 tracing = { workspace = true }
 anyhow = { workspace = true }
 once_cell = { workspace = true }
@@ -18,4 +19,6 @@ async-trait = { workspace = true }
 uuid = { workspace = true }
 
 [dev-dependencies]
-tokio = { workspace = true, features = ["test-util"] }
+sea-orm = { workspace = true }
+mockall = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }

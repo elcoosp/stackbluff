@@ -1,3 +1,5 @@
+#[allow(unused_imports)]
+use chrono::{DateTime, Utc};
 use sb_contracts::repo_api::PersistenceResult;
 use sb_contracts::repo_api::{UserProfile, UserWithHash};
 use sb_shared_types::{RequestContext, UserId};
@@ -83,9 +85,17 @@ pub enum DbCommand {
         email: String,
         respond: ResponseSender<Option<UserId>>,
     },
+<<<<<<< HEAD
     FindByEmailWithHash {
         ctx: RequestContext,
         email: String,
         respond: ResponseSender<Option<UserWithHash>>,
+||||||| 84ca6e9
+=======
+
+    CheckClubPro {
+        user_id: UserId,
+        respond: oneshot::Sender<PersistenceResult<bool>>,
+>>>>>>> origin/main
     },
 }

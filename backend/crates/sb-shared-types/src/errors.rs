@@ -7,6 +7,9 @@ pub enum AppError {
     #[error("Invalid input: {0}")]
     InvalidInput(String),
 
+    #[error("Validation error: {0}")]
+    ValidationError(String),
+
     #[error("Unauthorized: {0}")]
     Unauthorized(String),
 
