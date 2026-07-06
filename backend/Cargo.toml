@@ -28,6 +28,9 @@ edition = "2024"
 rust-version = "1.94"
 
 [workspace.dependencies]
+anyhow = { version = "1.0.102" }
+uuid = { version = "1.23.0", features = ["v4", "serde"] }
+dashmap = { version = "6.2.1", features = ["serde"] }
 image = { version = "0.25.5", default-features = false, features = ["png"] }
 tokio-cron-scheduler = "0.11"
 sb-notification = { path = "crates/sb-notification" }
@@ -45,7 +48,6 @@ axum-extra = { version = "0.10", features = ["cookie"] }
     async-stripe-checkout = { version = "=1.0.0-rc.6", features = ["checkout_session"] }
     async-stripe = { version = "=1.0.0-rc.6", features = ["default-tls"] }
 metrics = "0.24"
-dashmap = { version = "6", features = ["serde"] }
 
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 sb-server = { path = "crates/sb-server" }
@@ -69,7 +71,6 @@ sb-mission = { path = "crates/sb-mission" }
 sb-ws-messages = { path = "crates/sb-ws-messages" }
 sb-ws-handler = { path = "crates/sb-ws-handler" }
 async-trait = { version = "0.1.89" }
-anyhow = { version = "1.0.102" }
 thiserror = { version = "2.0.18" }
 serde_json = { version = "1.0.150" }
 tracing = { version = "0.1.44" }
@@ -89,7 +90,6 @@ sqlx = { version = "0.9.0", features = ["sqlite", "runtime-tokio", "tls-rustls"]
 sea-orm = { version = "2.0.0-rc.38", features = ["sqlx-sqlite", "runtime-tokio-rustls", "macros"] }
 sea-orm-migration = { version = "2.0.0-rc.38" }
 serde = { version = "1.0.228", features = ["derive"] }
-uuid = { version = "1.23.0", features = ["v7", "serde"] }
 chrono = { version = "0.4.45", features = ["serde"] }
 derive_more = "2.1.1"
 tokio = { version = "1.52.3", features = ["rt", "macros"] }

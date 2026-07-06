@@ -1,3 +1,4 @@
+use axum::extract::ConnectInfo;
 pub mod leaderboard;
 use axum::{
     Router,
@@ -188,7 +189,6 @@ pub fn create_router(
     });
 
     let public_routes = Router::new().route("/api/tables", get(list_tables_public));
-
     let protected_routes = Router::new()
         .route("/lobby", get(lobby_handler))
         .route("/tables", post(create_table_handler))
@@ -384,6 +384,9 @@ fn forbidden(msg: &str) -> (StatusCode, Json<ErrorResponse>) {
         }),
     )
 }
+
+pub mod anti_cheat_routes;
+use axum::routing::post;
 
 pub mod gdpr_routes;
 pub mod routes;
