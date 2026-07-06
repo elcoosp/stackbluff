@@ -15,7 +15,7 @@ impl MigrationTrait for Migration {
             .alter_table(
                 Table::alter()
                     .table(HandHistory::Table)
-                    .add_column_if_not_exists(
+                    .add_column(
                         ColumnDef::new(HandHistory::Participants)
                             .text()
                             .not_null()

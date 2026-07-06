@@ -10,7 +10,7 @@ impl MigrationTrait for Migration {
             .alter_table(
                 Table::alter()
                     .table(Alias::new("users"))
-                    .add_column_if_not_exists(
+                    .add_column(
                         ColumnDef::new(Alias::new("club_pro_expires_at"))
                             .timestamp_with_time_zone()
                             .null(),

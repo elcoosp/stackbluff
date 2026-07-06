@@ -22,7 +22,7 @@ impl MigrationTrait for Migration {
             .alter_table(
                 Table::alter()
                     .table(ClubMemberships::Table)
-                    .add_column_if_not_exists(
+                    .add_column(
                         ColumnDef::new(ClubMemberships::Division)
                             .integer()
                             .not_null()
