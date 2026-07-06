@@ -1,11 +1,11 @@
 import puppeteer, { Browser } from 'puppeteer';
 import { Cluster } from 'puppeteer-cluster';
 
-let browser: Browser;
+let browser: Browser | null = null;
 
-export async function getBrowser() {
+export async function getBrowser(): Promise<Browser> {
   if (!browser) {
-    browser = await puppeteer.launch({ headless: 'new' });
+    browser = await puppeteer.launch({ headless: true });
   }
   return browser;
 }
@@ -23,5 +23,18 @@ export const createCluster = (concurrency: number) =>
     // Use CONTEXT concurrency to isolate cookies per task
     concurrency: Cluster.CONCURRENCY_CONTEXT,
     maxConcurrency: concurrency,
-    puppeteerOptions: { headless: 'new' },
+    puppeteerOptions: { headless: true },
   });
+
+export async function closeBrowser(): Promise<void> {
+  if (browser) {
+    try {
+      await browser.close();
+      browser = null;
+    } catch (error) {
+      console.error('Failed to close browser:', error);
+      // Force cleanup even if close fails
+      browser = null;
+    }
+  }
+}
