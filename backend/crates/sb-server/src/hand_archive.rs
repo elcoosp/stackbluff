@@ -183,13 +183,14 @@ pub async fn get_hand(
     Ok(Json(json))
 }
 
+#[allow(dead_code)]
 pub async fn upload_club_banner(
     r2: &RealR2,
     club_id: sb_shared_types::ClubId,
     data: bytes::Bytes,
 ) -> Result<String, sb_shared_types::AppError> {
     let key = format!("club_banners/{}/banner.png", club_id);
-    r2.put_object(&key, data.to_vec(), "image/png").await
+    r2.put_object(&key, data.to_vec()).await
         .map_err(|e| sb_shared_types::AppError::Internal(e.to_string()))?;
     Ok(format!("https://cdn.stackbluff.com/{}", key))
 }
