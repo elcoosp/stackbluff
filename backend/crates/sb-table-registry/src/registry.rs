@@ -36,6 +36,8 @@ pub struct Registry {
     user_room_map: Arc<RwLock<HashMap<UserId, HashSet<TableId>>>>,
     event_tx: tokio::sync::broadcast::Sender<TableEvent>,
     stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
+    #[allow(clippy::type_complexity)]
+    table_metadata: Arc<RwLock<HashMap<TableId, (UserId, Option<String>)>>>,
 }
 
 impl Registry {
@@ -51,6 +53,7 @@ impl Registry {
             user_room_map: Arc::new(RwLock::new(HashMap::new())),
             event_tx,
             stats_repo,
+            table_metadata: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -83,6 +86,10 @@ impl Registry {
             .insert(table_id, created_by);
         self.table_chat_ids.write().await.insert(table_id, chat_id);
         self.table_rooms.write().await.entry(table_id).or_default();
+        self.table_metadata
+            .write()
+            .await
+            .insert(table_id, (created_by, chat_id));
         info!(%table_id, "Registered table config in Registry");
     }
 
@@ -118,7 +125,6 @@ impl Registry {
 
         if let Some(room_ids) = table_rooms.get(&table_id) {
             for room_id in room_ids {
-                // Ignore les rooms dans lesquelles le joueur est déjà
                 if !exclude_rooms.contains(room_id)
                     && let Some(room) = rooms.get(room_id)
                     && room.active_players.load(Ordering::Relaxed) < config.max_players
@@ -130,6 +136,14 @@ impl Registry {
 
         let new_room_id = TableId::new(uuid::Uuid::new_v4());
         let active_players = Arc::new(AtomicU8::new(0));
+
+        let (created_by, chat_id) = self
+            .table_metadata
+            .read()
+            .await
+            .get(&table_id)
+            .cloned()
+            .unwrap_or_else(|| (UserId::new(uuid::Uuid::nil()), None));
 
         let (cmd_tx, _) = spawn_table_actor(
             new_room_id,
@@ -182,8 +196,6 @@ impl Registry {
             let entry = guard.get(&room_id).ok_or(TableError::NotFound(room_id))?;
             entry.table_id
         };
-
-        // LA VERIFICATION "Already seated" A ÉTÉ COMPLÈTEMENT SUPPRIMÉE ICI POUR AUTORISER LE MULTI-TABLING
 
         let (tx, rx) = tokio::sync::oneshot::channel();
 
@@ -484,8 +496,28 @@ impl Registry {
         self.event_tx.clone()
     }
 
-    /// Creates a tournament table and wires it into the registry.
+    // 3-arg version (backward compatible)
     pub async fn create_tournament_table(
+        &self,
+        config: TableConfig,
+        tournament_id: sb_shared_types::TournamentId,
+        broker: Arc<ConnectionBroker>,
+        created_by: UserId,
+        chat_id: Option<String>,
+    ) -> Result<(mpsc::Sender<InternalCommand>, TableId), AppError> {
+        let default_creator = UserId::new(uuid::Uuid::nil());
+        self.create_tournament_table_with_metadata(
+            config,
+            tournament_id,
+            broker,
+            default_creator,
+            None,
+        )
+        .await
+    }
+
+    // 5-arg version with metadata
+    pub async fn create_tournament_table_with_metadata(
         &self,
         config: TableConfig,
         tournament_id: sb_shared_types::TournamentId,
@@ -507,7 +539,6 @@ impl Registry {
             chat_id,
         );
 
-        // Enter tournament mode
         cmd_tx
             .send(InternalCommand::EnterTournamentMode {
                 parent: tournament_id,

@@ -44,8 +44,15 @@ impl TableService for TableServiceImpl {
             max_buy_in,
             turn_time_limit_ms: 30_000,
         };
+        let default_creator = sb_shared_types::UserId::new(uuid::Uuid::nil());
         self.registry
+<<<<<<< HEAD
+            .register_existing_table(table_id, config, default_creator, None)
+||||||| 18bcddd
+            .register_existing_table(table_id, config)
+=======
             .register_existing_table(table_id, config, created_by, chat_id)
+>>>>>>> origin/main
             .await;
 
         Ok(table_id)
