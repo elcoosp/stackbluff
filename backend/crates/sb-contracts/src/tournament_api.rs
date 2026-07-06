@@ -57,6 +57,7 @@ pub struct TournamentConfig {
     pub start_delay_seconds: u32,
     pub min_players_to_start: u32,
     pub club_id: Option<ClubId>,
+    pub blind_schedule_id: Option<uuid::Uuid>,
 }
 
 // ── Query types ──────────────────────────────────────────────────────────────

@@ -9,6 +9,8 @@ default = ["test-stubs"]
 test-stubs = []
 
 [dependencies]
+serde_json = { workspace = true }
+image = { workspace = true }
 sb-ws-handler = { path = "../sb-ws-handler" }
 sb-table-registry = { path = "../sb-table-registry" }
 tower-cookies = "0.11"
@@ -19,7 +21,7 @@ sb-rest-router = { workspace = true }
 sb-mission = { workspace = true }
 sb-oracle = { workspace = true }
 axum.workspace = true
-tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time"] }
 tower-http = { version = "0.6", features = ["cors"] }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
@@ -30,7 +32,6 @@ sb-contracts = { path = "../sb-contracts" }
 sb-shared-types = { path = "../sb-shared-types" }
 sea-orm.workspace = true
 migration = { path = "../../migration" }
-serde_json.workspace = true
 async-trait.workspace = true
 parking_lot = { workspace = true }
 uuid = { workspace = true }
@@ -47,4 +48,4 @@ serde.workspace = true
 [dev-dependencies]
 mockall.workspace = true
 sea-orm = { workspace = true, features = ["sqlx-sqlite"] }
-tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time"] }

@@ -36,8 +36,15 @@ pub trait NotificationService: Send + Sync {
     ) -> Result<(), NotificationError>;
 }
 
-
 #[async_trait::async_trait]
 pub trait ClubNotifier: Send + Sync {
     async fn send_club_reminder(&self, club_id: ClubId, message: String) -> Result<(), sb_shared_types::errors::AppError>;
+}
+
+#[derive(Debug, Clone)]
+pub enum NotificationEvent {
+    SeasonCardReady {
+        season_id: i32,
+        card_url: Option<String>,
+    },
 }
