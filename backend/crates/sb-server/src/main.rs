@@ -14,6 +14,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tower_cookies::CookieManagerLayer;
 use tower_http::cors::CorsLayer;
+use uuid::Uuid; // added for nil UUID
 
 use sb_auth::{
     AuthServiceImpl, Authenticator, SharedAuthService, config::AuthConfig, routes::auth_router,
@@ -31,7 +32,7 @@ use sb_db_repos::user_repo::UserRepoImpl;
 use sb_rest_router::create_router;
 use sb_rest_router::player_stats::player_stats_routes;
 use sb_rest_router::tournament_routes::{self, TournamentState};
-use sb_shared_types::{GameVariant, StakeLevel, TableConfig, TournamentId};
+use sb_shared_types::{GameVariant, StakeLevel, TableConfig, TournamentId, UserId}; // added UserId
 use sb_table_registry::buy_in_limits_for_stake;
 use sb_table_registry::registry::Registry;
 use sb_table_registry::spawn_history_recorder;
@@ -108,7 +109,8 @@ async fn main() {
 
     let registry = Arc::new(Registry::new(stats_repo.clone()));
 
-    // Hydrate registry
+    // Hydrate registry – use default creator (nil user) and no chat_id
+    let system_user = UserId::new(Uuid::nil());
     let db_tables = table_repo
         .list_tables()
         .await
@@ -123,7 +125,9 @@ async fn main() {
             max_buy_in,
             turn_time_limit_ms: 30_000,
         };
-        registry.register_existing_table(t.table_id, config).await;
+        registry
+            .register_existing_table(t.table_id, config, system_user, None)
+            .await;
         tracing::info!(table_id = %t.table_id, "Hydrated table config from DB");
     }
     tracing::info!(count = db_tables.len(), "Registry hydrated from DB");
@@ -135,7 +139,7 @@ async fn main() {
 
     if db_tables.is_empty() {
         let default_table_id = table_service
-            .create_cash_table(StakeLevel::Micro, 6)
+            .create_cash_table(StakeLevel::Micro, 6, system_user, None)
             .await
             .expect("failed to create default table");
         tracing::info!(%default_table_id, "Default table created (DB was empty)");
@@ -148,11 +152,13 @@ async fn main() {
         HandHistoryRepoImpl::new(writer_handle.sender.clone(), db.clone()),
     );
 
+    // spawn_history_recorder expects Receiver<TableEvent> – we pass that directly
     let event_rx = registry.event_sender().subscribe();
     spawn_history_recorder(event_rx, hand_history_repo.clone());
 
     spawn_hand_history_cleanup(db.clone()).await;
 
+    // spawn_stats_aggregator now expects Receiver<TableEvent> – we pass directly
     let stats_event_rx = registry.event_sender().subscribe();
     spawn_stats_aggregator(stats_event_rx, stats_repo.clone());
 
@@ -262,6 +268,8 @@ async fn load_existing_tournaments(
 
     tracing::info!(count = records.len(), "Loading active tournaments");
 
+    let system_user = UserId::new(Uuid::nil()); // default creator for restored tournaments
+
     for record in records {
         let tournament_id = TournamentId::new(record.id);
         let status = record.status;
@@ -282,6 +290,8 @@ async fn load_existing_tournaments(
                     state.broker.clone(),
                     cmd_rx,
                     event_rx,
+                    system_user, // created_by
+                    None,        // chat_id
                 );
                 tokio::spawn(actor.run());
                 state
@@ -305,6 +315,8 @@ async fn load_existing_tournaments(
                     state.broker.clone(),
                     cmd_rx,
                     event_rx,
+                    system_user, // created_by
+                    None,        // chat_id
                 );
                 tokio::spawn(actor.run());
                 state
@@ -349,4 +361,31 @@ fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
         "Production service wiring not yet configured. \
          Build with --features test-stubs for development."
     )
+}
+
+
+use tokio_cron_scheduler::{JobScheduler, Job};
+
+async fn start_gdpr_job(state: std::sync::Arc<sb_rest_router::AppState>) {
+    let sched = JobScheduler::new().await.unwrap();
+    sched.add(Job::new_async("0 0 2 * * *", move |_uuid, _l| {
+        let state = state.clone();
+        Box::pin(async move {
+            tracing::info!("Running daily GDPR deletion job...");
+            if let Ok(pending) = state.gdpr_repo.get_pending_deletions(30).await {
+                for req in pending {
+                    if let Err(e) = state.gdpr_repo.anonymize_user(req.user_id).await {
+                        tracing::error!("Failed to anonymize user {}: {:?}", req.user_id, e);
+                        continue;
+                    }
+                    let _ = state.gdpr_repo.mark_deletion_completed(req.user_id).await;
+                }
+            }
+        })
+    }).unwrap()).await.unwrap();
+    sched.start().await.unwrap();
+}
+
+pub fn spawn_gdpr_scheduler(state: std::sync::Arc<sb_rest_router::AppState>) {
+    tokio::spawn(start_gdpr_job(state));
 }

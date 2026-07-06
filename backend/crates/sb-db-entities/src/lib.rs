@@ -26,3 +26,5 @@ pub mod user_statistics;
 
 pub use referral::Entity as Referral;
 pub use system_counter::Entity as SystemCounter;
+
+pub mod deletion_request;

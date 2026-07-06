@@ -586,7 +586,6 @@ pub struct TableActor {
 }
 
 impl TableActor {
-    #[allow(clippy::too_many_arguments)]
     pub fn new(
         room_id: TableId,
         table_id: TableId,
@@ -2442,19 +2441,20 @@ impl TableActor {
         use crate::events::{TableClosedEvent, TableEvent};
         use sb_shared_types::{ChipAmount, TableId, UserId};
 
-        // Placeholder: in a real implementation, retrieve from game state.
-        // For now, use default values.
-        let winner = None;
-        let hand_desc = "Unknown".to_string();
-        let pot = ChipAmount::new(0);
+        // Retrieve the actual pot from the current hand if any
+        let pot = self
+            .current_hand
+            .as_ref()
+            .map(|hand| hand.state.current_pot())
+            .unwrap_or_else(zero);
 
         let event = TableClosedEvent {
             table_id: self.table_id,
             room_id: self.table_id,
             started_by: self.created_by,
-            winner,
-            winning_hand_description: hand_desc,
-            pot_amount: pot.unwrap_or_default(),
+            winner: None, // We could compute a winner if needed
+            winning_hand_description: "Unknown".to_string(),
+            pot_amount: pot,
             chat_id: self.telegram_chat_id.clone(),
         };
 
@@ -2471,7 +2471,6 @@ fn community_cards_to_array(hand: &ActiveHand) -> Option<[sb_shared_types::Card;
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 pub fn spawn_table_actor(
     room_id: TableId,
     table_id: TableId,
