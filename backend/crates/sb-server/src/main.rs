@@ -361,3 +361,30 @@ fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
          Build with --features test-stubs for development."
     )
 }
+
+
+use tokio_cron_scheduler::{JobScheduler, Job};
+
+async fn start_gdpr_job(state: std::sync::Arc<sb_rest_router::AppState>) {
+    let sched = JobScheduler::new().await.unwrap();
+    sched.add(Job::new_async("0 0 2 * * *", move |_uuid, _l| {
+        let state = state.clone();
+        Box::pin(async move {
+            tracing::info!("Running daily GDPR deletion job...");
+            if let Ok(pending) = state.gdpr_repo.get_pending_deletions(30).await {
+                for req in pending {
+                    if let Err(e) = state.gdpr_repo.anonymize_user(req.user_id).await {
+                        tracing::error!("Failed to anonymize user {}: {:?}", req.user_id, e);
+                        continue;
+                    }
+                    let _ = state.gdpr_repo.mark_deletion_completed(req.user_id).await;
+                }
+            }
+        })
+    }).unwrap()).await.unwrap();
+    sched.start().await.unwrap();
+}
+
+pub fn spawn_gdpr_scheduler(state: std::sync::Arc<sb_rest_router::AppState>) {
+    tokio::spawn(start_gdpr_job(state));
+}

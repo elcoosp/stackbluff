@@ -1,6 +1,7 @@
 // backend/migration/src/lib.rs
 #![allow(clippy::needless_update)]
 #![allow(clippy::enum_variant_names)]
+mod m20260628_000001_gdpr_deletion;
 mod m20250101_000001_add_participants_to_hand_history;
 mod m20250614_create_payment_intents;
 mod m20260101_000008_player_statistics;
@@ -25,6 +26,7 @@ pub struct Migrator;
 impl MigratorTrait for Migrator {
     fn migrations() -> Vec<Box<dyn MigrationTrait>> {
         vec![
+        Box::new(m20260628_000001_gdpr_deletion::Migration),
             // 1. Core tables
             Box::new(m20260607_000001_create_all_tables::Migration),
             Box::new(m20260607_000002_create_clubs_tables::Migration),
