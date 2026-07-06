@@ -1,18 +1,7 @@
-<<<<<<< HEAD
-||||||| 84ca6e9
-use crate::events::TableEvent;
-=======
 use crate::TableActorConfig;
-use crate::events::TableEvent;
->>>>>>> origin/main
 use crate::actor::{InternalCommand, LeaveResult, spawn_table_actor};
 use crate::connection_broker::ConnectionBroker;
-<<<<<<< HEAD
 use crate::events::TableEvent;
-||||||| 84ca6e9
-=======
-
->>>>>>> origin/main
 use crate::game_room::RoomMessage;
 use sb_contracts::stats_api::PlayerStatsRepo;
 use sb_contracts::{TableCommand, TableError, lobby_api::TableInfo};
@@ -123,8 +112,6 @@ impl Registry {
             .ok_or(TableError::NotFound(table_id))?
             .clone();
 
-        // FIX: Removed unused `created_by` and `chat_id` variables that were shadowed later.
-
         let mut table_rooms = self.table_rooms.write().await;
         let mut rooms = self.rooms.write().await;
 
@@ -152,22 +139,7 @@ impl Registry {
 
         let (cmd_tx, _) = spawn_table_actor(TableActorConfig {
             room_id: new_room_id,
-            table_id,
-<<<<<<< HEAD
-            config.clone(),
-            self.event_tx.clone(),
-            self.stats_repo.clone(),
-            active_players.clone(),
-            sb_shared_types::UserId::new(uuid::Uuid::nil()),
-            None,
-        );
-||||||| 84ca6e9
-            config.clone(),
-            self.event_tx.clone(),
-            self.stats_repo.clone(),
-            active_players.clone(),
-        , created_by, chat_id);
-=======
+            table_id: table_id,
             config: config.clone(),
             event_tx: self.event_tx.clone(),
             stats_repo: self.stats_repo.clone(),
@@ -175,8 +147,6 @@ impl Registry {
             created_by,
             chat_id,
         });
-
->>>>>>> origin/main
 
         let room_entry = RoomEntry {
             table_id,
@@ -527,7 +497,6 @@ impl Registry {
         created_by: UserId,
         chat_id: Option<String>,
     ) -> Result<(mpsc::Sender<InternalCommand>, TableId), AppError> {
-        // FIX: Actually pass the provided `created_by` and `chat_id` instead of hardcoding defaults
         self.create_tournament_table_with_metadata(
             config,
             tournament_id,
@@ -552,23 +521,6 @@ impl Registry {
 
         let (cmd_tx, _) = spawn_table_actor(TableActorConfig {
             room_id,
-<<<<<<< HEAD
-            room_id,
-            config.clone(),
-            self.event_tx.clone(),
-            self.stats_repo.clone(),
-            active_players.clone(),
-            sb_shared_types::UserId::new(uuid::Uuid::nil()),
-            None,
-        );
-||||||| 84ca6e9
-            room_id,
-            config.clone(),
-            self.event_tx.clone(),
-            self.stats_repo.clone(),
-            active_players.clone(),
-        , created_by, chat_id);
-=======
             table_id: room_id,
             config: config.clone(),
             event_tx: self.event_tx.clone(),
@@ -577,8 +529,6 @@ impl Registry {
             created_by,
             chat_id,
         });
-
->>>>>>> origin/main
 
         cmd_tx
             .send(InternalCommand::EnterTournamentMode {
