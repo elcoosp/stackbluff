@@ -12,6 +12,9 @@ pub mod service_api;
 pub mod stats_api;
 pub mod tournament_api;
 pub mod user_resolution;
+pub use service_api::{
+    ClubService, ReferralStats, ReplayCard, UserService, ViralService,
+};
 
 pub use async_hooks::{HandCountObserver, ReplayCardObserver};
 pub use badge_repo_api::{BadgeRepo, BadgeType};
@@ -20,10 +23,6 @@ pub use lobby_api::TableInfo;
 pub use repo_api::{
     ClubRepo, DIVISION_SIZE, HandHistoryRepository, HandSummary, LeaderboardPage, WinnerSummary,
 };
-pub use service_api::{
-    ClubService, HandResult, ReferralStats, ReplayCard, UserService, ViralService,
-};
-
 // ========== Table Registry contracts ==========
 use sb_shared_types::TableId;
 

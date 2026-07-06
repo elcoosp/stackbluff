@@ -1,12 +1,7 @@
 use sea_orm_migration::prelude::*;
 
+#[derive(DeriveMigrationName)]
 pub struct Migration;
-
-impl MigrationName for Migration {
-    fn name(&self) -> &str {
-        "m20250101_000001_add_participants_to_hand_history"
-    }
-}
 
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
@@ -14,12 +9,11 @@ impl MigrationTrait for Migration {
         manager
             .alter_table(
                 Table::alter()
-                    .table(HandHistory::Table)
+                    .table(Alias::new("users"))
                     .add_column(
-                        ColumnDef::new(HandHistory::Participants)
-                            .text()
-                            .not_null()
-                            .default(","),
+                        ColumnDef::new(Alias::new("club_pro_expires_at"))
+                            .timestamp_with_time_zone()
+                            .null(),
                     )
                     .to_owned(),
             )
@@ -30,16 +24,10 @@ impl MigrationTrait for Migration {
         manager
             .alter_table(
                 Table::alter()
-                    .table(HandHistory::Table)
-                    .drop_column(HandHistory::Participants)
+                    .table(Alias::new("users"))
+                    .drop_column(Alias::new("club_pro_expires_at"))
                     .to_owned(),
             )
             .await
     }
-}
-
-#[derive(Iden)]
-pub enum HandHistory {
-    Table,
-    Participants,
 }

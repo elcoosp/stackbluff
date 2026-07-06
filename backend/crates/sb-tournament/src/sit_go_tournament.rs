@@ -95,6 +95,7 @@ impl SitGoTournament {
         event_rx: tokio::sync::broadcast::Receiver<TableEvent>,
         created_by: UserId,
         chat_id: Option<String>,
+
     ) -> Self {
         Self {
             tournament_id,
@@ -139,6 +140,7 @@ impl SitGoTournament {
                 }
                 Ok(event) = self.event_rx.recv() => {
                     // Handle only HandCompleted events
+
                     if let TableEvent::HandCompleted(hand_event) = event {
                         self.handle_hand_completed(hand_event).await;
                     }

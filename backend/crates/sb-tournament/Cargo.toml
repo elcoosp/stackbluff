@@ -5,6 +5,7 @@ edition = { workspace = true }
 rust-version = { workspace = true }
 
 [dependencies]
+sb-db-entities = { path = "../sb-db-entities" }
 async-trait = { workspace = true }
 sb-contracts = { workspace = true }
 sb-shared-types = { workspace = true }

@@ -29,6 +29,7 @@ use sb_db_repos::init_writer_loop;
 use sb_db_repos::player_stats_repo::PlayerStatsRepoImpl;
 use sb_db_repos::tournament_repo::TournamentRepoImpl;
 use sb_db_repos::user_repo::UserRepoImpl;
+use sb_db_repos::club_repo::ClubRepoImpl;
 use sb_rest_router::create_router;
 use sb_rest_router::player_stats::player_stats_routes;
 use sb_rest_router::season_card;
@@ -38,6 +39,7 @@ use sb_table_registry::buy_in_limits_for_stake;
 use sb_table_registry::registry::Registry;
 use sb_table_registry::spawn_history_recorder;
 use sb_table_registry::stats_aggregator::spawn_stats_aggregator;
+use sb_table_registry::connection_broker::ConnectionBroker;
 use sb_table_registry::table_service::TableServiceImpl;
 use sb_tournament::{
     MttCommand, MttDirector, SitGoCommand, SitGoTournament, TournamentServiceImpl,
@@ -202,61 +204,13 @@ async fn main() {
     let stats_event_rx = registry.event_sender().subscribe();
     spawn_stats_aggregator(stats_event_rx, stats_repo.clone());
 
-    // ── Spawn listener for TableClosedEvent to send Telegram summary ──
-    {
-        let event_tx = registry.event_sender();
-        let mut event_rx = event_tx.subscribe();
-        let bot_state_clone = bot_state.clone();
-        let user_repo_clone = user_repo.clone();
-        tokio::spawn(async move {
-            use sb_shared_types::RequestContext;
-            use sb_table_registry::events::TableEvent;
-            use tracing::{info, warn};
-            use uuid::Uuid;
 
-            while let Ok(event) = event_rx.recv().await {
-                if let TableEvent::TableClosed(closed) = event {
-                    info!("Table closed: {:?}", closed);
-                    let winner_name = if let Some(winner_id) = closed.winner {
-                        let ctx = RequestContext::new(Uuid::new_v4(), Some(winner_id));
-                        match user_repo_clone.get_user(ctx, winner_id).await {
-                            Ok(username) => format!("@{}", username),
-                            Err(_) => format!("User {}", winner_id),
-                        }
-                    } else {
-                        "No winner".to_string()
-                    };
-                    let hand_desc = closed.winning_hand_description;
-                    let pot = closed.pot_amount;
-                    let inviter_id = closed.started_by;
-                    let invite_link =
-                        format!("{}?ref={}", bot_state_clone.mini_app_url, inviter_id);
-
-                    let text = format!(
-                        "{} won {} chips with {}\nPlay again: {}",
-                        winner_name, pot, hand_desc, invite_link
-                    );
-
-                    // Use ref to avoid moving chat_id
-                    if let Some(ref chat_id_str) = closed.chat_id {
-                        if let Ok(chat_id) = chat_id_str.parse::<i64>() {
-                            if let Err(e) = bot_state_clone
-                                .notification_service
-                                .send_telegram_message(chat_id, text, None)
-                                .await
-                            {
-                                warn!("Failed to send Telegram message: {}", e);
-                            }
-                        } else {
-                            warn!("Invalid chat_id: {:?}", chat_id_str);
-                        }
-                    } else {
-                        warn!("No chat_id in TableClosedEvent");
-                    }
-                }
-            }
-        });
-    }
+    // ── Club service ─────────────────────────────────────────────────
+    let club_repo: Arc<dyn sb_contracts::repo_api::ClubRepo + Send + Sync> =
+        Arc::new(ClubRepoImpl::new(db.clone()));
+    let club_service: Arc<dyn sb_contracts::service_api::ClubService + Send + Sync> =
+        Arc::new(sb_club::ClubServiceImpl::new(club_repo.clone()));
+    let broker = Arc::new(ConnectionBroker::new());
 
     // ── REST router ──────────────────────────────────────────────────
     let badge_repo = Arc::new(sb_db_repos::badge_repo::BadgeRepoImpl::new(db.clone()));
@@ -266,7 +220,10 @@ async fn main() {
         registry.clone(),
         hand_history_repo.clone(),
         leaderboard_repo.clone(),
+        club_service.clone(),
+        broker.clone(),
         badge_repo,
+
     )
     .merge(player_stats_routes(stats_repo.clone(), user_repo.clone()));
 
@@ -288,12 +245,6 @@ async fn main() {
         Some(bot_state.clone());
     let app_base_url =
         std::env::var("APP_BASE_URL").unwrap_or_else(|_| "https://app.stackbluff.com".to_string());
-
-    // ── Club system ────────────────────────────────────────────────
-    let club_repo: Arc<dyn sb_contracts::ClubRepo> =
-        Arc::new(sb_db_repos::club_repo::ClubRepoImpl::new(db.clone()));
-    let _club_service: Arc<dyn sb_contracts::ClubService> =
-        Arc::new(sb_club::ClubServiceImpl::new(club_repo.clone()));
 
     let mut tournament_service_impl = TournamentServiceImpl::new(
         tournament_repo.clone(),

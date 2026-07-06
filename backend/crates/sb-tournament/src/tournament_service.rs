@@ -467,10 +467,10 @@ impl TournamentServiceImpl {
             .ok_or_else(|| AppError::NotFound("Tournament not found".into()))?;
 
         if let Some(club_id) = tournament.config.club_id {
-            if let Some(club_repo) = &self.club_repo {
-                if let Err(e) = self.post_tournament_results(tournament_id, club_repo).await {
-                    tracing::error!(%tournament_id, error = ?e, "Failed to post tournament results");
-                }
+            if let Some(club_repo) = &self.club_repo
+                && let Err(e) = self.post_tournament_results(tournament_id, club_repo).await
+            {
+                tracing::error!(%tournament_id, error = ?e, "Failed to post tournament results");
             }
 
             tracing::info!(%tournament_id, %club_id, "Club tournament completed");

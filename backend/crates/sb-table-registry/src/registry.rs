@@ -1,6 +1,8 @@
+use crate::TableActorConfig;
+use crate::events::TableEvent;
 use crate::actor::{InternalCommand, LeaveResult, spawn_table_actor};
 use crate::connection_broker::ConnectionBroker;
-use crate::events::TableEvent;
+
 use crate::game_room::RoomMessage;
 use sb_contracts::stats_api::PlayerStatsRepo;
 use sb_contracts::{TableCommand, TableError, lobby_api::TableInfo};
@@ -138,16 +140,17 @@ impl Registry {
             .cloned()
             .unwrap_or_else(|| (UserId::new(uuid::Uuid::nil()), None));
 
-        let (cmd_tx, _) = spawn_table_actor(
-            new_room_id,
+        let (cmd_tx, _) = spawn_table_actor(TableActorConfig {
+            room_id: new_room_id,
             table_id,
-            config.clone(),
-            self.event_tx.clone(),
-            self.stats_repo.clone(),
-            active_players.clone(),
+            config: config.clone(),
+            event_tx: self.event_tx.clone(),
+            stats_repo: self.stats_repo.clone(),
+            active_players: active_players.clone(),
             created_by,
             chat_id,
-        );
+        });
+
 
         let room_entry = RoomEntry {
             table_id,
@@ -521,16 +524,17 @@ impl Registry {
         let room_id = TableId::new(uuid::Uuid::new_v4());
         let active_players = Arc::new(AtomicU8::new(0));
 
-        let (cmd_tx, _) = spawn_table_actor(
+        let (cmd_tx, _) = spawn_table_actor(TableActorConfig {
             room_id,
-            room_id,
-            config.clone(),
-            self.event_tx.clone(),
-            self.stats_repo.clone(),
-            active_players.clone(),
+            table_id: room_id,
+            config: config.clone(),
+            event_tx: self.event_tx.clone(),
+            stats_repo: self.stats_repo.clone(),
+            active_players: active_players.clone(),
             created_by,
             chat_id,
-        );
+        });
+
 
         cmd_tx
             .send(InternalCommand::EnterTournamentMode {
@@ -691,3 +695,4 @@ impl Registry {
         Ok(())
     }
 }
+

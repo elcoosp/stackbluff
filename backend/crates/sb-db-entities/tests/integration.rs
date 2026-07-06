@@ -1,4 +1,3 @@
-use sea_orm::Set;
 use chrono::Utc;
 use migration::Migrator;
 use sb_db_entities::enums::Platform;
@@ -6,6 +5,7 @@ use sb_db_entities::user;
 use sea_orm::{ActiveModelTrait, Database, EntityTrait, IntoActiveModel, ModelTrait};
 use sea_orm_migration::migrator::MigratorTrait;
 use uuid::Uuid;
+use sea_orm::Set;
 
 #[tokio::test]
 async fn test_migration_and_basic_ops() {
@@ -13,6 +13,8 @@ async fn test_migration_and_basic_ops() {
     Migrator::up(&db, None).await.unwrap();
 
     let user_active = user::ActiveModel {
+        deleted_at: sea_orm::ActiveValue::Set(None),
+        club_pro_expires_at: Set(None),
         id: sea_orm::ActiveValue::Set(Uuid::now_v7()),
         telegram_id: sea_orm::ActiveValue::Set(Some(123456789)),
         email: sea_orm::ActiveValue::Set(None),

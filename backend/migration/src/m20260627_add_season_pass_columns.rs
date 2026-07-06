@@ -7,34 +7,28 @@ pub struct Migration;
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         // Add season_pass_id column
-        if !manager.has_column("users", "season_pass_id").await? {
-            manager
-                .alter_table(
-                    Table::alter()
-                        .table(Users::Table)
-                        .add_column(ColumnDef::new(Alias::new("season_pass_id")).uuid().null())
-                        .to_owned(),
-                )
-                .await?;
-        }
+        manager
+            .alter_table(
+                Table::alter()
+                    .table(Users::Table)
+                    .add_column(ColumnDef::new(Alias::new("season_pass_id")).uuid().null())
+                    .to_owned(),
+            )
+            .await?;
+
         // Add season_pass_expires_at column
-        if !manager
-            .has_column("users", "season_pass_expires_at")
-            .await?
-        {
-            manager
-                .alter_table(
-                    Table::alter()
-                        .table(Users::Table)
-                        .add_column(
-                            ColumnDef::new(Alias::new("season_pass_expires_at"))
-                                .timestamp()
-                                .null(),
-                        )
-                        .to_owned(),
-                )
-                .await?;
-        }
+        manager
+            .alter_table(
+                Table::alter()
+                    .table(Users::Table)
+                    .add_column(
+                        ColumnDef::new(Alias::new("season_pass_expires_at"))
+                            .timestamp()
+                            .null(),
+                    )
+                    .to_owned(),
+            )
+            .await?;
         Ok(())
     }
 

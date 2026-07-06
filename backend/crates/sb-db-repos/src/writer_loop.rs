@@ -127,6 +127,7 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
         DbCommand::FindOrCreateByTelegram { ctx, .. } => ctx,
         DbCommand::CreateEmailUser { ctx, .. } => ctx,
         DbCommand::FindByEmail { ctx, .. } => ctx,
+        DbCommand::CheckClubPro { .. } => unimplemented!(),
     };
 
     let request_id = ctx.request_id;
@@ -185,8 +186,10 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                     display_name: model.display_name,
                     email: model.email,
                     chip_balance: model.chip_balance,
+                    club_pro_expires_at: model.club_pro_expires_at,
                     season_pass_id: model.season_pass_id,
                     season_pass_expires_at: model.season_pass_expires_at,
+
                 };
 
                 Ok(Some(
@@ -324,6 +327,7 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                 let user_id = user_model.map(|u| UserId::new(u.id));
                 Ok(user_id.map(|id: UserId| id.to_string()))
             }
+            &mut DbCommand::CheckClubPro { .. } => Ok(None),
         };
 
         let rollback_sql = format!("ROLLBACK TO {}", sp_name);
@@ -407,6 +411,9 @@ fn respond_ok(cmd: DbCommand, value: Option<String>) {
         DbCommand::StoreHandHistory { respond, .. } | DbCommand::ExecuteRaw { respond, .. } => {
             let _ = respond.send(Ok(()));
         }
+        DbCommand::CheckClubPro { respond, .. } => {
+            let _ = respond.send(Ok(true));
+        }
     }
 }
 
@@ -437,6 +444,9 @@ fn respond_err(cmd: DbCommand, err: PersistenceError) {
             let _ = respond.send(Err(err));
         }
         DbCommand::FindByEmail { respond, .. } => {
+            let _ = respond.send(Err(err));
+        }
+        DbCommand::CheckClubPro { respond, .. } => {
             let _ = respond.send(Err(err));
         }
     }

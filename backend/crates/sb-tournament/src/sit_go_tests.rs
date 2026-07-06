@@ -1,3 +1,12 @@
+#![allow(dead_code)]
+struct DummyStatsRepo;
+
+#[async_trait::async_trait]
+impl sb_contracts::stats_api::PlayerStatsRepo for DummyStatsRepo {
+    async fn get(&self, _: &str) -> Result<sb_shared_types::player_stats::PlayerStatsDto, sb_contracts::repo_api::PersistenceError> { Ok(Default::default()) }
+    async fn apply_delta(&self, _: sb_shared_types::player_stats::StatsDelta) -> Result<(), sb_contracts::repo_api::PersistenceError> { Ok(()) }
+}
+
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Duration;

@@ -32,7 +32,8 @@ fn app_error_to_status(e: &AppError) -> StatusCode {
         | AppError::TournamentNotRunning
         | AppError::InvalidSeat => StatusCode::BAD_REQUEST,
         AppError::External(_) => StatusCode::BAD_GATEWAY,
-        AppError::Timeout => StatusCode::GATEWAY_TIMEOUT, // <-- NEW ARM
+        AppError::Timeout => StatusCode::GATEWAY_TIMEOUT,
+        AppError::ValidationError(_) => StatusCode::BAD_REQUEST, // <-- NEW ARM
     }
 }
 

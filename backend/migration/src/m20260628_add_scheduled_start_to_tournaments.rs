@@ -10,7 +10,7 @@ impl MigrationTrait for Migration {
             .alter_table(
                 Table::alter()
                     .table(Tournament::Table)
-                    .add_column_if_not_exists(
+                    .add_column(
                         ColumnDef::new(Tournament::ScheduledStart)
                             .timestamp_with_time_zone()
                             .null()

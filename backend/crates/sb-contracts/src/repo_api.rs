@@ -28,8 +28,10 @@ pub struct UserProfile {
     pub display_name: String,
     pub email: Option<String>,
     pub chip_balance: i64,
+    pub club_pro_expires_at: Option<chrono::DateTime<chrono::Utc>>,
     pub season_pass_id: Option<uuid::Uuid>,
     pub season_pass_expires_at: Option<chrono::DateTime<chrono::Utc>>,
+
 }
 
 #[async_trait]
@@ -209,6 +211,22 @@ pub trait ClubRepo: Send + Sync {
     async fn refresh_leaderboard(&self, club_id: ClubId) -> ClubResult<()>;
 
     async fn get_all_club_ids(&self) -> ClubResult<Vec<ClubId>>;
+
+    async fn update_club_pro_settings(
+        &self,
+        club_id: ClubId,
+        settings: serde_json::Value,
+    ) -> PersistenceResult<()>;
+
+    async fn get_club_pro_settings(
+        &self,
+        club_id: ClubId,
+    ) -> PersistenceResult<Option<serde_json::Value>>;
+
+    async fn get_tables_by_club_id(
+        &self,
+        club_id: ClubId,
+    ) -> PersistenceResult<Vec<TableId>>;
 
     async fn get_user_division(&self, club_id: ClubId, user_id: UserId) -> ClubResult<Option<u32>>;
 

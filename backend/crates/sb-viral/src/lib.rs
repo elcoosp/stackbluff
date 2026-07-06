@@ -5,9 +5,10 @@ use chrono::Utc;
 use sb_contracts::{
     HandCountObserver, ReplayCardObserver,
     repo_api::{BadgeRepo, ReferralRepository},
-    service_api::{HandResult, ReferralStats, ReplayCard, UserService, ViralService},
+    service_api::{ReferralStats, ReplayCard, UserService, ViralService},
+
 };
-use sb_shared_types::{AppError, ChipAmount, TableId, UserId};
+use sb_shared_types::{AppError, ChipAmount, TableId, UserId, game_types::HandResult};
 use std::sync::Arc;
 use tracing::{error, info};
 use uuid::Uuid;
@@ -64,7 +65,7 @@ impl<R: ReferralRepository, U: UserService> ViralService for ViralServiceImpl<R,
     ) -> Result<ReplayCard, AppError> {
         let span = tracing::info_span!("generate_replay_card", winner_id = %winner_id);
         let _enter = span.enter();
-        if !hand_result.is_significant() {
+        if !hand_result.went_to_showdown && !hand_result.hero_went_allin {
             return Err(AppError::InvalidInput("hand not significant".into()));
         }
         let winner_name = self.user_service.get_user_name(winner_id).await?;
@@ -72,7 +73,7 @@ impl<R: ReferralRepository, U: UserService> ViralService for ViralServiceImpl<R,
         let invite_link = format!("{}/?ref={}", self.base_url, winner_id);
         Ok(ReplayCard {
             card_id,
-            hand_description: format!("{:?}", hand_result.hand_rank),
+            hand_description: "Significant Hand".to_string(),
             winner_name,
             invite_link,
             timestamp: Utc::now(),
@@ -86,7 +87,7 @@ impl<R: ReferralRepository, U: UserService> ViralService for ViralServiceImpl<R,
     ) -> Result<(), AppError> {
         let span = tracing::info_span!("record_referral", referrer_id = %referrer_id, referred_id = %referred_id);
         let _enter = span.enter();
-        self.repo.record_referral(referrer_id, referred_id).await
+        self.repo.record_referral(referrer_id, referred_id).await.map_err(|e| AppError::Internal(e.to_string()))
     }
 
     async fn on_hand_completed(&self, user_id: UserId) -> Result<(), AppError> {
@@ -95,11 +96,11 @@ impl<R: ReferralRepository, U: UserService> ViralService for ViralServiceImpl<R,
         let should_award = self
             .repo
             .increment_hand_count_and_check_bonus(user_id)
-            .await?;
+            .await.map_err(|e| AppError::Internal(e.to_string()))?;
         if !should_award {
             return Ok(());
         }
-        let referrer_id = match self.repo.get_referrer_id(user_id).await? {
+        let referrer_id = match self.repo.get_referrer_id(user_id).await.map_err(|e| AppError::Internal(e.to_string()))? {
             Some(id) => id,
             None => return Ok(()),
         };
@@ -121,12 +122,13 @@ impl<R: ReferralRepository, U: UserService> ViralService for ViralServiceImpl<R,
             _ => {}
         }
 
+
         info!(referred = %user_id, referrer = %referrer_id, triple = triple, "Referral bonus awarded after 5 hands");
         Ok(())
     }
 
     async fn get_referral_stats(&self, user_id: UserId) -> Result<ReferralStats, AppError> {
-        self.repo.get_referral_stats(user_id).await
+        self.repo.get_referral_stats(user_id).await.map_err(|e| AppError::Internal(e.to_string())).map(|s| ReferralStats { total_referred: s.total_referred, bonus_earned: s.bonus_earned, pending_bonus: s.pending_bonus })
     }
 }
 
@@ -160,3 +162,4 @@ impl<R: ReferralRepository + Send + Sync, U: UserService + Send + Sync> HandCoun
     }
 }
 pub mod puzzle;
+

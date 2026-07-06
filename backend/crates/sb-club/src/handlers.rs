@@ -1,6 +1,6 @@
 use axum::{
     Extension, Json,
-    extract::{Path, State},
+    extract::{Multipart, Path, State},
     http::StatusCode,
 };
 use sb_contracts::{ClubError, ClubService};
@@ -11,6 +11,7 @@ use crate::models::{
     CreateClubRequest, CreateClubResponse, GetLeaderboardResponse, GetUserDivisionResponse,
     JoinClubResponse, RebalanceResponse,
 };
+use sb_contracts::service_api::{ClubProSettings, UpdateClubSettingsRequest};
 
 #[derive(Clone)]
 pub struct ClubState {
@@ -146,6 +147,60 @@ fn map_club_error(e: ClubError) -> (StatusCode, String) {
 }
 
 
+pub async fn update_club_settings(
+    State(state): State<ClubState>,
+    Extension(ctx): Extension<RequestContext>,
+    Path(club_id): Path<ClubId>,
+    Json(req): Json<UpdateClubSettingsRequest>,
+) -> Result<Json<ClubProSettings>, (StatusCode, String)> {
+    let _user_id = extract_user_id(&ctx)?;
+
+    match state.service.update_pro_settings(&ctx, club_id, req).await {
+        Ok(settings) => Ok(Json(settings)),
+        Err(e) => {
+            tracing::error!("Failed to update club settings: {:?}", e);
+            Err((StatusCode::INTERNAL_SERVER_ERROR, "internal error".to_string()))
+        }
+    }
+}
+
+pub async fn get_club_settings(
+    State(state): State<ClubState>,
+    Extension(_ctx): Extension<RequestContext>,
+    Path(club_id): Path<ClubId>,
+) -> Result<Json<Option<ClubProSettings>>, (StatusCode, String)> {
+    match state.service.get_pro_settings(club_id).await {
+        Ok(settings) => Ok(Json(settings)),
+        Err(e) => {
+            tracing::error!("Failed to get club settings: {:?}", e);
+            Err((StatusCode::INTERNAL_SERVER_ERROR, "internal error".to_string()))
+        }
+    }
+}
+
+pub async fn upload_banner(
+    State(state): State<ClubState>,
+    Extension(ctx): Extension<RequestContext>,
+    Path(club_id): Path<ClubId>,
+    mut multipart: Multipart,
+) -> Result<Json<String>, (StatusCode, String)> {
+    let user_id = extract_user_id(&ctx)?;
+
+    match state.service.is_club_pro_active(user_id).await {
+        Ok(false) | Err(_) => return Err((StatusCode::FORBIDDEN, "Club Pro required".to_string())),
+        Ok(true) => {}
+    }
+
+    while let Ok(Some(field)) = multipart.next_field().await {
+        let name: String = field.name().unwrap_or_default().to_string();
+        if name == "banner" {
+            let _data: axum::body::Bytes = field.bytes().await.map_err(|_| (StatusCode::BAD_REQUEST, "invalid file".to_string()))?;
+            return Ok(Json(format!("https://cdn.example.com/club_{}_banner.png", club_id)));
+        }
+    }
+
+    Err((StatusCode::BAD_REQUEST, "no banner field".to_string()))
+}
 
 // === Issue #029: Club Tournament Scheduling ===
 use sb_contracts::tournament_api::{TournamentConfig, TournamentService, TournamentSummary};

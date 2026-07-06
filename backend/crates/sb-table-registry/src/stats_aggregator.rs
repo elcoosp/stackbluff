@@ -1,5 +1,6 @@
 //! Aggregates player statistics from hand completion events.
 
+
 use crate::events::TableEvent;
 use sb_contracts::stats_api::PlayerStatsRepo;
 use sb_shared_types::PlayerId;
@@ -10,10 +11,12 @@ use std::sync::Arc;
 use tokio::sync::broadcast;
 use tracing::{error, info, warn};
 
+
 /// Spawns a background task that listens for hand completion events
 /// and updates player statistics.
 pub fn spawn_stats_aggregator(
     mut rx: broadcast::Receiver<TableEvent>,
+
     stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
 ) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
@@ -23,6 +26,7 @@ pub fn spawn_stats_aggregator(
             match rx.recv().await {
                 Ok(TableEvent::HandCompleted(hand_event)) => {
                     let event = hand_event;
+
 
                     let mut deltas: HashMap<String, StatsDelta> = HashMap::new();
                     let mut player_to_user: HashMap<PlayerId, String> = HashMap::new();

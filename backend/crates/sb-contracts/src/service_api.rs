@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sb_shared_types::RequestContext;
-use sb_shared_types::{AppError, ChipAmount, HandRank, TableId, UserId};
+use sb_shared_types::{AppError, ChipAmount, TableId, UserId};
 use serde::{Deserialize, Serialize};
 
 use crate::repo_api::UserProfile;
@@ -32,23 +32,6 @@ pub trait TableService: Send + Sync {
     ) -> Result<TableId, AppError>;
 }
 
-#[derive(Debug, Clone)]
-pub struct HandResult {
-    pub hand_rank: HandRank,
-    pub pot_size: ChipAmount,
-    pub is_all_in: bool,
-    pub is_tournament_ko: bool,
-}
-
-impl HandResult {
-    pub fn is_significant(&self) -> bool {
-        matches!(
-            self.hand_rank,
-            HandRank::StraightFlush | HandRank::FourOfAKind | HandRank::FullHouse
-        ) || self.is_all_in
-            || self.is_tournament_ko
-    }
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReplayCard {
@@ -70,7 +53,7 @@ pub struct ReferralStats {
 pub trait ViralService: Send + Sync {
     async fn generate_replay_card(
         &self,
-        hand_result: &HandResult, // ← FIXED: now uses local HandResult
+        hand_result: &sb_shared_types::game_types::HandResult, // ← FIXED: now uses local HandResult
         winner_id: UserId,
         table_id: TableId,
     ) -> Result<ReplayCard, AppError>;
@@ -203,6 +186,28 @@ pub trait ClubService: Send + Sync {
         xp: i64,
     ) -> Result<(), ClubError>;
 
+    async fn update_pro_settings(
+        &self,
+        ctx: &sb_shared_types::RequestContext,
+        club_id: sb_shared_types::ClubId,
+        settings: UpdateClubSettingsRequest,
+    ) -> Result<ClubProSettings, ClubError>;
+
+    async fn get_pro_settings(
+        &self,
+        club_id: sb_shared_types::ClubId,
+    ) -> Result<Option<ClubProSettings>, ClubError>;
+
+    async fn find_club_owner(
+        &self,
+        club_id: sb_shared_types::ClubId,
+    ) -> Result<Option<sb_shared_types::UserId>, ClubError>;
+
+    async fn is_club_pro_active(
+        &self,
+        user_id: sb_shared_types::UserId,
+    ) -> Result<bool, ClubError>;
+
     async fn get_user_division(
         &self,
         ctx: &sb_shared_types::RequestContext,
@@ -273,6 +278,20 @@ pub trait AuthService: Send + Sync {
 
 // ── Missions ──────────────────────────────────────────────────────────────
 use sb_shared_types::missions::{Mission, MissionId};
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ClubProSettings {
+    pub banner_url: Option<String>,
+    pub chip_preset_id: Option<i32>,
+    pub felt_color: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct UpdateClubSettingsRequest {
+    pub banner_url: Option<String>,
+    pub chip_preset_id: Option<i32>,
+    pub felt_color: Option<String>,
+}
 
 #[derive(Debug, serde::Serialize)]
 pub struct ClaimResult {
