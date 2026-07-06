@@ -1,7 +1,7 @@
 use crate::{HandAnalysisParams, OracleServiceImpl, SessionManager};
 use async_trait::async_trait;
 use mockall::mock;
-use sb_contracts::repo_api::{PersistenceError, UserCreate, UserProfile, UserRepo};
+use sb_contracts::repo_api::{PersistenceError, UserCreate, UserProfile, UserRepo, UserWithHash};
 use sb_contracts::service_api::OracleService;
 use sb_shared_types::{RequestContext, UserId};
 use std::sync::Arc;
@@ -19,6 +19,11 @@ mock! {
         async fn find_or_create_by_telegram(&self, ctx: RequestContext, tg_id: i64) -> Result<UserId, PersistenceError>;
         async fn create_email_user(&self, ctx: RequestContext, username: &str, email: &str, password_hash: &str) -> Result<UserId, PersistenceError>;
         async fn find_by_email(&self, ctx: RequestContext, email: &str) -> Result<Option<UserId>, PersistenceError>;
+        async fn find_by_email_with_hash(&self, ctx: RequestContext, email: &str) -> Result<Option<UserWithHash>, PersistenceError>;
+        async fn mark_email_verified(&self, ctx: RequestContext, user_id: UserId) -> Result<(), PersistenceError>;
+        async fn update_password(&self, ctx: RequestContext, user_id: UserId, new_password_hash: &str) -> Result<(), PersistenceError>;
+        async fn update_password_with_timestamp(&self, ctx: RequestContext, user_id: UserId, new_password_hash: &str) -> Result<(), PersistenceError>;
+        async fn is_email_verified(&self, ctx: RequestContext, user_id: UserId) -> Result<bool, PersistenceError>;
         async fn has_active_season_pass(&self, ctx: RequestContext, user_id: UserId) -> Result<bool, PersistenceError>;
     }
 }

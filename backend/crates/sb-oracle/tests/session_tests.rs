@@ -1,4 +1,4 @@
-use sb_contracts::repo_api::{PersistenceError, UserProfile, UserRepo};
+use sb_contracts::repo_api::{PersistenceError, UserCreate, UserProfile, UserRepo, UserWithHash};
 use sb_oracle::{OracleServiceImpl, SessionManager};
 use sb_shared_types::{RequestContext, UserId};
 use std::sync::Arc;
@@ -10,7 +10,7 @@ impl UserRepo for DummyRepo {
     async fn create_user(
         &self,
         _ctx: RequestContext,
-        _create: sb_contracts::repo_api::UserCreate,
+        _create: UserCreate,
     ) -> Result<UserId, PersistenceError> {
         unimplemented!()
     }
@@ -66,6 +66,43 @@ impl UserRepo for DummyRepo {
         _ctx: RequestContext,
         _email: &str,
     ) -> Result<Option<UserId>, PersistenceError> {
+        unimplemented!()
+    }
+    async fn find_by_email_with_hash(
+        &self,
+        _ctx: RequestContext,
+        _email: &str,
+    ) -> Result<Option<UserWithHash>, PersistenceError> {
+        unimplemented!()
+    }
+    async fn mark_email_verified(
+        &self,
+        _ctx: RequestContext,
+        _user_id: UserId,
+    ) -> Result<(), PersistenceError> {
+        unimplemented!()
+    }
+    async fn update_password(
+        &self,
+        _ctx: RequestContext,
+        _user_id: UserId,
+        _new_password_hash: &str,
+    ) -> Result<(), PersistenceError> {
+        unimplemented!()
+    }
+    async fn update_password_with_timestamp(
+        &self,
+        _ctx: RequestContext,
+        _user_id: UserId,
+        _new_password_hash: &str,
+    ) -> Result<(), PersistenceError> {
+        unimplemented!()
+    }
+    async fn is_email_verified(
+        &self,
+        _ctx: RequestContext,
+        _user_id: UserId,
+    ) -> Result<bool, PersistenceError> {
         unimplemented!()
     }
     async fn has_active_season_pass(

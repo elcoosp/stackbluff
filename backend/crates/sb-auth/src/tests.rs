@@ -66,6 +66,9 @@ mod tests {
                     chip_balance: 100000,
                     email_verified_at: None,
                     platform: platform.clone(),
+                    club_pro_expires_at: None,
+                    season_pass_expires_at: None,
+                    season_pass_id: None,
                 })
             } else {
                 Err(PersistenceError::NotFound)
@@ -172,6 +175,14 @@ mod tests {
             _ctx: RequestContext,
             _user_id: UserId,
         ) -> PersistenceResult<bool> {
+            Ok(false)
+        }
+
+        async fn has_active_season_pass(
+            &self,
+            _ctx: RequestContext,
+            _user_id: UserId,
+        ) -> Result<bool, PersistenceError> {
             Ok(false)
         }
     }

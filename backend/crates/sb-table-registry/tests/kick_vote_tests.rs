@@ -1,9 +1,9 @@
-use sb_table_registry::TableActorConfig;
 use async_trait::async_trait;
 use sb_contracts::{repo_api::PersistenceError, stats_api::PlayerStatsRepo};
 use sb_shared_types::{
     ChipAmount, GameVariant, StakeLevel, TableConfig, TableId, UserId, player_stats::StatsDelta,
 };
+use sb_table_registry::TableActorConfig;
 use sb_table_registry::actor::{InternalCommand, spawn_table_actor};
 use sb_table_registry::game_room::RoomMessage;
 use std::sync::Arc;
@@ -45,18 +45,9 @@ async fn kick_vote_passes_and_refunds() {
         event_tx,
         stats_repo,
         active_players,
-<<<<<<< HEAD
-        UserId::new(uuid::Uuid::nil()),
-        None,
-    );
-||||||| 84ca6e9
-    );
-=======
         created_by: UserId::new(uuid::Uuid::nil()),
         chat_id: None,
     });
-
->>>>>>> origin/main
 
     async fn join_player(
         tx: &mpsc::Sender<InternalCommand>,
