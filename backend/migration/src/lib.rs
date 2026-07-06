@@ -16,8 +16,8 @@ mod m20260617_add_table_name;
 mod m20260622_132958_mission_system;
 mod m20260624_create_tournament_tables;
 mod m20260625_seed_tournaments;
-mod m20260628_create_user_season_cards;
 mod m20260628_add_processed_to_seasons;
+mod m20260628_create_user_season_cards;
 
 use sea_orm_migration::prelude::*;
 

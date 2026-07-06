@@ -216,7 +216,10 @@ async fn main() {
             r2_client,
             std::env::var("R2_BUCKET").expect("R2_BUCKET not set"),
         ));
-    let archive_state = Arc::new(hand_archive::ArchiveState { db: db.clone(), r2: r2.clone() });
+    let archive_state = Arc::new(hand_archive::ArchiveState {
+        db: db.clone(),
+        r2: r2.clone(),
+    });
 
     // ── Build main router ────────────────────────────────────────────
     let app = Router::new()
