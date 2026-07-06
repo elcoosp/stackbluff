@@ -29,6 +29,32 @@ use crate::blind_scheduler::BlindScheduler;
 use crate::payout_calculator::calculate_payouts;
 use crate::rebalancer::{compute_final_table_moves, compute_rebalance_moves};
 
+// ─── Dummy Repo for Tests ──────────────────────────────────────────────────
+// FIX: Added DummyStatsRepo to satisfy the Registry's requirement for a PlayerStatsRepo.
+struct DummyStatsRepo;
+
+#[async_trait::async_trait]
+impl sb_contracts::stats_api::PlayerStatsRepo for DummyStatsRepo {
+    // FIX: Added the missing `get` method required by the trait
+    async fn get(
+        &self,
+        _user_id: &str,
+    ) -> Result<
+        sb_shared_types::player_stats::PlayerStatsDto,
+        sb_contracts::repo_api::PersistenceError,
+    > {
+        Ok(Default::default())
+    }
+
+    // FIX: Changed return type from AppError to PersistenceError to match the trait definition
+    async fn apply_delta(
+        &self,
+        _delta: sb_shared_types::player_stats::StatsDelta,
+    ) -> Result<(), sb_contracts::repo_api::PersistenceError> {
+        Ok(())
+    }
+}
+
 pub enum MttCommand {
     Register {
         user_id: UserId,
@@ -122,8 +148,6 @@ fn make_config(max_players: u32) -> TournamentConfig {
 
 #[tokio::test(flavor = "current_thread")]
 async fn test_sit_go_registration_messages_flow() {
-    // DummyStatsRepo is used; it must be defined elsewhere in the module.
-    // We'll keep the test as is; it will compile if DummyStatsRepo exists.
     let stats_repo: Arc<dyn sb_contracts::stats_api::PlayerStatsRepo> = Arc::new(DummyStatsRepo);
     let registry = Arc::new(Registry::new(stats_repo));
     let broker = Arc::new(ConnectionBroker::new());

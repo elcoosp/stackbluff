@@ -2,6 +2,7 @@ use chrono::Utc;
 use migration::Migrator;
 use sb_db_entities::enums::Platform;
 use sb_db_entities::user;
+use sea_orm::Set;
 use sea_orm::{ActiveModelTrait, Database, EntityTrait, IntoActiveModel, ModelTrait};
 use sea_orm_migration::migrator::MigratorTrait;
 use uuid::Uuid;
@@ -29,6 +30,7 @@ async fn test_migration_and_basic_ops() {
         email_verified_at: sea_orm::ActiveValue::Set(None),
         password_hash: sea_orm::ActiveValue::Set(None),
         registration_order: sea_orm::ActiveValue::Set(None),
+        deleted_at: sea_orm::ActiveValue::Set(None),
     };
     let user = user_active.insert(&db).await.unwrap();
 
@@ -54,7 +56,6 @@ async fn test_migration_and_basic_ops() {
     };
     rank.insert(&db).await.unwrap();
 
-    // Delete user using method on model
     user.delete(&db).await.unwrap();
     let ranks = sb_db_entities::player_rank::Entity::find()
         .all(&db)
