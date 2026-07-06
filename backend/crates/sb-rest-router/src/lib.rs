@@ -182,7 +182,7 @@ async fn lobby_handler(
 
 #[axum::debug_handler]
 async fn create_table_handler(
-    Extension(_auth_user): Extension<AuthUser>,
+    Extension(auth_user): Extension<AuthUser>,
     State(state): State<Arc<AppState>>,
     Json(req): Json<CreateTableRequest>,
 ) -> Result<Json<CreateTableResponse>, (StatusCode, Json<ErrorResponse>)> {
@@ -192,9 +192,14 @@ async fn create_table_handler(
             "max_players must be between 2 and 9",
         ));
     }
+    // Parse the authenticated user's ID
+    let user_id = UserId::new(
+        Uuid::parse_str(&auth_user.user_id)
+            .map_err(|_| bad_request("INVALID_USER", "Invalid user ID"))?,
+    );
     let table_id = state
         .table_service
-        .create_cash_table(req.stake_level, req.max_players)
+        .create_cash_table(req.stake_level, req.max_players, user_id, None)
         .await
         .map_err(internal_error)?;
     Ok(Json(CreateTableResponse { table_id }))
