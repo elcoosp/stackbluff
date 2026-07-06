@@ -52,6 +52,23 @@ struct RegisteredPlayer {
     buy_in: ChipAmount,
 }
 
+// Keep the make_config function from HEAD with new fields
+fn make_config(max_players: u32) -> TournamentConfig {
+    TournamentConfig {
+        club_id: None,
+        scheduled_start: None,
+        blind_schedule_id: None,
+        tournament_type: TournamentType::SitAndGo,
+        max_players,
+        buy_in: ChipAmount::new(1000).unwrap(),
+        blind_schedule: make_blind_schedule(),
+        payout_structure: make_payout_structure(),
+        start_delay_seconds: 0,
+        min_players_to_start: max_players,
+    }
+}
+
+// Also keep the TableInfo struct from main
 struct TableInfo {
     table_id: TableId,
     cmd_tx: mpsc::Sender<TableCommand>,

@@ -55,6 +55,9 @@ pub struct TournamentConfig {
     pub payout_structure: PayoutStructure,
     pub start_delay_seconds: u32,
     pub min_players_to_start: u32,
+    pub club_id: Option<sb_shared_types::ids::ClubId>,
+    pub scheduled_start: Option<chrono::DateTime<chrono::Utc>>,
+    pub blind_schedule_id: Option<uuid::Uuid>,
 }
 
 // ── Query types ──────────────────────────────────────────────────────────────

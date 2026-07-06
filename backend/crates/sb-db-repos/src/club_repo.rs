@@ -5,9 +5,9 @@ use sb_contracts::repo_api::{Club, ClubRepo, DIVISION_SIZE, LeaderboardEntry, Le
 use sb_db_entities::{club_leaderboard, club_memberships, clubs};
 use sb_shared_types::{ClubId, UserId};
 use sea_orm::sea_query::ExprTrait;
-use sea_orm::{ConnectionTrait,
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseConnection, EntityTrait,
-    PaginatorTrait, QueryFilter, QueryOrder, TransactionTrait,
+use sea_orm::{
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, ConnectionTrait, DatabaseConnection,
+    EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, TransactionTrait,
 };
 use uuid::Uuid;
 
@@ -61,6 +61,7 @@ impl ClubRepo for ClubRepoImpl {
             name: m.name,
             logo_url: m.logo_url,
             created_by: UserId::new(m.created_by),
+            telegram_chat_id: m.telegram_chat_id,
         }))
     }
 
@@ -285,7 +286,20 @@ impl ClubRepo for ClubRepoImpl {
         Ok(all_clubs.into_iter().map(|c| ClubId::new(c.id)).collect())
     }
 
-    async fn get_user_division(&self, club_id: ClubId, user_id: UserId) -> Result<Option<u32>, ClubError> {
+    async fn get_telegram_chat_id(&self, club_id: ClubId) -> Result<Option<i64>, ClubError> {
+        let model = clubs::Entity::find_by_id(club_id.as_uuid())
+            .one(&self.db)
+            .await
+            .map_err(|e| ClubError::Database(e.to_string()))?;
+
+        Ok(model.and_then(|m| m.telegram_chat_id))
+    }
+
+    async fn get_user_division(
+        &self,
+        club_id: ClubId,
+        user_id: UserId,
+    ) -> Result<Option<u32>, ClubError> {
         let membership = club_memberships::Entity::find()
             .filter(club_memberships::Column::ClubId.eq(club_id.as_uuid()))
             .filter(club_memberships::Column::UserId.eq(user_id.as_uuid()))
@@ -310,7 +324,7 @@ impl ClubRepo for ClubRepoImpl {
         txn.execute_unprepared(&format!(
             r#"
             WITH numbered AS (
-                SELECT 
+                SELECT
                     id,
                     ROW_NUMBER() OVER (ORDER BY joined_at ASC, id ASC) - 1 AS rn
                 FROM club_memberships
@@ -362,7 +376,9 @@ impl ClubRepo for ClubRepoImpl {
             .await
             .map_err(|e| ClubError::Database(e.to_string()))?;
 
-        Ok(club.map(|c| c.owner_id == user_id.as_uuid()).unwrap_or(false))
+        Ok(club
+            .map(|c| c.owner_id == user_id.as_uuid())
+            .unwrap_or(false))
     }
 }
 

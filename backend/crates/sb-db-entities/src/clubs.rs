@@ -24,6 +24,7 @@ pub struct Model {
     pub pro_settings_json: Option<ClubProSettings>,
     pub created_at: DateTimeUtc,
     pub updated_at: DateTimeUtc,
+    pub telegram_chat_id: Option<i64>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

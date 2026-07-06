@@ -118,6 +118,7 @@ pub struct Club {
     pub name: String,
     pub logo_url: Option<String>,
     pub created_by: UserId,
+    pub telegram_chat_id: Option<i64>,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -180,6 +181,8 @@ pub trait ClubRepo: Send + Sync {
     async fn is_member(&self, club_id: ClubId, user_id: UserId) -> ClubResult<bool>;
 
     async fn get_member_count(&self, club_id: ClubId) -> ClubResult<u64>;
+
+    async fn get_telegram_chat_id(&self, club_id: ClubId) -> ClubResult<Option<i64>>;
 
     async fn get_leaderboard_page(
         &self,
