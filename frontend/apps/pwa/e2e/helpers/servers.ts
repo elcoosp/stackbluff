@@ -134,7 +134,7 @@ export async function stopTestServers(): Promise<void> {
   if (backendProcess) {
     // Kill the entire process group to ensure children are terminated
     try {
-      process.kill(-backendProcess.pid, 'SIGKILL');
+      process.kill(-backendProcess.pid!, 'SIGKILL');
     } catch (e) {
       // Already dead
     }
@@ -142,7 +142,7 @@ export async function stopTestServers(): Promise<void> {
   }
   if (frontendProcess) {
     try {
-      process.kill(-frontendProcess.pid, 'SIGKILL');
+      process.kill(-frontendProcess.pid!, 'SIGKILL');
     } catch (e) {
       // Already dead
     }

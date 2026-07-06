@@ -14,6 +14,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tower_cookies::CookieManagerLayer;
 use tower_http::cors::CorsLayer;
+use uuid::Uuid;
 
 use sb_auth::{
     AuthServiceImpl, Authenticator, SharedAuthService, config::AuthConfig, routes::auth_router,
@@ -30,8 +31,9 @@ use sb_db_repos::tournament_repo::TournamentRepoImpl;
 use sb_db_repos::user_repo::UserRepoImpl;
 use sb_rest_router::create_router;
 use sb_rest_router::player_stats::player_stats_routes;
+use sb_rest_router::season_card;
 use sb_rest_router::tournament_routes::{self, TournamentState};
-use sb_shared_types::{GameVariant, StakeLevel, TableConfig, TournamentId};
+use sb_shared_types::{GameVariant, StakeLevel, TableConfig, TournamentId, UserId};
 use sb_table_registry::buy_in_limits_for_stake;
 use sb_table_registry::registry::Registry;
 use sb_table_registry::spawn_history_recorder;
@@ -49,6 +51,41 @@ use test_utils::table_service::InMemoryTableService;
 #[cfg(feature = "test-stubs")]
 use test_utils::user_resolution_service::InMemoryUserResolutionService;
 mod hand_archive;
+mod r2_storage;
+mod season_card_generator;
+
+async fn reschedule_tournament_reminders(
+    repo: std::sync::Arc<dyn sb_contracts::tournament_api::TournamentRepo>,
+    notification_service: std::sync::Arc<dyn sb_contracts::notification_api::NotificationService>,
+    bot_handler: Option<std::sync::Arc<dyn sb_contracts::notification_api::ClubNotifier>>,
+    app_base_url: String,
+) {
+    use chrono::Utc;
+    use sb_contracts::tournament_api::TournamentStatus;
+    let tournaments = match repo.list_tournaments(None).await {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::error!("Failed to list tournaments for reminders: {:?}", e);
+            return;
+        }
+    };
+    let now = Utc::now();
+    for tournament in &tournaments {
+        if tournament.status == TournamentStatus::Registering
+            && let Some(start) = tournament.config.scheduled_start
+            && start > now
+        {
+            sb_tournament::reminders::schedule_reminders(
+                tournament.id,
+                start,
+                repo.clone(),
+                notification_service.clone(),
+                bot_handler.clone(),
+                app_base_url.clone(),
+            );
+        }
+    }
+}
 
 #[tokio::main]
 async fn main() {
@@ -97,7 +134,12 @@ async fn main() {
     let bot_state = build_bot_state();
 
     // ── Oracle ────────────────────────────────────────────────────────
-    let oracle_service = Arc::new(sb_oracle::OracleServiceImpl::new());
+    let session_manager = sb_oracle::SessionManager::new();
+    let oracle_service = Arc::new(sb_oracle::OracleServiceImpl::new(
+        session_manager,
+        user_repo.clone(),
+        None,
+    ));
 
     // ── Table infrastructure ─────────────────────────────────────────
     let table_repo: Arc<dyn TableRepo + Send + Sync> =
@@ -108,7 +150,8 @@ async fn main() {
 
     let registry = Arc::new(Registry::new(stats_repo.clone()));
 
-    // Hydrate registry
+    // Hydrate registry – use default creator (nil user) and no chat_id
+    let system_user = UserId::new(Uuid::nil());
     let db_tables = table_repo
         .list_tables()
         .await
@@ -123,8 +166,9 @@ async fn main() {
             max_buy_in,
             turn_time_limit_ms: 30_000,
         };
-        let default_creator = sb_shared_types::UserId::new(uuid::Uuid::nil());
-        registry.register_existing_table(t.table_id, config, default_creator, None).await;
+        registry
+            .register_existing_table(t.table_id, config, system_user, None)
+            .await;
         tracing::info!(table_id = %t.table_id, "Hydrated table config from DB");
     }
     tracing::info!(count = db_tables.len(), "Registry hydrated from DB");
@@ -135,9 +179,8 @@ async fn main() {
         Arc::new(TableServiceImpl::new(registry.clone(), table_repo.clone()));
 
     if db_tables.is_empty() {
-        let _default_creator = sb_shared_types::UserId::new(uuid::Uuid::nil());
         let default_table_id = table_service
-            .create_cash_table(StakeLevel::Micro, 6)
+            .create_cash_table(StakeLevel::Micro, 6, system_user, None)
             .await
             .expect("failed to create default table");
         tracing::info!(%default_table_id, "Default table created (DB was empty)");
@@ -186,7 +229,8 @@ async fn main() {
                     let hand_desc = closed.winning_hand_description;
                     let pot = closed.pot_amount;
                     let inviter_id = closed.started_by;
-                    let invite_link = format!("{}?ref={}", bot_state_clone.mini_app_url, inviter_id);
+                    let invite_link =
+                        format!("{}?ref={}", bot_state_clone.mini_app_url, inviter_id);
 
                     let text = format!(
                         "{} won {} chips with {}\nPlay again: {}",
@@ -196,7 +240,8 @@ async fn main() {
                     // Use ref to avoid moving chat_id
                     if let Some(ref chat_id_str) = closed.chat_id {
                         if let Ok(chat_id) = chat_id_str.parse::<i64>() {
-                            if let Err(e) = bot_state_clone.notification_service
+                            if let Err(e) = bot_state_clone
+                                .notification_service
                                 .send_telegram_message(chat_id, text, None)
                                 .await
                             {
@@ -214,24 +259,53 @@ async fn main() {
     }
 
     // ── REST router ──────────────────────────────────────────────────
+    let badge_repo = Arc::new(sb_db_repos::badge_repo::BadgeRepoImpl::new(db.clone()));
     let rest_router = create_router(
         table_service.clone(),
         table_repo.clone(),
         registry.clone(),
         hand_history_repo.clone(),
         leaderboard_repo.clone(),
+        badge_repo,
     )
     .merge(player_stats_routes(stats_repo.clone(), user_repo.clone()));
 
     // ── Tournament system ────────────────────────────────────────────
     let tournament_repo = Arc::new(TournamentRepoImpl::new(db.clone()));
     let broker = Arc::new(sb_table_registry::connection_broker::ConnectionBroker::new());
-    let tournament_service = Arc::new(TournamentServiceImpl::new(
+
+    // ── Notification service ────────────────────────────────────────
+    #[cfg(feature = "test-stubs")]
+    let in_memory_notif =
+        Arc::new(test_utils::notification_service::InMemoryNotificationService::new());
+    #[cfg(feature = "test-stubs")]
+    let notification_service: Arc<dyn sb_contracts::notification_api::NotificationService> =
+        in_memory_notif.clone();
+    #[cfg(not(feature = "test-stubs"))]
+    let notification_service: Arc<dyn sb_contracts::notification_api::NotificationService> =
+        panic!("Production notification service not implemented");
+    let bot_handler: Option<Arc<dyn sb_contracts::notification_api::ClubNotifier>> =
+        Some(bot_state.clone());
+    let app_base_url =
+        std::env::var("APP_BASE_URL").unwrap_or_else(|_| "https://app.stackbluff.com".to_string());
+
+    // ── Club system ────────────────────────────────────────────────
+    let club_repo: Arc<dyn sb_contracts::ClubRepo> =
+        Arc::new(sb_db_repos::club_repo::ClubRepoImpl::new(db.clone()));
+    let _club_service: Arc<dyn sb_contracts::ClubService> =
+        Arc::new(sb_club::ClubServiceImpl::new(club_repo.clone()));
+
+    let mut tournament_service_impl = TournamentServiceImpl::new(
         tournament_repo.clone(),
         user_repo.clone(),
         registry.clone(),
         broker.clone(),
-    ));
+        notification_service.clone(),
+        bot_handler.clone(),
+        app_base_url.clone(),
+    );
+    tournament_service_impl.set_club_repo(club_repo.clone());
+    let tournament_service = Arc::new(tournament_service_impl);
 
     let tournament_state = Arc::new(TournamentState {
         tournament_service: tournament_service.clone(),
@@ -270,7 +344,10 @@ async fn main() {
             r2_client,
             std::env::var("R2_BUCKET").expect("R2_BUCKET not set"),
         ));
-    let archive_state = Arc::new(hand_archive::ArchiveState { db: db.clone(), r2 });
+    let archive_state = Arc::new(hand_archive::ArchiveState {
+        db: db.clone(),
+        r2: r2.clone(),
+    });
 
     // ── Build main router ────────────────────────────────────────────
     let app = Router::new()
@@ -282,9 +359,10 @@ async fn main() {
         ))
         .merge(auth_router(auth_service))
         .merge(sb_bot_handler::attach(bot_state))
-        .merge(sb_rest_router::oracle_router(oracle_service))
+        .merge(sb_rest_router::oracle_routes(oracle_service))
         .merge(hand_archive::router(archive_state.clone()))
         .merge(tournament_router)
+        .merge(season_card::router(db.clone()))
         .layer(cors)
         .layer(CookieManagerLayer::new());
 
@@ -299,6 +377,28 @@ async fn main() {
             eprintln!("Scheduler error: {e}");
         }
     });
+
+    reschedule_tournament_reminders(
+        tournament_repo.clone(),
+        notification_service.clone(),
+        bot_handler.clone(),
+        app_base_url.clone(),
+    )
+    .await;
+
+    // Season end background processor (MVP - no notifications)
+    let season_processor = std::sync::Arc::new(season_card_generator::SeasonCardGenerator::new(
+        db.clone(),
+        std::sync::Arc::new(r2_storage::R2StorageAdapter::new(r2.clone())),
+        std::sync::Arc::new(sb_db_repos::season_card_repo::SeaOrmSeasonCardRepo::new(
+            db.clone(),
+        )),
+    ));
+    let season_proc_clone = season_processor.clone();
+    tokio::spawn(async move {
+        season_proc_clone.run_scheduler().await;
+    });
+
     axum::serve(listener, app).await.expect("server error");
 }
 
@@ -317,6 +417,8 @@ async fn load_existing_tournaments(
     }
 
     tracing::info!(count = records.len(), "Loading active tournaments");
+
+    let system_user = UserId::new(Uuid::nil());
 
     for record in records {
         let tournament_id = TournamentId::new(record.id);
@@ -338,6 +440,8 @@ async fn load_existing_tournaments(
                     state.broker.clone(),
                     cmd_rx,
                     event_rx,
+                    system_user,
+                    None,
                 );
                 tokio::spawn(actor.run());
                 state
@@ -361,6 +465,8 @@ async fn load_existing_tournaments(
                     state.broker.clone(),
                     cmd_rx,
                     event_rx,
+                    system_user,
+                    None,
                 );
                 tokio::spawn(actor.run());
                 state
@@ -385,14 +491,14 @@ async fn load_existing_tournaments(
 fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
     let table_service: Arc<dyn sb_contracts::service_api::TableService> =
         Arc::new(InMemoryTableService::new());
-    let notification_service: Arc<dyn sb_contracts::notification_api::NotificationService> =
+    let notification_api_service: Arc<dyn sb_contracts::notification_api::NotificationService> =
         Arc::new(InMemoryNotificationService::new());
     let user_resolution: Arc<dyn sb_contracts::user_resolution::UserResolutionService> =
         Arc::new(InMemoryUserResolutionService::new());
 
     Arc::new(sb_bot_handler::BotState::new(
         table_service,
-        notification_service,
+        notification_api_service,
         user_resolution,
         std::env::var("TELEGRAM_BOT_TOKEN").unwrap_or_default(),
         std::env::var("MINI_APP_URL").unwrap_or_else(|_| "http://localhost:5173/".to_string()),
@@ -405,4 +511,43 @@ fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
         "Production service wiring not yet configured. \
          Build with --features test-stubs for development."
     )
+}
+
+// ── GDPR scheduler (if needed, but it's not used in main) ──
+// I'll keep it as a separate function; you can call it if you want.
+#[allow(dead_code)]
+async fn start_gdpr_job(state: std::sync::Arc<sb_rest_router::AppState>) {
+    use tokio_cron_scheduler::{Job, JobScheduler};
+    let sched = JobScheduler::new().await.unwrap();
+    sched
+        .add(
+            Job::new_async("0 0 2 * * *", move |_uuid, _l| {
+                let state = state.clone();
+                Box::pin(async move {
+                    tracing::info!("Running daily GDPR deletion job...");
+                    if let Ok(pending) = state.gdpr_repo.get_pending_deletions(30).await {
+                        for req in pending {
+                            if let Err(e) = state.gdpr_repo.anonymize_user(req.user_id).await {
+                                tracing::error!(
+                                    "Failed to anonymize user {}: {:?}",
+                                    req.user_id,
+                                    e
+                                );
+                                continue;
+                            }
+                            let _ = state.gdpr_repo.mark_deletion_completed(req.user_id).await;
+                        }
+                    }
+                })
+            })
+            .unwrap(),
+        )
+        .await
+        .unwrap();
+    sched.start().await.unwrap();
+}
+
+#[allow(dead_code)]
+pub fn spawn_gdpr_scheduler(state: std::sync::Arc<sb_rest_router::AppState>) {
+    tokio::spawn(start_gdpr_job(state));
 }

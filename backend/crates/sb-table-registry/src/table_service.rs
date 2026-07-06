@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use sb_contracts::lobby_api::{TableRepo, TableService};
-use sb_shared_types::{AppError, GameVariant, StakeLevel, TableConfig, TableId};
+use sb_shared_types::{AppError, GameVariant, StakeLevel, TableConfig, TableId, UserId};
 use std::sync::Arc;
 
 use crate::actor::buy_in_limits_for_stake;
@@ -26,6 +26,8 @@ impl TableService for TableServiceImpl {
         &self,
         stake_level: StakeLevel,
         max_players: u32,
+        created_by: UserId,
+        chat_id: Option<String>,
     ) -> Result<TableId, AppError> {
         let name = Some(format!("{:?} Table", stake_level));
         let table_id = self
@@ -44,7 +46,13 @@ impl TableService for TableServiceImpl {
         };
         let default_creator = sb_shared_types::UserId::new(uuid::Uuid::nil());
         self.registry
+<<<<<<< HEAD
             .register_existing_table(table_id, config, default_creator, None)
+||||||| 18bcddd
+            .register_existing_table(table_id, config)
+=======
+            .register_existing_table(table_id, config, created_by, chat_id)
+>>>>>>> origin/main
             .await;
 
         Ok(table_id)

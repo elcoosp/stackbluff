@@ -18,7 +18,7 @@ use sb_shared_types::{ActionType, ChipAmount, PlayerId, StakeLevel, TableConfig,
 
 use crate::connection_broker::ConnectionBroker;
 use crate::events::HandCompletedEvent;
-use crate::events::{TableEvent, TableClosedEvent};
+use crate::events::{TableClosedEvent, TableEvent};
 use chrono::Utc;
 use sb_db_entities::hand_history_json::{
     HandAction, HandActions, HandPlayer, HandPlayers, HandResult, PotSplit, Winner,
@@ -2443,12 +2443,16 @@ impl TableActor {
     }
 
     fn emit_table_closed_event(&self) {
-        use sb_shared_types::{UserId, TableId, ChipAmount};
         use crate::events::{TableClosedEvent, TableEvent};
+        use sb_shared_types::{ChipAmount, TableId, UserId};
 
         let (winner, hand_desc, pot) = match &self.last_hand_result {
             Some((uid, desc, pot)) => (Some(*uid), desc.clone(), *pot),
-            None => (None, "No hand completed".to_string(), ChipAmount::new(0).unwrap()),
+            None => (
+                None,
+                "No hand completed".to_string(),
+                ChipAmount::new(0).unwrap(),
+            ),
         };
 
         let event = TableClosedEvent {

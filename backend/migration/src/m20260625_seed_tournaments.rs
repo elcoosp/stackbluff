@@ -108,6 +108,7 @@ impl MigrationTrait for Migration {
                 prize_pool: Set(0),
                 started_at: Set(None),
                 completed_at: Set(None),
+                scheduled_start: Set(None),
                 created_at: Set(now),
             };
             active.insert(db).await?;

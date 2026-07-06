@@ -1,3 +1,4 @@
+use sea_orm::Set;
 use chrono::Utc;
 use migration::Migrator;
 use sb_db_entities::enums::Platform;
@@ -20,6 +21,8 @@ async fn test_migration_and_basic_ops() {
         streak_count: sea_orm::ActiveValue::Set(0),
         created_at: sea_orm::ActiveValue::Set(Utc::now()),
         updated_at: sea_orm::ActiveValue::Set(Utc::now()),
+        season_pass_id: sea_orm::ActiveValue::Set(None),
+        season_pass_expires_at: sea_orm::ActiveValue::Set(None),
         platform: sea_orm::ActiveValue::Set(Platform::Telegram),
         email_verified_at: sea_orm::ActiveValue::Set(None),
         password_hash: sea_orm::ActiveValue::Set(None),
@@ -33,6 +36,7 @@ async fn test_migration_and_basic_ops() {
     assert!(err.to_string().contains("CHECK constraint"));
 
     let season = sb_db_entities::season::ActiveModel {
+        processed: Set(false),
         id: sea_orm::ActiveValue::Set(1),
         name: sea_orm::ActiveValue::Set("Season 1".to_string()),
         starts_at: sea_orm::ActiveValue::Set(Utc::now()),
