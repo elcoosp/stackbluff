@@ -5444,6 +5444,7 @@ dependencies = [
  "jsonwebtoken",
  "mockall",
  "moka",
+ "prometheus",
  "sb-anti-cheat",
  "sb-auth",
  "sb-contracts",
@@ -5452,6 +5453,7 @@ dependencies = [
  "sb-shared-types",
  "sb-table-registry",
  "sb-tournament",
+ "sb-viral",
  "sea-orm",
  "serde",
  "serde_json",
@@ -5509,6 +5511,7 @@ dependencies = [
 name = "sb-shared-types"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "derive_more 2.1.1",
  "serde",
  "thiserror 2.0.18",
@@ -5569,6 +5572,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "once_cell",
+ "prometheus",
  "sb-contracts",
  "sb-db-entities",
  "sb-db-repos",

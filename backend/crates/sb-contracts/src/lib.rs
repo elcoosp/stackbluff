@@ -68,3 +68,7 @@ pub enum TableCommand {
     },
 }
 pub use lobby_api::TableInfo;
+
+pub mod notification;
+pub mod puzzle_repo;
+pub mod tournament_api;

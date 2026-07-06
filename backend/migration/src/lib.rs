@@ -55,3 +55,4 @@ impl MigratorTrait for Migrator {
         ]
     }
 }
+pub mod m20260628_000001_create_puzzle_submissions;

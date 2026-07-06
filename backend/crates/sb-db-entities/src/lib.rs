@@ -28,3 +28,4 @@ pub use referral::Entity as Referral;
 pub use system_counter::Entity as SystemCounter;
 
 pub mod deletion_request;
+pub mod puzzle_submission;

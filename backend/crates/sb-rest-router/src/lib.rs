@@ -1,18 +1,3 @@
-
-#[allow(dead_code)]
-struct DummyGdprRepo;
-#[async_trait::async_trait]
-impl sb_contracts::repo_api::GdprRepo for DummyGdprRepo {
-    async fn request_deletion(&self, _: uuid::Uuid) -> Result<(), sb_contracts::repo_api::PersistenceError> { Ok(()) }
-    async fn get_pending_deletions(&self, _: i64) -> Result<Vec<sb_contracts::repo_api::DeletionRequestDto>, sb_contracts::repo_api::PersistenceError> { Ok(vec![]) }
-    async fn mark_deletion_completed(&self, _: uuid::Uuid) -> Result<(), sb_contracts::repo_api::PersistenceError> { Ok(()) }
-    async fn get_user_data(&self, _: uuid::Uuid) -> Result<sb_contracts::repo_api::UserDataExportDto, sb_contracts::repo_api::PersistenceError> {
-        Ok(sb_contracts::repo_api::UserDataExportDto { profile: serde_json::Value::Null, hand_history: serde_json::Value::Null, missions: serde_json::Value::Null })
-    }
-    async fn anonymize_user(&self, _: uuid::Uuid) -> Result<(), sb_contracts::repo_api::PersistenceError> { Ok(()) }
-    async fn invalidate_sessions(&self, _: uuid::Uuid) -> Result<(), sb_contracts::repo_api::PersistenceError> { Ok(()) }
-    async fn get_user_password_hash(&self, _: uuid::Uuid) -> Result<String, sb_contracts::repo_api::PersistenceError> { Ok(String::new()) }
-}
 pub mod leaderboard;
 use axum::{
     Router,
@@ -25,8 +10,8 @@ use base64::prelude::*;
 use chrono::{DateTime, Utc};
 use sb_auth::middleware::{AuthUser, auth_middleware};
 use sb_contracts::lobby_api::{TableInfo, TableRepo, TableService};
-use sb_contracts::repo_api::{HandHistoryRepository, HandSummary};
 use sb_contracts::repo_api::BadgeRepo;
+use sb_contracts::repo_api::{HandHistoryRepository, HandSummary};
 use sb_shared_types::{RequestContext, StakeLevel, TableId, UserId};
 use sb_table_registry::registry::Registry;
 use serde::{Deserialize, Serialize};
@@ -34,14 +19,70 @@ use std::sync::Arc;
 use tracing::error;
 use uuid::Uuid;
 
-pub mod oracle_routes;
 pub mod handlers;
+pub mod oracle_routes;
 pub mod player_stats;
 pub mod rate_limit;
 pub mod tournament_routes;
 
 pub use oracle_routes::oracle_router;
 pub use rate_limit::rate_limit_middleware;
+
+#[allow(dead_code)]
+struct DummyGdprRepo;
+#[async_trait::async_trait]
+impl sb_contracts::repo_api::GdprRepo for DummyGdprRepo {
+    async fn request_deletion(
+        &self,
+        _: uuid::Uuid,
+    ) -> Result<(), sb_contracts::repo_api::PersistenceError> {
+        Ok(())
+    }
+    async fn get_pending_deletions(
+        &self,
+        _: i64,
+    ) -> Result<
+        Vec<sb_contracts::repo_api::DeletionRequestDto>,
+        sb_contracts::repo_api::PersistenceError,
+    > {
+        Ok(vec![])
+    }
+    async fn mark_deletion_completed(
+        &self,
+        _: uuid::Uuid,
+    ) -> Result<(), sb_contracts::repo_api::PersistenceError> {
+        Ok(())
+    }
+    async fn get_user_data(
+        &self,
+        _: uuid::Uuid,
+    ) -> Result<sb_contracts::repo_api::UserDataExportDto, sb_contracts::repo_api::PersistenceError>
+    {
+        Ok(sb_contracts::repo_api::UserDataExportDto {
+            profile: serde_json::Value::Null,
+            hand_history: serde_json::Value::Null,
+            missions: serde_json::Value::Null,
+        })
+    }
+    async fn anonymize_user(
+        &self,
+        _: uuid::Uuid,
+    ) -> Result<(), sb_contracts::repo_api::PersistenceError> {
+        Ok(())
+    }
+    async fn invalidate_sessions(
+        &self,
+        _: uuid::Uuid,
+    ) -> Result<(), sb_contracts::repo_api::PersistenceError> {
+        Ok(())
+    }
+    async fn get_user_password_hash(
+        &self,
+        _: uuid::Uuid,
+    ) -> Result<String, sb_contracts::repo_api::PersistenceError> {
+        Ok(String::new())
+    }
+}
 
 #[derive(Debug, Serialize)]
 pub struct LobbyTableInfo {
@@ -153,7 +194,10 @@ pub fn create_router(
         .route("/tables", post(create_table_handler))
         .route("/tables/{table_id}/history", get(table_history_handler))
         .route("/users/me/badges", get(handlers::badges::get_my_badges))
-        .route("/users/{user_id}/badges", get(handlers::badges::get_user_badges))
+        .route(
+            "/users/{user_id}/badges",
+            get(handlers::badges::get_user_badges),
+        )
         .layer(axum::middleware::from_fn(auth_middleware));
 
     Router::new()
@@ -342,3 +386,8 @@ fn forbidden(msg: &str) -> (StatusCode, Json<ErrorResponse>) {
 }
 
 pub mod gdpr_routes;
+pub mod routes;
+
+pub fn register_metrics(registry: &prometheus::Registry) {
+    sb_viral::puzzle::service::register_metrics(registry);
+}
