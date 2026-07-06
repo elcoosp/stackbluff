@@ -1,3 +1,4 @@
+import { clubWebSocket } from './lib/websocket';
 import { getPlatform, useUserStore } from '@stackbluff/shared';
 import { useEffect } from 'react';
 import { CookieConsentBanner } from '@/components/consent/CookieConsentBanner';
@@ -12,6 +13,9 @@ function App() {
 
   useEffect(() => {
     loadUser();
+
+    // Initialize club WebSocket connection
+    clubWebSocket.connect();
   }, [loadUser]);
 
   // Register service worker on app startup (with cleanup)
