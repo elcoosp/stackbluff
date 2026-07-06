@@ -1,4 +1,3 @@
-use axum::extract::ConnectInfo;
 pub mod leaderboard;
 use axum::{
     Router,
@@ -386,7 +385,7 @@ fn forbidden(msg: &str) -> (StatusCode, Json<ErrorResponse>) {
 }
 
 pub mod anti_cheat_routes;
-use axum::routing::post;
+// Removed duplicate `use axum::routing::post;`
 
 pub mod gdpr_routes;
 pub mod routes;
