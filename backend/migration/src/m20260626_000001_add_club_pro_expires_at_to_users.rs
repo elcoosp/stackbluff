@@ -9,9 +9,9 @@ impl MigrationTrait for Migration {
         manager
             .alter_table(
                 Table::alter()
-                    .table(Users::Table)
+                    .table(Alias::new("users"))
                     .add_column_if_not_exists(
-                        ColumnDef::new(Users::ClubProExpiresAt)
+                        ColumnDef::new(Alias::new("club_pro_expires_at"))
                             .timestamp_with_time_zone()
                             .null(),
                     )
@@ -24,16 +24,10 @@ impl MigrationTrait for Migration {
         manager
             .alter_table(
                 Table::alter()
-                    .table(Users::Table)
-                    .drop_column(Users::ClubProExpiresAt)
+                    .table(Alias::new("users"))
+                    .drop_column(Alias::new("club_pro_expires_at"))
                     .to_owned(),
             )
             .await
     }
-}
-
-#[derive(Iden)]
-enum Users {
-    Table,
-    ClubProExpiresAt,
 }

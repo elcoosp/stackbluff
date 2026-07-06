@@ -9,9 +9,9 @@ impl MigrationTrait for Migration {
         manager
             .alter_table(
                 Table::alter()
-                    .table(Clubs::Table)
+                    .table(Alias::new("clubs"))
                     .add_column_if_not_exists(
-                        ColumnDef::new(Clubs::ProSettingsJson)
+                        ColumnDef::new(Alias::new("pro_settings_json"))
                             .json()
                             .null(),
                     )
@@ -24,16 +24,10 @@ impl MigrationTrait for Migration {
         manager
             .alter_table(
                 Table::alter()
-                    .table(Clubs::Table)
-                    .drop_column(Clubs::ProSettingsJson)
+                    .table(Alias::new("clubs"))
+                    .drop_column(Alias::new("pro_settings_json"))
                     .to_owned(),
             )
             .await
     }
-}
-
-#[derive(Iden)]
-enum Clubs {
-    Table,
-    ProSettingsJson,
 }
