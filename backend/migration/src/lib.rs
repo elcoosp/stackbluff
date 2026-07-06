@@ -35,10 +35,11 @@ pub struct Migrator;
 impl MigratorTrait for Migrator {
     fn migrations() -> Vec<Box<dyn MigrationTrait>> {
         vec![
-            Box::new(m20260627_add_season_pass_columns::Migration),
             // 1. Core tables
             Box::new(m20260607_000001_create_all_tables::Migration),
             Box::new(m20260607_000002_create_clubs_tables::Migration),
+            // 2. Add columns to existing tables
+            Box::new(m20260627_add_season_pass_columns::Migration),
             // 2. Add columns to existing tables
             Box::new(m20260617_add_table_name::Migration),
             Box::new(m20260615_add_password_hash_to_users::Migration),
