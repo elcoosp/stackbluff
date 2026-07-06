@@ -10,6 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TournamentsRouteImport } from './routes/tournaments'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ShopRouteImport } from './routes/shop'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LobbyRouteImport } from './routes/lobby'
@@ -21,6 +23,16 @@ import { Route as TableTableIdRouteImport } from './routes/table/$tableId'
 const TournamentsRoute = TournamentsRouteImport.update({
   id: '/tournaments',
   path: '/tournaments',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShopRoute = ShopRouteImport.update({
+  id: '/shop',
+  path: '/shop',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RegisterRoute = RegisterRouteImport.update({
@@ -66,6 +78,8 @@ export interface FileRoutesByFullPath {
   '/lobby': typeof LobbyRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/settings': typeof SettingsRoute
+  '/shop': typeof ShopRoute
   '/tournaments': typeof TournamentsRoute
   '/table/$tableId': typeof TableTableIdRoute
 }
@@ -76,6 +90,8 @@ export interface FileRoutesByTo {
   '/lobby': typeof LobbyRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/settings': typeof SettingsRoute
+  '/shop': typeof ShopRoute
   '/tournaments': typeof TournamentsRoute
   '/table/$tableId': typeof TableTableIdRoute
 }
@@ -87,40 +103,48 @@ export interface FileRoutesById {
   '/lobby': typeof LobbyRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/settings': typeof SettingsRoute
+  '/shop': typeof ShopRoute
   '/tournaments': typeof TournamentsRoute
   '/table/$tableId': typeof TableTableIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
-    | '/guide'
-    | '/leaderboard'
-    | '/lobby'
-    | '/login'
-    | '/register'
-    | '/tournaments'
-    | '/table/$tableId'
+  | '/'
+  | '/guide'
+  | '/leaderboard'
+  | '/lobby'
+  | '/login'
+  | '/register'
+  | '/settings'
+  | '/shop'
+  | '/tournaments'
+  | '/table/$tableId'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
-    | '/guide'
-    | '/leaderboard'
-    | '/lobby'
-    | '/login'
-    | '/register'
-    | '/tournaments'
-    | '/table/$tableId'
+  | '/'
+  | '/guide'
+  | '/leaderboard'
+  | '/lobby'
+  | '/login'
+  | '/register'
+  | '/settings'
+  | '/shop'
+  | '/tournaments'
+  | '/table/$tableId'
   id:
-    | '__root__'
-    | '/'
-    | '/guide'
-    | '/leaderboard'
-    | '/lobby'
-    | '/login'
-    | '/register'
-    | '/tournaments'
-    | '/table/$tableId'
+  | '__root__'
+  | '/'
+  | '/guide'
+  | '/leaderboard'
+  | '/lobby'
+  | '/login'
+  | '/register'
+  | '/settings'
+  | '/shop'
+  | '/tournaments'
+  | '/table/$tableId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -130,6 +154,8 @@ export interface RootRouteChildren {
   LobbyRoute: typeof LobbyRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
+  SettingsRoute: typeof SettingsRoute
+  ShopRoute: typeof ShopRoute
   TournamentsRoute: typeof TournamentsRoute
   TableTableIdRoute: typeof TableTableIdRoute
 }
@@ -141,6 +167,20 @@ declare module '@tanstack/react-router' {
       path: '/tournaments'
       fullPath: '/tournaments'
       preLoaderRoute: typeof TournamentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shop': {
+      id: '/shop'
+      path: '/shop'
+      fullPath: '/shop'
+      preLoaderRoute: typeof ShopRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/register': {
@@ -202,6 +242,8 @@ const rootRouteChildren: RootRouteChildren = {
   LobbyRoute: LobbyRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
+  SettingsRoute: SettingsRoute,
+  ShopRoute: ShopRoute,
   TournamentsRoute: TournamentsRoute,
   TableTableIdRoute: TableTableIdRoute,
 }

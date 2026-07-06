@@ -5,6 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+async-trait = { workspace = true }
 tokio = { workspace = true, features = ["time"] }
 parking_lot = { workspace = true }
 sb-contracts = { workspace = true }

@@ -1,4 +1,4 @@
-use crate::actor::{InternalCommand, LeaveResult};
+use crate::actor::{InternalCommand, LeaveResult, spawn_table_actor};
 use crate::connection_broker::ConnectionBroker;
 use crate::events::TableEvent;
 use crate::game_room::RoomMessage;
@@ -28,6 +28,8 @@ struct RoomEntry {
 #[derive(Clone)]
 pub struct Registry {
     table_configs: Arc<RwLock<HashMap<TableId, TableConfig>>>,
+    table_creators: Arc<RwLock<HashMap<TableId, UserId>>>,
+    table_chat_ids: Arc<RwLock<HashMap<TableId, Option<String>>>>,
     table_rooms: Arc<RwLock<HashMap<TableId, Vec<TableId>>>>,
     rooms: Arc<RwLock<HashMap<TableId, RoomEntry>>>,
     users_at_table: Arc<RwLock<HashMap<TableId, HashSet<UserId>>>>,
@@ -41,6 +43,8 @@ impl Registry {
         let (event_tx, _) = tokio::sync::broadcast::channel(1024);
         Self {
             table_configs: Arc::new(RwLock::new(HashMap::new())),
+            table_creators: Arc::new(RwLock::new(HashMap::new())),
+            table_chat_ids: Arc::new(RwLock::new(HashMap::new())),
             table_rooms: Arc::new(RwLock::new(HashMap::new())),
             rooms: Arc::new(RwLock::new(HashMap::new())),
             users_at_table: Arc::new(RwLock::new(HashMap::new())),
@@ -50,17 +54,34 @@ impl Registry {
         }
     }
 
-    pub async fn create_table(&self, config: TableConfig) -> TableId {
+    pub async fn create_table(
+        &self,
+        config: TableConfig,
+        created_by: UserId,
+        chat_id: Option<String>,
+    ) -> TableId {
         let table_id = TableId::new(uuid::Uuid::new_v4());
-        self.register_existing_table(table_id, config).await;
+        self.register_existing_table(table_id, config, created_by, chat_id)
+            .await;
         table_id
     }
 
-    pub async fn register_existing_table(&self, table_id: TableId, config: TableConfig) {
+    pub async fn register_existing_table(
+        &self,
+        table_id: TableId,
+        config: TableConfig,
+        created_by: UserId,
+        chat_id: Option<String>,
+    ) {
         if self.table_configs.read().await.contains_key(&table_id) {
             return;
         }
         self.table_configs.write().await.insert(table_id, config);
+        self.table_creators
+            .write()
+            .await
+            .insert(table_id, created_by);
+        self.table_chat_ids.write().await.insert(table_id, chat_id);
         self.table_rooms.write().await.entry(table_id).or_default();
         info!(%table_id, "Registered table config in Registry");
     }
@@ -77,6 +98,20 @@ impl Registry {
             .get(&table_id)
             .ok_or(TableError::NotFound(table_id))?
             .clone();
+
+        let created_by = *self
+            .table_creators
+            .read()
+            .await
+            .get(&table_id)
+            .ok_or(TableError::NotFound(table_id))?;
+        let chat_id = self
+            .table_chat_ids
+            .read()
+            .await
+            .get(&table_id)
+            .cloned()
+            .unwrap_or(None);
 
         let mut table_rooms = self.table_rooms.write().await;
         let mut rooms = self.rooms.write().await;
@@ -455,6 +490,8 @@ impl Registry {
         config: TableConfig,
         tournament_id: sb_shared_types::TournamentId,
         broker: Arc<ConnectionBroker>,
+        created_by: UserId,
+        chat_id: Option<String>,
     ) -> Result<(mpsc::Sender<InternalCommand>, TableId), AppError> {
         let room_id = TableId::new(uuid::Uuid::new_v4());
         let active_players = Arc::new(AtomicU8::new(0));
@@ -497,6 +534,7 @@ impl Registry {
         info!(%room_id, %tournament_id, "Tournament table created");
         Ok((cmd_tx, room_id))
     }
+
     /// Remove a room from the registry.
     pub async fn remove_room(&self, room_id: TableId) {
         if let Some(entry) = self.rooms.write().await.remove(&room_id) {
@@ -589,6 +627,15 @@ impl Registry {
     }
 
     /// Subscribe a user to a room's broadcast (for spectating).
+    pub async fn subscribe_to_room(&self, room_id: TableId, user_id: UserId) {
+        self.user_room_map
+            .write()
+            .await
+            .entry(user_id)
+            .or_default()
+            .insert(room_id);
+    }
+
     /// Remove a user from a room's broadcast.
     pub async fn unsubscribe_from_room(&self, room_id: TableId, user_id: UserId) {
         if let Some(set) = self.user_room_map.write().await.get_mut(&user_id) {
@@ -597,15 +644,6 @@ impl Registry {
                 self.user_room_map.write().await.remove(&user_id);
             }
         }
-    }
-
-    pub async fn subscribe_to_room(&self, room_id: TableId, user_id: UserId) {
-        self.user_room_map
-            .write()
-            .await
-            .entry(user_id)
-            .or_default()
-            .insert(room_id);
     }
 
     pub async fn set_sitting_out(

@@ -31,6 +31,8 @@ rust-version = "1.94"
 anyhow = { version = "1.0.102" }
 uuid = { version = "1.23.0", features = ["v4", "serde"] }
 dashmap = { version = "6.2.1", features = ["serde"] }
+image = { version = "0.25.5", default-features = false, features = ["png"] }
+tokio-cron-scheduler = "0.11"
 sb-notification = { path = "crates/sb-notification" }
 figment = { version = "0.10", features = ["toml", "env"] }
 wiremock = { version = "0.6",}
@@ -51,7 +53,7 @@ tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 sb-server = { path = "crates/sb-server" }
 sb-club = { path = "crates/sb-club" }
 futures = { version = "0.3.32", default-features = false, features = ["std", "async-await"] }
-moka = { version = "0.12.5", features = ["sync"] }
+moka = { version = "0.12.5", features = ["sync", "future"] }
 parking_lot = "0.12.3"
 sb-bot-handler = { path = "crates/sb-bot-handler" }
 teloxide = { version = "0.17", features = ["webhooks", "axum"] }
