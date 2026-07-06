@@ -84,7 +84,12 @@ impl Registry {
             .write()
             .await
             .insert(table_id, created_by);
-        self.table_chat_ids.write().await.insert(table_id, chat_id);
+
+        // FIX: Cloned chat_id to prevent "use of moved value" error
+        self.table_chat_ids
+            .write()
+            .await
+            .insert(table_id, chat_id.clone());
         self.table_rooms.write().await.entry(table_id).or_default();
         self.table_metadata
             .write()
@@ -106,19 +111,7 @@ impl Registry {
             .ok_or(TableError::NotFound(table_id))?
             .clone();
 
-        let created_by = *self
-            .table_creators
-            .read()
-            .await
-            .get(&table_id)
-            .ok_or(TableError::NotFound(table_id))?;
-        let chat_id = self
-            .table_chat_ids
-            .read()
-            .await
-            .get(&table_id)
-            .cloned()
-            .unwrap_or(None);
+        // FIX: Removed unused `created_by` and `chat_id` variables that were shadowed later.
 
         let mut table_rooms = self.table_rooms.write().await;
         let mut rooms = self.rooms.write().await;
@@ -496,7 +489,7 @@ impl Registry {
         self.event_tx.clone()
     }
 
-    // 3-arg version (backward compatible)
+    // 5-arg version (backward compatible wrapper)
     pub async fn create_tournament_table(
         &self,
         config: TableConfig,
@@ -505,13 +498,13 @@ impl Registry {
         created_by: UserId,
         chat_id: Option<String>,
     ) -> Result<(mpsc::Sender<InternalCommand>, TableId), AppError> {
-        let default_creator = UserId::new(uuid::Uuid::nil());
+        // FIX: Actually pass the provided `created_by` and `chat_id` instead of hardcoding defaults
         self.create_tournament_table_with_metadata(
             config,
             tournament_id,
             broker,
-            default_creator,
-            None,
+            created_by,
+            chat_id,
         )
         .await
     }

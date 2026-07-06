@@ -1,330 +1,169 @@
-<<<<<<< HEAD
 //! Aggregates player statistics from hand completion events.
 
-||||||| 18bcddd
-use crate::events::HandCompletedEvent;
-=======
->>>>>>> origin/main
 use crate::events::TableEvent;
 use sb_contracts::stats_api::PlayerStatsRepo;
+use sb_shared_types::PlayerId;
+use sb_shared_types::player_stats::StatsDelta;
+
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tokio::sync::broadcast;
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 
 /// Spawns a background task that listens for hand completion events
 /// and updates player statistics.
 pub fn spawn_stats_aggregator(
-<<<<<<< HEAD
     mut rx: broadcast::Receiver<TableEvent>,
-    _repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
+    stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
 ) -> tokio::task::JoinHandle<()> {
-||||||| 18bcddd
-    mut event_rx: Receiver<HandCompletedEvent>,
-    stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
-) {
-=======
-    mut event_rx: Receiver<TableEvent>,
-    stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
-) {
->>>>>>> origin/main
     tokio::spawn(async move {
-<<<<<<< HEAD
+        info!("Player stats aggregator started");
+
         loop {
             match rx.recv().await {
                 Ok(TableEvent::HandCompleted(hand_event)) => {
-                    // Stats updates are intentionally disabled because the PlayerStatsRepo trait
-        // does not yet expose the required methods (increment_hand_count, add_winnings,
-        // increment_busts). These should be re-enabled when the trait is extended.
-        // For now, we only log the event.
-                    // In a real implementation, these would be uncommented.
-                    info!("Hand completed event received (stats aggregator): table_id={}", hand_event.table_id);
-||||||| 18bcddd
-        tracing::info!("Player stats aggregator started");
+                    let event = hand_event;
 
-        while let Ok(event) = event_rx.recv().await {
-            let mut deltas: HashMap<String, StatsDelta> = HashMap::new();
-            let mut player_to_user: HashMap<PlayerId, String> = HashMap::new();
+                    let mut deltas: HashMap<String, StatsDelta> = HashMap::new();
+                    let mut player_to_user: HashMap<PlayerId, String> = HashMap::new();
 
-            // Sets to track hand-level states per player
-            let mut folded_players: HashSet<PlayerId> = HashSet::new();
-            let mut vpip_players: HashSet<PlayerId> = HashSet::new();
-            let mut pfr_players: HashSet<PlayerId> = HashSet::new();
-            let mut all_in_players: HashSet<PlayerId> = HashSet::new();
-            let mut total_wagered_map: HashMap<PlayerId, i64> = HashMap::new();
-            let mut bets_map: HashMap<PlayerId, i32> = HashMap::new();
-            let mut raises_map: HashMap<PlayerId, i32> = HashMap::new();
-            let mut calls_map: HashMap<PlayerId, i32> = HashMap::new();
+                    // Sets to track hand-level states per player
+                    let mut folded_players: HashSet<PlayerId> = HashSet::new();
+                    let mut vpip_players: HashSet<PlayerId> = HashSet::new();
+                    let mut pfr_players: HashSet<PlayerId> = HashSet::new();
+                    let mut all_in_players: HashSet<PlayerId> = HashSet::new();
 
-            // 1. Initialize basic data for all participants
-            for player in &event.players.seats {
-                if let Some(user_id) = &player.user_id {
-                    let uid_str = user_id.0.to_string();
-                    player_to_user.insert(player.player_id, uid_str.clone());
+                    // FIX: Removed `mut` as this map is only read, never written to.
+                    let total_wagered_map: HashMap<PlayerId, i64> = HashMap::new();
 
-                    let net_profit = player.stack_after - player.stack_before;
+                    let mut bets_map: HashMap<PlayerId, i32> = HashMap::new();
+                    let mut raises_map: HashMap<PlayerId, i32> = HashMap::new();
+                    let mut calls_map: HashMap<PlayerId, i32> = HashMap::new();
 
-                    deltas.entry(uid_str.clone()).or_insert_with(|| StatsDelta {
-                        user_id: uid_str,
-                        hands_played: 1,
-                        net_profit,
-                        total_won: net_profit.max(0),
-                        ..Default::default()
-                    });
-=======
-        tracing::info!("Player stats aggregator started");
+                    // 1. Initialize basic data for all participants
+                    for player in &event.players.seats {
+                        if let Some(user_id) = &player.user_id {
+                            let uid_str = user_id.0.to_string();
+                            player_to_user.insert(player.player_id, uid_str.clone());
 
-        while let Ok(raw_event) = event_rx.recv().await {
-            let event = match raw_event {
-                TableEvent::HandCompleted(hand) => hand,
-                _ => continue,
-            };
+                            let net_profit = player.stack_after - player.stack_before;
 
-            let mut deltas: HashMap<String, StatsDelta> = HashMap::new();
-            let mut player_to_user: HashMap<PlayerId, String> = HashMap::new();
+                            deltas.entry(uid_str.clone()).or_insert_with(|| StatsDelta {
+                                user_id: uid_str,
+                                hands_played: 1,
+                                net_profit,
+                                total_won: net_profit.max(0),
+                                ..Default::default()
+                            });
+                        }
+                    }
 
-            // Sets to track hand-level states per player
-            let mut folded_players: HashSet<PlayerId> = HashSet::new();
-            let mut vpip_players: HashSet<PlayerId> = HashSet::new();
-            let mut pfr_players: HashSet<PlayerId> = HashSet::new();
-            let mut all_in_players: HashSet<PlayerId> = HashSet::new();
-            let mut total_wagered_map: HashMap<PlayerId, i64> = HashMap::new();
-            let mut bets_map: HashMap<PlayerId, i32> = HashMap::new();
-            let mut raises_map: HashMap<PlayerId, i32> = HashMap::new();
-            let mut calls_map: HashMap<PlayerId, i32> = HashMap::new();
+                    // 2. Process Actions
+                    for action in &event.actions.actions {
+                        let pid = &action.player_id;
+                        let action_type_lower = action.action_type.to_lowercase();
 
-            // 1. Initialize basic data for all participants
-            for player in &event.players.seats {
-                if let Some(user_id) = &player.user_id {
-                    let uid_str = user_id.0.to_string();
-                    player_to_user.insert(player.player_id, uid_str.clone());
+                        match action_type_lower.as_str() {
+                            "bet" => *bets_map.entry(*pid).or_insert(0) += 1,
+                            "raise" => *raises_map.entry(*pid).or_insert(0) += 1,
+                            "call" => *calls_map.entry(*pid).or_insert(0) += 1,
+                            "allin" | "all-in" | "all_in" => {
+                                all_in_players.insert(*pid);
+                            }
+                            "fold" => {
+                                folded_players.insert(*pid);
+                            }
+                            _ => {}
+                        }
 
-                    let net_profit = player.stack_after - player.stack_before;
+                        let is_preflop = action_type_lower.contains("preflop")
+                            || (!action_type_lower.contains("flop")
+                                && !action_type_lower.contains("turn")
+                                && !action_type_lower.contains("river"));
 
-                    deltas.entry(uid_str.clone()).or_insert_with(|| StatsDelta {
-                        user_id: uid_str,
-                        hands_played: 1,
-                        net_profit,
-                        total_won: net_profit.max(0),
-                        ..Default::default()
-                    });
->>>>>>> origin/main
+                        if is_preflop {
+                            if action_type_lower.contains("call")
+                                || action_type_lower.contains("raise")
+                                || action_type_lower.contains("bet")
+                            {
+                                vpip_players.insert(*pid);
+                            }
+                            if action_type_lower.contains("raise")
+                                || action_type_lower.contains("bet")
+                            {
+                                pfr_players.insert(*pid);
+                            }
+                        }
+                    }
+
+                    let total_players = event.players.seats.len();
+                    let total_folded = folded_players.len();
+                    let is_showdown = total_players - total_folded > 1;
+
+                    let mut winner_pids: HashSet<PlayerId> = HashSet::new();
+                    for winner in &event.result.winners {
+                        winner_pids.insert(winner.player_id);
+                        if let Some(uid_str) = player_to_user.get(&winner.player_id)
+                            && let Some(delta) = deltas.get_mut(uid_str)
+                        {
+                            delta.hands_won = 1;
+                            if delta.biggest_pot_won < winner.amount_won {
+                                delta.biggest_pot_won = winner.amount_won;
+                            }
+                        }
+                    }
+
+                    for (pid, uid_str) in &player_to_user {
+                        if let Some(delta) = deltas.get_mut(uid_str) {
+                            delta.bets = *bets_map.get(pid).unwrap_or(&0);
+                            delta.raises = *raises_map.get(pid).unwrap_or(&0);
+                            delta.calls = *calls_map.get(pid).unwrap_or(&0);
+                            delta.total_wagered = *total_wagered_map.get(pid).unwrap_or(&0);
+
+                            if all_in_players.contains(pid) {
+                                delta.all_in_count = 1;
+                            }
+
+                            if vpip_players.contains(pid) {
+                                delta.vpip_hands = 1;
+                            }
+                            if pfr_players.contains(pid) {
+                                delta.pfr_hands = 1;
+                            }
+
+                            if folded_players.contains(pid) {
+                                delta.preflop_fold_count = 1;
+                            }
+
+                            if is_showdown {
+                                if !folded_players.contains(pid) {
+                                    delta.showdowns = 1;
+                                    if winner_pids.contains(pid) {
+                                        delta.showdown_wins = 1;
+                                    }
+                                }
+                            } else if winner_pids.contains(pid) {
+                                delta.hands_won_without_showdown = 1;
+                            }
+                        }
+                    }
+
+                    // 3. Apply all deltas to the database
+                    for (_, delta) in deltas {
+                        if let Err(e) = stats_repo.apply_delta(delta).await {
+                            error!("Failed to apply stats delta: {}", e);
+                        }
+                    }
                 }
-<<<<<<< HEAD
                 Ok(TableEvent::TableClosed(_)) => {
                     // Ignore table closed events
-||||||| 18bcddd
-            }
-
-            // 2. Process Actions to calculate Aggression, VPIP, PFR, Folds
-            for action in &event.actions.actions {
-                let pid = &action.player_id;
-                let action_type_lower = action.action_type.to_lowercase();
-
-                // Track aggression and wagered amounts
-                match action_type_lower.as_str() {
-                    "bet" => *bets_map.entry(*pid).or_insert(0) += 1,
-                    "raise" => *raises_map.entry(*pid).or_insert(0) += 1,
-                    "call" => *calls_map.entry(*pid).or_insert(0) += 1,
-                    "allin" | "all-in" | "all_in" => {
-                        all_in_players.insert(*pid);
-                    }
-                    "fold" => {
-                        folded_players.insert(*pid);
-                    }
-                    _ => {}
-=======
-            }
-
-            // 2. Process Actions
-            for action in &event.actions.actions {
-                let pid = &action.player_id;
-                let action_type_lower = action.action_type.to_lowercase();
-
-                match action_type_lower.as_str() {
-                    "bet" => *bets_map.entry(*pid).or_insert(0) += 1,
-                    "raise" => *raises_map.entry(*pid).or_insert(0) += 1,
-                    "call" => *calls_map.entry(*pid).or_insert(0) += 1,
-                    "allin" | "all-in" | "all_in" => {
-                        all_in_players.insert(*pid);
-                    }
-                    "fold" => {
-                        folded_players.insert(*pid);
-                    }
-                    _ => {}
->>>>>>> origin/main
                 }
                 Err(broadcast::error::RecvError::Lagged(n)) => {
                     warn!(lagged = n, "Stats aggregator lagged, skipping events");
                 }
-<<<<<<< HEAD
                 Err(broadcast::error::RecvError::Closed) => {
                     info!("Stats aggregator channel closed, exiting");
                     break;
-||||||| 18bcddd
-
-                // VPIP / PFR Logic (Best effort based on action strings)
-                // If the action string contains 'preflop' (e.g. "preflop_call"), or if it's a generic call/raise
-                let is_preflop = action_type_lower.contains("preflop")
-                    || (!action_type_lower.contains("flop")
-                        && !action_type_lower.contains("turn")
-                        && !action_type_lower.contains("river"));
-
-                if is_preflop {
-                    if action_type_lower.contains("call")
-                        || action_type_lower.contains("raise")
-                        || action_type_lower.contains("bet")
-                    {
-                        vpip_players.insert(*pid); // Voluntarily Put In Pot
-                    }
-                    if action_type_lower.contains("raise") || action_type_lower.contains("bet") {
-                        pfr_players.insert(*pid); // Preflop Raise
-                    }
-                }
-            }
-
-            // 3. Determine if the hand went to Showdown
-            // It's a showdown if more than 1 player did NOT fold
-            let total_players = event.players.seats.len();
-            let total_folded = folded_players.len();
-            let is_showdown = total_players - total_folded > 1;
-
-            // 4. Process Winners
-            let mut winner_pids: HashSet<PlayerId> = HashSet::new();
-            for winner in &event.result.winners {
-                winner_pids.insert(winner.player_id);
-                if let Some(uid_str) = player_to_user.get(&winner.player_id)
-                    && let Some(delta) = deltas.get_mut(uid_str)
-                {
-                    delta.hands_won = 1;
-                    if delta.biggest_pot_won < winner.amount_won {
-                        delta.biggest_pot_won = winner.amount_won;
-                    }
-                }
-            }
-
-            // 5. Finalize all deltas by mapping our sets/maps to the StatsDelta struct
-            for (pid, uid_str) in &player_to_user {
-                if let Some(delta) = deltas.get_mut(uid_str) {
-                    delta.bets = *bets_map.get(pid).unwrap_or(&0);
-                    delta.raises = *raises_map.get(pid).unwrap_or(&0);
-                    delta.calls = *calls_map.get(pid).unwrap_or(&0);
-                    delta.total_wagered = *total_wagered_map.get(pid).unwrap_or(&0);
-
-                    if all_in_players.contains(pid) {
-                        delta.all_in_count = 1;
-                    }
-
-                    if vpip_players.contains(pid) {
-                        delta.vpip_hands = 1;
-                    }
-                    if pfr_players.contains(pid) {
-                        delta.pfr_hands = 1;
-                    }
-
-                    if folded_players.contains(pid) {
-                        // If they folded, count it as a preflop fold for simplicity
-                        // (can be improved if action logs explicitly separate streets)
-                        delta.preflop_fold_count = 1;
-                    }
-
-                    if is_showdown {
-                        if !folded_players.contains(pid) {
-                            delta.showdowns = 1;
-                            if winner_pids.contains(pid) {
-                                delta.showdown_wins = 1;
-                            }
-                        }
-                    } else {
-                        // No showdown (everyone except winner folded)
-                        if winner_pids.contains(pid) {
-                            delta.hands_won_without_showdown = 1;
-                        }
-                    }
-                }
-            }
-
-            // 6. Apply all deltas to the database
-            for (_, delta) in deltas {
-                if let Err(e) = stats_repo.apply_delta(delta).await {
-                    tracing::error!("Failed to apply stats delta: {}", e);
-=======
-
-                let is_preflop = action_type_lower.contains("preflop")
-                    || (!action_type_lower.contains("flop")
-                        && !action_type_lower.contains("turn")
-                        && !action_type_lower.contains("river"));
-
-                if is_preflop {
-                    if action_type_lower.contains("call")
-                        || action_type_lower.contains("raise")
-                        || action_type_lower.contains("bet")
-                    {
-                        vpip_players.insert(*pid);
-                    }
-                    if action_type_lower.contains("raise") || action_type_lower.contains("bet") {
-                        pfr_players.insert(*pid);
-                    }
-                }
-            }
-
-            let total_players = event.players.seats.len();
-            let total_folded = folded_players.len();
-            let is_showdown = total_players - total_folded > 1;
-
-            let mut winner_pids: HashSet<PlayerId> = HashSet::new();
-            for winner in &event.result.winners {
-                winner_pids.insert(winner.player_id);
-                if let Some(uid_str) = player_to_user.get(&winner.player_id)
-                    && let Some(delta) = deltas.get_mut(uid_str)
-                {
-                    delta.hands_won = 1;
-                    if delta.biggest_pot_won < winner.amount_won {
-                        delta.biggest_pot_won = winner.amount_won;
-                    }
-                }
-            }
-
-            for (pid, uid_str) in &player_to_user {
-                if let Some(delta) = deltas.get_mut(uid_str) {
-                    delta.bets = *bets_map.get(pid).unwrap_or(&0);
-                    delta.raises = *raises_map.get(pid).unwrap_or(&0);
-                    delta.calls = *calls_map.get(pid).unwrap_or(&0);
-                    delta.total_wagered = *total_wagered_map.get(pid).unwrap_or(&0);
-
-                    if all_in_players.contains(pid) {
-                        delta.all_in_count = 1;
-                    }
-
-                    if vpip_players.contains(pid) {
-                        delta.vpip_hands = 1;
-                    }
-                    if pfr_players.contains(pid) {
-                        delta.pfr_hands = 1;
-                    }
-
-                    if folded_players.contains(pid) {
-                        delta.preflop_fold_count = 1;
-                    }
-
-                    if is_showdown {
-                        if !folded_players.contains(pid) {
-                            delta.showdowns = 1;
-                            if winner_pids.contains(pid) {
-                                delta.showdown_wins = 1;
-                            }
-                        }
-                    } else {
-                        if winner_pids.contains(pid) {
-                            delta.hands_won_without_showdown = 1;
-                        }
-                    }
-                }
-            }
-
-            for (_, delta) in deltas {
-                if let Err(e) = stats_repo.apply_delta(delta).await {
-                    tracing::error!("Failed to apply stats delta: {}", e);
->>>>>>> origin/main
                 }
             }
         }
