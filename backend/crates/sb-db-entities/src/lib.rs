@@ -2,8 +2,8 @@ pub mod entities;
 pub mod prelude;
 pub mod referral;
 pub mod system_counter;
+pub mod user_badges;
 
-// Add all missing module declarations
 pub mod club;
 pub mod club_leaderboard;
 pub mod club_memberships;
