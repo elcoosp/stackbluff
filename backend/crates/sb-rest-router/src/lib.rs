@@ -25,7 +25,7 @@ pub mod player_stats;
 pub mod rate_limit;
 pub mod tournament_routes;
 
-pub use oracle_routes::oracle_router;
+pub use oracle_routes::oracle_routes;
 pub use rate_limit::rate_limit_middleware;
 
 #[allow(dead_code)]

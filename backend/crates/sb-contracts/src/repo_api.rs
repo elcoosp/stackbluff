@@ -28,6 +28,8 @@ pub struct UserProfile {
     pub display_name: String,
     pub email: Option<String>,
     pub chip_balance: i64,
+    pub season_pass_id: Option<uuid::Uuid>,
+    pub season_pass_expires_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 #[async_trait]
@@ -44,6 +46,13 @@ pub trait UserRepository: Send + Sync {
         id: UserId,
     ) -> PersistenceResult<UserProfile>;
 
+    async fn has_active_season_pass(
+        &self,
+        ctx: RequestContext,
+        user_id: UserId,
+    ) -> Result<bool, PersistenceError>;
+
+    /// Updates the user's chip balance by `delta`. Returns the new balance.
     async fn update_chip_balance(
         &self,
         ctx: RequestContext,

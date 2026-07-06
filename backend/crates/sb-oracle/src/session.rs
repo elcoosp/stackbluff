@@ -7,11 +7,6 @@ use tokio::time::{Duration, Instant};
 const MAX_ANALYSES: u32 = 3;
 const INACTIVITY_RESET: Duration = Duration::from_secs(8 * 3600);
 
-/// In-memory session manager. Sessions are lost if the server restarts.
-/// This is intentional per the specification (counted in memory, keyed by user_id).
-/// For persistence across restarts, a database-backed store would be required.
-/// Volatility: sessions expire after 8 hours of inactivity, but restart resets all counters.
-/// This is acceptable for the current requirements but should be noted for production deployments.
 pub struct SessionManager {
     inner: Arc<Mutex<HashMap<UserId, UserSession>>>,
 }
@@ -50,5 +45,13 @@ impl SessionManager {
         entry.count += 1;
         entry.last_active = now;
         true
+    }
+}
+
+impl SessionManager {
+    pub async fn remaining(&self, user_id: UserId) -> u32 {
+        let map = self.inner.lock().await;
+        let count = map.get(&user_id).map(|s| s.count).unwrap_or(0);
+        MAX_ANALYSES.saturating_sub(count)
     }
 }

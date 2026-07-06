@@ -5469,9 +5469,12 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "chrono",
+ "mockall",
  "once_cell",
  "sb-contracts",
  "sb-shared-types",
+ "sea-orm",
  "serde",
  "serde_json",
  "thiserror 2.0.18",

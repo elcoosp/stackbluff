@@ -134,7 +134,12 @@ async fn main() {
     let bot_state = build_bot_state();
 
     // ── Oracle ────────────────────────────────────────────────────────
-    let oracle_service = Arc::new(sb_oracle::OracleServiceImpl::new());
+    let session_manager = sb_oracle::SessionManager::new();
+    let oracle_service = Arc::new(sb_oracle::OracleServiceImpl::new(
+        session_manager,
+        user_repo.clone(),
+        None,
+    ));
 
     // ── Table infrastructure ─────────────────────────────────────────
     let table_repo: Arc<dyn TableRepo + Send + Sync> =
@@ -297,7 +302,7 @@ async fn main() {
         ))
         .merge(auth_router(auth_service))
         .merge(sb_bot_handler::attach(bot_state))
-        .merge(sb_rest_router::oracle_router(oracle_service))
+        .merge(sb_rest_router::oracle_routes(oracle_service))
         .merge(hand_archive::router(archive_state.clone()))
         .merge(tournament_router)
         .merge(season_card::router(db.clone()))

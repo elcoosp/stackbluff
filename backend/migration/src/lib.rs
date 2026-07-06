@@ -17,6 +17,7 @@ mod m20260617_add_table_name;
 mod m20260622_132958_mission_system;
 mod m20260624_create_tournament_tables;
 mod m20260625_seed_tournaments;
+mod m20260627_add_season_pass_columns;
 mod m20260628_000001_gdpr_deletion;
 mod m20260628_161024_create_user_badges_table;
 mod m20260628_add_processed_to_seasons;
@@ -32,6 +33,7 @@ pub struct Migrator;
 impl MigratorTrait for Migrator {
     fn migrations() -> Vec<Box<dyn MigrationTrait>> {
         vec![
+            Box::new(m20260627_add_season_pass_columns::Migration),
             // 1. Core tables
             Box::new(m20260607_000001_create_all_tables::Migration),
             Box::new(m20260607_000002_create_clubs_tables::Migration),
