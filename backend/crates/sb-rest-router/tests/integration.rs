@@ -86,26 +86,23 @@ async fn test_unauthenticated_returns_401() {
     let leaderboard_query = Arc::new(MockLeaderboardQueryMock::new());
     let badge_repo = Arc::new(sb_contracts::repo_api::NoopBadgeRepo);
 
-    let (_db_cmd_tx, _db_cmd_rx) = tokio::sync::mpsc::unbounded_channel::<sb_db_repos::commands::DbCommand>();
-    let club_service: Arc<dyn sb_contracts::service_api::ClubService + Send + Sync> = Arc::new(sb_club::ClubServiceImpl::new(
-        Arc::new(sb_db_repos::club_repo::ClubRepoImpl::new(
+    let (_db_cmd_tx, _db_cmd_rx) =
+        tokio::sync::mpsc::unbounded_channel::<sb_db_repos::commands::DbCommand>();
+    let club_service: Arc<dyn sb_contracts::service_api::ClubService + Send + Sync> = Arc::new(
+        sb_club::ClubServiceImpl::new(Arc::new(sb_db_repos::club_repo::ClubRepoImpl::new(
             sea_orm::Database::connect("sqlite::memory:").await.unwrap(),
-        )),
-    ));
+        ))),
+    );
+
     let app = create_router(
         Arc::new(mock_service),
         Arc::new(mock_repo),
         registry,
         hand_history_repo,
         leaderboard_query,
-<<<<<<< HEAD
         club_service,
         Arc::new(sb_table_registry::connection_broker::ConnectionBroker::new()),
-        Arc::new(sb_contracts::repo_api::NoopBadgeRepo),
-||||||| parent of d1b358e (fix: integration tests)
-=======
         badge_repo,
->>>>>>> d1b358e (fix: integration tests)
     );
 
     let server = TestServer::new(app);

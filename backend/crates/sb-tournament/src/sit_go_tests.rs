@@ -1,11 +1,4 @@
 #![allow(dead_code)]
-struct DummyStatsRepo;
-
-#[async_trait::async_trait]
-impl sb_contracts::stats_api::PlayerStatsRepo for DummyStatsRepo {
-    async fn get(&self, _: &str) -> Result<sb_shared_types::player_stats::PlayerStatsDto, sb_contracts::repo_api::PersistenceError> { Ok(Default::default()) }
-    async fn apply_delta(&self, _: sb_shared_types::player_stats::StatsDelta) -> Result<(), sb_contracts::repo_api::PersistenceError> { Ok(()) }
-}
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -30,12 +23,10 @@ use crate::payout_calculator::calculate_payouts;
 use crate::rebalancer::{compute_final_table_moves, compute_rebalance_moves};
 
 // ─── Dummy Repo for Tests ──────────────────────────────────────────────────
-// FIX: Added DummyStatsRepo to satisfy the Registry's requirement for a PlayerStatsRepo.
 struct DummyStatsRepo;
 
 #[async_trait::async_trait]
 impl sb_contracts::stats_api::PlayerStatsRepo for DummyStatsRepo {
-    // FIX: Added the missing `get` method required by the trait
     async fn get(
         &self,
         _user_id: &str,
@@ -46,7 +37,6 @@ impl sb_contracts::stats_api::PlayerStatsRepo for DummyStatsRepo {
         Ok(Default::default())
     }
 
-    // FIX: Changed return type from AppError to PersistenceError to match the trait definition
     async fn apply_delta(
         &self,
         _delta: sb_shared_types::player_stats::StatsDelta,
