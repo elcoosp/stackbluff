@@ -21,6 +21,7 @@ pub struct Model {
     pub is_founder_club: bool,
     #[sea_orm(column_type = "Json", nullable)]
     pub pro_settings_json: Option<ClubProSettings>,
+    pub telegram_chat_id: Option<i64>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

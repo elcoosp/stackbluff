@@ -6,6 +6,7 @@ rust-version = "1.94"
 
 [dependencies]
 sb-db-entities = { workspace = true }
+argon2 = { workspace = true }
 sea-orm = { workspace = true }
 sb-db-repos = { path = "../sb-db-repos" }
 sb-anti-cheat = { path = "../sb-anti-cheat" }
@@ -32,6 +33,8 @@ sb-shared-types = { path = "../sb-shared-types" }
 sb-contracts = { path = "../sb-contracts" }
 sb-auth = { path = "../sb-auth" }
 sb-table-registry = { path = "../sb-table-registry" }
+prometheus.workspace = true
+sb-viral = { version = "0.1.0", path = "../sb-viral" }
 
 [dev-dependencies]
 axum-test = "20"

@@ -419,6 +419,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-lock"
+version = "3.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "290f7f2596bd5b78a9fec8088ccd89180d7f9f55b94b0576823bbbdc72ee8311"
+dependencies = [
+ "event-listener",
+ "event-listener-strategy",
+ "pin-project-lite",
+]
+
+[[package]]
 name = "async-stream"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3908,10 +3919,13 @@ version = "0.12.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "957228ad12042ee839f93c8f257b62b4c0ab5eaae1d4fa60de53b27c9d7c5046"
 dependencies = [
+ "async-lock",
  "crossbeam-channel",
  "crossbeam-epoch",
  "crossbeam-utils",
  "equivalent",
+ "event-listener",
+ "futures-util",
  "parking_lot",
  "portable-atomic",
  "smallvec",
@@ -5325,7 +5339,9 @@ dependencies = [
  "axum",
  "chrono",
  "migration",
+ "moka",
  "parking_lot",
+ "prometheus",
  "sb-contracts",
  "sb-db-entities",
  "sb-db-repos",
@@ -5336,6 +5352,7 @@ dependencies = [
  "serde_json",
  "thiserror 2.0.18",
  "tokio",
+ "tower",
  "tracing",
  "uuid",
 ]
@@ -5501,6 +5518,7 @@ name = "sb-rest-router"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "argon2",
  "async-trait",
  "axum",
  "axum-test",
@@ -5509,6 +5527,7 @@ dependencies = [
  "jsonwebtoken",
  "mockall",
  "moka",
+ "prometheus",
  "sb-anti-cheat",
  "sb-auth",
  "sb-contracts",
@@ -5518,6 +5537,7 @@ dependencies = [
  "sb-shared-types",
  "sb-table-registry",
  "sb-tournament",
+ "sb-viral",
  "sea-orm",
  "serde",
  "serde_json",
@@ -5576,6 +5596,7 @@ dependencies = [
 name = "sb-shared-types"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "derive_more 2.1.1",
  "serde",
  "thiserror 2.0.18",
@@ -5636,8 +5657,10 @@ dependencies = [
  "async-trait",
  "chrono",
  "once_cell",
+ "prometheus",
  "sb-contracts",
  "sb-db-entities",
+ "sb-db-repos",
  "sb-shared-types",
  "sea-orm",
  "serde",
