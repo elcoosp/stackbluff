@@ -31,6 +31,7 @@ use sb_db_repos::tournament_repo::TournamentRepoImpl;
 use sb_db_repos::user_repo::UserRepoImpl;
 use sb_rest_router::create_router;
 use sb_rest_router::player_stats::player_stats_routes;
+use sb_rest_router::season_card;
 use sb_rest_router::tournament_routes::{self, TournamentState};
 use sb_shared_types::{GameVariant, StakeLevel, TableConfig, TournamentId, UserId};
 use sb_table_registry::buy_in_limits_for_stake;
@@ -50,6 +51,8 @@ use test_utils::table_service::InMemoryTableService;
 #[cfg(feature = "test-stubs")]
 use test_utils::user_resolution_service::InMemoryUserResolutionService;
 mod hand_archive;
+mod r2_storage;
+mod season_card_generator;
 
 #[tokio::main]
 async fn main() {
@@ -226,7 +229,10 @@ let mut tournament_service_impl = TournamentServiceImpl::new(
             r2_client,
             std::env::var("R2_BUCKET").expect("R2_BUCKET not set"),
         ));
-    let archive_state = Arc::new(hand_archive::ArchiveState { db: db.clone(), r2 });
+    let archive_state = Arc::new(hand_archive::ArchiveState {
+        db: db.clone(),
+        r2: r2.clone(),
+    });
 
     // ── Build main router ────────────────────────────────────────────
     let app = Router::new()
@@ -241,6 +247,7 @@ let mut tournament_service_impl = TournamentServiceImpl::new(
         .merge(sb_rest_router::oracle_router(oracle_service))
         .merge(hand_archive::router(archive_state.clone()))
         .merge(tournament_router)
+        .merge(season_card::router(db.clone()))
         .layer(cors)
         .layer(CookieManagerLayer::new());
 
@@ -255,6 +262,19 @@ let mut tournament_service_impl = TournamentServiceImpl::new(
             eprintln!("Scheduler error: {e}");
         }
     });
+    // Season end background processor (MVP - no notifications)
+    let season_processor = std::sync::Arc::new(season_card_generator::SeasonCardGenerator::new(
+        db.clone(),
+        std::sync::Arc::new(r2_storage::R2StorageAdapter::new(r2.clone())),
+        std::sync::Arc::new(sb_db_repos::season_card_repo::SeaOrmSeasonCardRepo::new(
+            db.clone(),
+        )),
+    ));
+    let season_proc_clone = season_processor.clone();
+    tokio::spawn(async move {
+        season_proc_clone.run_scheduler().await;
+    });
+
     axum::serve(listener, app).await.expect("server error");
 }
 

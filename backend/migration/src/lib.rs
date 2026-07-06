@@ -19,6 +19,8 @@ mod m20260624_create_tournament_tables;
 mod m20260625_seed_tournaments;
 mod m20260628_000001_gdpr_deletion;
 mod m20260628_161024_create_user_badges_table;
+mod m20260628_add_processed_to_seasons;
+mod m20260628_create_user_season_cards;
 mod m20260629_000001_add_division_to_club_memberships;
 
 use sea_orm_migration::prelude::*;
@@ -35,6 +37,7 @@ impl MigratorTrait for Migrator {
             // 2. Add columns to existing tables
             Box::new(m20260617_add_table_name::Migration),
             Box::new(m20260615_add_password_hash_to_users::Migration),
+            Box::new(m20260628_add_processed_to_seasons::Migration),
             // 3. Additional tables
             Box::new(m20250614_create_payment_intents::Migration),
             Box::new(m20260614_145806_add_referrals_and_counters::Migration),
@@ -44,6 +47,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260614_152712_add_registration_order_to_users::Migration),
             Box::new(m20260614_152713_add_referrer_id_index::Migration),
             Box::new(m20260622_132958_mission_system::Migration),
+            Box::new(m20260628_create_user_season_cards::Migration),
             // 4. Tournament tables
             Box::new(m20260624_create_tournament_tables::Migration),
             // 5. Seed data

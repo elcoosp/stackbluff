@@ -5,6 +5,7 @@ edition = "2024"
 rust-version = "1.94"
 
 [dependencies]
+sb-db-entities = { workspace = true }
 argon2 = { workspace = true }
 sea-orm = { workspace = true }
 sb-db-repos = { path = "../sb-db-repos" }

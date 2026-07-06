@@ -26,6 +26,7 @@ pub mod user_statistics;
 
 pub use referral::Entity as Referral;
 pub use system_counter::Entity as SystemCounter;
-
+pub use user_season_card::Entity as UserSeasonCard;
 pub mod deletion_request;
 pub mod puzzle_submission;
+pub mod user_season_card;

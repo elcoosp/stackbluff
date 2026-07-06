@@ -1,6 +1,16 @@
+export interface ShareContent {
+  title: string;
+  text: string;
+  url: string;
+}
+
 export const PlatformAPI = {
-    shareContent: async (data: { title?: string; text?: string; url?: string }) => {
-        if (navigator.share) { await navigator.share(data); }
-        else { console.log('Share fallback:', data.text); }
+  async shareContent(content: ShareContent): Promise<void> {
+    if (navigator.share) {
+      await navigator.share(content);
+    } else {
+      await navigator.clipboard.writeText(`${content.text} ${content.url}`);
+      alert("Link copied to clipboard!");
     }
+  },
 };
