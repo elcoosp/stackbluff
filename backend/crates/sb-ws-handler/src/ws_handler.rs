@@ -1,3 +1,16 @@
+
+#[allow(dead_code)]
+struct DummyGdprRepo;
+#[async_trait::async_trait]
+impl sb_contracts::repo_api::GdprRepo for DummyGdprRepo {
+    async fn request_deletion(&self, _: uuid::Uuid) -> Result<(), sb_contracts::repo_api::PersistenceError> { Ok(()) }
+    async fn get_pending_deletions(&self, _: i64) -> Result<Vec<sb_contracts::repo_api::DeletionRequestDto>, sb_contracts::repo_api::PersistenceError> { Ok(vec![]) }
+    async fn mark_deletion_completed(&self, _: uuid::Uuid) -> Result<(), sb_contracts::repo_api::PersistenceError> { Ok(()) }
+    async fn get_user_data(&self, _: uuid::Uuid) -> Result<sb_contracts::repo_api::UserDataExportDto, sb_contracts::repo_api::PersistenceError> { Ok(sb_contracts::repo_api::UserDataExportDto { profile: serde_json::json!({}), hand_history: serde_json::json!({}), missions: serde_json::json!({}) }) }
+    async fn anonymize_user(&self, _: uuid::Uuid) -> Result<(), sb_contracts::repo_api::PersistenceError> { Ok(()) }
+    async fn invalidate_sessions(&self, _: uuid::Uuid) -> Result<(), sb_contracts::repo_api::PersistenceError> { Ok(()) }
+    async fn get_user_password_hash(&self, _: uuid::Uuid) -> Result<String, sb_contracts::repo_api::PersistenceError> { Ok(String::new()) }
+}
 use axum::body::Bytes;
 use axum::http::StatusCode;
 use axum::{
@@ -27,10 +40,12 @@ struct AppState {
     auth: Arc<dyn Authenticator + Send + Sync>,
     registry: Arc<Registry>,
     user_repo: Arc<dyn UserRepo>,
-}
+        gdpr_repo: std::sync::Arc::new(DummyGdprRepo),
+    }
 
 pub fn ws_route(auth: Arc<dyn Authenticator + Send + Sync>, registry: Arc<Registry>, user_repo: Arc<dyn UserRepo>) -> Router {
-    let state = Arc::new(AppState { auth, registry, user_repo });
+    let state = Arc::new(AppState { auth, registry, user_repo         gdpr_repo: std::sync::Arc::new(DummyGdprRepo),
+    });
     Router::new().route("/ws/game", get(ws_handler)).with_state(state)
 }
 

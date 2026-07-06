@@ -1,10 +1,9 @@
 import { useHasActiveClubPro } from '../../hooks/useEntitlements';
 
 export function ClubCustomizer() {
-  const clubProExpiresAt = useAuthStore((s) => s.clubProExpiresAt);
-  
+  const hasActiveClubPro = useHasActiveClubPro();
 
-  if (!hasActiveClubPro()) return null;
+  if (!hasActiveClubPro) return null;
 
   return (
     <div className="mt-4 rounded-lg bg-indigo-900/30 p-4">

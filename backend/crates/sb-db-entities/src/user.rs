@@ -22,6 +22,7 @@ pub struct Model {
     pub email_verified_at: Option<DateTimeUtc>,
     pub password_hash: Option<String>,
     pub registration_order: Option<i64>,
+    pub deleted_at: Option<chrono::NaiveDateTime>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

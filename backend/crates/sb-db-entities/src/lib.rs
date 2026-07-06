@@ -2,8 +2,8 @@ pub mod entities;
 pub mod prelude;
 pub mod referral;
 pub mod system_counter;
+pub mod user_badges;
 
-// Add all missing module declarations
 pub mod club;
 pub mod club_leaderboard;
 pub mod club_memberships;
@@ -26,3 +26,6 @@ pub mod user_statistics;
 
 pub use referral::Entity as Referral;
 pub use system_counter::Entity as SystemCounter;
+
+pub mod deletion_request;
+pub mod puzzle_submission;
