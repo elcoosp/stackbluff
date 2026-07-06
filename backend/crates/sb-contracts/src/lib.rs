@@ -9,7 +9,7 @@ pub mod service_api;
 pub mod stats_api;
 pub mod user_resolution;
 pub use service_api::{
-    ClubService, HandResult, ReferralStats, ReplayCard, UserService, ViralService,
+    ClubService, ReferralStats, ReplayCard, UserService, ViralService,
 };
 pub mod club_error;
 pub use async_hooks::{HandCountObserver, ReplayCardObserver};

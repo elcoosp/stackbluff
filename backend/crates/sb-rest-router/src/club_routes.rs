@@ -6,8 +6,8 @@ use axum::{
     routing::{patch, post},
 };
 use sb_auth::middleware::AuthUser;
-use sb_shared_types::club_pro_settings::UpdateClubProSettingsRequest;
-use sb_shared_types::{ClubId, UserId};
+use sb_contracts::service_api::{ClubProSettings, UpdateClubSettingsRequest};
+use sb_shared_types::{ClubId, RequestContext, UserId};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -24,21 +24,17 @@ async fn update_club_settings(
     Extension(auth_user): Extension<AuthUser>,
     State(state): State<Arc<AppState>>,
     Path(club_id): Path<ClubId>,
-    Json(req): Json<UpdateClubProSettingsRequest>,
-) -> Result<Json<sb_contracts::repo_api::ClubProSettings>, (StatusCode, Json<ErrorResponse>)> {
+    Json(req): Json<UpdateClubSettingsRequest>,
+) -> Result<Json<ClubProSettings>, (StatusCode, Json<ErrorResponse>)> {
     let user_id = UserId::new(
         Uuid::parse_str(&auth_user.user_id)
-            .map_err(|_| (StatusCode::BAD_REQUEST, Json(ErrorResponse {
-                error: crate::ErrorDetail {
-                    code: "INVALID_USER".to_string(),
-                    message: "Invalid user ID".to_string(),
-                },
-            })))?,
+            .map_err(|_| bad_request("INVALID_USER", "Invalid user ID"))?,
     );
+    let ctx = RequestContext::new(Uuid::new_v4(), Some(user_id));
 
     let settings = state
         .club_service
-        .update_club_pro_settings(club_id, user_id, req)
+        .update_pro_settings(&ctx, club_id, req)
         .await
         .map_err(|e| match e {
             sb_contracts::ClubError::PermissionDenied => forbidden("Club Pro subscription required"),
@@ -58,18 +54,13 @@ async fn upload_club_banner(
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
     let user_id = UserId::new(
         Uuid::parse_str(&auth_user.user_id)
-            .map_err(|_| (StatusCode::BAD_REQUEST, Json(ErrorResponse {
-                error: crate::ErrorDetail {
-                    code: "INVALID_USER".to_string(),
-                    message: "Invalid user ID".to_string(),
-                },
-            })))?,
+            .map_err(|_| bad_request("INVALID_USER", "Invalid user ID"))?,
     );
 
     // Verify ownership & Pro status
     let club_owner = state.club_service.find_club_owner(club_id).await
         .map_err(internal_error)?;
-    if club_owner != user_id {
+    if club_owner != Some(user_id) {
         return Err(forbidden("Only the club owner can upload a banner"));
     }
 
@@ -105,12 +96,13 @@ async fn upload_club_banner(
     let banner_url = format!("https://cdn.stackbluff.com/{}", key);
 
     // Update settings with new banner URL
-    let req = UpdateClubProSettingsRequest {
+    let req = UpdateClubSettingsRequest {
         banner_url: Some(banner_url.clone()),
         chip_preset_id: None,
         felt_color: None,
     };
-    let _ = state.club_service.update_club_pro_settings(club_id, user_id, req).await
+    let ctx = RequestContext::new(Uuid::new_v4(), Some(user_id));
+    let _ = state.club_service.update_pro_settings(&ctx, club_id, req).await
         .map_err(|e| match e {
             sb_contracts::ClubError::PermissionDenied => forbidden("Club Pro subscription required"),
             _ => internal_error(e),

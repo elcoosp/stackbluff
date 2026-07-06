@@ -1,5 +1,6 @@
 use async_trait::async_trait;
-use sb_contracts::repo_api::{ReferralRepository, PersistenceResult, ReferralStats};
+use sb_contracts::repo_api::ReferralRepository;
+use sb_contracts::service_api::ReferralStats;
 use sb_db_entities::{prelude::*, referral};
 use sb_shared_types::{AppError, UserId};
 use sea_orm::prelude::Expr;
@@ -25,7 +26,7 @@ impl ReferralRepository for ReferralRepositoryImpl {
         &self,
         referrer_id: UserId,
         referred_id: UserId,
-    ) -> PersistenceResult<()> {
+    ) -> Result<(), AppError> {
         let new_ref = referral::ActiveModel {
             referrer_id: Set(referrer_id.to_string()),
             referred_id: Set(referred_id.to_string()),
@@ -44,7 +45,7 @@ impl ReferralRepository for ReferralRepositoryImpl {
     async fn increment_hand_count_and_check_bonus(
         &self,
         referred_id: UserId,
-    ) -> PersistenceResult<bool> {
+    ) -> Result<bool, AppError> {
         use referral::COLUMN;
         let referred_str = referred_id.to_string();
         let update_result = Referral::update_many()
@@ -72,7 +73,7 @@ impl ReferralRepository for ReferralRepositoryImpl {
         }
     }
 
-    async fn mark_bonus_awarded(&self, referred_id: UserId) -> PersistenceResult<()> {
+    async fn mark_bonus_awarded(&self, referred_id: UserId) -> Result<(), AppError> {
         use referral::COLUMN;
         let referred_str = referred_id.to_string();
         let referral = Referral::find()
@@ -91,7 +92,7 @@ impl ReferralRepository for ReferralRepositoryImpl {
         Ok(())
     }
 
-    async fn get_referrer_id(&self, referred_id: UserId) -> PersistenceResult<Option<UserId>> {
+    async fn get_referrer_id(&self, referred_id: UserId) -> Result<Option<UserId>, AppError> {
         use referral::COLUMN;
         let referred_str = referred_id.to_string();
         let referral = Referral::find()
@@ -108,7 +109,7 @@ impl ReferralRepository for ReferralRepositoryImpl {
         }
     }
 
-    async fn get_referral_stats(&self, referrer_id: UserId) -> PersistenceResult<ReferralStats> {
+    async fn get_referral_stats(&self, referrer_id: UserId) -> Result<ReferralStats, AppError> {
         use referral::COLUMN;
         let referrer_str = referrer_id.to_string();
         let referrals = Referral::find()

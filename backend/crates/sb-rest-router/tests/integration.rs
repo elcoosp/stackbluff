@@ -86,12 +86,11 @@ async fn test_unauthenticated_returns_401() {
     let hand_history_repo = Arc::new(MockHandHistoryRepo::new());
     let leaderboard_query = Arc::new(MockLeaderboardQueryMock::new());
 
-    let (db_cmd_tx, _db_cmd_rx) = tokio::sync::mpsc::unbounded_channel::<sb_db_repos::commands::DbCommand>();
+    let (_db_cmd_tx, _db_cmd_rx) = tokio::sync::mpsc::unbounded_channel::<sb_db_repos::commands::DbCommand>();
     let club_service: Arc<dyn sb_contracts::service_api::ClubService + Send + Sync> = Arc::new(sb_club::ClubServiceImpl::new(
         Arc::new(sb_db_repos::club_repo::ClubRepoImpl::new(
             sea_orm::Database::connect("sqlite::memory:").await.unwrap(),
         )),
-        Arc::new(sb_db_repos::user_repo::UserRepoImpl::new(db_cmd_tx)),
     ));
     let app = create_router(
         Arc::new(mock_service),

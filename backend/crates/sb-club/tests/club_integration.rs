@@ -25,7 +25,7 @@ async fn setup_db() -> (
     Migrator::up(&db, None).await.expect("migrations");
 
     let repo: Arc<dyn ClubRepo> = Arc::new(ClubRepoImpl::new(db.clone()));
-    let service = Arc::new(ClubServiceImpl::new(repo.clone(), user_repo, None));
+    let service = Arc::new(ClubServiceImpl::new(repo.clone()));
     (service, repo, db)
 }
 

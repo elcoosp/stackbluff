@@ -1,6 +1,6 @@
 use crate::commands::DbCommand;
 use sb_contracts::repo_api::{
-    PersistenceError, PersistenceResult, UserCreate, UserProfile, UserRepo,
+    PersistenceError, PersistenceResult, UserCreate, UserProfile, UserRepository,
 };
 use sb_shared_types::{RequestContext, UserId};
 use tokio::sync::{mpsc, oneshot};
@@ -16,7 +16,7 @@ impl UserRepoImpl {
 }
 
 #[async_trait::async_trait]
-impl UserRepo for UserRepoImpl {
+impl UserRepository for UserRepoImpl {
     async fn create_user(
         &self,
         ctx: RequestContext,
@@ -178,17 +178,4 @@ impl UserRepo for UserRepoImpl {
 
         Ok(new_balance)
     }
-    async fn is_club_pro_active(&self, user_id: UserId) -> PersistenceResult<bool> {
-        let (tx, rx) = oneshot::channel();
-        let cmd = DbCommand::CheckClubPro {
-            user_id,
-            respond: tx,
-        };
-        self.sender
-            .send(cmd)
-            .map_err(|e| PersistenceError::Database(e.to_string()))?;
-        rx.await
-            .map_err(|e| PersistenceError::Database(e.to_string()))?
-    }
-
 }

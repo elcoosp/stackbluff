@@ -11,7 +11,7 @@ pub use game_state::{ActionError, GameState, HandId, Winner};
 pub use hand_rank::HandRank;
 
 use async_trait::async_trait;
-use sb_contracts::service_api::HandResult;
+use sb_shared_types::game_types::HandResult;
 use sb_shared_types::{TableId, UserId};
 
 #[async_trait]
@@ -54,7 +54,7 @@ impl GameEngine {
         table_id: TableId,
     ) {
         for observer in &self.replay_observers {
-            if hand_result.is_significant() {
+            if hand_result.went_to_showdown || hand_result.hero_went_allin {
                 observer
                     .on_significant_hand(hand_result, winner_id, table_id)
                     .await;

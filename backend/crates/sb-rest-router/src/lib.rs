@@ -2,12 +2,10 @@ pub mod club_routes;
 pub mod leaderboard;
 use axum::{
     Router,
-    routing::{get, post, patch},
-    Router,
+    routing::{get, post},
     extract::{Extension, Path, Query, State},
     http::StatusCode,
     response::Json,
-    routing::{get, post},
 };
 use base64::prelude::*;
 use chrono::{DateTime, Utc};

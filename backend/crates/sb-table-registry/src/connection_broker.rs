@@ -82,6 +82,7 @@ impl Default for ConnectionBroker {
         Self::new()
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -138,19 +139,5 @@ mod tests {
             rx.try_recv().is_err(),
             "no message expected after unsubscribe"
         );
-    }
-
-}
-impl ConnectionBroker {
-    pub async fn broadcast_to_club(
-        &self,
-        table_ids: Vec<TableId>,
-        message: RoomMessage,
-    ) {
-        for table_id in table_ids {
-            if let Some(tx) = self.room_senders.get(&table_id) {
-                let _ = tx.send(message.clone());
-            }
-        }
     }
 }

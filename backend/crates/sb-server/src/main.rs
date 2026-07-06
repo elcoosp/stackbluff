@@ -162,7 +162,7 @@ async fn main() {
     let club_repo: Arc<dyn sb_contracts::repo_api::ClubRepo + Send + Sync> =
         Arc::new(ClubRepoImpl::new(db.clone()));
     let club_service: Arc<dyn sb_contracts::service_api::ClubService + Send + Sync> =
-        Arc::new(sb_club::ClubServiceImpl::new(club_repo.clone(), user_repo.clone(), None));
+        Arc::new(sb_club::ClubServiceImpl::new(club_repo.clone()));
     let broker = Arc::new(ConnectionBroker::new());
 
     // ── REST router ──────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 use crate::service_api::ClubProSettings;
-use crate::service_api::HandResult;
+use sb_shared_types::game_types::HandResult;
 use async_trait::async_trait;
 use sb_shared_types::{TableId, UserId};
 use sb_shared_types::ids::ClubId;

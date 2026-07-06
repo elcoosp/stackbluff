@@ -5,9 +5,9 @@ use chrono::Utc;
 use sb_contracts::{
     HandCountObserver, ReplayCardObserver,
     repo_api::ReferralRepository,
-    service_api::{HandResult, ReferralStats, ReplayCard, UserService, ViralService},
+    service_api::{ReferralStats, ReplayCard, UserService, ViralService},
 };
-use sb_shared_types::{AppError, ChipAmount, TableId, UserId};
+use sb_shared_types::{AppError, ChipAmount, TableId, UserId, game_types::HandResult};
 use std::sync::Arc;
 use tracing::{error, info};
 use uuid::Uuid;
@@ -53,7 +53,7 @@ impl<R: ReferralRepository, U: UserService> ViralService for ViralServiceImpl<R,
     ) -> Result<ReplayCard, AppError> {
         let span = tracing::info_span!("generate_replay_card", winner_id = %winner_id);
         let _enter = span.enter();
-        if !hand_result.is_significant() {
+        if !hand_result.went_to_showdown && !hand_result.hero_went_allin {
             return Err(AppError::InvalidInput("hand not significant".into()));
         }
         let winner_name = self.user_service.get_user_name(winner_id).await?;
@@ -61,7 +61,7 @@ impl<R: ReferralRepository, U: UserService> ViralService for ViralServiceImpl<R,
         let invite_link = format!("{}/?ref={}", self.base_url, winner_id);
         Ok(ReplayCard {
             card_id,
-            hand_description: format!("{:?}", hand_result.hand_rank),
+            hand_description: "Significant Hand".to_string(),
             winner_name,
             invite_link,
             timestamp: Utc::now(),

@@ -119,6 +119,11 @@ impl ClubService for ClubServiceImpl {
         }
     }
     
+    async fn find_club_owner(&self, club_id: ClubId) -> Result<Option<UserId>, ClubError> {
+        let club = self.repo.find_club_by_id(club_id).await?;
+        Ok(club.map(|c| c.created_by))
+    }
+
     async fn is_club_pro_active(
         &self,
         _user_id: UserId,
