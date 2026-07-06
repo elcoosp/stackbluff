@@ -44,12 +44,12 @@ impl MigratorTrait for Migrator {
             Box::new(m20260622_132958_mission_system::Migration),
             // 4. Tournament tables
             Box::new(m20260624_create_tournament_tables::Migration),
-            // 5. Seed data (last)
-            Box::new(m20260616_seed_base_tables::Migration),
-            Box::new(m20260625_seed_tournaments::Migration), // <-- added here
-            // 6. Pro Settings
+            // 5. Pro Settings (must be before seeding)
             Box::new(m20260626_000001_add_club_pro_expires_at_to_users::Migration),
             Box::new(m20260626_000002_add_pro_settings_to_clubs::Migration),
+            // 6. Seed data (last)
+            Box::new(m20260616_seed_base_tables::Migration),
+            Box::new(m20260625_seed_tournaments::Migration), // <-- added here
         ]
     }
 }
