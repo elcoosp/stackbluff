@@ -9,6 +9,7 @@ pub enum NotificationEvent {
     TournamentReminder {
         tournament_name: String,
         start_time: String,
+        deep_link: String,
     },
     StreakAlert {
         streak_count: u32,
@@ -23,7 +24,7 @@ pub enum NotificationEvent {
 }
 
 #[async_trait::async_trait]
-pub trait NotificationService {
+pub trait NotificationService: Send + Sync {
     async fn send(
         &self,
         ctx: &RequestContext,

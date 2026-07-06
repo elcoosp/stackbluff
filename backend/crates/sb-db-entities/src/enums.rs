@@ -69,3 +69,18 @@ pub enum MissionType {
     #[sea_orm(string_value = "win_all_in")]
     WinAllIn,
 }
+
+impl RankTier {
+    pub fn reset_rank(&self) -> Self {
+        match self {
+            RankTier::Legend => RankTier::Maestro,
+            RankTier::Maestro => RankTier::Diamond,
+            RankTier::Diamond => RankTier::Platinum,
+            RankTier::Platinum => RankTier::Gold,
+            RankTier::Gold => RankTier::Silver,
+            RankTier::Silver => RankTier::Silver,
+            RankTier::Bronze => RankTier::Bronze,
+            RankTier::Brick => RankTier::Brick,
+        }
+    }
+}

@@ -1,3 +1,4 @@
+use sea_orm::Set;
 use chrono::Utc;
 use migration::Migrator;
 use sb_db_entities::enums::Platform;
@@ -35,6 +36,7 @@ async fn test_migration_and_basic_ops() {
     assert!(err.to_string().contains("CHECK constraint"));
 
     let season = sb_db_entities::season::ActiveModel {
+        processed: Set(false),
         id: sea_orm::ActiveValue::Set(1),
         name: sea_orm::ActiveValue::Set("Season 1".to_string()),
         starts_at: sea_orm::ActiveValue::Set(Utc::now()),
