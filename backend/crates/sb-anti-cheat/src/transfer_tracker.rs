@@ -62,6 +62,9 @@ impl TransferTracker {
             limit,
         }
     }
+    pub fn limit(&self) -> i64 {
+        self.limit
+    }
 
     pub fn check_and_record(
         &self,

@@ -13,6 +13,7 @@ use tracing::{info, warn};
 
 use crate::ip_collusion::IpCollusionTracker;
 use crate::rate_limiter::RateLimiter;
+use crate::transfer_tracker::TransferTracker; // <-- ADD
 use sb_contracts::service_api::{AntiCheatError, AntiCheatService};
 
 // A key for the fingerprint tracker: (fingerprint_hash, ip)
@@ -21,11 +22,12 @@ type FingerprintKey = String;
 // Store timestamps (in seconds) of each match for the pair
 type FingerprintEntry = (UserId, UserId, Vec<u64>);
 
-/// Implementation of the anti‑cheat service with fingerprint collusion detection.
+/// Implementation of the anti‑cheat service with fingerprint collusion detection and transfer tracking.
 pub struct AntiCheatServiceImpl {
     pub db: DatabaseConnection,
     pub ip_tracker: IpCollusionTracker,
     pub rate_limiter: Arc<RateLimiter>,
+    pub transfer_tracker: TransferTracker, // <-- ADD
     // Map: key -> (user1, user2, list of timestamps in seconds since epoch)
     pub fingerprint_tracker: Arc<DashMap<FingerprintKey, FingerprintEntry>>,
     // Cleanup interval and max age (24h)
@@ -51,10 +53,22 @@ impl AntiCheatServiceImpl {
             }
         });
 
+        // Also spawn cleanup for the transfer tracker (optional, but good)
+        let transfer_tracker = TransferTracker::new();
+        let tt = transfer_tracker.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_secs(60 * 10));
+            loop {
+                interval.tick().await;
+                tt.cleanup_expired();
+            }
+        });
+
         Self {
             db,
             ip_tracker: IpCollusionTracker::new(),
             rate_limiter,
+            transfer_tracker,
             fingerprint_tracker: tracker,
             max_age_secs: max_age_secs as u64,
         }
@@ -160,23 +174,36 @@ impl AntiCheatService for AntiCheatServiceImpl {
 
     async fn check_transfer(
         &self,
-        _from: UserId,
-        _to: UserId,
-        _amount: ChipAmount,
+        from: UserId,
+        to: UserId,
+        amount: ChipAmount,
         _ctx: &RequestContext,
     ) -> Result<(), AntiCheatError> {
-        // TODO: Implement transfer collusion detection
-        Ok(())
+        // Use the transfer tracker to enforce limits
+        match self.transfer_tracker.check_and_record(from, to, amount) {
+            Ok(true) => Ok(()),
+            Ok(false) => Err(AntiCheatError::TransferLimitExceeded(
+                self.transfer_tracker.limit(),
+            )),
+            Err(e) => Err(AntiCheatError::Internal(e.to_string())),
+        }
     }
 
-    fn check_game_action_rate(&self, _user_id: UserId) -> Result<(), AntiCheatError> {
-        // TODO: Implement action rate limiting
-        Ok(())
+    fn check_game_action_rate(&self, user_id: UserId) -> Result<(), AntiCheatError> {
+        // Convert UserId to string for the rate limiter
+        let user_id_str = user_id.to_string();
+        if self.rate_limiter.check_game_action(&user_id_str) {
+            Ok(())
+        } else {
+            Err(AntiCheatError::RateLimited)
+        }
     }
 
-    fn check_auth_rate(&self, _ip: &str) -> Result<(), AntiCheatError> {
-        // Placeholder – rate limiter API may differ; we'll return success for now.
-        // In production, call self.rate_limiter.check(ip)
-        Ok(())
+    fn check_auth_rate(&self, ip: &str) -> Result<(), AntiCheatError> {
+        if self.rate_limiter.check_auth_ip(ip) {
+            Ok(())
+        } else {
+            Err(AntiCheatError::RateLimited)
+        }
     }
 }
