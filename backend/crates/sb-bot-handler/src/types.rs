@@ -1,4 +1,4 @@
-use sb_contracts::lobby_api::TableService; // <-- CORRECT
+use sb_contracts::lobby_api::TableService;
 use sb_contracts::notification_api::NotificationService;
 use sb_contracts::user_resolution::UserResolutionService;
 use std::sync::Arc;

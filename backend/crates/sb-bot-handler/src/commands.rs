@@ -84,7 +84,7 @@ pub async fn handle_poker_command(ctx: &RequestContext, state: &Arc<BotState>, m
         is_private: false,
         invited_users: vec![],
         telegram_chat_id: Some(chat_id.0.to_string()),
-        _max_players: 6, // Default; the service will use this or its own default
+        _max_players: 6,
     };
 
     let table_id = match timeout(
@@ -207,7 +207,7 @@ pub async fn handle_challenge_command(
         is_private: true,
         invited_users: vec![challenger_id, challenged_id],
         telegram_chat_id: Some(chat_id.0.to_string()),
-        _max_players: 2, // Heads-up table, max players = 2
+        _max_players: 2,
     };
 
     let table_id = match timeout(
