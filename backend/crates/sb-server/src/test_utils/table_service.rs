@@ -5,7 +5,7 @@ use async_trait::async_trait;
 #[cfg(feature = "test-stubs")]
 use parking_lot::RwLock;
 #[cfg(feature = "test-stubs")]
-use sb_contracts::service_api::{CreateTableInput, TableService};
+use sb_contracts::lobby_api::{CreateTableInput, TableService}; // <-- FIXED import
 #[cfg(feature = "test-stubs")]
 use sb_shared_types::game_types::{GameVariant, StakeLevel};
 #[cfg(feature = "test-stubs")]

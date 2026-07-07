@@ -6,32 +6,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::repo_api::UserProfile;
 use crate::{ClubError, LeaderboardPage};
-use sb_shared_types::game_types::GameVariant;
-use sb_shared_types::{ClubId, StakeLevel};
-
-/// Input for creating a new poker table.
-#[derive(Debug, Clone)]
-pub struct CreateTableInput {
-    pub name: String,
-    pub club_id: Option<ClubId>,
-    pub stake_level: StakeLevel,
-    pub variant: GameVariant,
-    pub is_private: bool,
-    pub invited_users: Vec<UserId>,
-    pub created_by: sb_shared_types::UserId,
-    pub telegram_chat_id: Option<String>,
-}
-
-/// Service for managing poker tables.
-#[async_trait::async_trait]
-pub trait TableService: Send + Sync {
-    async fn create_table(
-        &self,
-        ctx: &RequestContext,
-        input: CreateTableInput,
-    ) -> Result<TableId, AppError>;
-}
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReplayCard {
@@ -53,7 +27,7 @@ pub struct ReferralStats {
 pub trait ViralService: Send + Sync {
     async fn generate_replay_card(
         &self,
-        hand_result: &sb_shared_types::game_types::HandResult, // ← FIXED: now uses local HandResult
+        hand_result: &sb_shared_types::game_types::HandResult,
         winner_id: UserId,
         table_id: TableId,
     ) -> Result<ReplayCard, AppError>;
@@ -144,14 +118,12 @@ pub trait OracleService: Send + Sync {
     type Output: Send + Sync;
     type Error: std::error::Error + Send + Sync;
 
-    /// Analyze a hand using the oracle heuristic engine.
     async fn analyze(
         &self,
         ctx: &RequestContext,
         params: Self::Params,
     ) -> Result<Self::Output, Self::Error>;
 
-    /// Handle a callback query (no-op for oracle service, but required by the trait).
     async fn answer_callback_query(
         &self,
         callback_id: String,
@@ -208,10 +180,8 @@ pub trait ClubService: Send + Sync {
         club_id: sb_shared_types::ClubId,
     ) -> Result<Option<sb_shared_types::UserId>, ClubError>;
 
-    async fn is_club_pro_active(
-        &self,
-        user_id: sb_shared_types::UserId,
-    ) -> Result<bool, ClubError>;
+    async fn is_club_pro_active(&self, user_id: sb_shared_types::UserId)
+    -> Result<bool, ClubError>;
 
     async fn get_user_division(
         &self,

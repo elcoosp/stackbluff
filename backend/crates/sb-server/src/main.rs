@@ -24,7 +24,7 @@ use sb_auth::{
 };
 use sb_club::handlers::{ClubTournamentState, club_tournament_routes};
 use sb_contracts::async_hooks::{HandCountObserver, ReplayCardObserver};
-use sb_contracts::lobby_api::TableRepo;
+use sb_contracts::lobby_api::{TableRepo, TableService};
 use sb_contracts::repo_api::{GdprRepo, HandHistoryRepository, UserRepo};
 use sb_contracts::service_api::MissionApi;
 use sb_contracts::stats_api::PlayerStatsRepo;
@@ -199,7 +199,7 @@ async fn main() {
 
     Registry::spawn_room_reaper(registry.clone()).await;
 
-    let table_service: Arc<dyn sb_contracts::lobby_api::TableService> =
+    let table_service: Arc<dyn TableService + Send + Sync> =
         Arc::new(TableServiceImpl::new(registry.clone(), table_repo.clone()));
 
     if db_tables.is_empty() {
@@ -510,12 +510,9 @@ async fn load_existing_tournaments(
 
 #[cfg(feature = "test-stubs")]
 fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
-    let table_service: Arc<dyn sb_contracts::service_api::TableService> =
-        Arc::new(InMemoryTableService::new());
-    let notification_api_service: Arc<dyn sb_contracts::notification_api::NotificationService> =
-        Arc::new(InMemoryNotificationService::new());
-    let user_resolution: Arc<dyn sb_contracts::user_resolution::UserResolutionService> =
-        Arc::new(InMemoryUserResolutionService::new());
+    let table_service = Arc::new(InMemoryTableService::new());
+    let notification_api_service = Arc::new(InMemoryNotificationService::new());
+    let user_resolution = Arc::new(InMemoryUserResolutionService::new());
 
     Arc::new(sb_bot_handler::BotState::new(
         table_service,
