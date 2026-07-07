@@ -1,7 +1,6 @@
 mod leaderboard_refresh;
 #[cfg(feature = "test-stubs")]
 mod test_utils;
-mod user_resolution_service;
 mod user_service;
 mod viral_observer;
 
@@ -57,7 +56,6 @@ use sb_tournament::{
 };
 use sb_viral::ViralServiceImpl;
 use sb_ws_handler::ws_route;
-use user_resolution_service::UserResolutionServiceImpl;
 use user_service::UserServiceImpl;
 
 #[cfg(feature = "test-stubs")]

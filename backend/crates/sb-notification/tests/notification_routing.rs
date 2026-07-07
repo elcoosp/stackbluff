@@ -5,7 +5,7 @@ use sb_notification::{TelegramNotificationService, web_push::WebPushSender};
 use sb_shared_types::{ids::UserId, request_context::RequestContext};
 use uuid::Uuid;
 
-fn test_ctx() -> RequestContext {
+fn _test_ctx() -> RequestContext {
     RequestContext {
         request_id: uuid::Uuid::new_v4(),
         user_id: Some(sb_shared_types::ids::UserId::new(uuid::Uuid::new_v4())),
@@ -17,7 +17,7 @@ fn test_ctx() -> RequestContext {
 async fn telegram_service_can_be_created() {
     // We need a dummy bot token for tests.
     let bot_token = "dummy:token".to_string();
-    let service = TelegramNotificationService::new(bot_token);
+    let _service = TelegramNotificationService::new(bot_token);
     // The service does not implement the generic NotificationService trait,
     // but that's fine; we just test that it exists and can be used directly.
     // We won't try to send a message because that would require a real token.

@@ -15,6 +15,9 @@ use std::sync::atomic::{AtomicU8, Ordering};
 use std::time::Duration;
 use tokio::sync::{RwLock, mpsc};
 use tracing::info;
+use sb_shared_types::GameVariant;
+use sb_shared_types::RequestContext;
+use crate::actor::buy_in_limits_for_stake;
 
 type ActorSender = mpsc::Sender<InternalCommand>;
 
@@ -422,37 +425,62 @@ impl Registry {
         cmd: TableCommand,
     ) -> Result<(), TableError> {
         match cmd {
-            TableCommand::Join {
-                user_id, reply_to, ..
-            } => {
-                let stack = ChipAmount::new(1000).unwrap();
-                let cmd_tx = {
-                    let guard = self.rooms.read().await;
-                    let entry = guard.get(&room_id).ok_or(TableError::NotFound(room_id))?;
-                    entry.cmd_tx.clone()
+            TableCommand::CreateTable { table_id, stake_level, max_players, reply_to } => {
+                let (min_buy_in, max_buy_in) = crate::actor::buy_in_limits_for_stake(stake_level);
+                let config = TableConfig {
+                    max_players: max_players as u8,
+                    stake_level,
+                    variant: GameVariant::Holdem,
+                    min_buy_in,
+                    max_buy_in,
+                    turn_time_limit_ms: 30000,
                 };
-                let (tx, _) = tokio::sync::mpsc::unbounded_channel();
-                let (resp_tx, _resp_rx) = tokio::sync::oneshot::channel();
-                let internal = InternalCommand::Join {
-                    user_id,
-                    display_name: "Player".to_string(),
-                    seat: None,
-                    stack,
-                    msg_tx: tx,
-                    respond_to: resp_tx,
-                };
-                match cmd_tx.send(internal).await {
-                    Ok(()) => {
+                self.register_existing_table(table_id, config, UserId::new(uuid::Uuid::nil()), None).await;
+                let _ = reply_to.send(Ok(()));
+                Ok(())
+            }
+            TableCommand::RemoveTable { table_id, reply_to } => {
+                self.remove_room(table_id).await;
+                let _ = reply_to.send(Ok(()));
+                Ok(())
+            }
+            TableCommand::GetTableInfo { table_id, reply_to } => {
+                let config_opt = self.table_configs.read().await.get(&table_id).cloned();
+                let active = self.get_total_active_players(table_id).await;
+                let info = config_opt.map(|c| TableInfo {
+                    table_id,
+                    name: format!("{:?} Table", c.stake_level),
+                    stake_level: c.stake_level,
+                    current_players: active,
+                    max_players: c.max_players as u32,
+                    status: "active".to_string(),
+                });
+                let _ = reply_to.send(info.ok_or(TableError::NotFound(table_id)));
+                Ok(())
+            }
+            TableCommand::ListTables { reply_to } => {
+                let tables = self.list_active_tables().await;
+                let _ = reply_to.send(Ok(tables));
+                Ok(())
+            }
+            TableCommand::Join { table_id, user_id, reply_to } => {
+                let rooms = self.find_all_user_rooms(user_id).await;
+                match self.assign_room(table_id, rooms).await {
+                    Ok(room_id) => {
+                        let (msg_tx, _) = tokio::sync::mpsc::unbounded_channel();
+                        let stack = ChipAmount::new(1000).unwrap();
+                        let _ = self.join_room_full(room_id, user_id, "Player".to_string(), None, stack, msg_tx).await;
                         let _ = reply_to.send(Ok(()));
-                        Ok(())
                     }
                     Err(e) => {
-                        let _ = reply_to.send(Err(TableError::ActorError(e.to_string())));
-                        Err(TableError::ActorError(e.to_string()))
+                        let _ = reply_to.send(Err(e));
                     }
                 }
+                Ok(())
             }
-            _ => Ok(()),
+            TableCommand::Heartbeat { table_id: _ } => {
+                Ok(())
+            }
         }
     }
 
