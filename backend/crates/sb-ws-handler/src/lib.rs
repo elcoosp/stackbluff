@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use axum::body::Bytes;
 use axum::http::StatusCode;
 use axum::{
@@ -10,7 +9,7 @@ use axum::{
 use axum_extra::extract::CookieJar;
 use futures::{SinkExt, StreamExt};
 use sb_auth::Authenticator;
-use sb_contracts::repo_api::{GdprRepo, UserRepo};
+use sb_contracts::repo_api::UserRepo;
 use sb_shared_types::{ChipAmount, RequestContext, TableId, UserId};
 use sb_table_registry::game_room::RoomMessage;
 use sb_table_registry::registry::Registry;
@@ -30,20 +29,17 @@ struct AppState {
     auth: Arc<dyn Authenticator + Send + Sync>,
     registry: Arc<Registry>,
     user_repo: Arc<dyn UserRepo>,
-    gdpr_repo: Arc<dyn GdprRepo + Send + Sync>,
 }
 
 pub fn ws_route(
     auth: Arc<dyn Authenticator + Send + Sync>,
     registry: Arc<Registry>,
     user_repo: Arc<dyn UserRepo>,
-    gdpr_repo: Arc<dyn GdprRepo + Send + Sync>,
 ) -> Router {
     let state = Arc::new(AppState {
         auth,
         registry,
         user_repo,
-        gdpr_repo,
     });
     Router::new()
         .route("/ws/game", get(ws_handler))

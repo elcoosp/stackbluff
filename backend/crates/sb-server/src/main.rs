@@ -325,7 +325,6 @@ async fn main() {
         auth_authenticator.clone(),
         registry.clone(),
         user_repo.clone(),
-        gdpr_repo.clone(),
     );
 
     // ── CORS ──────────────────────────────────────────────────────────
