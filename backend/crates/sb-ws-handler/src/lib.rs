@@ -10,7 +10,7 @@ use axum::{
 use axum_extra::extract::CookieJar;
 use futures::{SinkExt, StreamExt};
 use sb_auth::Authenticator;
-use sb_contracts::repo_api::UserRepo;
+use sb_contracts::repo_api::{GdprRepo, UserRepo};
 use sb_shared_types::{ChipAmount, RequestContext, TableId, UserId};
 use sb_table_registry::game_room::RoomMessage;
 use sb_table_registry::registry::Registry;
@@ -21,63 +21,6 @@ use tokio::sync::mpsc;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
-// Dummy GDPR repo – kept for compatibility, not used in this crate.
-struct DummyGdprRepo;
-
-#[async_trait]
-impl sb_contracts::repo_api::GdprRepo for DummyGdprRepo {
-    async fn request_deletion(
-        &self,
-        _user_id: Uuid,
-    ) -> Result<(), sb_contracts::repo_api::PersistenceError> {
-        Ok(())
-    }
-    async fn get_pending_deletions(
-        &self,
-        _older_than_days: i64,
-    ) -> Result<
-        Vec<sb_contracts::repo_api::DeletionRequestDto>,
-        sb_contracts::repo_api::PersistenceError,
-    > {
-        Ok(vec![])
-    }
-    async fn mark_deletion_completed(
-        &self,
-        _user_id: Uuid,
-    ) -> Result<(), sb_contracts::repo_api::PersistenceError> {
-        Ok(())
-    }
-    async fn get_user_data(
-        &self,
-        _user_id: Uuid,
-    ) -> Result<sb_contracts::repo_api::UserDataExportDto, sb_contracts::repo_api::PersistenceError>
-    {
-        Ok(sb_contracts::repo_api::UserDataExportDto {
-            profile: serde_json::Value::Null,
-            hand_history: serde_json::Value::Null,
-            missions: serde_json::Value::Null,
-        })
-    }
-    async fn anonymize_user(
-        &self,
-        _user_id: Uuid,
-    ) -> Result<(), sb_contracts::repo_api::PersistenceError> {
-        Ok(())
-    }
-    async fn invalidate_sessions(
-        &self,
-        _user_id: Uuid,
-    ) -> Result<(), sb_contracts::repo_api::PersistenceError> {
-        Ok(())
-    }
-    async fn get_user_password_hash(
-        &self,
-        _user_id: Uuid,
-    ) -> Result<String, sb_contracts::repo_api::PersistenceError> {
-        Ok(String::new())
-    }
-}
-
 #[derive(Deserialize)]
 struct WsQuery {
     token: Option<String>,
@@ -87,19 +30,20 @@ struct AppState {
     auth: Arc<dyn Authenticator + Send + Sync>,
     registry: Arc<Registry>,
     user_repo: Arc<dyn UserRepo>,
-    _gdpr_repo: Arc<dyn sb_contracts::repo_api::GdprRepo + Send + Sync>,
+    gdpr_repo: Arc<dyn GdprRepo + Send + Sync>,
 }
 
 pub fn ws_route(
     auth: Arc<dyn Authenticator + Send + Sync>,
     registry: Arc<Registry>,
     user_repo: Arc<dyn UserRepo>,
+    gdpr_repo: Arc<dyn GdprRepo + Send + Sync>,
 ) -> Router {
     let state = Arc::new(AppState {
         auth,
         registry,
         user_repo,
-        _gdpr_repo: Arc::new(DummyGdprRepo),
+        gdpr_repo,
     });
     Router::new()
         .route("/ws/game", get(ws_handler))
@@ -248,7 +192,6 @@ async fn handle_websocket(
 
     info!(%user_id, "WebSocket handler loop exited");
 
-    // Clean up: leave all rooms the user was in
     for room_id in active_rooms {
         let registry = state.registry.clone();
         let user_repo = state.user_repo.clone();
@@ -323,7 +266,6 @@ async fn handle_client_message(
                         active_rooms.insert(room_id);
                     }
                     Ok(false) => {
-                        // Reconnect failed – user not at table
                         let err = serde_json::json!({
                             "type": "Error",
                             "room_id": room_id,
@@ -333,7 +275,6 @@ async fn handle_client_message(
                             return false;
                         }
                         failed_rooms.push(room_id);
-                        // Remove from active_rooms if it was there
                         active_rooms.remove(&room_id);
                     }
                     Err(e) => {
@@ -352,7 +293,6 @@ async fn handle_client_message(
                 }
             }
 
-            // Remove any rooms that failed from the user's registry subscription
             for room_id in failed_rooms {
                 state
                     .registry

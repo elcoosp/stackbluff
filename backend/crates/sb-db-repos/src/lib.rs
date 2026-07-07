@@ -25,3 +25,5 @@ pub mod badge_repo;
 pub mod gdpr_repo;
 pub mod puzzle_repo;
 pub mod season_card_repo;
+
+pub use gdpr_repo::PgGdprRepo;

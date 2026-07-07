@@ -25,11 +25,12 @@ use sb_auth::{
 use sb_club::handlers::{ClubTournamentState, club_tournament_routes};
 use sb_contracts::async_hooks::{HandCountObserver, ReplayCardObserver};
 use sb_contracts::lobby_api::TableRepo;
-use sb_contracts::repo_api::{HandHistoryRepository, UserRepo};
+use sb_contracts::repo_api::{GdprRepo, HandHistoryRepository, UserRepo};
 use sb_contracts::stats_api::PlayerStatsRepo;
 use sb_contracts::tournament_api::{TournamentConfig, TournamentType};
 use sb_db_entities::tournament::{Column as TournamentColumn, Entity as TournamentEntity};
 use sb_db_repos::club_repo::ClubRepoImpl;
+use sb_db_repos::gdpr_repo::PgGdprRepo;
 use sb_db_repos::hand_history_repo::{HandHistoryRepoImpl, spawn_hand_history_cleanup};
 use sb_db_repos::init_writer_loop;
 use sb_db_repos::player_stats_repo::PlayerStatsRepoImpl;
@@ -230,6 +231,9 @@ async fn main() {
         Arc::new(sb_club::ClubServiceImpl::new(club_repo.clone()));
     let broker = Arc::new(ConnectionBroker::new());
 
+    // ── GDPR repository ──────────────────────────────────────────────
+    let gdpr_repo: Arc<dyn GdprRepo + Send + Sync> = Arc::new(PgGdprRepo { db: db.clone() });
+
     // ── REST router ──────────────────────────────────────────────────
     let badge_repo = Arc::new(sb_db_repos::badge_repo::BadgeRepoImpl::new(db.clone()));
     let rest_router = create_router(
@@ -241,6 +245,7 @@ async fn main() {
         club_service.clone(),
         broker.clone(),
         badge_repo.clone(),
+        gdpr_repo.clone(),
     )
     .merge(player_stats_routes(stats_repo.clone(), user_repo.clone()));
 
@@ -315,6 +320,14 @@ async fn main() {
     let viral_event_rx = registry.event_sender().subscribe();
     viral_observer::spawn_viral_observer(viral_event_rx, hand_count_observer, replay_observer);
 
+    // ── WebSocket handler ────────────────────────────────────────────
+    let ws_router = ws_route(
+        auth_authenticator.clone(),
+        registry.clone(),
+        user_repo.clone(),
+        gdpr_repo.clone(),
+    );
+
     // ── CORS ──────────────────────────────────────────────────────────
     let allowed_origins = vec![
         "http://localhost:5173".parse().unwrap(),
@@ -346,11 +359,7 @@ async fn main() {
     // ── Build main router ────────────────────────────────────────────
     let app = Router::new()
         .merge(rest_router)
-        .merge(ws_route(
-            auth_authenticator.clone(),
-            registry.clone(),
-            user_repo.clone(),
-        ))
+        .merge(ws_router)
         .merge(auth_router(auth_service))
         .merge(sb_bot_handler::attach(bot_state))
         .merge(sb_rest_router::oracle_routes(oracle_service))

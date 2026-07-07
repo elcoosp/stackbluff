@@ -1,18 +1,27 @@
+pub mod anti_cheat_routes;
 pub mod club_routes;
+pub mod gdpr_routes;
+pub mod handlers;
 pub mod leaderboard;
+pub mod oracle_routes;
+pub mod player_stats;
+pub mod rate_limit;
+pub mod routes;
+pub mod season_card;
+pub mod tournament_routes;
+
 use axum::{
     Router,
-    routing::{get, post},
     extract::{Extension, Path, Query, State},
     http::StatusCode,
     response::Json,
+    routing::{get, post},
 };
 use base64::prelude::*;
 use chrono::{DateTime, Utc};
 use sb_auth::middleware::{AuthUser, auth_middleware};
 use sb_contracts::lobby_api::{TableInfo, TableRepo, TableService};
-use sb_contracts::repo_api::BadgeRepo;
-use sb_contracts::repo_api::{HandHistoryRepository, HandSummary};
+use sb_contracts::repo_api::{BadgeRepo, GdprRepo, HandHistoryRepository, HandSummary};
 use sb_shared_types::{RequestContext, StakeLevel, TableId, UserId};
 use sb_table_registry::registry::Registry;
 use serde::{Deserialize, Serialize};
@@ -20,69 +29,66 @@ use std::sync::Arc;
 use tracing::error;
 use uuid::Uuid;
 
-pub mod handlers;
-pub mod oracle_routes;
-pub mod player_stats;
-pub mod rate_limit;
-pub mod tournament_routes;
-
+pub use gdpr_routes::gdpr_routes;
 pub use oracle_routes::oracle_routes;
 pub use rate_limit::rate_limit_middleware;
 
-#[allow(dead_code)]
-struct DummyGdprRepo;
-#[async_trait::async_trait]
-impl sb_contracts::repo_api::GdprRepo for DummyGdprRepo {
-    async fn request_deletion(
-        &self,
-        _: uuid::Uuid,
-    ) -> Result<(), sb_contracts::repo_api::PersistenceError> {
-        Ok(())
-    }
-    async fn get_pending_deletions(
-        &self,
-        _: i64,
-    ) -> Result<
-        Vec<sb_contracts::repo_api::DeletionRequestDto>,
-        sb_contracts::repo_api::PersistenceError,
-    > {
-        Ok(vec![])
-    }
-    async fn mark_deletion_completed(
-        &self,
-        _: uuid::Uuid,
-    ) -> Result<(), sb_contracts::repo_api::PersistenceError> {
-        Ok(())
-    }
-    async fn get_user_data(
-        &self,
-        _: uuid::Uuid,
-    ) -> Result<sb_contracts::repo_api::UserDataExportDto, sb_contracts::repo_api::PersistenceError>
-    {
-        Ok(sb_contracts::repo_api::UserDataExportDto {
-            profile: serde_json::Value::Null,
-            hand_history: serde_json::Value::Null,
-            missions: serde_json::Value::Null,
-        })
-    }
-    async fn anonymize_user(
-        &self,
-        _: uuid::Uuid,
-    ) -> Result<(), sb_contracts::repo_api::PersistenceError> {
-        Ok(())
-    }
-    async fn invalidate_sessions(
-        &self,
-        _: uuid::Uuid,
-    ) -> Result<(), sb_contracts::repo_api::PersistenceError> {
-        Ok(())
-    }
-    async fn get_user_password_hash(
-        &self,
-        _: uuid::Uuid,
-    ) -> Result<String, sb_contracts::repo_api::PersistenceError> {
-        Ok(String::new())
-    }
+#[derive(Clone)]
+pub struct AppState {
+    table_service: Arc<dyn TableService + Send + Sync>,
+    table_repo: Arc<dyn TableRepo + Send + Sync>,
+    registry: Arc<Registry>,
+    hand_history_repo: Arc<dyn HandHistoryRepository + Send + Sync>,
+    pub leaderboard_query: Arc<dyn sb_contracts::leaderboard::LeaderboardQuery + Send + Sync>,
+    pub club_service: Arc<dyn sb_contracts::service_api::ClubService + Send + Sync>,
+    pub broker: Arc<sb_table_registry::connection_broker::ConnectionBroker>,
+    pub badge_repo: Arc<dyn BadgeRepo + Send + Sync>,
+    pub gdpr_repo: Arc<dyn GdprRepo + Send + Sync>,
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn create_router(
+    table_service: Arc<dyn TableService + Send + Sync>,
+    table_repo: Arc<dyn TableRepo + Send + Sync>,
+    registry: Arc<Registry>,
+    hand_history_repo: Arc<dyn HandHistoryRepository + Send + Sync>,
+    leaderboard_query: Arc<dyn sb_contracts::leaderboard::LeaderboardQuery + Send + Sync>,
+    club_service: Arc<dyn sb_contracts::service_api::ClubService + Send + Sync>,
+    broker: Arc<sb_table_registry::connection_broker::ConnectionBroker>,
+    badge_repo: Arc<dyn BadgeRepo + Send + Sync>,
+    gdpr_repo: Arc<dyn GdprRepo + Send + Sync>,
+) -> Router {
+    let state = Arc::new(AppState {
+        table_service,
+        table_repo,
+        registry,
+        hand_history_repo,
+        leaderboard_query,
+        club_service,
+        broker,
+        badge_repo,
+        gdpr_repo,
+    });
+
+    let public_routes = Router::new().route("/api/tables", get(list_tables_public));
+    let protected_routes = Router::new()
+        .route("/lobby", get(lobby_handler))
+        .route("/tables", post(create_table_handler))
+        .route("/tables/{table_id}/history", get(table_history_handler))
+        .merge(club_routes::club_routes())
+        .route("/users/me/badges", get(handlers::badges::get_my_badges))
+        .route(
+            "/users/{user_id}/badges",
+            get(handlers::badges::get_user_badges),
+        )
+        .layer(axum::middleware::from_fn(auth_middleware));
+
+    Router::new()
+        .merge(public_routes)
+        .merge(leaderboard::leaderboard_routes())
+        .merge(protected_routes)
+        .merge(gdpr_routes())
+        .with_state(state)
 }
 
 #[derive(Debug, Serialize)]
@@ -160,65 +166,6 @@ pub struct HistoryResponse {
     pub next_cursor: Option<String>,
 }
 
-pub struct AppState {
-    table_service: Arc<dyn TableService + Send + Sync>,
-    table_repo: Arc<dyn TableRepo + Send + Sync>,
-    registry: Arc<Registry>,
-    hand_history_repo: Arc<dyn HandHistoryRepository + Send + Sync>,
-    pub leaderboard_query: Arc<dyn sb_contracts::leaderboard::LeaderboardQuery + Send + Sync>,
-    pub club_service: Arc<dyn sb_contracts::service_api::ClubService + Send + Sync>,
-    pub broker: Arc<sb_table_registry::connection_broker::ConnectionBroker>,
-    pub badge_repo: Arc<dyn BadgeRepo + Send + Sync>,
-    pub gdpr_repo: Arc<dyn sb_contracts::repo_api::GdprRepo + Send + Sync>,
-
-}
-
-#[allow(clippy::too_many_arguments)]
-pub fn create_router(
-    table_service: Arc<dyn TableService + Send + Sync>,
-    table_repo: Arc<dyn TableRepo + Send + Sync>,
-    registry: Arc<Registry>,
-    hand_history_repo: Arc<dyn HandHistoryRepository + Send + Sync>,
-    leaderboard_query: Arc<dyn sb_contracts::leaderboard::LeaderboardQuery + Send + Sync>,
-    club_service: Arc<dyn sb_contracts::service_api::ClubService + Send + Sync>,
-    broker: Arc<sb_table_registry::connection_broker::ConnectionBroker>,
-    badge_repo: Arc<dyn BadgeRepo + Send + Sync>,
-
-) -> Router {
-    let state = Arc::new(AppState {
-        table_service,
-        table_repo,
-        registry,
-        hand_history_repo,
-        leaderboard_query,
-        club_service,
-        broker,
-        badge_repo,
-        gdpr_repo: Arc::new(DummyGdprRepo),
-
-    });
-
-    let public_routes = Router::new().route("/api/tables", get(list_tables_public));
-    let protected_routes = Router::new()
-        .route("/lobby", get(lobby_handler))
-        .route("/tables", post(create_table_handler))
-        .route("/tables/{table_id}/history", get(table_history_handler))
-        .merge(club_routes::club_routes())
-        .route("/users/me/badges", get(handlers::badges::get_my_badges))
-        .route(
-            "/users/{user_id}/badges",
-            get(handlers::badges::get_user_badges),
-        )
-
-        .layer(axum::middleware::from_fn(auth_middleware));
-
-    Router::new()
-        .merge(public_routes)
-        .merge(leaderboard::leaderboard_routes())
-        .merge(protected_routes)
-        .with_state(state)
-}
-
 async fn list_tables_public(State(state): State<Arc<AppState>>) -> Json<PublicTableList> {
     let tables = state.table_repo.list_tables().await.unwrap_or_default();
     Json(PublicTableList {
@@ -272,7 +219,6 @@ async fn create_table_handler(
             "max_players must be between 2 and 9",
         ));
     }
-    // Parse the authenticated user's ID
     let user_id = UserId::new(
         Uuid::parse_str(&auth_user.user_id)
             .map_err(|_| bad_request("INVALID_USER", "Invalid user ID"))?,
@@ -297,7 +243,6 @@ async fn table_history_handler(
     );
     let ctx = RequestContext::new(Uuid::new_v4(), Some(user_id));
 
-    // ── Authorization ──
     let is_at_table = state.registry.is_user_at_table(table_id, user_id).await;
     let user_hand_count = state
         .hand_history_repo
@@ -310,7 +255,6 @@ async fn table_history_handler(
         ));
     }
 
-    // ── Parse cursor ──
     let cursor = match params.cursor {
         Some(encoded) => {
             let decoded = BASE64_STANDARD
@@ -335,7 +279,6 @@ async fn table_history_handler(
         None => None,
     };
 
-    // ── Fetch data ──
     let limit = params.limit.unwrap_or(20).min(100);
     let (summaries, next_cursor) = state
         .hand_history_repo
@@ -396,13 +339,6 @@ fn forbidden(msg: &str) -> (StatusCode, Json<ErrorResponse>) {
         }),
     )
 }
-
-pub mod anti_cheat_routes;
-// Removed duplicate `use axum::routing::post;`
-
-pub mod gdpr_routes;
-pub mod routes;
-pub mod season_card;
 
 pub fn register_metrics(registry: &prometheus::Registry) {
     sb_viral::puzzle::service::register_metrics(registry);
