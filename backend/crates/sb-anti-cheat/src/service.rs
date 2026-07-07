@@ -53,7 +53,7 @@ impl AntiCheatServiceImpl {
             }
         });
 
-        // Also spawn cleanup for the transfer tracker (optional, but good)
+        // Transfer tracker cleanup
         let transfer_tracker = TransferTracker::new();
         let tt = transfer_tracker.clone();
         tokio::spawn(async move {
@@ -64,9 +64,30 @@ impl AntiCheatServiceImpl {
             }
         });
 
+        // IP tracker
+        let ip_tracker = IpCollusionTracker::new();
+        let ip = ip_tracker.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_secs(60));
+            loop {
+                interval.tick().await;
+                ip.cleanup_expired();
+            }
+        });
+
+        // Rate limiter cleanup
+        let rl = rate_limiter.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_secs(60));
+            loop {
+                interval.tick().await;
+                rl.cleanup_expired();
+            }
+        });
+
         Self {
             db,
-            ip_tracker: IpCollusionTracker::new(),
+            ip_tracker,
             rate_limiter,
             transfer_tracker,
             fingerprint_tracker: tracker,

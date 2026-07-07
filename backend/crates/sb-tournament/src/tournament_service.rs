@@ -4,7 +4,7 @@ use dashmap::DashMap;
 use sb_contracts::repo_api::UserRepo;
 use sb_contracts::tournament_api::{
     TournamentConfig, TournamentRepo, TournamentResult, TournamentService, TournamentSummary,
-    TournamentType,
+    TournamentType, TournamentStatus,
 };
 use sb_shared_types::{AppError, RequestContext, TableId, TournamentId, UserId};
 use sb_table_registry::connection_broker::ConnectionBroker;

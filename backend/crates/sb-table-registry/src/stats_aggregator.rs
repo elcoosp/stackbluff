@@ -29,8 +29,8 @@ pub fn spawn_stats_aggregator(
 
                     // Sets to track hand-level states per player
                     let mut folded_players: HashSet<PlayerId> = HashSet::new();
-                    let _vpip_players: HashSet<PlayerId> = HashSet::new();
-                    let _pfr_players: HashSet<PlayerId> = HashSet::new();
+                    let mut vpip_players: HashSet<PlayerId> = HashSet::new();
+                    let mut pfr_players: HashSet<PlayerId> = HashSet::new();
                     let mut all_in_players: HashSet<PlayerId> = HashSet::new();
 
                     // This map will be populated during action processing
@@ -66,18 +66,39 @@ pub fn spawn_stats_aggregator(
                         // Combine bet/raise/call to accumulate total wagered
                         match action_type_lower.as_str() {
                             "bet" => {
+
+                                if action.street == "preflop" {
+                                    vpip_players.insert(*pid);
+                                    if action_type_lower == "raise" || action_type_lower == "bet" {
+                                        pfr_players.insert(*pid);
+                                    }
+                                }
                                 *bets_map.entry(*pid).or_insert(0) += 1;
                                 if let Some(amount) = action.amount {
                                     *total_wagered_map.entry(*pid).or_insert(0) += amount;
                                 }
                             }
                             "raise" => {
+
+                                if action.street == "preflop" {
+                                    vpip_players.insert(*pid);
+                                    if action_type_lower == "raise" || action_type_lower == "bet" {
+                                        pfr_players.insert(*pid);
+                                    }
+                                }
                                 *raises_map.entry(*pid).or_insert(0) += 1;
                                 if let Some(amount) = action.amount {
                                     *total_wagered_map.entry(*pid).or_insert(0) += amount;
                                 }
                             }
                             "call" => {
+
+                                if action.street == "preflop" {
+                                    vpip_players.insert(*pid);
+                                    if action_type_lower == "raise" || action_type_lower == "bet" {
+                                        pfr_players.insert(*pid);
+                                    }
+                                }
                                 *calls_map.entry(*pid).or_insert(0) += 1;
                                 if let Some(amount) = action.amount {
                                     *total_wagered_map.entry(*pid).or_insert(0) += amount;
@@ -145,6 +166,13 @@ pub fn spawn_stats_aggregator(
 
                             if folded_players.contains(pid) {
                                 delta.preflop_fold_count = 1;
+
+                            if vpip_players.contains(pid) {
+                                delta.vpip_hands = 1;
+                            }
+                            if pfr_players.contains(pid) {
+                                delta.pfr_hands = 1;
+                            }
                             }
 
                             if is_showdown {

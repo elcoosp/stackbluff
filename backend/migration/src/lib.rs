@@ -28,6 +28,7 @@ mod m20260629162121_grandfather_existing_users;
 mod m20260629_000001_add_division_to_club_memberships;
 mod m20260630_add_email_verified_at;
 mod m20260630_add_password_changed_at;
+mod m20250702_add_tournament_name;
 
 use sea_orm_migration::prelude::*;
 
@@ -67,9 +68,11 @@ impl MigratorTrait for Migrator {
             Box::new(m20260628_add_scheduled_start_to_tournaments::Migration),
             // 5. Seed data (LAST)
             Box::new(m20260616_seed_base_tables::Migration),
+            Box::new(m20250702_add_tournament_name::Migration),
             Box::new(m20260625_seed_tournaments::Migration),
             // 6. Data migrations (MUST run AFTER all columns exist)
             Box::new(m20260629162121_grandfather_existing_users::Migration),
+            // 7. New migrations
         ]
     }
 }

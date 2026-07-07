@@ -1562,6 +1562,7 @@ impl TableActor {
                         action_type: format!("{:?}", action_type).to_lowercase(),
                         amount: amount.map(|a| a.as_i64()),
                         timestamp_ms: elapsed_ms,
+                    street: street_name(&hand.state),
                     });
                 }
 
