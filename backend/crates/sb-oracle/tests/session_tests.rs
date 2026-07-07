@@ -112,6 +112,13 @@ impl UserRepo for DummyRepo {
     ) -> Result<bool, PersistenceError> {
         Ok(false)
     }
+    async fn find_by_telegram(
+        &self,
+        _ctx: RequestContext,
+        _tg_id: i64,
+    ) -> Result<Option<UserId>, PersistenceError> {
+        Ok(None)
+    }
 }
 
 #[tokio::test]

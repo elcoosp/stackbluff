@@ -13,8 +13,7 @@ mod tests {
 
     // Mock UserRepository for testing
     struct MockUserRepo {
-        users:
-            std::sync::Mutex<std::collections::HashMap<UserId, (String, Option<String>, String)>>,
+        users: std::sync::Mutex<std::collections::HashMap<UserId, (String, Option<String>, String)>>,
     }
 
     impl MockUserRepo {
@@ -69,6 +68,7 @@ mod tests {
                     club_pro_expires_at: None,
                     season_pass_expires_at: None,
                     season_pass_id: None,
+                    registration_order: None,
                 })
             } else {
                 Err(PersistenceError::NotFound)
@@ -184,6 +184,14 @@ mod tests {
             _user_id: UserId,
         ) -> Result<bool, PersistenceError> {
             Ok(false)
+        }
+
+        async fn find_by_telegram(
+            &self,
+            _ctx: RequestContext,
+            _tg_id: i64,
+        ) -> PersistenceResult<Option<UserId>> {
+            Ok(None)
         }
     }
 

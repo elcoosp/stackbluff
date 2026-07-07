@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use tokio::sync::mpsc;
 
-use sb_contracts::tournament_api::TournamentConfig;
+use sb_contracts::tournament_api::{TournamentConfig, TournamentType};
 use sb_shared_types::{ChipAmount, TournamentId, UserId};
 use sb_table_registry::connection_broker::ConnectionBroker;
 
