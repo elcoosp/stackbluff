@@ -1,14 +1,18 @@
 use axum::{
-    extract::Request,
+    extract::{ConnectInfo, Request},
     http::StatusCode,
     middleware::Next,
     response::{IntoResponse, Response},
 };
+use axum_extra::extract::CookieJar;
 use jsonwebtoken::{DecodingKey, Validation, decode};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::env;
-use tower_cookies::Cookies;
+use std::net::SocketAddr;
+use uuid::Uuid;
+
+use sb_shared_types::{RequestContext, UserId};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Claims {
@@ -26,7 +30,8 @@ static DECODING_KEY: Lazy<DecodingKey> = Lazy::new(|| {
     DecodingKey::from_secret(secret.as_bytes())
 });
 
-pub async fn auth_middleware(mut req: Request, next: Next) -> Response {
+/// Authentication middleware that also creates a RequestContext.
+pub async fn auth_middleware_with_context(mut req: Request, next: Next) -> Response {
     // Try to get token from Authorization header first
     let token = req
         .headers()
@@ -40,10 +45,11 @@ pub async fn auth_middleware(mut req: Request, next: Next) -> Response {
         Some(t)
     } else {
         req.extensions()
-            .get::<Cookies>()
+            .get::<CookieJar>()
             .and_then(|cookies| cookies.get("token").map(|c| c.value().to_string()))
     };
 
+    // If still no token, return 401
     let token = match token {
         Some(t) => t,
         None => {
@@ -51,35 +57,82 @@ pub async fn auth_middleware(mut req: Request, next: Next) -> Response {
         }
     };
 
+    // Validate token
     let decoding_key = DECODING_KEY.clone();
     let validation = Validation::default();
     let token_data = match decode::<Claims>(&token, &decoding_key, &validation) {
         Ok(data) => data,
         Err(e) => {
-            eprintln!("Token validation error: {:?}", e);
+            tracing::warn!(error = %e, "Token validation failed");
             return (StatusCode::UNAUTHORIZED, "Invalid token").into_response();
         }
     };
 
+    // Parse user ID
+    let user_id = match Uuid::parse_str(&token_data.claims.sub) {
+        Ok(uid) => UserId::new(uid),
+        Err(e) => {
+            tracing::warn!(error = %e, "Invalid user ID in token");
+            return (StatusCode::UNAUTHORIZED, "Invalid token").into_response();
+        }
+    };
+
+    // Extract client IP from ConnectInfo
+    let ip = req
+        .extensions()
+        .get::<ConnectInfo<SocketAddr>>()
+        .map(|addr| addr.ip().to_string())
+        .unwrap_or_else(|| "unknown".to_string());
+
+    // Create RequestContext
+    let request_id = Uuid::new_v4();
+    let ctx = RequestContext {
+        request_id,
+        user_id: Some(user_id),
+        ip,
+    };
+
+    // Insert both AuthUser and RequestContext into extensions
     let auth_user = AuthUser {
         user_id: token_data.claims.sub,
     };
     req.extensions_mut().insert(auth_user);
+    req.extensions_mut().insert(ctx);
+
     next.run(req).await
 }
 
-impl<S> axum::extract::FromRequest<S> for AuthUser
+impl<S> axum::extract::FromRequestParts<S> for AuthUser
 where
     S: Send + Sync,
 {
     type Rejection = (StatusCode, &'static str);
-    async fn from_request(
-        req: axum::extract::Request,
+    async fn from_request_parts(
+        parts: &mut axum::http::request::Parts,
         _state: &S,
     ) -> Result<Self, Self::Rejection> {
-        req.extensions()
+        parts
+            .extensions
             .get::<AuthUser>()
             .cloned()
             .ok_or((StatusCode::UNAUTHORIZED, "Not authenticated"))
+    }
+}
+
+/// Extract RequestContext from extensions.
+impl<S> axum::extract::FromRequestParts<S> for RequestContext
+where
+    S: Send + Sync,
+{
+    type Rejection = (StatusCode, &'static str);
+    async fn from_request_parts(
+        parts: &mut axum::http::request::Parts,
+        _state: &S,
+    ) -> Result<Self, Self::Rejection> {
+        parts
+            .extensions
+            .get::<RequestContext>()
+            .cloned()
+            .ok_or((StatusCode::INTERNAL_SERVER_ERROR, "Request context missing"))
     }
 }

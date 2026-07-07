@@ -58,7 +58,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
             "/users/{user_id}/badges",
             get(handlers::badges::get_user_badges),
         )
-        .layer(axum::middleware::from_fn(auth_middleware));
+        .layer(axum::middleware::from_fn(auth_middleware_with_context));
 
     Router::new()
         .merge(public_routes)

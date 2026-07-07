@@ -1,5 +1,5 @@
 use axum::{
-    Json, Router,
+    Extension, Json, Router,
     extract::State,
     http::{HeaderMap, StatusCode, header},
     response::IntoResponse,
@@ -7,18 +7,10 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use tower_cookies::{Cookie, Cookies};
-use uuid::Uuid;
 
 use crate::SharedAuthService;
 use sb_shared_types::errors::AppError;
 use sb_shared_types::request_context::RequestContext;
-
-/// Create a request context for the current request
-/// TODO: Extract from Axum middleware/extensions for proper request tracing
-/// Currently creates a new UUID per request, losing correlation with upstream services
-fn dummy_ctx() -> RequestContext {
-    RequestContext::new(Uuid::new_v4(), None)
-}
 
 fn app_error_to_status(e: &AppError) -> StatusCode {
     match e {
@@ -119,9 +111,9 @@ fn error_response(e: AppError) -> axum::response::Response {
 async fn telegram_auth(
     cookies: Cookies,
     State(svc): State<SharedAuthService>,
+    Extension(ctx): Extension<RequestContext>,
     Json(req): Json<TelegramAuthRequest>,
 ) -> impl IntoResponse {
-    let ctx = dummy_ctx();
     match svc.telegram_auth(&ctx, &req.init_data).await {
         Ok(r) => {
             set_auth_cookie(&cookies, &r.jwt);
@@ -149,9 +141,9 @@ async fn telegram_auth(
 async fn register(
     cookies: Cookies,
     State(svc): State<SharedAuthService>,
+    Extension(ctx): Extension<RequestContext>,
     Json(req): Json<RegisterRequest>,
 ) -> impl IntoResponse {
-    let ctx = dummy_ctx();
     match svc
         .register(&ctx, &req.username, &req.email, &req.password)
         .await
@@ -182,9 +174,9 @@ async fn register(
 async fn login(
     cookies: Cookies,
     State(svc): State<SharedAuthService>,
+    Extension(ctx): Extension<RequestContext>,
     Json(req): Json<EmailPasswordRequest>,
 ) -> impl IntoResponse {
-    let ctx = dummy_ctx();
     match svc.login(&ctx, &req.email, &req.password).await {
         Ok(r) => {
             set_auth_cookie(&cookies, &r.jwt);
@@ -213,6 +205,7 @@ async fn me_handler(
     cookies: Cookies,
     headers: HeaderMap,
     State(svc): State<SharedAuthService>,
+    Extension(ctx): Extension<RequestContext>,
 ) -> impl IntoResponse {
     let token = cookies
         .get("token")
@@ -232,7 +225,6 @@ async fn me_handler(
         }
     };
 
-    let ctx = dummy_ctx();
     match svc.validate_token(&token).await {
         Ok(user_id) => match svc.get_user_profile(&ctx, user_id).await {
             Ok(profile) => (
@@ -251,11 +243,16 @@ async fn me_handler(
     }
 }
 
+#[derive(Deserialize)]
+struct VerifyEmailQuery {
+    token: String,
+}
+
 async fn verify_email_handler(
-    axum::extract::Query(params): axum::extract::Query<VerifyEmailQuery>,
     State(svc): State<SharedAuthService>,
+    Query(query): Query<VerifyEmailQuery>,
 ) -> impl IntoResponse {
-    match svc.verify_email(&params.token).await {
+    match svc.verify_email(&query.token).await {
         Ok(()) => (
             StatusCode::OK,
             Json(MessageResponse {
@@ -267,16 +264,11 @@ async fn verify_email_handler(
     }
 }
 
-#[derive(Deserialize)]
-struct VerifyEmailQuery {
-    token: String,
-}
-
 async fn forgot_password(
     State(svc): State<SharedAuthService>,
+    Extension(ctx): Extension<RequestContext>,
     Json(req): Json<ForgotPasswordRequest>,
 ) -> impl IntoResponse {
-    let ctx = dummy_ctx();
     match svc.forgot_password(&ctx, &req.email).await {
         Ok(()) => (
             StatusCode::OK,
@@ -309,6 +301,7 @@ async fn resend_verification(
     cookies: Cookies,
     headers: HeaderMap,
     State(svc): State<SharedAuthService>,
+    Extension(ctx): Extension<RequestContext>,
 ) -> impl IntoResponse {
     let token = cookies
         .get("token")
@@ -328,7 +321,6 @@ async fn resend_verification(
         }
     };
 
-    let ctx = dummy_ctx();
     match svc.validate_token(&token).await {
         Ok(user_id) => match svc.send_verification_email(&ctx, user_id).await {
             Ok(()) => (

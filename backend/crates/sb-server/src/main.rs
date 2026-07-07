@@ -392,6 +392,10 @@ async fn main() {
         .merge(tournament_router)
         .merge(season_card::router(db.clone()))
         .merge(club_tournament_router)
+        .layer(axum::extract::DefaultBodyLimit::max(1024 * 1024 * 10))
+        .layer(axum::middleware::from_fn(
+            ConnectInfo::<SocketAddr>::extract,
+        ))
         .layer(cors)
         .layer(CookieManagerLayer::new());
 
