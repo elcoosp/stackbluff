@@ -2,7 +2,7 @@ use image::{ImageBuffer, Rgba, RgbaImage};
 use sb_db_entities::{enums::RankTier, player_rank, season};
 use sb_db_repos::season_card_repo::SeasonCardRepo;
 use sb_shared_types::errors::AppError;
-use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set, TransactionTrait};
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, QueryOrder, Set, TransactionTrait};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -81,7 +81,23 @@ impl SeasonCardGenerator {
             }
         }
 
-        let next_season_id = season_id + 1;
+        // Find the current season to get its starts_at
+        let current_season = season::Entity::find_by_id(season_id)
+            .one(&txn)
+            .await
+            .map_err(|e| AppError::Internal(format!("DB error: {e}")))?
+            .ok_or_else(|| AppError::Internal("Season not found".to_string()))?;
+
+        // Find the next season by starts_at > current season's starts_at
+        let next_season = season::Entity::find()
+            .filter(season::Column::StartsAt.gt(current_season.starts_at))
+            .order_by_asc(season::Column::StartsAt)
+            .one(&txn)
+            .await
+            .map_err(|e| AppError::Internal(format!("DB error: {e}")))?;
+
+        let next_season_id = next_season.map(|s| s.id).unwrap_or(season_id + 1);
+
         for rank in &ranks {
             let new_tier = rank.rank_tier.reset_rank();
             let active = player_rank::ActiveModel {

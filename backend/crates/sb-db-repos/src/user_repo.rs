@@ -1,6 +1,6 @@
 use crate::commands::DbCommand;
 use sb_contracts::repo_api::{
-    PersistenceError, PersistenceResult, UserCreate, UserProfile, UserRepository, UserWithHash,
+    PersistenceError, PersistenceResult, UserCreate, UserProfile, UserRepo, UserWithHash,
 };
 use sb_shared_types::{RequestContext, UserId};
 use tokio::sync::oneshot;
@@ -16,7 +16,7 @@ impl UserRepoImpl {
 }
 
 #[async_trait::async_trait]
-impl UserRepository for UserRepoImpl {
+impl UserRepo for UserRepoImpl {
     async fn create_user(
         &self,
         ctx: RequestContext,

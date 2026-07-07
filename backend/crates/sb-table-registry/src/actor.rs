@@ -368,7 +368,7 @@ impl ActiveHand {
         let tx = cmd_tx.clone();
         let handle = tokio::spawn(async move {
             sleep(Duration::from_millis(duration_ms)).await;
-            let _ = tx.send(InternalCommand::Timeout { user_id }).await;
+            let _: Result<_, _> = tx.send(InternalCommand::Timeout { user_id }).await;
         });
         self.timeout_handle = Some(handle);
     }
@@ -638,7 +638,7 @@ impl TableActor {
         msg: RoomMessage,
     ) {
         for tx in user_senders.values() {
-            let _ = tx.send(msg.clone());
+            let _: Result<_, _> = tx.send(msg.clone());
         }
     }
 
@@ -648,7 +648,7 @@ impl TableActor {
         msg: RoomMessage,
     ) {
         if let Some(tx) = user_senders.get(user_id) {
-            let _ = tx.send(msg);
+            let _: Result<_, _> = tx.send(msg);
         }
     }
 
@@ -657,7 +657,7 @@ impl TableActor {
             broker.broadcast_to_room(self.room_id, msg);
         } else {
             for tx in self.user_senders.values() {
-                let _ = tx.send(msg.clone());
+                let _: Result<_, _> = tx.send(msg.clone());
             }
         }
     }
@@ -666,7 +666,7 @@ impl TableActor {
         if let Some(broker) = &self.broker {
             broker.send_to_user(*user_id, msg);
         } else if let Some(tx) = self.user_senders.get(user_id) {
-            let _ = tx.send(msg);
+            let _: Result<_, _> = tx.send(msg);
         }
     }
 
@@ -840,7 +840,7 @@ impl TableActor {
                         }
                     }
                 };
-                let player = Player::new(user_id, "".to_string(), seat, stack);
+                let player = Player::new(user_id, format!("Player_{}", user_id), seat, stack);
                 self.players.insert(
                     user_id,
                     Player {
@@ -1254,8 +1254,6 @@ impl TableActor {
             warn!("Hand already in progress");
             return;
         }
-        self.prune_cooldowns();
-        self.prune_cooldowns();
 
         let active_players_count = self
             .players

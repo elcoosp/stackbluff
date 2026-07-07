@@ -41,7 +41,7 @@ impl ConnectionBroker {
     /// Send a message to a single user if connected.
     pub fn send_to_user(&self, user_id: UserId, msg: RoomMessage) {
         if let Some(tx_ref) = self.senders.get(&user_id) {
-            let tx = tx_ref.value();
+            let tx: &mpsc::UnboundedSender<RoomMessage> = tx_ref.value();
             let _ = tx.send(msg);
         }
     }

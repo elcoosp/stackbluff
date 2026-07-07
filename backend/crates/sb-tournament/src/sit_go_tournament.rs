@@ -146,6 +146,14 @@ impl SitGoTournament {
                         self.handle_hand_completed(hand_event).await;
                     }
                 }
+                _ = tokio::time::sleep(tokio::time::Duration::from_millis(100)) => {
+                    if self.pending_start {
+                        self.pending_start = false;
+                        if let Err(e) = self.start_tournament().await {
+                            error!(tournament_id = %self.tournament_id, error = ?e, "Failed to start tournament");
+                        }
+                    }
+                }
                 else => break,
             }
         }

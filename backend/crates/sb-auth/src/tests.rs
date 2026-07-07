@@ -5,13 +5,13 @@ mod tests {
     use crate::jwt::{create_reset_token, create_verification_token, verify_verification_token};
     use crate::rate_limiter::RateLimiter;
     use sb_contracts::repo_api::{
-        PersistenceError, PersistenceResult, UserCreate, UserProfile, UserRepository, UserWithHash,
+        PersistenceError, PersistenceResult, UserCreate, UserProfile, UserRepo, UserWithHash,
     };
     use sb_shared_types::{RequestContext, UserId};
     use std::sync::Arc;
     use uuid::Uuid;
 
-    // Mock UserRepository for testing
+    // Mock UserRepo for testing
     struct MockUserRepo {
         users: std::sync::Mutex<std::collections::HashMap<UserId, (String, Option<String>, String)>>,
     }
@@ -38,7 +38,7 @@ mod tests {
     }
 
     #[async_trait::async_trait]
-    impl UserRepository for MockUserRepo {
+    impl UserRepo for MockUserRepo {
         async fn create_user(
             &self,
             _ctx: RequestContext,

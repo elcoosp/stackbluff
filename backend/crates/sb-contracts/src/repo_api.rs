@@ -45,7 +45,7 @@ pub struct UserProfile {
 }
 
 #[async_trait]
-pub trait UserRepository: Send + Sync {
+pub trait UserRepo: Send + Sync {
     async fn create_user(
         &self,
         ctx: RequestContext,
@@ -384,4 +384,3 @@ pub struct UserDataExportDto {
     pub missions: serde_json::Value,
 }
 
-pub use UserRepository as UserRepo;

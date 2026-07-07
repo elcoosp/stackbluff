@@ -552,6 +552,7 @@ impl MttDirector {
                             };
                         self.broker.send_to_user(m.user_id, msg);
                         self.user_to_table.insert(m.user_id, to_table.table_id);
+                        self.player_assignments.insert(m.user_id, m.to_table_idx);
                     }
                 }
             }
@@ -628,6 +629,7 @@ impl MttDirector {
                             };
                         self.broker.send_to_user(m.user_id, msg);
                         self.user_to_table.insert(m.user_id, to_table.table_id);
+                        self.player_assignments.insert(m.user_id, m.to_table_idx);
                     }
                 }
             }
@@ -640,7 +642,7 @@ impl MttDirector {
 
         let dealer_seat = {
             let mut rng = rand::rng();
-            rng.random_range(0..9u8)
+            rng.random_range(0..self.config.max_players as u8)
         };
         for table in &self.tables {
             let (tx, rx) = oneshot::channel();
