@@ -40,7 +40,6 @@ use sb_db_repos::referral_repo::ReferralRepositoryImpl;
 use sb_db_repos::tournament_repo::TournamentRepoImpl;
 use sb_db_repos::user_repo::UserRepoImpl;
 use sb_mission::service::MissionServiceImpl;
-use sb_notification::TelegramNotificationService;
 use sb_rest_router::player_stats::player_stats_routes;
 use sb_rest_router::season_card;
 use sb_rest_router::tournament_routes::{self, TournamentState};
@@ -58,6 +57,9 @@ use sb_tournament::{
 use sb_viral::ViralServiceImpl;
 use sb_ws_handler::ws_route;
 use user_service::UserServiceImpl;
+
+// Notification import is inside the production branch below.
+// No global import of sb_notification.
 
 #[cfg(feature = "test-stubs")]
 use test_utils::notification_service::InMemoryNotificationService;
@@ -248,6 +250,7 @@ async fn main() {
 
     #[cfg(not(feature = "test-stubs"))]
     let notification_service: Arc<dyn sb_contracts::notification_api::NotificationService> = {
+        use sb_notification::TelegramNotificationService;
         let bot_token = std::env::var("TELEGRAM_BOT_TOKEN")
             .expect("TELEGRAM_BOT_TOKEN must be set in production");
         Arc::new(
@@ -259,7 +262,7 @@ async fn main() {
 
     // ── bot_handler uses the same service (it implements ClubNotifier) ──
     let bot_handler: Option<Arc<dyn sb_contracts::notification_api::ClubNotifier>> =
-        Some(notification_service.clone());
+        Some(notification_service.clone() as Arc<dyn sb_contracts::notification_api::ClubNotifier>);
 
     // ── Create AppState ──────────────────────────────────────────────
     let app_state = Arc::new(AppState {
