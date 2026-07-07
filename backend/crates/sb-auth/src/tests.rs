@@ -69,6 +69,7 @@ mod tests {
                     season_pass_expires_at: None,
                     season_pass_id: None,
                     registration_order: None,
+                    password_changed_at: None,
                 })
             } else {
                 Err(PersistenceError::NotFound)
