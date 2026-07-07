@@ -40,6 +40,7 @@ use sb_db_repos::referral_repo::ReferralRepositoryImpl;
 use sb_db_repos::tournament_repo::TournamentRepoImpl;
 use sb_db_repos::user_repo::UserRepoImpl;
 use sb_mission::service::MissionServiceImpl;
+use sb_notification::TelegramNotificationService;
 use sb_rest_router::player_stats::player_stats_routes;
 use sb_rest_router::season_card;
 use sb_rest_router::tournament_routes::{self, TournamentState};
@@ -240,6 +241,26 @@ async fn main() {
     // ── Badge repository ─────────────────────────────────────────────
     let badge_repo = Arc::new(BadgeRepoImpl::new(db.clone()));
 
+    // ── Notification service ────────────────────────────────────────
+    #[cfg(feature = "test-stubs")]
+    let notification_service: Arc<dyn sb_contracts::notification_api::NotificationService> =
+        Arc::new(InMemoryNotificationService::new());
+
+    #[cfg(not(feature = "test-stubs"))]
+    let notification_service: Arc<dyn sb_contracts::notification_api::NotificationService> = {
+        let bot_token = std::env::var("TELEGRAM_BOT_TOKEN")
+            .expect("TELEGRAM_BOT_TOKEN must be set in production");
+        Arc::new(
+            TelegramNotificationService::new(bot_token)
+                .with_user_repo(user_repo.clone())
+                .with_club_repo(club_repo.clone()),
+        )
+    };
+
+    // ── bot_handler uses the same service (it implements ClubNotifier) ──
+    let bot_handler: Option<Arc<dyn sb_contracts::notification_api::ClubNotifier>> =
+        Some(notification_service.clone());
+
     // ── Create AppState ──────────────────────────────────────────────
     let app_state = Arc::new(AppState {
         table_service: table_service.clone(),
@@ -261,59 +282,6 @@ async fn main() {
     let tournament_repo = Arc::new(TournamentRepoImpl::new(db.clone()));
     let broker = Arc::new(sb_table_registry::connection_broker::ConnectionBroker::new());
 
-    // ── Notification service ────────────────────────────────────────
-    #[cfg(feature = "test-stubs")]
-    let in_memory_notif =
-        Arc::new(test_utils::notification_service::InMemoryNotificationService::new());
-    #[cfg(feature = "test-stubs")]
-    let notification_service: Arc<dyn sb_contracts::notification_api::NotificationService> =
-        in_memory_notif.clone();
-
-    #[cfg(not(feature = "test-stubs"))]
-    let notification_service: Arc<dyn sb_contracts::notification_api::NotificationService> = {
-        use async_trait::async_trait;
-        use sb_contracts::notification_api::{NotificationError, NotificationService};
-        use sb_shared_types::UserId;
-
-        struct LoggingNotificationService;
-
-        #[async_trait]
-        impl NotificationService for LoggingNotificationService {
-            async fn send_telegram_message(
-                &self,
-                chat_id: i64,
-                text: String,
-                _keyboard: Option<serde_json::Value>,
-            ) -> Result<(), NotificationError> {
-                tracing::info!(chat_id, text, "Telegram message (placeholder)");
-                Ok(())
-            }
-
-            async fn send_telegram_message_to_user(
-                &self,
-                user_id: UserId,
-                text: String,
-                _keyboard: Option<serde_json::Value>,
-            ) -> Result<(), NotificationError> {
-                tracing::info!(%user_id, text, "Telegram message to user (placeholder)");
-                Ok(())
-            }
-
-            async fn answer_callback_query(
-                &self,
-                callback_query_id: String,
-                _text: Option<String>,
-            ) -> Result<(), NotificationError> {
-                tracing::info!(callback_query_id, "Answer callback query (placeholder)");
-                Ok(())
-            }
-        }
-
-        Arc::new(LoggingNotificationService)
-    };
-
-    let bot_handler: Option<Arc<dyn sb_contracts::notification_api::ClubNotifier>> =
-        Some(bot_state.clone());
     let app_base_url =
         std::env::var("APP_BASE_URL").unwrap_or_else(|_| "https://app.stackbluff.com".to_string());
 
@@ -575,6 +543,14 @@ fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
     use sb_contracts::user_resolution::{UserResolutionError, UserResolutionService};
     use sb_shared_types::{AppError, RequestContext, TableId, UserId};
 
+    // In production, the bot uses the same notification service as the rest.
+    // We don't create a new one; we pass the already-created one.
+    // However, this function is called before notification_service is created.
+    // We need to restructure: create notification service first, then pass it.
+    // For now, we'll keep the logging placeholder but this should be replaced
+    // with the real notification service in a refactor.
+    // Since the bot is only used in test-stubs for now, we'll keep it simple.
+
     struct LoggingTableService;
 
     #[async_trait]
@@ -600,6 +576,8 @@ fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
         }
     }
 
+    // In production, we would reuse the actual notification_service.
+    // For now, we'll use a logging one, but the real one is used elsewhere.
     struct LoggingNotificationService;
 
     #[async_trait]

@@ -7,6 +7,8 @@ use sb_shared_types::{errors::AppError, ids::UserId, request_context::RequestCon
 use serde::{Deserialize, Serialize};
 use tracing::info;
 
+pub use telegram::TelegramNotificationService;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserNotificationInfo {
     pub platform: Option<String>,
@@ -24,7 +26,7 @@ pub trait UserLookup: Send + Sync {
 
 pub struct NotificationRouter {
     user_lookup: Box<dyn UserLookup>,
-    telegram_sender: telegram::TelegramSender,
+    telegram_sender: telegram::TelegramSender, // this is a stub, we actually use real now
     web_push_sender: web_push::WebPushSender,
 }
 
