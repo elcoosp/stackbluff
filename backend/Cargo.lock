@@ -5701,6 +5701,7 @@ dependencies = [
 name = "sb-ws-handler"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "axum",
  "axum-extra",
  "dashmap",

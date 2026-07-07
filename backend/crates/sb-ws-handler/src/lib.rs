@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use axum::body::Bytes;
 use axum::http::StatusCode;
 use axum::{
@@ -20,6 +21,64 @@ use tokio::sync::mpsc;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
+// Dummy GDPR repo – kept for compatibility, not used in this crate.
+#[allow(dead_code)]
+struct DummyGdprRepo;
+
+#[async_trait]
+impl sb_contracts::repo_api::GdprRepo for DummyGdprRepo {
+    async fn request_deletion(
+        &self,
+        _user_id: Uuid,
+    ) -> Result<(), sb_contracts::repo_api::PersistenceError> {
+        Ok(())
+    }
+    async fn get_pending_deletions(
+        &self,
+        _older_than_days: i64,
+    ) -> Result<
+        Vec<sb_contracts::repo_api::DeletionRequestDto>,
+        sb_contracts::repo_api::PersistenceError,
+    > {
+        Ok(vec![])
+    }
+    async fn mark_deletion_completed(
+        &self,
+        _user_id: Uuid,
+    ) -> Result<(), sb_contracts::repo_api::PersistenceError> {
+        Ok(())
+    }
+    async fn get_user_data(
+        &self,
+        _user_id: Uuid,
+    ) -> Result<sb_contracts::repo_api::UserDataExportDto, sb_contracts::repo_api::PersistenceError>
+    {
+        Ok(sb_contracts::repo_api::UserDataExportDto {
+            profile: serde_json::Value::Null,
+            hand_history: serde_json::Value::Null,
+            missions: serde_json::Value::Null,
+        })
+    }
+    async fn anonymize_user(
+        &self,
+        _user_id: Uuid,
+    ) -> Result<(), sb_contracts::repo_api::PersistenceError> {
+        Ok(())
+    }
+    async fn invalidate_sessions(
+        &self,
+        _user_id: Uuid,
+    ) -> Result<(), sb_contracts::repo_api::PersistenceError> {
+        Ok(())
+    }
+    async fn get_user_password_hash(
+        &self,
+        _user_id: Uuid,
+    ) -> Result<String, sb_contracts::repo_api::PersistenceError> {
+        Ok(String::new())
+    }
+}
+
 #[derive(Deserialize)]
 struct WsQuery {
     token: Option<String>,
@@ -29,6 +88,7 @@ struct AppState {
     auth: Arc<dyn Authenticator + Send + Sync>,
     registry: Arc<Registry>,
     user_repo: Arc<dyn UserRepo>,
+    gdpr_repo: Arc<dyn sb_contracts::repo_api::GdprRepo + Send + Sync>,
 }
 
 pub fn ws_route(
@@ -40,6 +100,7 @@ pub fn ws_route(
         auth,
         registry,
         user_repo,
+        gdpr_repo: Arc::new(DummyGdprRepo),
     });
     Router::new()
         .route("/ws/game", get(ws_handler))
@@ -193,7 +254,6 @@ async fn handle_websocket(
         let user_repo = state.user_repo.clone();
         tokio::spawn(async move {
             info!(%user_id, %room_id, "Disconnect cleanup: sending leave");
-            // FORCE = TRUE pour éviter l'état zombie
             match registry.send_leave(room_id, user_id, true).await {
                 Ok(remaining_stack) => {
                     if remaining_stack > ChipAmount::new(0).unwrap() {
@@ -312,7 +372,6 @@ async fn handle_client_message(
                 }
             };
 
-            // NOUVEAU : Récupère les rooms du joueur pour les exclure lors de l'assignation
             let user_rooms = state.registry.find_all_user_rooms(*user_id).await;
 
             let room_id = match state.registry.assign_room(table_id, user_rooms).await {
@@ -348,7 +407,6 @@ async fn handle_client_message(
                 }
             };
 
-            #[allow(clippy::collapsible_if)]
             if let Some(cfg) = state.registry.get_table_config(table_id).await {
                 if stack < cfg.min_buy_in || stack > cfg.max_buy_in {
                     let err = serde_json::json!({
@@ -722,6 +780,147 @@ async fn handle_client_message(
                     "user_id": user_id
                 });
                 return send_json_to_client(client_tx, ack);
+            }
+        }
+
+        // Kick vote and sit out – only one copy now
+        "kick_vote_start" => {
+            let room_id_str = parsed.get("room_id").and_then(|t| t.as_str()).unwrap_or("");
+            let room_id = match room_id_str.parse::<TableId>() {
+                Ok(id) => id,
+                Err(e) => {
+                    let err = serde_json::json!({
+                        "type": "Error",
+                        "room_id": null,
+                        "message": format!("Invalid room_id: {}", e)
+                    });
+                    return send_json_to_client(client_tx, err);
+                }
+            };
+            let target_id_str = parsed
+                .get("target_player_id")
+                .and_then(|t| t.as_str())
+                .unwrap_or("");
+            let target_id = match Uuid::parse_str(target_id_str) {
+                Ok(uuid) => UserId::new(uuid),
+                Err(_) => {
+                    let err = serde_json::json!({
+                        "type": "Error",
+                        "room_id": room_id,
+                        "message": "Invalid target_player_id"
+                    });
+                    return send_json_to_client(client_tx, err);
+                }
+            };
+            let (refund_tx, refund_rx) = tokio::sync::oneshot::channel::<ChipAmount>(); // removed 'mut'
+            match state
+                .registry
+                .start_kick_vote(room_id, *user_id, target_id, Some(refund_tx))
+                .await
+            {
+                Ok(()) => {
+                    let user_id = *user_id;
+                    let client_tx = client_tx.clone();
+                    let user_repo = state.user_repo.clone();
+                    tokio::spawn(async move {
+                        if let Ok(refund) = refund_rx.await {
+                            if refund > ChipAmount::new(0).unwrap() {
+                                let ctx = RequestContext::new(Uuid::new_v4(), Some(user_id));
+                                if let Ok(new_balance) = user_repo
+                                    .update_chip_balance(ctx, user_id, refund.as_i64())
+                                    .await
+                                {
+                                    let balance_msg = serde_json::json!({
+                                        "type": "BalanceUpdated",
+                                        "balance": new_balance
+                                    });
+                                    let _ = client_tx.send(axum::extract::ws::Message::Text(
+                                        balance_msg.to_string().into(),
+                                    ));
+                                }
+                            }
+                        }
+                    });
+                }
+                Err(e) => {
+                    let err = serde_json::json!({
+                        "type": "Error",
+                        "room_id": room_id,
+                        "message": format!("Kick vote failed: {:?}", e)
+                    });
+                    return send_json_to_client(client_tx, err);
+                }
+            }
+        }
+        "kick_vote_yes" => {
+            let room_id_str = parsed.get("room_id").and_then(|t| t.as_str()).unwrap_or("");
+            let room_id = match room_id_str.parse::<TableId>() {
+                Ok(id) => id,
+                Err(e) => {
+                    let err = serde_json::json!({
+                        "type": "Error",
+                        "room_id": null,
+                        "message": format!("Invalid room_id: {}", e)
+                    });
+                    return send_json_to_client(client_tx, err);
+                }
+            };
+            let kick_vote_id_str = parsed
+                .get("kick_vote_id")
+                .and_then(|t| t.as_str())
+                .unwrap_or("");
+            let kick_vote_id = match Uuid::parse_str(kick_vote_id_str) {
+                Ok(id) => id,
+                Err(_) => {
+                    let err = serde_json::json!({
+                        "type": "Error",
+                        "room_id": room_id,
+                        "message": "Invalid kick_vote_id"
+                    });
+                    return send_json_to_client(client_tx, err);
+                }
+            };
+            if let Err(e) = state
+                .registry
+                .vote_kick_yes(room_id, *user_id, kick_vote_id)
+                .await
+            {
+                let err = serde_json::json!({
+                    "type": "Error",
+                    "room_id": room_id,
+                    "message": format!("Vote failed: {:?}", e)
+                });
+                return send_json_to_client(client_tx, err);
+            }
+        }
+        "sit_out" => {
+            let room_id_str = parsed.get("room_id").and_then(|t| t.as_str()).unwrap_or("");
+            let room_id = match room_id_str.parse::<TableId>() {
+                Ok(id) => id,
+                Err(e) => {
+                    let err = serde_json::json!({
+                        "type": "Error",
+                        "room_id": null,
+                        "message": format!("Invalid room_id: {}", e)
+                    });
+                    return send_json_to_client(client_tx, err);
+                }
+            };
+            let sitting_out = parsed
+                .get("sitting_out")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(true);
+            if let Err(e) = state
+                .registry
+                .set_sitting_out(room_id, *user_id, sitting_out)
+                .await
+            {
+                let err = serde_json::json!({
+                    "type": "Error",
+                    "room_id": room_id,
+                    "message": format!("Failed to set sitting_out: {:?}", e)
+                });
+                return send_json_to_client(client_tx, err);
             }
         }
 
