@@ -1,9 +1,9 @@
 use crate::service_api::ClubProSettings;
-use sb_shared_types::game_types::HandResult;
 use async_trait::async_trait;
-use sb_shared_types::{TableId, UserId};
-use sb_shared_types::ids::ClubId;
 use sb_shared_types::errors::AppError;
+use sb_shared_types::game_types::HandResult;
+use sb_shared_types::ids::ClubId;
+use sb_shared_types::{TableId, UserId};
 
 #[async_trait]
 pub trait ReplayCardObserver: Send + Sync {
@@ -17,13 +17,19 @@ pub trait ReplayCardObserver: Send + Sync {
 
 #[async_trait]
 pub trait HandCountObserver: Send + Sync {
-    async fn on_hand_completed(&self, user_id: UserId);
+    async fn on_hand_completed(
+        &self,
+        user_id: UserId,
+        hand_result: &HandResult,
+    ) -> Result<(), AppError>;
 }
 
 #[async_trait::async_trait]
 pub trait ConnectionBroker: Send + Sync {
     async fn broadcast_club_theme_updated(
-        &self, club_id: ClubId, settings: ClubProSettings,
+        &self,
+        club_id: ClubId,
+        settings: ClubProSettings,
     ) -> Result<(), AppError>;
 }
 
@@ -36,5 +42,8 @@ pub struct BadgeUnlockedEvent {
 
 #[async_trait::async_trait]
 pub trait BadgeEventNotifier: Send + Sync {
-    async fn notify_badge_unlocked(&self, event: BadgeUnlockedEvent) -> Result<(), crate::persistence_error::PersistenceError>;
+    async fn notify_badge_unlocked(
+        &self,
+        event: BadgeUnlockedEvent,
+    ) -> Result<(), crate::persistence_error::PersistenceError>;
 }

@@ -183,10 +183,15 @@ impl<R: ReferralRepository + Send + Sync, U: UserService + Send + Sync, B: Badge
 impl<R: ReferralRepository + Send + Sync, U: UserService + Send + Sync, B: BadgeRepo>
     HandCountObserver for ViralServiceImpl<R, U, B>
 {
-    async fn on_hand_completed(&self, user_id: UserId) {
-        if let Err(e) = ViralService::on_hand_completed(self, user_id).await {
-            error!(error = %e, "Failed to process hand completion for referrals");
-        }
+    // Updated signature to match the trait: now includes hand_result and returns Result<(), AppError>
+    async fn on_hand_completed(
+        &self,
+        user_id: UserId,
+        _hand_result: &HandResult,
+    ) -> Result<(), AppError> {
+        // Delegate to the ViralService implementation which already contains the full logic.
+        // The hand_result parameter is ignored here; it may be used in future versions.
+        ViralService::on_hand_completed(self, user_id).await
     }
 }
 

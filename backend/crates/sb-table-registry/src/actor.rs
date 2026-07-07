@@ -1377,6 +1377,10 @@ impl TableActor {
                     stack_before: p.stack_before.as_i64(),
                     stack_after: p.stack_before.as_i64(),
                     is_dealer: p.player_id == dealer_pid,
+                    // Flags will be set in finalize_hand
+                    raised_preflop: false,
+                    went_to_showdown: false,
+                    went_allin: false,
                 });
             }
         }
@@ -1801,6 +1805,14 @@ impl TableActor {
             if let Some(stack) = final_stacks.get(&hp.player_id) {
                 hp.stack_after = *stack;
             }
+        }
+
+        // ── Set per-player mission flags ──────────────────────────────────
+        for hp in &mut self.hand_players {
+            let player_id = hp.player_id;
+            hp.raised_preflop = hand.state.has_raised_preflop(player_id);
+            hp.went_to_showdown = hand.state.has_went_to_showdown(player_id);
+            hp.went_allin = hand.state.has_went_allin(player_id);
         }
 
         let busted = self.busted_players_cache.take().unwrap_or_default();

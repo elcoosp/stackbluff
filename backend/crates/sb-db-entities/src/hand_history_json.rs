@@ -5,12 +5,18 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, FromJsonQueryResult)]
 pub struct HandPlayer {
     pub player_id: PlayerId,
-    pub user_id: Option<UserId>, // NEW: actual user identifier
+    pub user_id: Option<UserId>,
     pub seat: u8,
     pub hole_cards: Option<[String; 2]>,
     pub stack_before: i64,
     pub stack_after: i64,
     pub is_dealer: bool,
+    #[serde(default)]
+    pub raised_preflop: bool,
+    #[serde(default)]
+    pub went_to_showdown: bool,
+    #[serde(default)]
+    pub went_allin: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, FromJsonQueryResult)]

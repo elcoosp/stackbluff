@@ -7,7 +7,7 @@ use sb_shared_types::game_types::SidePot;
 use sb_shared_types::{Card, ChipAmount, PlayerId, TableId};
 
 use sb_ws_messages::ActionRequired as WsActionRequired;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use tracing::{debug, warn};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -71,24 +71,25 @@ pub struct Winner {
 }
 
 pub struct GameState {
-    hand_id: HandId,
+    pub hand_id: HandId,
     deck: Deck,
     players: Vec<PlayerHandState>,
-    current_round: BettingRound,
+    pub current_round: BettingRound,
     current_player_index: usize,
-    community_cards: Vec<Card>,
+    pub community_cards: Vec<Card>,
     pot: ChipAmount,
     smallest_bet: ChipAmount,
     min_raise: ChipAmount,
     blinds: (ChipAmount, ChipAmount),
-    dealer_index: usize,
+    pub dealer_index: usize,
     last_aggressor_index: Option<usize>,
     round_bets: Vec<ChipAmount>,
-    hand_complete: bool,
-    /// Player stacks at the start of the hand, for tie-breaking busted players.
-    /// Player stacks at the start of the hand, for tie-breaking busted players.
-    #[allow(dead_code)] // used by get_busted_players(), called from tournament actors
+    pub hand_complete: bool,
     hand_start_stacks: HashMap<PlayerId, ChipAmount>,
+    // NEW: per-player flags for mission progress (public for actor)
+    pub raised_preflop: HashSet<PlayerId>,
+    pub went_to_showdown: HashSet<PlayerId>,
+    pub went_allin: HashSet<PlayerId>,
 }
 
 impl GameState {
@@ -120,8 +121,6 @@ impl GameState {
             .and_then(|p| p.hole_cards)
     }
 
-    /// Forcefully folds a player, bypassing turn checks.
-    /// Useful for disconnection/timeout scenarios.
     pub fn force_fold(&mut self, player_id: PlayerId) -> Result<(), ActionError> {
         if self.hand_complete {
             return Err(ActionError::HandComplete);
@@ -130,7 +129,7 @@ impl GameState {
             .players
             .iter()
             .position(|p| p.player_id == player_id)
-            .ok_or(ActionError::NotYourTurn)?; // using NotYourTurn for "not found"
+            .ok_or(ActionError::NotYourTurn)?;
 
         let p = &mut self.players[idx];
         if p.has_folded {
@@ -140,16 +139,13 @@ impl GameState {
             return Err(ActionError::AlreadyAllIn);
         }
 
-        // Mark folded
         p.has_folded = true;
         p.acted_this_round = true;
 
-        // If the folded player was the current player, advance the turn
         if idx == self.current_player_index {
             self.advance_turn();
         }
 
-        // Check if the hand is now complete (only one active player left)
         let active_count = self.players.iter().filter(|p| !p.has_folded).count();
         if active_count <= 1 {
             self.hand_complete = true;
@@ -171,7 +167,6 @@ impl GameState {
         let sb = blinds.0;
         let bb = blinds.1;
 
-        // FIX: Règle du Heads-up (2 joueurs). Le Dealer est la Small Blind.
         let (small_blind_index, big_blind_index) = if players.len() == 2 {
             (dealer_index, (dealer_index + 1) % 2)
         } else {
@@ -233,8 +228,6 @@ impl GameState {
         let smallest_bet = bb;
         let min_raise = bb;
 
-        // En heads-up, la Small Blind (Dealer) parle en premier préflop.
-        // À 3+ joueurs, c'est le joueur après la Big Blind (UTG).
         let current_player_index = if player_states.len() == 2 {
             small_blind_index
         } else {
@@ -262,6 +255,9 @@ impl GameState {
             round_bets,
             hand_complete: false,
             hand_start_stacks,
+            raised_preflop: HashSet::new(),
+            went_to_showdown: HashSet::new(),
+            went_allin: HashSet::new(),
         })
     }
 
@@ -340,7 +336,6 @@ impl GameState {
                         min: self.min_raise,
                     });
                 }
-                // If stack is less than the required call, call with everything left (all-in)
                 if self.players[idx].stack < call_amount {
                     call_amount = self.players[idx].stack;
                 }
@@ -352,7 +347,6 @@ impl GameState {
             Action::Raise(raise_amount) => {
                 let total_bet = self.round_bets[idx] + raise_amount;
                 let required = self.smallest_bet + self.min_raise;
-                // Allow all-in even if total_bet < required
                 if total_bet < required && self.players[idx].stack != raise_amount {
                     return Err(ActionError::InvalidRaise {
                         attempted: raise_amount,
@@ -369,6 +363,11 @@ impl GameState {
                 self.smallest_bet = total_bet;
                 self.min_raise = raise_amount;
                 self.last_aggressor_index = Some(idx);
+
+                // Track raised preflop
+                if self.current_round == BettingRound::Preflop {
+                    self.raised_preflop.insert(player_id);
+                }
 
                 // Reset acted_this_round for all OTHER active players
                 for (i, p) in self.players.iter_mut().enumerate() {
@@ -394,6 +393,7 @@ impl GameState {
         self.pot = self.pot + amount;
         if p.stack == ChipAmount::new(0).unwrap() {
             p.is_all_in = true;
+            self.went_allin.insert(p.player_id);
             debug!(player = ?p.player_id, "All-in");
         }
     }
@@ -474,6 +474,12 @@ impl GameState {
                     self.deal_remaining_community_cards();
                     self.current_round = BettingRound::Showdown;
                     self.hand_complete = true;
+                    // Mark all non-folded players as went to showdown
+                    for player in &self.players {
+                        if !player.has_folded {
+                            self.went_to_showdown.insert(player.player_id);
+                        }
+                    }
                     return;
                 }
                 self.current_round = BettingRound::Flop;
@@ -497,6 +503,11 @@ impl GameState {
                     }
                     self.current_round = BettingRound::Showdown;
                     self.hand_complete = true;
+                    for player in &self.players {
+                        if !player.has_folded {
+                            self.went_to_showdown.insert(player.player_id);
+                        }
+                    }
                     return;
                 }
                 self.current_round = BettingRound::Turn;
@@ -513,6 +524,11 @@ impl GameState {
                 if self.active_player_count() == 0 {
                     self.current_round = BettingRound::Showdown;
                     self.hand_complete = true;
+                    for player in &self.players {
+                        if !player.has_folded {
+                            self.went_to_showdown.insert(player.player_id);
+                        }
+                    }
                     return;
                 }
                 self.current_round = BettingRound::River;
@@ -521,8 +537,20 @@ impl GameState {
             BettingRound::River => {
                 self.current_round = BettingRound::Showdown;
                 self.hand_complete = true;
+                for player in &self.players {
+                    if !player.has_folded {
+                        self.went_to_showdown.insert(player.player_id);
+                    }
+                }
             }
-            BettingRound::Showdown => self.hand_complete = true,
+            BettingRound::Showdown => {
+                self.hand_complete = true;
+                for player in &self.players {
+                    if !player.has_folded {
+                        self.went_to_showdown.insert(player.player_id);
+                    }
+                }
+            }
         }
         if !self.hand_complete {
             debug!(round = ?self.current_round, "Round ended, moving to next");
@@ -613,6 +641,25 @@ impl GameState {
             .iter()
             .any(|p| p.player_id == player_id && p.has_folded)
     }
+
+    // ── Mission flag query methods ──────────────────────────────────────
+
+    /// Returns true if the given player raised preflop.
+    pub fn has_raised_preflop(&self, player_id: PlayerId) -> bool {
+        self.raised_preflop.contains(&player_id)
+    }
+
+    /// Returns true if the given player went to showdown.
+    pub fn has_went_to_showdown(&self, player_id: PlayerId) -> bool {
+        self.went_to_showdown.contains(&player_id)
+    }
+
+    /// Returns true if the given player went all-in.
+    pub fn has_went_allin(&self, player_id: PlayerId) -> bool {
+        self.went_allin.contains(&player_id)
+    }
+
+    // ── Public action handling ──────────────────────────────────────────
 
     pub fn action_required_for_current_player(&self) -> Option<WsActionRequired> {
         if self.hand_complete {
@@ -792,9 +839,6 @@ impl GameState {
         winners
     }
 
-    /// Returns busted players (stack == 0) with their starting stack at the
-    /// beginning of the hand, sorted descending by starting stack (larger
-    /// starting stack => better finishing position).
     pub fn get_busted_players(&self) -> Vec<(PlayerId, ChipAmount)> {
         let mut busted: Vec<_> = self
             .players
@@ -849,14 +893,12 @@ mod tests {
         let state = GameState::new_hand(
             TableId::generate(),
             players,
-            0, // Dealer is pid(1)
+            0,
             (ChipAmount::new(5).unwrap(), ChipAmount::new(10).unwrap()),
         )
         .unwrap();
 
-        // Dealer (pid 1) should have bet 5 (SB)
         assert_eq!(state.player_current_bet(pid(1)).unwrap().as_i64(), 5);
-        // Non-dealer (pid 2) should have bet 10 (BB)
         assert_eq!(state.player_current_bet(pid(2)).unwrap().as_i64(), 10);
     }
 
@@ -874,9 +916,9 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(state.current_player_id(), Some(pid(1))); // SB acts first
+        assert_eq!(state.current_player_id(), Some(pid(1)));
         state.apply_action(pid(1), Action::Call).unwrap();
-        assert_eq!(state.current_player_id(), Some(pid(2))); // BB acts second
+        assert_eq!(state.current_player_id(), Some(pid(2)));
         assert_eq!(state.current_round, BettingRound::Preflop);
         state.apply_action(pid(2), Action::Check).unwrap();
         assert_eq!(state.current_round, BettingRound::Flop);
@@ -897,26 +939,22 @@ mod tests {
         )
         .unwrap();
 
-        // Preflop: SB (pid 1) acts first, BB (pid 2) acts last
         assert_eq!(state.current_player_id(), Some(pid(1)));
         state.apply_action(pid(1), Action::Call).unwrap();
         assert_eq!(state.current_player_id(), Some(pid(2)));
         state.apply_action(pid(2), Action::Check).unwrap();
 
-        // Flop: BB (pid 2) acts first, SB (pid 1) acts last
         assert_eq!(state.current_round, BettingRound::Flop);
         assert_eq!(state.current_player_id(), Some(pid(2)));
         state.apply_action(pid(2), Action::Check).unwrap();
         assert_eq!(state.current_player_id(), Some(pid(1)));
         state.apply_action(pid(1), Action::Check).unwrap();
 
-        // Turn: BB acts first
         assert_eq!(state.current_round, BettingRound::Turn);
         assert_eq!(state.current_player_id(), Some(pid(2)));
         state.apply_action(pid(2), Action::Check).unwrap();
         state.apply_action(pid(1), Action::Check).unwrap();
 
-        // River: BB acts first
         assert_eq!(state.current_round, BettingRound::River);
         assert_eq!(state.current_player_id(), Some(pid(2)));
         state.apply_action(pid(2), Action::Check).unwrap();
@@ -1043,7 +1081,6 @@ mod tests {
         )
         .unwrap();
 
-        // Player 1 (SB) goes all-in for their remaining stack (1000 - 5 = 995)
         state
             .apply_action(pid(1), Action::Raise(ChipAmount::new(995).unwrap()))
             .unwrap();
@@ -1053,6 +1090,7 @@ mod tests {
         assert_eq!(state.community_cards().len(), 5);
         assert!(state.current_pot().as_i64() > 0);
     }
+
     #[test]
     fn test_all_in_raise_below_minimum_is_allowed() {
         let players = vec![
@@ -1067,13 +1105,10 @@ mod tests {
         )
         .unwrap();
 
-        // SB calls (adds 5 to match BB's 10)
         state.apply_action(pid(1), Action::Call).unwrap();
-        // BB raises to 100
         state
             .apply_action(pid(2), Action::Raise(ChipAmount::new(100).unwrap()))
             .unwrap();
-        // SB goes all-in with their remaining stack (50 - 5 - 5 = 40)
         let result = state.apply_action(pid(1), Action::Raise(ChipAmount::new(40).unwrap()));
         assert!(result.is_ok());
         assert!(state.player_is_all_in(pid(1)));

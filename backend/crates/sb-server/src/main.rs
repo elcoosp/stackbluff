@@ -26,6 +26,7 @@ use sb_club::handlers::{ClubTournamentState, club_tournament_routes};
 use sb_contracts::async_hooks::{HandCountObserver, ReplayCardObserver};
 use sb_contracts::lobby_api::TableRepo;
 use sb_contracts::repo_api::{GdprRepo, HandHistoryRepository, UserRepo};
+use sb_contracts::service_api::MissionApi;
 use sb_contracts::stats_api::PlayerStatsRepo;
 use sb_contracts::tournament_api::{TournamentConfig, TournamentType};
 use sb_db_entities::tournament::{Column as TournamentColumn, Entity as TournamentEntity};
@@ -37,6 +38,7 @@ use sb_db_repos::player_stats_repo::PlayerStatsRepoImpl;
 use sb_db_repos::referral_repo::ReferralRepositoryImpl;
 use sb_db_repos::tournament_repo::TournamentRepoImpl;
 use sb_db_repos::user_repo::UserRepoImpl;
+use sb_mission::service::MissionServiceImpl;
 use sb_rest_router::create_router;
 use sb_rest_router::player_stats::player_stats_routes;
 use sb_rest_router::season_card;
@@ -303,22 +305,37 @@ async fn main() {
 
     let tournament_router = tournament_routes::tournament_routes(tournament_state);
 
-    // ── Viral service (referrals, badges, replay cards) ──────────────────
+    // ── Viral service (referrals, badges, replay cards) ────────────────
     let referral_repo = ReferralRepositoryImpl::new(db.clone());
     let user_service = Arc::new(UserServiceImpl::new(user_repo.clone()));
     let base_url =
         std::env::var("APP_BASE_URL").unwrap_or_else(|_| "https://app.stackbluff.com".to_string());
 
-    let viral_service_impl = ViralServiceImpl::new(referral_repo, user_service, base_url)
-        .with_badge_repo(badge_repo.clone());
+    // IMPORTANT: Clone the Arc so we can reuse it for mission service
+    let viral_service_impl = ViralServiceImpl::new(
+        referral_repo,
+        user_service.clone(), // <-- clone here
+        base_url,
+    )
+    .with_badge_repo(badge_repo.clone());
 
     let viral_service_arc = Arc::new(viral_service_impl);
 
     let hand_count_observer: Arc<dyn HandCountObserver + Send + Sync> = viral_service_arc.clone();
     let replay_observer: Arc<dyn ReplayCardObserver + Send + Sync> = viral_service_arc.clone();
 
+    // ── Mission service ──────────────────────────────────────────────────
+    let mission_service: Arc<dyn MissionApi + Send + Sync> = Arc::new(
+        MissionServiceImpl::new(Arc::new(db.clone()), user_service), // uses the original Arc
+    );
+
     let viral_event_rx = registry.event_sender().subscribe();
-    viral_observer::spawn_viral_observer(viral_event_rx, hand_count_observer, replay_observer);
+    viral_observer::spawn_viral_observer(
+        viral_event_rx,
+        hand_count_observer,
+        replay_observer,
+        mission_service,
+    );
 
     // ── WebSocket handler ────────────────────────────────────────────
     let ws_router = ws_route(
