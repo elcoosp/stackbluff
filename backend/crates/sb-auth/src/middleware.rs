@@ -4,12 +4,12 @@ use axum::{
     middleware::Next,
     response::{IntoResponse, Response},
 };
-use axum_extra::extract::CookieJar;
 use jsonwebtoken::{DecodingKey, Validation, decode};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::net::SocketAddr;
+use tower_cookies::Cookies;
 use uuid::Uuid;
 
 use sb_shared_types::{RequestContext, UserId};
@@ -45,7 +45,7 @@ pub async fn auth_middleware_with_context(mut req: Request, next: Next) -> Respo
         Some(t)
     } else {
         req.extensions()
-            .get::<CookieJar>()
+            .get::<Cookies>()
             .and_then(|cookies| cookies.get("token").map(|c| c.value().to_string()))
     };
 
@@ -116,23 +116,5 @@ where
             .get::<AuthUser>()
             .cloned()
             .ok_or((StatusCode::UNAUTHORIZED, "Not authenticated"))
-    }
-}
-
-/// Extract RequestContext from extensions.
-impl<S> axum::extract::FromRequestParts<S> for RequestContext
-where
-    S: Send + Sync,
-{
-    type Rejection = (StatusCode, &'static str);
-    async fn from_request_parts(
-        parts: &mut axum::http::request::Parts,
-        _state: &S,
-    ) -> Result<Self, Self::Rejection> {
-        parts
-            .extensions
-            .get::<RequestContext>()
-            .cloned()
-            .ok_or((StatusCode::INTERNAL_SERVER_ERROR, "Request context missing"))
     }
 }

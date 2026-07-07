@@ -1,6 +1,6 @@
 use axum::{
     Extension, Json, Router,
-    extract::State,
+    extract::{Query, State},
     http::{HeaderMap, StatusCode, header},
     response::IntoResponse,
     routing::{get, post},

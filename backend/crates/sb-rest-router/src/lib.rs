@@ -19,7 +19,7 @@ use axum::{
 };
 use base64::prelude::*;
 use chrono::{DateTime, Utc};
-use sb_auth::middleware::{AuthUser, auth_middleware};
+use sb_auth::middleware::{AuthUser, auth_middleware_with_context};
 use sb_contracts::lobby_api::{TableInfo, TableRepo, TableService};
 use sb_contracts::repo_api::{BadgeRepo, GdprRepo, HandHistoryRepository, HandSummary};
 use sb_shared_types::{RequestContext, StakeLevel, TableId, UserId};
