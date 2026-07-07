@@ -4,32 +4,33 @@ use axum::{
     middleware::Next,
     response::{IntoResponse, Response},
 };
-use once_cell::sync::Lazy;
-use jsonwebtoken::{DecodingKey, Validation, decode};
-use std::env;
 use std::net::SocketAddr;
 use tower_cookies::Cookies;
 use uuid::Uuid;
 
 use sb_shared_types::{RequestContext, UserId};
 
-use crate::jwt::Claims;
-
-static JWT_SECRET: Lazy<String> = Lazy::new(|| {
-    env::var("JWT_SECRET").unwrap_or_else(|_| "your-secret-key".to_string())
-});
-
-static DECODING_KEY: Lazy<DecodingKey> = Lazy::new(|| {
-    DecodingKey::from_secret(JWT_SECRET.as_bytes())
-});
+use crate::SharedAuthService;
 
 #[derive(Debug, Clone)]
 pub struct AuthUser {
     pub user_id: String,
 }
 
-/// Authentication middleware that creates RequestContext.
-pub async fn auth_middleware_with_context(mut req: Request, next: Next) -> Response {
+/// Authentication middleware that uses injected SharedAuthService.
+pub async fn auth_middleware_with_context(
+    mut req: Request,
+    next: Next,
+) -> Response {
+    // Extract the auth service from request extensions (injected by the router).
+    let auth_service = match req.extensions().get::<SharedAuthService>() {
+        Some(s) => s.clone(),
+        None => {
+            tracing::error!("SharedAuthService not found in request extensions");
+            return (StatusCode::INTERNAL_SERVER_ERROR, "Service unavailable").into_response();
+        }
+    };
+
     // Try to get token from Authorization header first
     let token = req
         .headers()
@@ -55,10 +56,16 @@ pub async fn auth_middleware_with_context(mut req: Request, next: Next) -> Respo
         }
     };
 
-    // Validate token using jsonwebtoken with imported Claims
-    let validation = Validation::default();
-    let token_data = match decode::<Claims>(&token, &DECODING_KEY, &validation) {
-        Ok(data) => data,
+    // Validate token using the auth service's config.
+    // We need to get the JWT secret from the service.
+    // We'll add a method to get the secret or just use the existing verify_jwt with the secret.
+    // But we need to access the secret. We'll store it in the service.
+    // For simplicity, we'll just use the existing verify_jwt with a static secret? No, we must use the service's config.
+    // Since we already have the service, we can call its verify_token method.
+    // But verify_token returns TokenClaims, not the raw Claims.
+    // We'll use the service's verify_token which already checks expiration and signature.
+    let claims = match auth_service.verify_token(&token).await {
+        Ok(c) => c,
         Err(e) => {
             tracing::warn!(error = %e, "Token validation failed");
             return (StatusCode::UNAUTHORIZED, "Invalid token").into_response();
@@ -66,7 +73,7 @@ pub async fn auth_middleware_with_context(mut req: Request, next: Next) -> Respo
     };
 
     // Parse user ID
-    let user_id = match Uuid::parse_str(&token_data.claims.sub.to_string()) {
+    let user_id = match Uuid::parse_str(&claims.user_id.0.to_string()) {
         Ok(uid) => UserId::new(uid),
         Err(e) => {
             tracing::warn!(error = %e, "Invalid user ID in token");
@@ -91,7 +98,7 @@ pub async fn auth_middleware_with_context(mut req: Request, next: Next) -> Respo
 
     // Insert both AuthUser and RequestContext into extensions
     let auth_user = AuthUser {
-        user_id: token_data.claims.sub.to_string(),
+        user_id: claims.user_id.0.to_string(),
     };
     req.extensions_mut().insert(auth_user);
     req.extensions_mut().insert(ctx);

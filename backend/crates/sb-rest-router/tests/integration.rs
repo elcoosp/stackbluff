@@ -5,7 +5,10 @@ use sb_contracts::HandHistoryRepository;
 use sb_contracts::leaderboard::LeaderboardQuery;
 use sb_contracts::lobby_api::{TableInfo, TableRepo, TableService};
 use sb_rest_router::create_router;
+use sb_auth::{AuthServiceImpl, SharedAuthService};
+use sb_auth::config::AuthConfig;
 use sb_shared_types::{AppError, RequestContext, StakeLevel, TableId, UserId};
+use sb_db_repos::user_repo::UserRepoImpl;
 use sb_table_registry::Registry;
 use std::sync::Arc;
 
@@ -216,7 +219,18 @@ async fn test_unauthenticated_returns_401() {
         gdpr_repo: gdpr_repo,
     });
 
-    let app = create_router(state);
+    
+    // Create a dummy auth service for the middleware
+    let auth_config = AuthConfig::from_env();
+    let user_repo = Arc::new(sb_db_repos::user_repo::UserRepoImpl::new(tokio::sync::mpsc::unbounded_channel().0));
+    let auth_impl = Arc::new(AuthServiceImpl::new(user_repo, auth_config));
+    let auth_service: SharedAuthService = auth_impl;
+    let app = create_router(state)
+        .layer(axum::middleware::from_fn(move |mut req: axum::extract::Request, next: axum::middleware::Next| {
+            req.extensions_mut().insert(auth_service.clone());
+            next.run(req)
+        }));
+
 
     let server = TestServer::new(app);
     let resp = server.get("/lobby").await;

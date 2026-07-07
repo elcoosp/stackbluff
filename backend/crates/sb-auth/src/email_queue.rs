@@ -10,12 +10,12 @@ pub enum EmailJob {
 }
 
 pub struct EmailQueue {
-    sender: mpsc::UnboundedSender<EmailJob>,
+    sender: mpsc::Sender<EmailJob>,
 }
 
 impl EmailQueue {
     pub fn new(email_service: Arc<EmailService>) -> Self {
-        let (sender, receiver) = mpsc::unbounded_channel();
+        let (sender, receiver) = mpsc::channel(100);
 
         // Spawn background task to process emails
         tokio::spawn(async move {
@@ -27,20 +27,20 @@ impl EmailQueue {
 
     #[tracing::instrument(skip(self, token), fields(email = to))]
     pub fn queue_verification_email(&self, to: String, token: String) {
-        if let Err(e) = self.sender.send(EmailJob::Verification { to, token }) {
+        if let Err(e) = self.sender.try_send(EmailJob::Verification { to, token }) {
             error!("Failed to queue verification email: {}", e);
         }
     }
 
     #[tracing::instrument(skip(self, token), fields(email = to))]
     pub fn queue_password_reset_email(&self, to: String, token: String) {
-        if let Err(e) = self.sender.send(EmailJob::PasswordReset { to, token }) {
+        if let Err(e) = self.sender.try_send(EmailJob::PasswordReset { to, token }) {
             error!("Failed to queue password reset email: {}", e);
         }
     }
 
     async fn process_emails(
-    mut receiver: mpsc::UnboundedReceiver<EmailJob>,
+    mut receiver: mpsc::Receiver<EmailJob>,
     email_service: Arc<EmailService>,
 ) {
     info!("Email queue processor started");
