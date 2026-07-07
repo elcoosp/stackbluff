@@ -4,9 +4,8 @@ use axum::{
     middleware::Next,
     response::{IntoResponse, Response},
 };
-use jsonwebtoken::{DecodingKey, Validation, decode};
 use once_cell::sync::Lazy;
-use serde::{Deserialize, Serialize};
+use jsonwebtoken::{DecodingKey, Validation, decode};
 use std::env;
 use std::net::SocketAddr;
 use tower_cookies::Cookies;
@@ -14,23 +13,22 @@ use uuid::Uuid;
 
 use sb_shared_types::{RequestContext, UserId};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Claims {
-    pub sub: String,
-    pub exp: usize,
-}
+use crate::jwt::Claims;
+
+static JWT_SECRET: Lazy<String> = Lazy::new(|| {
+    env::var("JWT_SECRET").unwrap_or_else(|_| "your-secret-key".to_string())
+});
+
+static DECODING_KEY: Lazy<DecodingKey> = Lazy::new(|| {
+    DecodingKey::from_secret(JWT_SECRET.as_bytes())
+});
 
 #[derive(Debug, Clone)]
 pub struct AuthUser {
     pub user_id: String,
 }
 
-static DECODING_KEY: Lazy<DecodingKey> = Lazy::new(|| {
-    let secret = env::var("JWT_SECRET").unwrap_or_else(|_| "your-secret-key".to_string());
-    DecodingKey::from_secret(secret.as_bytes())
-});
-
-/// Authentication middleware that also creates a RequestContext.
+/// Authentication middleware that creates RequestContext.
 pub async fn auth_middleware_with_context(mut req: Request, next: Next) -> Response {
     // Try to get token from Authorization header first
     let token = req
@@ -57,10 +55,9 @@ pub async fn auth_middleware_with_context(mut req: Request, next: Next) -> Respo
         }
     };
 
-    // Validate token
-    let decoding_key = DECODING_KEY.clone();
+    // Validate token using jsonwebtoken with imported Claims
     let validation = Validation::default();
-    let token_data = match decode::<Claims>(&token, &decoding_key, &validation) {
+    let token_data = match decode::<Claims>(&token, &DECODING_KEY, &validation) {
         Ok(data) => data,
         Err(e) => {
             tracing::warn!(error = %e, "Token validation failed");
@@ -69,7 +66,7 @@ pub async fn auth_middleware_with_context(mut req: Request, next: Next) -> Respo
     };
 
     // Parse user ID
-    let user_id = match Uuid::parse_str(&token_data.claims.sub) {
+    let user_id = match Uuid::parse_str(&token_data.claims.sub.to_string()) {
         Ok(uid) => UserId::new(uid),
         Err(e) => {
             tracing::warn!(error = %e, "Invalid user ID in token");
@@ -94,7 +91,7 @@ pub async fn auth_middleware_with_context(mut req: Request, next: Next) -> Respo
 
     // Insert both AuthUser and RequestContext into extensions
     let auth_user = AuthUser {
-        user_id: token_data.claims.sub,
+        user_id: token_data.claims.sub.to_string(),
     };
     req.extensions_mut().insert(auth_user);
     req.extensions_mut().insert(ctx);

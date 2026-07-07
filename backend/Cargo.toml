@@ -51,7 +51,7 @@ axum-extra = { version = "0.10", features = ["cookie"] }
     async-stripe = { version = "=1.0.0-rc.6", features = ["default-tls"] }
 metrics = "0.24"
 
-tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.23", features = ["env-filter", "json"] }
 sb-server = { path = "crates/sb-server" }
 sb-club = { path = "crates/sb-club" }
 futures = { version = "0.3.32", default-features = false, features = ["std", "async-await"] }

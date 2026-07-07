@@ -35,6 +35,7 @@ pub use rate_limit::rate_limit_middleware;
 
 #[derive(Clone)]
 pub struct AppState {
+
     pub table_service: Arc<dyn TableService + Send + Sync>,
     pub table_repo: Arc<dyn TableRepo + Send + Sync>,
     pub registry: Arc<Registry>,
@@ -44,6 +45,7 @@ pub struct AppState {
     pub broker: Arc<sb_table_registry::connection_broker::ConnectionBroker>,
     pub badge_repo: Arc<dyn BadgeRepo + Send + Sync>,
     pub gdpr_repo: Arc<dyn GdprRepo + Send + Sync>,
+
 }
 
 pub fn create_router(state: Arc<AppState>) -> Router {

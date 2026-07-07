@@ -9,6 +9,7 @@ default = ["test-stubs"]
 test-stubs = []
 
 [dependencies]
+prometheus = { workspace = true }
 serde_json = { workspace = true }
 image = { workspace = true }
 sb-ws-handler = { path = "../sb-ws-handler" }
