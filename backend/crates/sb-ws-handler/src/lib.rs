@@ -248,6 +248,7 @@ async fn handle_websocket(
 
     info!(%user_id, "WebSocket handler loop exited");
 
+    // Clean up: leave all rooms the user was in
     for room_id in active_rooms {
         let registry = state.registry.clone();
         let user_repo = state.user_repo.clone();
@@ -309,6 +310,8 @@ async fn handle_client_message(
                 });
                 return send_json_to_client(client_tx, err);
             }
+
+            let mut failed_rooms = Vec::new();
             for room_id in user_rooms {
                 debug!(%user_id, %room_id, "Attempting to reconnect to room");
                 match state
@@ -320,6 +323,7 @@ async fn handle_client_message(
                         active_rooms.insert(room_id);
                     }
                     Ok(false) => {
+                        // Reconnect failed – user not at table
                         let err = serde_json::json!({
                             "type": "Error",
                             "room_id": room_id,
@@ -328,6 +332,9 @@ async fn handle_client_message(
                         if !send_json_to_client(client_tx, err) {
                             return false;
                         }
+                        failed_rooms.push(room_id);
+                        // Remove from active_rooms if it was there
+                        active_rooms.remove(&room_id);
                     }
                     Err(e) => {
                         error!(%user_id, %room_id, error = ?e, "Reconnect failed, treating as not seated");
@@ -339,8 +346,18 @@ async fn handle_client_message(
                         if !send_json_to_client(client_tx, err) {
                             return false;
                         }
+                        failed_rooms.push(room_id);
+                        active_rooms.remove(&room_id);
                     }
                 }
+            }
+
+            // Remove any rooms that failed from the user's registry subscription
+            for room_id in failed_rooms {
+                state
+                    .registry
+                    .unsubscribe_from_room(room_id, *user_id)
+                    .await;
             }
         }
 
@@ -485,6 +502,7 @@ async fn handle_client_message(
                                     return false;
                                 }
                                 let _ = state.registry.send_leave(room_id, *user_id, true).await;
+                                active_rooms.remove(&room_id);
                                 return true;
                             }
                         }
@@ -497,7 +515,10 @@ async fn handle_client_message(
                         "room_id": null,
                         "message": format!("Failed to join: {:?}", e)
                     });
-                    return send_json_to_client(client_tx, err);
+                    if !send_json_to_client(client_tx, err) {
+                        return false;
+                    }
+                    active_rooms.remove(&room_id);
                 }
             }
         }
