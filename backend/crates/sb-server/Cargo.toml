@@ -45,6 +45,7 @@ sb-db-entities.workspace = true
 sb-tournament = { path = "../sb-tournament" }
 serde.workspace = true
 bytes = { workspace = true }
+sb-viral = { path = "../sb-viral" }
 
 [dev-dependencies]
 mockall.workspace = true

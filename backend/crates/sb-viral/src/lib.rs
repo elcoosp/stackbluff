@@ -6,14 +6,17 @@ use sb_contracts::{
     HandCountObserver, ReplayCardObserver,
     repo_api::{BadgeRepo, ReferralRepository},
     service_api::{ReferralStats, ReplayCard, UserService, ViralService},
-
 };
 use sb_shared_types::{AppError, ChipAmount, TableId, UserId, game_types::HandResult};
 use std::sync::Arc;
 use tracing::{error, info};
 use uuid::Uuid;
 
-pub struct ViralServiceImpl<R: ReferralRepository, U: UserService, B: BadgeRepo = sb_contracts::repo_api::NoopBadgeRepo> {
+pub struct ViralServiceImpl<
+    R: ReferralRepository,
+    U: UserService,
+    B: BadgeRepo = sb_contracts::repo_api::NoopBadgeRepo,
+> {
     repo: Arc<R>,
     user_service: Arc<U>,
     badge_repo: Arc<B>,
@@ -30,15 +33,18 @@ impl<R: ReferralRepository, U: UserService> ViralServiceImpl<R, U> {
         }
     }
 
-    pub fn with_badge_repo<B2: BadgeRepo>(self, badge_repo: B2) -> ViralServiceImpl<R, U, B2> {
+    pub fn with_badge_repo<B2: BadgeRepo>(self, badge_repo: Arc<B2>) -> ViralServiceImpl<R, U, B2> {
         ViralServiceImpl {
             repo: self.repo,
             user_service: self.user_service,
-            badge_repo: Arc::new(badge_repo),
+            badge_repo,
             base_url: self.base_url,
         }
     }
+}
 
+// Helper method: accessible for all B types
+impl<R: ReferralRepository, U: UserService, B: BadgeRepo> ViralServiceImpl<R, U, B> {
     async fn award_bonus(&self, user_id: UserId, is_triple: bool) -> Result<(), AppError> {
         let base_amount: i64 = 100;
         let amount = if is_triple {
@@ -56,7 +62,9 @@ impl<R: ReferralRepository, U: UserService> ViralServiceImpl<R, U> {
 }
 
 #[async_trait]
-impl<R: ReferralRepository, U: UserService> ViralService for ViralServiceImpl<R, U> {
+impl<R: ReferralRepository, U: UserService, B: BadgeRepo> ViralService
+    for ViralServiceImpl<R, U, B>
+{
     async fn generate_replay_card(
         &self,
         hand_result: &HandResult,
@@ -87,7 +95,10 @@ impl<R: ReferralRepository, U: UserService> ViralService for ViralServiceImpl<R,
     ) -> Result<(), AppError> {
         let span = tracing::info_span!("record_referral", referrer_id = %referrer_id, referred_id = %referred_id);
         let _enter = span.enter();
-        self.repo.record_referral(referrer_id, referred_id).await.map_err(|e| AppError::Internal(e.to_string()))
+        self.repo
+            .record_referral(referrer_id, referred_id)
+            .await
+            .map_err(|e| AppError::Internal(e.to_string()))
     }
 
     async fn on_hand_completed(&self, user_id: UserId) -> Result<(), AppError> {
@@ -96,11 +107,17 @@ impl<R: ReferralRepository, U: UserService> ViralService for ViralServiceImpl<R,
         let should_award = self
             .repo
             .increment_hand_count_and_check_bonus(user_id)
-            .await.map_err(|e| AppError::Internal(e.to_string()))?;
+            .await
+            .map_err(|e| AppError::Internal(e.to_string()))?;
         if !should_award {
             return Ok(());
         }
-        let referrer_id = match self.repo.get_referrer_id(user_id).await.map_err(|e| AppError::Internal(e.to_string()))? {
+        let referrer_id = match self
+            .repo
+            .get_referrer_id(user_id)
+            .await
+            .map_err(|e| AppError::Internal(e.to_string()))?
+        {
             Some(id) => id,
             None => return Ok(()),
         };
@@ -113,7 +130,11 @@ impl<R: ReferralRepository, U: UserService> ViralService for ViralServiceImpl<R,
         // Check and award founding member badge
         match self.repo.get_referral_stats(referrer_id).await {
             Ok(stats) if stats.bonus_earned >= 10 => {
-                match self.badge_repo.award_badge(referrer_id, "founding_member").await {
+                match self
+                    .badge_repo
+                    .award_badge(referrer_id, "founding_member")
+                    .await
+                {
                     Ok(true) => info!("Badge awarded: founding_member to {}", referrer_id),
                     Ok(false) => {}
                     Err(e) => error!("Failed to award badge: {}", e),
@@ -122,19 +143,26 @@ impl<R: ReferralRepository, U: UserService> ViralService for ViralServiceImpl<R,
             _ => {}
         }
 
-
         info!(referred = %user_id, referrer = %referrer_id, triple = triple, "Referral bonus awarded after 5 hands");
         Ok(())
     }
 
     async fn get_referral_stats(&self, user_id: UserId) -> Result<ReferralStats, AppError> {
-        self.repo.get_referral_stats(user_id).await.map_err(|e| AppError::Internal(e.to_string())).map(|s| ReferralStats { total_referred: s.total_referred, bonus_earned: s.bonus_earned, pending_bonus: s.pending_bonus })
+        self.repo
+            .get_referral_stats(user_id)
+            .await
+            .map_err(|e| AppError::Internal(e.to_string()))
+            .map(|s| ReferralStats {
+                total_referred: s.total_referred,
+                bonus_earned: s.bonus_earned,
+                pending_bonus: s.pending_bonus,
+            })
     }
 }
 
 #[async_trait]
-impl<R: ReferralRepository + Send + Sync, U: UserService + Send + Sync> ReplayCardObserver
-    for ViralServiceImpl<R, U>
+impl<R: ReferralRepository + Send + Sync, U: UserService + Send + Sync, B: BadgeRepo>
+    ReplayCardObserver for ViralServiceImpl<R, U, B>
 {
     async fn on_significant_hand(
         &self,
@@ -152,8 +180,8 @@ impl<R: ReferralRepository + Send + Sync, U: UserService + Send + Sync> ReplayCa
 }
 
 #[async_trait]
-impl<R: ReferralRepository + Send + Sync, U: UserService + Send + Sync> HandCountObserver
-    for ViralServiceImpl<R, U>
+impl<R: ReferralRepository + Send + Sync, U: UserService + Send + Sync, B: BadgeRepo>
+    HandCountObserver for ViralServiceImpl<R, U, B>
 {
     async fn on_hand_completed(&self, user_id: UserId) {
         if let Err(e) = ViralService::on_hand_completed(self, user_id).await {
@@ -161,5 +189,5 @@ impl<R: ReferralRepository + Send + Sync, U: UserService + Send + Sync> HandCoun
         }
     }
 }
-pub mod puzzle;
 
+pub mod puzzle;

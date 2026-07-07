@@ -10,6 +10,7 @@ use sea_orm::{
 use std::str::FromStr;
 use uuid::Uuid;
 
+#[derive(Clone)]
 pub struct ReferralRepositoryImpl {
     db: DatabaseConnection,
 }
@@ -135,8 +136,8 @@ impl ReferralRepository for ReferralRepositoryImpl {
         db: &impl sea_orm::ConnectionTrait,
         referrer_id: sb_shared_types::ids::UserId,
     ) -> Result<i64, sb_contracts::persistence_error::PersistenceError> {
-        use sea_orm::{ColumnTrait, QueryFilter, PaginatorTrait};
         use sb_db_entities::referral::{self, Entity as ReferralEntity};
+        use sea_orm::{ColumnTrait, PaginatorTrait, QueryFilter};
 
         let count = ReferralEntity::find()
             .filter(referral::Column::ReferrerId.eq(referrer_id.0))
@@ -144,9 +145,10 @@ impl ReferralRepository for ReferralRepositoryImpl {
             .filter(referral::Column::BonusAwarded.eq(true))
             .count(db)
             .await
-            .map_err(|e| sb_contracts::persistence_error::PersistenceError::Database(e.to_string()))?;
+            .map_err(|e| {
+                sb_contracts::persistence_error::PersistenceError::Database(e.to_string())
+            })?;
 
         Ok(count as i64)
     }
-
 }

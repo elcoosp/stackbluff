@@ -5603,6 +5603,7 @@ dependencies = [
  "sb-shared-types",
  "sb-table-registry",
  "sb-tournament",
+ "sb-viral",
  "sb-ws-handler",
  "sea-orm",
  "sea-orm-migration",

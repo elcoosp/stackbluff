@@ -1,6 +1,8 @@
 mod leaderboard_refresh;
 #[cfg(feature = "test-stubs")]
 mod test_utils;
+mod user_service;
+mod viral_observer;
 
 use axum::Router;
 use axum::http::Method;
@@ -21,6 +23,7 @@ use sb_auth::{
     email_queue::EmailQueue, routes::auth_router,
 };
 use sb_club::handlers::{ClubTournamentState, club_tournament_routes};
+use sb_contracts::async_hooks::{HandCountObserver, ReplayCardObserver};
 use sb_contracts::lobby_api::TableRepo;
 use sb_contracts::repo_api::{HandHistoryRepository, UserRepo};
 use sb_contracts::stats_api::PlayerStatsRepo;
@@ -30,6 +33,7 @@ use sb_db_repos::club_repo::ClubRepoImpl;
 use sb_db_repos::hand_history_repo::{HandHistoryRepoImpl, spawn_hand_history_cleanup};
 use sb_db_repos::init_writer_loop;
 use sb_db_repos::player_stats_repo::PlayerStatsRepoImpl;
+use sb_db_repos::referral_repo::ReferralRepositoryImpl;
 use sb_db_repos::tournament_repo::TournamentRepoImpl;
 use sb_db_repos::user_repo::UserRepoImpl;
 use sb_rest_router::create_router;
@@ -46,7 +50,9 @@ use sb_table_registry::table_service::TableServiceImpl;
 use sb_tournament::{
     MttCommand, MttDirector, SitGoCommand, SitGoTournament, TournamentServiceImpl,
 };
+use sb_viral::ViralServiceImpl;
 use sb_ws_handler::ws_route;
+use user_service::UserServiceImpl;
 
 #[cfg(feature = "test-stubs")]
 use test_utils::notification_service::InMemoryNotificationService;
@@ -234,7 +240,7 @@ async fn main() {
         leaderboard_repo.clone(),
         club_service.clone(),
         broker.clone(),
-        badge_repo,
+        badge_repo.clone(),
     )
     .merge(player_stats_routes(stats_repo.clone(), user_repo.clone()));
 
@@ -292,6 +298,23 @@ async fn main() {
 
     let tournament_router = tournament_routes::tournament_routes(tournament_state);
 
+    // ── Viral service (referrals, badges, replay cards) ──────────────────
+    let referral_repo = ReferralRepositoryImpl::new(db.clone());
+    let user_service = Arc::new(UserServiceImpl::new(user_repo.clone()));
+    let base_url =
+        std::env::var("APP_BASE_URL").unwrap_or_else(|_| "https://app.stackbluff.com".to_string());
+
+    let viral_service_impl = ViralServiceImpl::new(referral_repo, user_service, base_url)
+        .with_badge_repo(badge_repo.clone());
+
+    let viral_service_arc = Arc::new(viral_service_impl);
+
+    let hand_count_observer: Arc<dyn HandCountObserver + Send + Sync> = viral_service_arc.clone();
+    let replay_observer: Arc<dyn ReplayCardObserver + Send + Sync> = viral_service_arc.clone();
+
+    let viral_event_rx = registry.event_sender().subscribe();
+    viral_observer::spawn_viral_observer(viral_event_rx, hand_count_observer, replay_observer);
+
     // ── CORS ──────────────────────────────────────────────────────────
     let allowed_origins = vec![
         "http://localhost:5173".parse().unwrap(),
@@ -334,7 +357,7 @@ async fn main() {
         .merge(hand_archive::router(archive_state.clone()))
         .merge(tournament_router)
         .merge(season_card::router(db.clone()))
-        .merge(club_tournament_router) // <── Added club tournament routes
+        .merge(club_tournament_router)
         .layer(cors)
         .layer(CookieManagerLayer::new());
 
@@ -358,7 +381,6 @@ async fn main() {
     )
     .await;
 
-    // Season end background processor (MVP - no notifications)
     let season_processor = std::sync::Arc::new(season_card_generator::SeasonCardGenerator::new(
         db.clone(),
         std::sync::Arc::new(r2_storage::R2StorageAdapter::new(r2.clone())),
@@ -414,7 +436,7 @@ async fn load_existing_tournaments(
                     event_rx,
                     system_user,
                     None,
-                    None, // completion_tx = None for recovery
+                    None,
                 );
                 tokio::spawn(actor.run());
                 state
@@ -440,7 +462,7 @@ async fn load_existing_tournaments(
                     event_rx,
                     system_user,
                     None,
-                    None, // completion_tx = None for recovery
+                    None,
                 );
                 tokio::spawn(actor.run());
                 state
@@ -487,8 +509,6 @@ fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
     )
 }
 
-// ── GDPR scheduler (if needed, but it's not used in main) ──
-// I'll keep it as a separate function; you can call it if you want.
 #[allow(dead_code)]
 async fn start_gdpr_job(state: std::sync::Arc<sb_rest_router::AppState>) {
     use tokio_cron_scheduler::{Job, JobScheduler};
