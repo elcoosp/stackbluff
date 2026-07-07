@@ -129,6 +129,25 @@ impl UserRepository for UserRepoImpl {
             .map_err(|e| PersistenceError::Database(e.to_string()))?
     }
 
+    // ── NEW: find by telegram ──────────────────────────────────────────
+    async fn find_by_telegram(
+        &self,
+        ctx: RequestContext,
+        tg_id: i64,
+    ) -> PersistenceResult<Option<UserId>> {
+        let (tx, rx) = oneshot::channel();
+        let cmd = DbCommand::FindByTelegram {
+            ctx,
+            tg_id,
+            respond: tx,
+        };
+        self.sender
+            .send(cmd)
+            .map_err(|e| PersistenceError::Database(e.to_string()))?;
+        rx.await
+            .map_err(|e| PersistenceError::Database(e.to_string()))?
+    }
+
     async fn mark_email_verified(
         &self,
         ctx: RequestContext,

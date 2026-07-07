@@ -343,7 +343,7 @@ impl Registry {
         cmd_tx
             .send(cmd)
             .await
-            .map_err(|_| TableError::ActorError("actor dropped".to_string()))
+            .map_err(|e| TableError::ActorError(e.to_string()))
     }
 
     pub async fn send_player_action(
@@ -366,7 +366,7 @@ impl Registry {
         cmd_tx
             .send(cmd)
             .await
-            .map_err(|_| TableError::ActorError("actor dropped".to_string()))
+            .map_err(|e| TableError::ActorError(e.to_string()))
     }
 
     pub async fn start_hand(&self, room_id: TableId) -> Result<(), TableError> {
@@ -378,7 +378,7 @@ impl Registry {
         cmd_tx
             .send(InternalCommand::StartHand)
             .await
-            .map_err(|_| TableError::ActorError("actor dropped".to_string()))
+            .map_err(|e| TableError::ActorError(e.to_string()))
     }
 
     pub async fn get_total_active_players(&self, table_id: TableId) -> u32 {

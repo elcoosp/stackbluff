@@ -125,6 +125,7 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
         DbCommand::StoreHandHistory { ctx, .. } => ctx,
         DbCommand::ExecuteRaw { ctx, .. } => ctx,
         DbCommand::FindOrCreateByTelegram { ctx, .. } => ctx,
+        DbCommand::FindByTelegram { ctx, .. } => ctx, // <-- ADDED
         DbCommand::CreateEmailUser { ctx, .. } => ctx,
         DbCommand::FindByEmail { ctx, .. } => ctx,
         DbCommand::FindByEmailWithHash { ctx, .. } => ctx,
@@ -303,6 +304,16 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                     UserId::new(model.id)
                 };
                 Ok(Some(user_id.to_string()))
+            }
+            DbCommand::FindByTelegram { tg_id, .. } => {
+                // <-- ADDED
+                use sb_db_entities::user;
+                let user_model = user::Entity::find()
+                    .filter(user::Column::TelegramId.eq(Some(*tg_id)))
+                    .one(conn)
+                    .await
+                    .map_err(map_db_error)?;
+                Ok(user_model.map(|u| UserId::new(u.id).to_string()))
             }
             DbCommand::CreateEmailUser {
                 username,
@@ -524,6 +535,13 @@ fn respond_ok(cmd: DbCommand, value: Option<String>) {
             });
             let _ = respond.send(Ok(user));
         }
+        DbCommand::FindByTelegram { respond, .. } => {
+            // <-- ADDED
+            let id = value
+                .and_then(|s| s.parse::<uuid::Uuid>().ok())
+                .map(UserId::new);
+            let _ = respond.send(Ok(id));
+        }
         DbCommand::GetUser { respond, .. } => {
             let _ = respond.send(Ok(value.unwrap_or_default()));
         }
@@ -577,6 +595,10 @@ fn respond_err(cmd: DbCommand, err: PersistenceError) {
             let _ = respond.send(Err(err));
         }
         DbCommand::FindOrCreateByTelegram { respond, .. } => {
+            let _ = respond.send(Err(err));
+        }
+        DbCommand::FindByTelegram { respond, .. } => {
+            // <-- ADDED
             let _ = respond.send(Err(err));
         }
         DbCommand::CreateEmailUser { respond, .. } => {

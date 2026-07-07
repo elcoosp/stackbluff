@@ -52,7 +52,6 @@ pub enum DbCommand {
         respond: ResponseSender<UserId>,
     },
     FindByTelegram {
-        // <-- NEW
         ctx: RequestContext,
         tg_id: i64,
         respond: ResponseSender<Option<UserId>>,

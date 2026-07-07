@@ -1,7 +1,7 @@
 mod leaderboard_refresh;
 #[cfg(feature = "test-stubs")]
 mod test_utils;
-mod user_resolution_service; // <-- ADDED
+mod user_resolution_service;
 mod user_service;
 mod viral_observer;
 
@@ -58,7 +58,7 @@ use sb_tournament::{
 use sb_viral::ViralServiceImpl;
 use sb_ws_handler::ws_route;
 use user_resolution_service::UserResolutionServiceImpl;
-use user_service::UserServiceImpl; // <-- ADDED
+use user_service::UserServiceImpl;
 
 #[cfg(feature = "test-stubs")]
 use test_utils::notification_service::InMemoryNotificationService;
@@ -234,9 +234,6 @@ async fn main() {
     // ── Badge repository ─────────────────────────────────────────────
     let badge_repo = Arc::new(BadgeRepoImpl::new(db.clone()));
 
-    // ── User resolution service (real) ──────────────────────────────
-    let user_resolution_service = Arc::new(UserResolutionServiceImpl::new(user_repo.clone()));
-
     // ── Notification service and bot_handler (unified) ────────────────
     #[cfg(feature = "test-stubs")]
     let (notification_service, bot_handler) = {
@@ -264,10 +261,10 @@ async fn main() {
     };
 
     // ── Bot state ─────────────────────────────────────────────────────
-    // Build bot state using the real services (or test stubs)
     #[cfg(feature = "test-stubs")]
     let bot_state = {
-        Arc::new(sb_bot_handler::BotState::new(
+        use sb_bot_handler::BotState;
+        Arc::new(BotState::new(
             Arc::new(InMemoryTableService::new()),
             Arc::new(InMemoryNotificationService::new()),
             Arc::new(InMemoryUserResolutionService::new()),
@@ -279,6 +276,7 @@ async fn main() {
     #[cfg(not(feature = "test-stubs"))]
     let bot_state = {
         use sb_bot_handler::BotState;
+        let user_resolution_service = Arc::new(UserResolutionServiceImpl::new(user_repo.clone()));
         Arc::new(BotState::new(
             table_service.clone(),
             notification_service.clone(),

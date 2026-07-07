@@ -12,18 +12,21 @@ pub mod service_api;
 pub mod stats_api;
 pub mod tournament_api;
 pub mod user_resolution;
-pub use service_api::{
-    ClubService, ReferralStats, ReplayCard, UserService, ViralService,
-};
+
+pub use lobby_api::{CreateTableInput, TableService};
+pub use service_api::{ClubService, ReferralStats, ReplayCard, UserService, ViralService};
 
 pub use async_hooks::{HandCountObserver, ReplayCardObserver};
 pub use badge_repo_api::{BadgeRepo, BadgeType};
 pub use club_error::ClubError;
 pub use lobby_api::TableInfo;
+pub use repo_api::BadgeRepo as RepoBadgeRepo;
 pub use repo_api::{
-    ClubRepo, DIVISION_SIZE, HandHistoryRepository, HandSummary, LeaderboardPage, WinnerSummary,
+    BadgeRecord, ClubRepo, DIVISION_SIZE, HandHistoryRepository, HandSummary, HandSummaryPage,
+    LeaderboardPage, NoopBadgeRepo, WinnerSummary,
 };
-// ========== Table Registry contracts ==========
+
+// ── Table Registry contracts ──────────────────────────────────────────────
 use sb_shared_types::TableId;
 
 #[derive(Debug, Clone, thiserror::Error)]

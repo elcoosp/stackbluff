@@ -4,8 +4,10 @@ use sb_shared_types::RequestContext;
 use sb_shared_types::{AppError, ChipAmount, TableId, UserId};
 use serde::{Deserialize, Serialize};
 
-use crate::repo_api::UserProfile;
-use crate::{ClubError, LeaderboardPage};
+use crate::ClubError;
+use crate::repo_api::{LeaderboardPage, UserProfile};
+
+// ── Removed CreateTableInput and TableService ──────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReplayCard {
