@@ -35,10 +35,10 @@ pub use rate_limit::rate_limit_middleware;
 
 #[derive(Clone)]
 pub struct AppState {
-    table_service: Arc<dyn TableService + Send + Sync>,
-    table_repo: Arc<dyn TableRepo + Send + Sync>,
-    registry: Arc<Registry>,
-    hand_history_repo: Arc<dyn HandHistoryRepository + Send + Sync>,
+    pub table_service: Arc<dyn TableService + Send + Sync>,
+    pub table_repo: Arc<dyn TableRepo + Send + Sync>,
+    pub registry: Arc<Registry>,
+    pub hand_history_repo: Arc<dyn HandHistoryRepository + Send + Sync>,
     pub leaderboard_query: Arc<dyn sb_contracts::leaderboard::LeaderboardQuery + Send + Sync>,
     pub club_service: Arc<dyn sb_contracts::service_api::ClubService + Send + Sync>,
     pub broker: Arc<sb_table_registry::connection_broker::ConnectionBroker>,
@@ -46,30 +46,7 @@ pub struct AppState {
     pub gdpr_repo: Arc<dyn GdprRepo + Send + Sync>,
 }
 
-#[allow(clippy::too_many_arguments)]
-pub fn create_router(
-    table_service: Arc<dyn TableService + Send + Sync>,
-    table_repo: Arc<dyn TableRepo + Send + Sync>,
-    registry: Arc<Registry>,
-    hand_history_repo: Arc<dyn HandHistoryRepository + Send + Sync>,
-    leaderboard_query: Arc<dyn sb_contracts::leaderboard::LeaderboardQuery + Send + Sync>,
-    club_service: Arc<dyn sb_contracts::service_api::ClubService + Send + Sync>,
-    broker: Arc<sb_table_registry::connection_broker::ConnectionBroker>,
-    badge_repo: Arc<dyn BadgeRepo + Send + Sync>,
-    gdpr_repo: Arc<dyn GdprRepo + Send + Sync>,
-) -> Router {
-    let state = Arc::new(AppState {
-        table_service,
-        table_repo,
-        registry,
-        hand_history_repo,
-        leaderboard_query,
-        club_service,
-        broker,
-        badge_repo,
-        gdpr_repo,
-    });
-
+pub fn create_router(state: Arc<AppState>) -> Router {
     let public_routes = Router::new().route("/api/tables", get(list_tables_public));
     let protected_routes = Router::new()
         .route("/lobby", get(lobby_handler))

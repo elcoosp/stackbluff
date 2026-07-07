@@ -86,7 +86,6 @@ impl Registry {
             .await
             .insert(table_id, created_by);
 
-        // FIX: Cloned chat_id to prevent "use of moved value" error
         self.table_chat_ids
             .write()
             .await
@@ -577,7 +576,8 @@ impl Registry {
                 let mut rooms_to_remove = Vec::new();
                 let rooms = registry.rooms.read().await;
                 for (room_id, entry) in rooms.iter() {
-                    if entry.active_players.load(Ordering::Relaxed) == 0 && !entry.is_tournament {
+                    // Reap all empty rooms, regardless of tournament status
+                    if entry.active_players.load(Ordering::Relaxed) == 0 {
                         rooms_to_remove.push(*room_id);
                     }
                 }

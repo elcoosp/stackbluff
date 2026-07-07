@@ -30,6 +30,7 @@ use sb_contracts::service_api::MissionApi;
 use sb_contracts::stats_api::PlayerStatsRepo;
 use sb_contracts::tournament_api::{TournamentConfig, TournamentType};
 use sb_db_entities::tournament::{Column as TournamentColumn, Entity as TournamentEntity};
+use sb_db_repos::badge_repo::BadgeRepoImpl;
 use sb_db_repos::club_repo::ClubRepoImpl;
 use sb_db_repos::gdpr_repo::PgGdprRepo;
 use sb_db_repos::hand_history_repo::{HandHistoryRepoImpl, spawn_hand_history_cleanup};
@@ -39,10 +40,10 @@ use sb_db_repos::referral_repo::ReferralRepositoryImpl;
 use sb_db_repos::tournament_repo::TournamentRepoImpl;
 use sb_db_repos::user_repo::UserRepoImpl;
 use sb_mission::service::MissionServiceImpl;
-use sb_rest_router::create_router;
 use sb_rest_router::player_stats::player_stats_routes;
 use sb_rest_router::season_card;
 use sb_rest_router::tournament_routes::{self, TournamentState};
+use sb_rest_router::{AppState, create_router};
 use sb_shared_types::{GameVariant, StakeLevel, TableConfig, TournamentId, UserId};
 use sb_table_registry::buy_in_limits_for_stake;
 use sb_table_registry::connection_broker::ConnectionBroker;
@@ -236,20 +237,25 @@ async fn main() {
     // ── GDPR repository ──────────────────────────────────────────────
     let gdpr_repo: Arc<dyn GdprRepo + Send + Sync> = Arc::new(PgGdprRepo { db: db.clone() });
 
+    // ── Badge repository ─────────────────────────────────────────────
+    let badge_repo = Arc::new(BadgeRepoImpl::new(db.clone()));
+
+    // ── Create AppState ──────────────────────────────────────────────
+    let app_state = Arc::new(AppState {
+        table_service: table_service.clone(),
+        table_repo: table_repo.clone(),
+        registry: registry.clone(),
+        hand_history_repo: hand_history_repo.clone(),
+        leaderboard_query: leaderboard_repo.clone(),
+        club_service: club_service.clone(),
+        broker: broker.clone(),
+        badge_repo: badge_repo.clone(),
+        gdpr_repo: gdpr_repo.clone(),
+    });
+
     // ── REST router ──────────────────────────────────────────────────
-    let badge_repo = Arc::new(sb_db_repos::badge_repo::BadgeRepoImpl::new(db.clone()));
-    let rest_router = create_router(
-        table_service.clone(),
-        table_repo.clone(),
-        registry.clone(),
-        hand_history_repo.clone(),
-        leaderboard_repo.clone(),
-        club_service.clone(),
-        broker.clone(),
-        badge_repo.clone(),
-        gdpr_repo.clone(),
-    )
-    .merge(player_stats_routes(stats_repo.clone(), user_repo.clone()));
+    let rest_router = create_router(app_state.clone())
+        .merge(player_stats_routes(stats_repo.clone(), user_repo.clone()));
 
     // ── Tournament system ────────────────────────────────────────────
     let tournament_repo = Arc::new(TournamentRepoImpl::new(db.clone()));
@@ -352,13 +358,8 @@ async fn main() {
     let base_url =
         std::env::var("APP_BASE_URL").unwrap_or_else(|_| "https://app.stackbluff.com".to_string());
 
-    // IMPORTANT: Clone the Arc so we can reuse it for mission service
-    let viral_service_impl = ViralServiceImpl::new(
-        referral_repo,
-        user_service.clone(), // <-- clone here
-        base_url,
-    )
-    .with_badge_repo(badge_repo.clone());
+    let viral_service_impl = ViralServiceImpl::new(referral_repo, user_service.clone(), base_url)
+        .with_badge_repo(badge_repo.clone());
 
     let viral_service_arc = Arc::new(viral_service_impl);
 
@@ -366,9 +367,8 @@ async fn main() {
     let replay_observer: Arc<dyn ReplayCardObserver + Send + Sync> = viral_service_arc.clone();
 
     // ── Mission service ──────────────────────────────────────────────────
-    let mission_service: Arc<dyn MissionApi + Send + Sync> = Arc::new(
-        MissionServiceImpl::new(Arc::new(db.clone()), user_service), // uses the original Arc
-    );
+    let mission_service: Arc<dyn MissionApi + Send + Sync> =
+        Arc::new(MissionServiceImpl::new(Arc::new(db.clone()), user_service));
 
     let viral_event_rx = registry.event_sender().subscribe();
     viral_observer::spawn_viral_observer(
@@ -458,6 +458,9 @@ async fn main() {
     tokio::spawn(async move {
         season_proc_clone.run_scheduler().await;
     });
+
+    // ── GDPR scheduler ──────────────────────────────────────────────────
+    spawn_gdpr_scheduler(app_state);
 
     axum::serve(listener, app).await.expect("server error");
 }
@@ -654,7 +657,7 @@ fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
 }
 
 #[allow(dead_code)]
-async fn start_gdpr_job(state: std::sync::Arc<sb_rest_router::AppState>) {
+async fn start_gdpr_job(state: std::sync::Arc<AppState>) {
     use tokio_cron_scheduler::{Job, JobScheduler};
     let sched = JobScheduler::new().await.unwrap();
     sched
@@ -686,6 +689,6 @@ async fn start_gdpr_job(state: std::sync::Arc<sb_rest_router::AppState>) {
 }
 
 #[allow(dead_code)]
-pub fn spawn_gdpr_scheduler(state: std::sync::Arc<sb_rest_router::AppState>) {
+pub fn spawn_gdpr_scheduler(state: std::sync::Arc<AppState>) {
     tokio::spawn(start_gdpr_job(state));
 }
