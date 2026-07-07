@@ -262,9 +262,50 @@ async fn main() {
     #[cfg(feature = "test-stubs")]
     let notification_service: Arc<dyn sb_contracts::notification_api::NotificationService> =
         in_memory_notif.clone();
+
     #[cfg(not(feature = "test-stubs"))]
-    let notification_service: Arc<dyn sb_contracts::notification_api::NotificationService> =
-        panic!("Production notification service not implemented");
+    let notification_service: Arc<dyn sb_contracts::notification_api::NotificationService> = {
+        use async_trait::async_trait;
+        use sb_contracts::notification_api::{NotificationError, NotificationService};
+        use sb_shared_types::UserId;
+
+        struct LoggingNotificationService;
+
+        #[async_trait]
+        impl NotificationService for LoggingNotificationService {
+            async fn send_telegram_message(
+                &self,
+                chat_id: i64,
+                text: String,
+                _keyboard: Option<serde_json::Value>,
+            ) -> Result<(), NotificationError> {
+                tracing::info!(chat_id, text, "Telegram message (placeholder)");
+                Ok(())
+            }
+
+            async fn send_telegram_message_to_user(
+                &self,
+                user_id: UserId,
+                text: String,
+                _keyboard: Option<serde_json::Value>,
+            ) -> Result<(), NotificationError> {
+                tracing::info!(%user_id, text, "Telegram message to user (placeholder)");
+                Ok(())
+            }
+
+            async fn answer_callback_query(
+                &self,
+                callback_query_id: String,
+                _text: Option<String>,
+            ) -> Result<(), NotificationError> {
+                tracing::info!(callback_query_id, "Answer callback query (placeholder)");
+                Ok(())
+            }
+        }
+
+        Arc::new(LoggingNotificationService)
+    };
+
     let bot_handler: Option<Arc<dyn sb_contracts::notification_api::ClubNotifier>> =
         Some(bot_state.clone());
     let app_base_url =
@@ -525,10 +566,91 @@ fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
 
 #[cfg(not(feature = "test-stubs"))]
 fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
-    compile_error!(
-        "Production service wiring not yet configured. \
-         Build with --features test-stubs for development."
-    )
+    use async_trait::async_trait;
+    use sb_contracts::lobby_api::{CreateTableInput, TableService};
+    use sb_contracts::notification_api::{NotificationError, NotificationService};
+    use sb_contracts::user_resolution::{UserResolutionError, UserResolutionService};
+    use sb_shared_types::{AppError, RequestContext, TableId, UserId};
+
+    struct LoggingTableService;
+
+    #[async_trait]
+    impl TableService for LoggingTableService {
+        async fn create_table(
+            &self,
+            _ctx: &RequestContext,
+            _input: CreateTableInput,
+        ) -> Result<TableId, AppError> {
+            tracing::info!("Create table (placeholder)");
+            Ok(TableId::new(uuid::Uuid::new_v4()))
+        }
+
+        async fn create_cash_table(
+            &self,
+            _stake: sb_shared_types::StakeLevel,
+            _max_players: u32,
+            _created_by: UserId,
+            _chat_id: Option<String>,
+        ) -> Result<TableId, AppError> {
+            tracing::info!("Create cash table (placeholder)");
+            Ok(TableId::new(uuid::Uuid::new_v4()))
+        }
+    }
+
+    struct LoggingNotificationService;
+
+    #[async_trait]
+    impl NotificationService for LoggingNotificationService {
+        async fn send_telegram_message(
+            &self,
+            chat_id: i64,
+            text: String,
+            _keyboard: Option<serde_json::Value>,
+        ) -> Result<(), NotificationError> {
+            tracing::info!(chat_id, text, "Bot send_telegram_message (placeholder)");
+            Ok(())
+        }
+
+        async fn send_telegram_message_to_user(
+            &self,
+            user_id: UserId,
+            text: String,
+            _keyboard: Option<serde_json::Value>,
+        ) -> Result<(), NotificationError> {
+            tracing::info!(%user_id, text, "Bot send_telegram_message_to_user (placeholder)");
+            Ok(())
+        }
+
+        async fn answer_callback_query(
+            &self,
+            callback_query_id: String,
+            _text: Option<String>,
+        ) -> Result<(), NotificationError> {
+            tracing::info!(callback_query_id, "Bot answer_callback_query (placeholder)");
+            Ok(())
+        }
+    }
+
+    struct LoggingUserResolutionService;
+
+    #[async_trait]
+    impl UserResolutionService for LoggingUserResolutionService {
+        async fn resolve_telegram_user(
+            &self,
+            telegram_id: &str,
+        ) -> Result<UserId, UserResolutionError> {
+            tracing::info!(telegram_id, "resolve_telegram_user (placeholder)");
+            Ok(UserId::new(uuid::Uuid::new_v4()))
+        }
+    }
+
+    Arc::new(sb_bot_handler::BotState::new(
+        Arc::new(LoggingTableService),
+        Arc::new(LoggingNotificationService),
+        Arc::new(LoggingUserResolutionService),
+        std::env::var("TELEGRAM_BOT_TOKEN").unwrap_or_default(),
+        std::env::var("MINI_APP_URL").unwrap_or_else(|_| "http://localhost:5173/".to_string()),
+    ))
 }
 
 #[allow(dead_code)]
