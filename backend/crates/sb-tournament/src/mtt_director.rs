@@ -15,6 +15,7 @@ use sb_table_registry::actor::InternalCommand as TableCommand;
 use sb_table_registry::connection_broker::ConnectionBroker;
 use sb_table_registry::events::{HandCompletedEvent, TableEvent};
 use sb_table_registry::registry::Registry;
+use sb_table_registry::actor::InternalCommand;
 
 use crate::blind_scheduler::BlindScheduler;
 use crate::payout_calculator::calculate_payouts;
@@ -359,13 +360,14 @@ impl MttDirector {
             let seat = table.players.len() as u8;
 
             let (tx, rx) = oneshot::channel();
-            let cmd = TableCommand::TransferPlayerIn {
-                user_id: player.user_id,
-                player_id: player.player_id,
-                stack: player.buy_in,
-                seat: Some(seat),
-                respond_to: tx,
-            };
+            let cmd = InternalCommand::TransferPlayerIn {
+                        user_id: player.user_id,
+                        player_id: player.player_id,
+                        stack: player.buy_in,
+                        seat: Some(seat),
+                        display_name: format!("Player_{}", player.user_id),
+                        respond_to: tx,
+                    };
             table
                 .cmd_tx
                 .send(cmd)
@@ -534,11 +536,12 @@ impl MttDirector {
                 let (tx, rx) = oneshot::channel();
                 let _ = to_table
                     .cmd_tx
-                    .send(TableCommand::TransferPlayerIn {
+                    .send(InternalCommand::TransferPlayerIn {
                         user_id: m.user_id,
                         player_id: m.player_id,
                         stack: transfer.stack,
                         seat: None,
+                        display_name: format!("Player_{}", m.user_id),
                         respond_to: tx,
                     })
                     .await;
@@ -611,11 +614,12 @@ impl MttDirector {
                 let (tx, rx) = oneshot::channel();
                 let _ = to_table
                     .cmd_tx
-                    .send(TableCommand::TransferPlayerIn {
+                    .send(InternalCommand::TransferPlayerIn {
                         user_id: m.user_id,
                         player_id: m.player_id,
                         stack: transfer.stack,
                         seat: None,
+                        display_name: format!("Player_{}", m.user_id),
                         respond_to: tx,
                     })
                     .await;

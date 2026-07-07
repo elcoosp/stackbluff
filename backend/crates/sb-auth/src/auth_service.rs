@@ -300,15 +300,18 @@ impl AuthService for AuthServiceImpl {
         // Successful login - clear failure counter
         self.login_rate_limiter.record_success(email);
 
-        // For PWA users, we could track password_changed_at in the DB
-        // For now, use None (all existing tokens remain valid)
-        // TODO: Add password_changed_at column to users table
+        // Get user profile to fetch password_changed_at
+        let profile = self.user_repo.get_user_profile(ctx.clone(), user_with_hash.id)
+            .await
+            .map_err(map_persistence_error)?;
+        let password_changed_at = profile.password_changed_at.map(|dt| dt.timestamp() as usize);
+
         let token = create_jwt(
             user_with_hash.id.0,
             "pwa",
             self.config.jwt_secret_str(),
             self.config.jwt_expiry_days,
-            None,
+            password_changed_at,
         )
         .map_err(|e| AppError::Internal(format!("JWT error: {}", e)))?;
 

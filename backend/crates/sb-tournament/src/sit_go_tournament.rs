@@ -15,6 +15,7 @@ use sb_table_registry::actor::InternalCommand as TableCommand;
 use sb_table_registry::connection_broker::ConnectionBroker;
 use sb_table_registry::events::{HandCompletedEvent, TableEvent};
 use sb_table_registry::registry::Registry;
+use sb_table_registry::actor::InternalCommand;
 
 use crate::blind_scheduler::BlindScheduler;
 use crate::payout_calculator::calculate_payouts;
@@ -321,13 +322,14 @@ impl SitGoTournament {
 
         for (seat, player) in shuffled.iter().enumerate() {
             let (tx, rx) = oneshot::channel();
-            let cmd = TableCommand::TransferPlayerIn {
+            let cmd = InternalCommand::TransferPlayerIn {
                 user_id: player.user_id,
                 player_id: player.player_id,
                 stack: player.buy_in,
                 seat: Some(seat as u8),
                 respond_to: tx,
-            };
+                                display_name: format!("Player_{}", player.user_id),
+                };
             cmd_tx
                 .send(cmd)
                 .await

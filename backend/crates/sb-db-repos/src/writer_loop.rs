@@ -201,7 +201,8 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                     club_pro_expires_at: model.club_pro_expires_at,
                     season_pass_id: model.season_pass_id,
                     season_pass_expires_at: model.season_pass_expires_at,
-                    registration_order: model.registration_order.map(|o| o as u64), // <-- ADDED
+                    registration_order: model.registration_order.map(|o| o as u64),
+                    password_changed_at: model.password_changed_at, // <-- ADDED
                 };
 
                 Ok(Some(
