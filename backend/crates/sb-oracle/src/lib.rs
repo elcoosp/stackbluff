@@ -22,7 +22,7 @@ pub enum OracleError {
     LimitReached { upgrade_url: String },
     #[error("unauthorized: {0}")]
     Unauthorized(String),
-    #[error("unauthorized: {0}")]
+    #[error("engine error: {0}")]
     Engine(String),
     #[error("persistence error: {0}")]
     Persistence(#[from] PersistenceError),
@@ -58,6 +58,7 @@ pub struct OracleServiceImpl {
     session_manager: SessionManager,
     user_repo: Arc<dyn UserRepo>,
     upgrade_url: String,
+    template_library: TemplateLibrary,
 }
 
 impl OracleServiceImpl {
@@ -72,6 +73,7 @@ impl OracleServiceImpl {
             upgrade_url: upgrade_url
                 .or_else(|| std::env::var("UPGRADE_URL").ok())
                 .unwrap_or_else(|| DEFAULT_UPGRADE_URL.to_string()),
+            template_library: TemplateLibrary::load(),
         }
     }
 
@@ -111,7 +113,7 @@ impl OracleService for OracleServiceImpl {
     async fn analyze(
         &self,
         ctx: &RequestContext,
-        _______params: Self::Params,
+        params: Self::Params,
     ) -> Result<Self::Output, Self::Error> {
         let user_id = ctx.user_id.ok_or_else(|| {
             OracleError::Unauthorized("missing user_id in request context".to_string())
@@ -135,9 +137,22 @@ impl OracleService for OracleServiceImpl {
             info!(%user_id, "oracle analysis request with active season pass");
         }
 
+        // ── Select the best matching template ──────────────────────────
+        let template = self.template_library.select(&params);
+        let (recommendation, confidence) = if let Some(tpl) = template {
+            (tpl.render(&params), 0.85)
+        } else {
+            // Fallback: generic advice
+            let generic = format!(
+                "Consider your position ({}) and hand strength ({:.2}). Pot odds are {:.1}:1.",
+                params.position, params.hand_strength, params.pot_odds_ratio
+            );
+            (generic, 0.5)
+        };
+
         Ok(AnalysisResult {
-            recommendation: "fold".to_string(),
-            confidence: 0.85,
+            recommendation,
+            confidence,
         })
     }
 
@@ -146,6 +161,7 @@ impl OracleService for OracleServiceImpl {
         _callback_id: String,
         _text: Option<String>,
     ) -> Result<(), Self::Error> {
+        // No-op for oracle service
         Ok(())
     }
 }
