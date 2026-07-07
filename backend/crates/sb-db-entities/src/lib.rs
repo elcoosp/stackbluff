@@ -4,7 +4,6 @@ pub mod referral;
 pub mod system_counter;
 pub mod user_badges;
 
-pub mod club;
 pub mod club_leaderboard;
 pub mod club_memberships;
 pub mod clubs;
@@ -30,6 +29,3 @@ pub use user_season_card::Entity as UserSeasonCard;
 pub mod deletion_request;
 pub mod puzzle_submission;
 pub mod user_season_card;
-pub mod users;
-pub mod tables;
-

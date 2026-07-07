@@ -1,7 +1,10 @@
 use async_trait::async_trait;
 use chrono::Utc;
 use sb_contracts::ClubError;
-use sb_contracts::repo_api::{Club, ClubRepo, DIVISION_SIZE, LeaderboardEntry, LeaderboardPage, PersistenceError, PersistenceResult};
+use sb_contracts::repo_api::{
+    Club, ClubRepo, DIVISION_SIZE, LeaderboardEntry, LeaderboardPage, PersistenceError,
+    PersistenceResult,
+};
 use sb_db_entities::{club_leaderboard, club_memberships, clubs};
 use sb_shared_types::{ClubId, TableId, UserId};
 use sea_orm::sea_query::ExprTrait;
@@ -286,7 +289,6 @@ impl ClubRepo for ClubRepoImpl {
         Ok(all_clubs.into_iter().map(|c| ClubId::new(c.id)).collect())
     }
 
-
     async fn update_club_pro_settings(
         &self,
         club_id: ClubId,
@@ -307,10 +309,14 @@ impl ClubRepo for ClubRepoImpl {
 
         let mut active: ActiveModel = model.into();
         active.pro_settings_json = sea_orm::ActiveValue::Set(Some(
-            serde_json::from_value(settings).map_err(|e| PersistenceError::InvalidData(e.to_string()))?
+            serde_json::from_value(settings)
+                .map_err(|e| PersistenceError::InvalidData(e.to_string()))?,
         ));
 
-        active.update(&self.db).await.map_err(|e| PersistenceError::Database(e.to_string()))?;
+        active
+            .update(&self.db)
+            .await
+            .map_err(|e| PersistenceError::Database(e.to_string()))?;
         Ok(())
     }
 
@@ -327,15 +333,15 @@ impl ClubRepo for ClubRepoImpl {
             .await
             .map_err(|e| PersistenceError::Database(e.to_string()))?;
 
-        Ok(club.and_then(|c| c.pro_settings_json.map(|s| serde_json::to_value(s).unwrap_or_default())))
+        Ok(club.and_then(|c| {
+            c.pro_settings_json
+                .map(|s| serde_json::to_value(s).unwrap_or_default())
+        }))
     }
 
-    async fn get_tables_by_club_id(
-        &self,
-        club_id: ClubId,
-    ) -> PersistenceResult<Vec<TableId>> {
-        use sb_db_entities::tables::{Column, Entity};
-        use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
+    async fn get_tables_by_club_id(&self, club_id: ClubId) -> PersistenceResult<Vec<TableId>> {
+        use sb_db_entities::table::{Column, Entity};
+        use sea_orm::QueryFilter;
 
         let tables = Entity::find()
             .filter(Column::ClubId.eq(club_id.as_uuid()))
@@ -439,7 +445,6 @@ impl ClubRepo for ClubRepoImpl {
         Ok(club
             .map(|c| c.owner_id == user_id.as_uuid())
             .unwrap_or(false))
-
     }
 }
 
@@ -447,5 +452,4 @@ impl ClubRepo for ClubRepoImpl {
 fn is_unique_violation(db_err: &sea_orm::DbErr) -> bool {
     let msg = db_err.to_string().to_lowercase();
     msg.contains("unique") || msg.contains("constraint") || msg.contains("duplicate")
-
 }
