@@ -145,11 +145,14 @@ impl SeasonCardGenerator {
     }
 }
 
+/// Generate a polished card image with a gradient, border, and a central medal icon.
+/// No text – the frontend can overlay text if needed.
 fn generate_card_image(tier: &RankTier) -> Result<Vec<u8>, AppError> {
     let width = 800u32;
     let height = 600u32;
     let mut img: RgbaImage = ImageBuffer::new(width, height);
 
+    // Define colors for each tier
     let (r, g, b) = match tier {
         RankTier::Legend => (255, 215, 0),
         RankTier::Maestro => (220, 20, 60),
@@ -161,12 +164,83 @@ fn generate_card_image(tier: &RankTier) -> Result<Vec<u8>, AppError> {
         RankTier::Brick => (139, 69, 19),
     };
 
+    // Background gradient: from color to slightly darker
     for y in 0..height {
+        let factor = y as f32 / height as f32;
+        let r2 = (r as f32 * (1.0 - factor * 0.3)) as u8;
+        let g2 = (g as f32 * (1.0 - factor * 0.3)) as u8;
+        let b2 = (b as f32 * (1.0 - factor * 0.3)) as u8;
         for x in 0..width {
-            img.put_pixel(x, y, Rgba([r, g, b, 255]));
+            img.put_pixel(x, y, Rgba([r2, g2, b2, 255]));
         }
     }
 
+    // Draw a rounded rectangle border (we'll simulate with a simple frame)
+    let border_color = Rgba([255, 255, 255, 180]);
+    let border_width = 12;
+    for x in 0..width {
+        for y in 0..height {
+            if x < border_width
+                || x >= width - border_width
+                || y < border_width
+                || y >= height - border_width
+            {
+                img.put_pixel(x, y, border_color);
+            }
+        }
+    }
+
+    // Draw a central medal circle
+    let center_x = width / 2;
+    let center_y = height / 2;
+    let radius = 120;
+    let medal_color = Rgba([255, 255, 255, 220]);
+    for x in (center_x - radius)..(center_x + radius) {
+        for y in (center_y - radius)..(center_y + radius) {
+            let dx = x as i32 - center_x as i32;
+            let dy = y as i32 - center_y as i32;
+            if dx * dx + dy * dy <= radius * radius {
+                img.put_pixel(x, y, medal_color);
+            }
+        }
+    }
+
+    // Draw a smaller inner circle with the rank color
+    let inner_radius = 90;
+    let (r3, g3, b3) = match tier {
+        RankTier::Legend => (255, 215, 0),
+        RankTier::Maestro => (220, 20, 60),
+        RankTier::Diamond => (0, 191, 255),
+        RankTier::Platinum => (200, 200, 200),
+        RankTier::Gold => (255, 215, 0),
+        RankTier::Silver => (180, 180, 180),
+        RankTier::Bronze => (205, 127, 50),
+        RankTier::Brick => (139, 69, 19),
+    };
+    let inner_color = Rgba([r3, g3, b3, 255]);
+    for x in (center_x - inner_radius)..(center_x + inner_radius) {
+        for y in (center_y - inner_radius)..(center_y + inner_radius) {
+            let dx = x as i32 - center_x as i32;
+            let dy = y as i32 - center_y as i32;
+            if dx * dx + dy * dy <= inner_radius * inner_radius {
+                img.put_pixel(x, y, inner_color);
+            }
+        }
+    }
+
+    // Add a small star or diamond shape in the center (just a few pixels)
+    let star_color = Rgba([255, 255, 255, 255]);
+    for x in (center_x - 20)..(center_x + 20) {
+        for y in (center_y - 20)..(center_y + 20) {
+            let dx = (x as i32 - center_x as i32).abs();
+            let dy = (y as i32 - center_y as i32).abs();
+            if dx + dy < 20 {
+                img.put_pixel(x, y, star_color);
+            }
+        }
+    }
+
+    // Encode as PNG
     let mut bytes: Vec<u8> = Vec::new();
     img.write_to(
         &mut std::io::Cursor::new(&mut bytes),
