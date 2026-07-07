@@ -17,6 +17,10 @@ use stripe_checkout::checkout_session::{
 };
 use stripe_types::Currency;
 
+/// Stripe expects amounts in the smallest currency unit (e.g., cents for USD).
+/// We treat 1 chip = 1 cent, so multiply by 100 for Stripe.
+const CHIP_TO_CENT_MULTIPLIER: i64 = 100;
+
 pub struct RealPaymentService {
     pub db: DatabaseConnection,
     stripe_client: Client,
@@ -74,11 +78,14 @@ impl PaymentService for RealPaymentService {
                     serde_json::from_value(metadata).unwrap_or_default();
                 metadata_map.insert("user_id".to_string(), user_id.as_uuid().to_string());
 
+                // Convert chips to cents for Stripe
+                let amount_cents = amount.as_i64() * CHIP_TO_CENT_MULTIPLIER;
+
                 let product_data = ProductData::new("Chip Purchase");
                 let price_data = CreateCheckoutSessionLineItemsPriceData {
                     currency: currency_enum.clone(),
                     product_data: Some(product_data),
-                    unit_amount: Some(amount.as_i64()),
+                    unit_amount: Some(amount_cents), // <-- now in cents
                     product: None,
                     recurring: None,
                     tax_behavior: None,
@@ -115,7 +122,7 @@ impl PaymentService for RealPaymentService {
                     &self.db,
                     &payment_id,
                     user_id.as_uuid(),
-                    amount.as_i64(),
+                    amount.as_i64(), // store chip amount, not cents
                     &currency_enum.to_string(),
                     "stripe",
                     serde_json::to_value(&metadata_map).unwrap_or_default(),
@@ -125,7 +132,8 @@ impl PaymentService for RealPaymentService {
                 info!(
                     payment_id = %payment_id,
                     user_id = %user_id.as_uuid(),
-                    amount = amount.as_i64(),
+                    chips = amount.as_i64(),
+                    cents = amount_cents,
                     "Created Stripe Checkout Session and pending record"
                 );
 

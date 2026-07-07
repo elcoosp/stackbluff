@@ -3,11 +3,14 @@ use crate::service::RealPaymentService;
 use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use hmac::KeyInit;
 use sb_contracts::service_api::PaymentService;
-use sb_shared_types::UserId;
+use sb_shared_types::{ChipAmount, UserId};
 use serde_json::{Value, json};
 use stripe_webhook::{Event, EventObject, Webhook};
 use tracing::{error, info, warn};
 use uuid::Uuid;
+
+/// Stripe amounts are in cents; we convert back to chips (1 chip = 1 cent).
+const CENT_TO_CHIP_DIVISOR: i64 = 100;
 
 pub async fn stripe_webhook(
     State(state): State<RealPaymentService>,
@@ -74,7 +77,9 @@ pub async fn stripe_webhook(
             }
         };
         let user_id = UserId::new(user_uuid);
-        let amount = session.amount_total.unwrap_or(0);
+        let amount_cents = session.amount_total.unwrap_or(0);
+        // Convert cents back to chips
+        let chips = amount_cents / CENT_TO_CHIP_DIVISOR;
         let start = std::time::Instant::now();
         if let Err(e) = state
             .confirm_payment(&payment_id, "stripe", "succeeded", Some(chrono::Utc::now()))
@@ -85,10 +90,13 @@ pub async fn stripe_webhook(
             return (StatusCode::INTERNAL_SERVER_ERROR, "Internal error").into_response();
         }
         metrics::record_confirmation_duration("stripe", start.elapsed());
-        if let Err(e) = state.award_chips_on_success(user_id, amount.into()).await {
+        if let Err(e) = state
+            .award_chips_on_success(user_id, ChipAmount::new(chips).unwrap_or_default())
+            .await
+        {
             error!(request_id = %request_id, payment_id = %payment_id, user_id = %user_id.as_uuid(), error = %e, "Failed to award chips");
         } else {
-            info!(request_id = %request_id, payment_id = %payment_id, user_id = %user_id.as_uuid(), amount = amount, "Chips awarded successfully");
+            info!(request_id = %request_id, payment_id = %payment_id, user_id = %user_id.as_uuid(), cents = amount_cents, chips = chips, "Chips awarded successfully");
         }
         metrics::record_webhook_success();
     }
@@ -153,7 +161,9 @@ pub async fn telegram_stars_webhook(
             }
         };
         let user_id = UserId::new(user_uuid);
-        let amount = pre_checkout["total_amount"].as_i64().unwrap_or(0);
+        let stars = pre_checkout["total_amount"].as_i64().unwrap_or(0);
+        // Assume 1 star = 1 chip (or could use a configurable ratio)
+        let chips = stars;
         let start = std::time::Instant::now();
         if let Err(e) = state
             .confirm_payment(
@@ -169,10 +179,13 @@ pub async fn telegram_stars_webhook(
             return (StatusCode::INTERNAL_SERVER_ERROR, "Internal error").into_response();
         }
         metrics::record_confirmation_duration("telegram", start.elapsed());
-        if let Err(e) = state.award_chips_on_success(user_id, amount.into()).await {
+        if let Err(e) = state
+            .award_chips_on_success(user_id, ChipAmount::new(chips).unwrap_or_default())
+            .await
+        {
             error!(request_id = %request_id, payment_id = %payment_id, user_id = %user_id.as_uuid(), error = %e, "Failed to award chips from Telegram");
         } else {
-            info!(request_id = %request_id, payment_id = %payment_id, user_id = %user_id.as_uuid(), amount = amount, "Telegram chips awarded");
+            info!(request_id = %request_id, payment_id = %payment_id, user_id = %user_id.as_uuid(), stars = stars, chips = chips, "Telegram chips awarded");
         }
         metrics::record_webhook_success();
     }

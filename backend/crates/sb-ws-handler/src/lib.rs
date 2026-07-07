@@ -22,7 +22,6 @@ use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
 // Dummy GDPR repo – kept for compatibility, not used in this crate.
-#[allow(dead_code)]
 struct DummyGdprRepo;
 
 #[async_trait]
@@ -88,7 +87,7 @@ struct AppState {
     auth: Arc<dyn Authenticator + Send + Sync>,
     registry: Arc<Registry>,
     user_repo: Arc<dyn UserRepo>,
-    gdpr_repo: Arc<dyn sb_contracts::repo_api::GdprRepo + Send + Sync>,
+    _gdpr_repo: Arc<dyn sb_contracts::repo_api::GdprRepo + Send + Sync>,
 }
 
 pub fn ws_route(
@@ -100,7 +99,7 @@ pub fn ws_route(
         auth,
         registry,
         user_repo,
-        gdpr_repo: Arc::new(DummyGdprRepo),
+        _gdpr_repo: Arc::new(DummyGdprRepo),
     });
     Router::new()
         .route("/ws/game", get(ws_handler))
@@ -783,7 +782,6 @@ async fn handle_client_message(
             }
         }
 
-        // Kick vote and sit out – only one copy now
         "kick_vote_start" => {
             let room_id_str = parsed.get("room_id").and_then(|t| t.as_str()).unwrap_or("");
             let room_id = match room_id_str.parse::<TableId>() {
@@ -812,7 +810,7 @@ async fn handle_client_message(
                     return send_json_to_client(client_tx, err);
                 }
             };
-            let (refund_tx, refund_rx) = tokio::sync::oneshot::channel::<ChipAmount>(); // removed 'mut'
+            let (refund_tx, refund_rx) = tokio::sync::oneshot::channel::<ChipAmount>();
             match state
                 .registry
                 .start_kick_vote(room_id, *user_id, target_id, Some(refund_tx))
