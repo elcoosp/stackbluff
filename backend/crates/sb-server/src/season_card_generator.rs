@@ -199,7 +199,7 @@ fn generate_card_image(tier: &RankTier) -> Result<Vec<u8>, AppError> {
         for y in (center_y - radius)..(center_y + radius) {
             let dx = x as i32 - center_x as i32;
             let dy = y as i32 - center_y as i32;
-            if dx * dx + dy * dy <= radius * radius {
+            if dx * dx + dy * dy <= (radius as i32) * (radius as i32) {
                 img.put_pixel(x, y, medal_color);
             }
         }
@@ -222,7 +222,7 @@ fn generate_card_image(tier: &RankTier) -> Result<Vec<u8>, AppError> {
         for y in (center_y - inner_radius)..(center_y + inner_radius) {
             let dx = x as i32 - center_x as i32;
             let dy = y as i32 - center_y as i32;
-            if dx * dx + dy * dy <= inner_radius * inner_radius {
+            if dx * dx + dy * dy <= (inner_radius as i32) * (inner_radius as i32) {
                 img.put_pixel(x, y, inner_color);
             }
         }
