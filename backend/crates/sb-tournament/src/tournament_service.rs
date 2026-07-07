@@ -10,22 +10,24 @@ use sb_shared_types::{AppError, RequestContext, TableId, TournamentId, UserId};
 use sb_table_registry::connection_broker::ConnectionBroker;
 use sb_table_registry::registry::Registry;
 use std::sync::Arc;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, oneshot};
+use tracing::{error, info};
 
 use crate::{MttCommand, MttDirector, SitGoCommand, SitGoTournament};
 
+#[derive(Clone)]
 pub struct TournamentServiceImpl {
     repo: Arc<dyn TournamentRepo>,
     user_repo: Arc<dyn UserRepo>,
     registry: Arc<Registry>,
     broker: Arc<ConnectionBroker>,
-    // Use the trait that actually has send_telegram_message
     notification_service: Arc<dyn sb_contracts::notification_api::NotificationService>,
     club_notifier: Option<Arc<dyn sb_contracts::notification_api::ClubNotifier>>,
     app_base_url: String,
     sit_go_actors: Arc<DashMap<TournamentId, mpsc::Sender<SitGoCommand>>>,
     mtt_actors: Arc<DashMap<TournamentId, mpsc::Sender<MttCommand>>>,
     club_repo: Option<Arc<dyn sb_contracts::ClubRepo>>,
+    club_service: Option<Arc<dyn sb_contracts::ClubService>>,
 }
 
 impl TournamentServiceImpl {
@@ -49,6 +51,7 @@ impl TournamentServiceImpl {
             sit_go_actors: Arc::new(DashMap::new()),
             mtt_actors: Arc::new(DashMap::new()),
             club_repo: None,
+            club_service: None,
         }
     }
 
@@ -62,6 +65,10 @@ impl TournamentServiceImpl {
 
     pub fn set_club_repo(&mut self, repo: Arc<dyn sb_contracts::ClubRepo>) {
         self.club_repo = Some(repo);
+    }
+
+    pub fn set_club_service(&mut self, service: Arc<dyn sb_contracts::ClubService>) {
+        self.club_service = Some(service);
     }
 
     pub fn remove_actor(&self, id: TournamentId) {
@@ -93,15 +100,151 @@ impl TournamentServiceImpl {
         }
     }
 
-    async fn spawn_actor(
+    /// Post results to Telegram using the main notification service.
+    pub async fn post_tournament_results(
         &self,
-        config: &TournamentConfig,
-        id: TournamentId,
-        created_by: UserId,
-        chat_id: Option<String>,
-    ) {
+        tournament_id: TournamentId,
+        club_repo: &Arc<dyn sb_contracts::ClubRepo>,
+    ) -> Result<(), AppError> {
+        let results = self.repo.list_results(tournament_id).await?;
+        let tournament = self
+            .repo
+            .get_tournament(tournament_id)
+            .await?
+            .ok_or_else(|| AppError::NotFound("Tournament not found".into()))?;
+
+        let club_id = tournament
+            .config
+            .club_id
+            .ok_or_else(|| AppError::Internal("Not a club tournament".into()))?;
+
+        let telegram_chat_id = club_repo
+            .get_telegram_chat_id(club_id)
+            .await
+            .map_err(|e| AppError::Internal(e.to_string()))?;
+
+        if let Some(chat_id) = telegram_chat_id {
+            let mut message = "🏆 *Tournament Results*\n\n".to_string();
+
+            for (idx, result) in results.iter().take(3).enumerate() {
+                let medal = match idx {
+                    0 => "🥇",
+                    1 => "🥈",
+                    2 => "🥉",
+                    _ => "",
+                };
+                message += &format!(
+                    "{} Position {}: User {} - Prize: {}\n",
+                    medal, result.position, result.user_id, result.prize
+                );
+            }
+
+            self.notification_service
+                .send_telegram_message(chat_id, message, None)
+                .await
+                .map_err(|e| AppError::Internal(e.to_string()))?;
+
+            info!(%tournament_id, %chat_id, "Posted tournament results to Telegram");
+        }
+
+        Ok(())
+    }
+
+    pub async fn award_tournament_xp(&self, tournament_id: TournamentId) -> Result<(), AppError> {
+        let tournament = self
+            .repo
+            .get_tournament(tournament_id)
+            .await?
+            .ok_or_else(|| AppError::NotFound("Tournament not found".into()))?;
+
+        let club_id = tournament
+            .config
+            .club_id
+            .ok_or_else(|| AppError::Internal("Not a club tournament".into()))?;
+
+        let registrations = self.repo.list_registrations(tournament_id).await?;
+        let xp_per_player = 50;
+
+        let club_service = self
+            .club_service
+            .as_ref()
+            .ok_or_else(|| AppError::Configuration("Club service not configured".into()))?;
+
+        for reg in &registrations {
+            let ctx = RequestContext {
+                request_id: uuid::Uuid::new_v4(),
+                user_id: Some(reg.user_id),
+                ip: String::new(),
+            };
+
+            club_service
+                .add_xp(&ctx, club_id, reg.user_id, xp_per_player)
+                .await
+                .map_err(|e| AppError::Internal(e.to_string()))?;
+        }
+
+        info!(%tournament_id, "Awarded XP to {} participants", registrations.len());
+        Ok(())
+    }
+
+    pub async fn handle_tournament_completion(
+        &self,
+        tournament_id: TournamentId,
+    ) -> Result<(), AppError> {
+        info!(%tournament_id, "Handling tournament completion");
+
+        let tournament = self
+            .repo
+            .get_tournament(tournament_id)
+            .await?
+            .ok_or_else(|| AppError::NotFound("Tournament not found".into()))?;
+
+        if let Some(club_id) = tournament.config.club_id {
+            if let Some(club_repo) = &self.club_repo {
+                if let Err(e) = self.post_tournament_results(tournament_id, club_repo).await {
+                    error!(%tournament_id, error = ?e, "Failed to post tournament results");
+                }
+                if let Err(e) = self.award_tournament_xp(tournament_id).await {
+                    error!(%tournament_id, error = ?e, "Failed to award tournament XP");
+                }
+            }
+            info!(%tournament_id, %club_id, "Club tournament completed");
+        }
+
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl TournamentService for TournamentServiceImpl {
+    async fn create_tournament(
+        &self,
+        ctx: &RequestContext,
+        config: TournamentConfig,
+    ) -> Result<TournamentId, AppError> {
+        let id = self.repo.insert_tournament(&config).await?;
+        if let Some(start) = config.scheduled_start
+            && start > Utc::now()
+        {
+            crate::reminders::schedule_reminders(
+                id,
+                start,
+                self.repo.clone(),
+                self.notification_service.clone(),
+                self.club_notifier.clone(),
+                self.app_base_url.clone(),
+            );
+        }
+        let created_by = ctx
+            .user_id
+            .unwrap_or_else(|| UserId::new(uuid::Uuid::nil()));
+        let chat_id = None;
+
+        // Spawn actor and completion handler inline
         let repo = self.repo.clone();
         let user_repo = self.user_repo.clone();
+        let (completion_tx, completion_rx) = oneshot::channel();
+
         match config.tournament_type {
             TournamentType::SitAndGo => {
                 let (tx, rx) = mpsc::channel(32);
@@ -114,6 +257,7 @@ impl TournamentServiceImpl {
                     self.registry.event_sender().subscribe(),
                     created_by,
                     chat_id.clone(),
+                    Some(completion_tx),
                 );
                 let handle = tokio::spawn(actor.run());
                 self.sit_go_actors.insert(id, tx.clone());
@@ -138,6 +282,7 @@ impl TournamentServiceImpl {
                     self.registry.event_sender().subscribe(),
                     created_by,
                     chat_id.clone(),
+                    Some(completion_tx),
                 );
                 let handle = tokio::spawn(actor.run());
                 self.mtt_actors.insert(id, tx.clone());
@@ -152,35 +297,17 @@ impl TournamentServiceImpl {
                     .await;
             }
         }
-    }
-}
 
-#[async_trait]
-impl TournamentService for TournamentServiceImpl {
-    async fn create_tournament(
-        &self,
-        ctx: &RequestContext,
-        config: TournamentConfig,
-    ) -> Result<TournamentId, AppError> {
-        let id = self.repo.insert_tournament(&config).await?;
-        if let Some(start) = config.scheduled_start
-            && start > Utc::now()
-        {
-            crate::reminders::schedule_reminders(
-                id,
-                start,
-                self.repo.clone(),
-                self.notification_service.clone(), // now the correct type
-                self.club_notifier.clone(),
-                self.app_base_url.clone(),
-            );
-        }
-        let created_by = ctx
-            .user_id
-            .unwrap_or_else(|| UserId::new(uuid::Uuid::nil()));
-        let chat_id = None;
-        self.spawn_actor(&config, id, created_by, chat_id).await;
-        tracing::info!(
+        // Spawn completion handler
+        let service = Arc::new(self.clone());
+        tokio::spawn(async move {
+            let _ = completion_rx.await;
+            if let Err(e) = service.handle_tournament_completion(id).await {
+                error!(%id, error = ?e, "Tournament completion handler failed");
+            }
+        });
+
+        info!(
             tournament_id = %id,
             tournament_type = ?config.tournament_type,
             max_players = config.max_players,
@@ -363,119 +490,5 @@ impl TournamentService for TournamentServiceImpl {
 
         rrx.await
             .map_err(|_| AppError::Internal("response dropped".into()))
-    }
-}
-
-// === Club Tournament Integration ===
-impl TournamentServiceImpl {
-    /// Post results to Telegram using the main notification service.
-    pub async fn post_tournament_results(
-        &self,
-        tournament_id: TournamentId,
-        club_repo: &Arc<dyn sb_contracts::ClubRepo>,
-    ) -> Result<(), AppError> {
-        let results = self.repo.list_results(tournament_id).await?;
-        let tournament = self
-            .repo
-            .get_tournament(tournament_id)
-            .await?
-            .ok_or_else(|| AppError::NotFound("Tournament not found".into()))?;
-
-        let club_id = tournament
-            .config
-            .club_id
-            .ok_or_else(|| AppError::Internal("Not a club tournament".into()))?;
-
-        let telegram_chat_id = club_repo
-            .get_telegram_chat_id(club_id)
-            .await
-            .map_err(|e| AppError::Internal(e.to_string()))?;
-
-        if let Some(chat_id) = telegram_chat_id {
-            let mut message = "🏆 *Tournament Results*\n\n".to_string();
-
-            for (idx, result) in results.iter().take(3).enumerate() {
-                let medal = match idx {
-                    0 => "🥇",
-                    1 => "🥈",
-                    2 => "🥉",
-                    _ => "",
-                };
-                message += &format!(
-                    "{} Position {}: User {} - Prize: {}\n",
-                    medal, result.position, result.user_id, result.prize
-                );
-            }
-
-            self.notification_service
-                .send_telegram_message(chat_id, message, None)
-                .await
-                .map_err(|e| AppError::Internal(e.to_string()))?;
-
-            tracing::info!(%tournament_id, %chat_id, "Posted tournament results to Telegram");
-        }
-
-        Ok(())
-    }
-
-    pub async fn award_tournament_xp(
-        &self,
-        tournament_id: TournamentId,
-        club_service: &Arc<dyn sb_contracts::ClubService>,
-    ) -> Result<(), AppError> {
-        let tournament = self
-            .repo
-            .get_tournament(tournament_id)
-            .await?
-            .ok_or_else(|| AppError::NotFound("Tournament not found".into()))?;
-
-        let club_id = tournament
-            .config
-            .club_id
-            .ok_or_else(|| AppError::Internal("Not a club tournament".into()))?;
-
-        let registrations = self.repo.list_registrations(tournament_id).await?;
-        let xp_per_player = 50;
-
-        for reg in &registrations {
-            let ctx = RequestContext {
-                request_id: uuid::Uuid::new_v4(),
-                user_id: Some(reg.user_id),
-                ip: String::new(),
-            };
-
-            club_service
-                .add_xp(&ctx, club_id, reg.user_id, xp_per_player)
-                .await
-                .map_err(|e| AppError::Internal(e.to_string()))?;
-        }
-
-        tracing::info!(%tournament_id, "Awarded XP to {} participants", registrations.len());
-        Ok(())
-    }
-
-    pub async fn handle_tournament_completion(
-        &self,
-        tournament_id: TournamentId,
-    ) -> Result<(), AppError> {
-        tracing::info!(%tournament_id, "Handling tournament completion");
-
-        let tournament = self
-            .repo
-            .get_tournament(tournament_id)
-            .await?
-            .ok_or_else(|| AppError::NotFound("Tournament not found".into()))?;
-
-        if let Some(club_id) = tournament.config.club_id {
-            if let Some(club_repo) = &self.club_repo
-                && let Err(e) = self.post_tournament_results(tournament_id, club_repo).await
-            {
-                tracing::error!(%tournament_id, error = ?e, "Failed to post tournament results");
-            }
-
-            tracing::info!(%tournament_id, %club_id, "Club tournament completed");
-        }
-
-        Ok(())
     }
 }

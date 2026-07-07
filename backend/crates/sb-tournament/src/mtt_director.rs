@@ -101,9 +101,11 @@ pub struct MttDirector {
     notification_service: Option<Arc<dyn sb_contracts::notification_api::NotificationService>>,
     club_repo: Option<Arc<dyn sb_contracts::ClubRepo>>,
 
-    // New fields from main
     created_by: UserId,
     chat_id: Option<String>,
+
+    // NEW: completion signal
+    completion_tx: Option<oneshot::Sender<()>>,
 }
 
 impl MttDirector {
@@ -117,6 +119,7 @@ impl MttDirector {
         event_rx: tokio::sync::broadcast::Receiver<TableEvent>,
         created_by: UserId,
         chat_id: Option<String>,
+        completion_tx: Option<oneshot::Sender<()>>,
     ) -> Self {
         Self {
             tournament_id,
@@ -143,6 +146,7 @@ impl MttDirector {
             club_repo: None,
             created_by,
             chat_id,
+            completion_tx,
         }
     }
 
@@ -164,7 +168,6 @@ impl MttDirector {
         info!(tournament_id = %self.tournament_id, "MttDirector terminated");
     }
 
-    // ─── Helper to fetch actual stacks from table actor ──────────────
     async fn fetch_player_stacks(&self, table_idx: usize) -> Vec<(PlayerId, UserId, ChipAmount)> {
         let table = &self.tables[table_idx];
         let mut result = Vec::new();
@@ -456,24 +459,24 @@ impl MttDirector {
             }
         }
 
-        if let Some(scheduler) = &mut self.blind_scheduler
-            && let Some((level, sb, bb, ante)) = scheduler.on_hand_completed()
-        {
-            for table in &self.tables {
-                let _ = table
-                    .cmd_tx
-                    .send(TableCommand::SetBlinds { small: sb, big: bb })
-                    .await;
+        if let Some(scheduler) = &mut self.blind_scheduler {
+            if let Some((level, sb, bb, ante)) = scheduler.on_hand_completed() {
+                for table in &self.tables {
+                    let _ = table
+                        .cmd_tx
+                        .send(TableCommand::SetBlinds { small: sb, big: bb })
+                        .await;
+                }
+                let msg = sb_table_registry::game_room::RoomMessage::TournamentBlindLevel {
+                    tournament_id: self.tournament_id,
+                    level,
+                    small_blind: sb.as_i64(),
+                    big_blind: bb.as_i64(),
+                    ante,
+                };
+                self.broker
+                    .broadcast_to_room(TableId::new(self.tournament_id.as_uuid()), msg);
             }
-            let msg = sb_table_registry::game_room::RoomMessage::TournamentBlindLevel {
-                tournament_id: self.tournament_id,
-                level,
-                small_blind: sb.as_i64(),
-                big_blind: bb.as_i64(),
-                ante,
-            };
-            self.broker
-                .broadcast_to_room(TableId::new(self.tournament_id.as_uuid()), msg);
         }
 
         for table in &self.tables {
@@ -494,7 +497,6 @@ impl MttDirector {
     async fn do_rebalance(&mut self) {
         self.state = DirectorState::Pausing;
 
-        // Pause all tables
         for table in &self.tables {
             let (tx, rx) = oneshot::channel();
             let _ = table
@@ -504,7 +506,6 @@ impl MttDirector {
             let _ = rx.await;
         }
 
-        // ─── Fetch actual stacks for all players ──────────────────────
         let mut table_states = Vec::with_capacity(self.tables.len());
         for idx in 0..self.tables.len() {
             let stacks = self.fetch_player_stacks(idx).await;
@@ -520,7 +521,6 @@ impl MttDirector {
             let from_table = &self.tables[m.from_table_idx];
             let to_table = &self.tables[m.to_table_idx];
 
-            // Transfer out
             let (tx, rx) = oneshot::channel();
             let _ = from_table
                 .cmd_tx
@@ -531,7 +531,6 @@ impl MttDirector {
                 .await;
             let result = rx.await;
             if let Ok(transfer) = result {
-                // Transfer in with the actual stack (from transfer)
                 let (tx, rx) = oneshot::channel();
                 let _ = to_table
                     .cmd_tx
@@ -543,24 +542,23 @@ impl MttDirector {
                         respond_to: tx,
                     })
                     .await;
-                if let Ok(seat_result) = rx.await
-                    && let Ok(seat) = seat_result
-                {
-                    let msg = sb_table_registry::game_room::RoomMessage::TournamentTableChanged {
-                        tournament_id: self.tournament_id,
-                        new_room_id: TableId::new(self.tournament_id.as_uuid()),
-                        new_seat: seat,
-                    };
-                    self.broker.send_to_user(m.user_id, msg);
-                    self.user_to_table.insert(m.user_id, to_table.table_id);
+                if let Ok(seat_result) = rx.await {
+                    if let Ok(seat) = seat_result {
+                        let msg =
+                            sb_table_registry::game_room::RoomMessage::TournamentTableChanged {
+                                tournament_id: self.tournament_id,
+                                new_room_id: TableId::new(self.tournament_id.as_uuid()),
+                                new_seat: seat,
+                            };
+                        self.broker.send_to_user(m.user_id, msg);
+                        self.user_to_table.insert(m.user_id, to_table.table_id);
+                    }
                 }
             }
         }
 
-        // Remove empty tables
         self.tables.retain(|t| !t.players.is_empty());
 
-        // Resume
         for table in &self.tables {
             let (tx, rx) = oneshot::channel();
             let _ = table
@@ -579,7 +577,6 @@ impl MttDirector {
     async fn do_final_table_merge(&mut self) {
         self.state = DirectorState::Pausing;
 
-        // Pause all tables
         for table in &self.tables {
             let (tx, rx) = oneshot::channel();
             let _ = table
@@ -589,7 +586,6 @@ impl MttDirector {
             let _ = rx.await;
         }
 
-        // ─── Fetch actual stacks for all players ──────────────────────
         let mut table_states = Vec::with_capacity(self.tables.len());
         for idx in 0..self.tables.len() {
             let stacks = self.fetch_player_stacks(idx).await;
@@ -622,21 +618,21 @@ impl MttDirector {
                         respond_to: tx,
                     })
                     .await;
-                if let Ok(seat_result) = rx.await
-                    && let Ok(seat) = seat_result
-                {
-                    let msg = sb_table_registry::game_room::RoomMessage::TournamentTableChanged {
-                        tournament_id: self.tournament_id,
-                        new_room_id: TableId::new(self.tournament_id.as_uuid()),
-                        new_seat: seat,
-                    };
-                    self.broker.send_to_user(m.user_id, msg);
-                    self.user_to_table.insert(m.user_id, to_table.table_id);
+                if let Ok(seat_result) = rx.await {
+                    if let Ok(seat) = seat_result {
+                        let msg =
+                            sb_table_registry::game_room::RoomMessage::TournamentTableChanged {
+                                tournament_id: self.tournament_id,
+                                new_room_id: TableId::new(self.tournament_id.as_uuid()),
+                                new_seat: seat,
+                            };
+                        self.broker.send_to_user(m.user_id, msg);
+                        self.user_to_table.insert(m.user_id, to_table.table_id);
+                    }
                 }
             }
         }
 
-        // Keep only the final table
         self.tables.retain(|t| !t.players.is_empty());
         if self.tables.len() > 1 {
             self.tables.truncate(1);
@@ -731,6 +727,11 @@ impl MttDirector {
 
         for table in &self.tables {
             let _ = table.cmd_tx.send(TableCommand::Shutdown).await;
+        }
+
+        // Signal completion to the service
+        if let Some(tx) = self.completion_tx.take() {
+            let _ = tx.send(());
         }
 
         info!(tournament_id = %self.tournament_id, "MTT completed");

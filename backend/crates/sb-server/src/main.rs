@@ -20,27 +20,28 @@ use sb_auth::{
     AuthServiceImpl, Authenticator, SharedAuthService, config::AuthConfig, email::EmailService,
     email_queue::EmailQueue, routes::auth_router,
 };
+use sb_club::handlers::{ClubTournamentState, club_tournament_routes};
 use sb_contracts::lobby_api::TableRepo;
 use sb_contracts::repo_api::{HandHistoryRepository, UserRepo};
 use sb_contracts::stats_api::PlayerStatsRepo;
 use sb_contracts::tournament_api::{TournamentConfig, TournamentType};
 use sb_db_entities::tournament::{Column as TournamentColumn, Entity as TournamentEntity};
+use sb_db_repos::club_repo::ClubRepoImpl;
 use sb_db_repos::hand_history_repo::{HandHistoryRepoImpl, spawn_hand_history_cleanup};
 use sb_db_repos::init_writer_loop;
 use sb_db_repos::player_stats_repo::PlayerStatsRepoImpl;
 use sb_db_repos::tournament_repo::TournamentRepoImpl;
 use sb_db_repos::user_repo::UserRepoImpl;
-use sb_db_repos::club_repo::ClubRepoImpl;
 use sb_rest_router::create_router;
 use sb_rest_router::player_stats::player_stats_routes;
 use sb_rest_router::season_card;
 use sb_rest_router::tournament_routes::{self, TournamentState};
 use sb_shared_types::{GameVariant, StakeLevel, TableConfig, TournamentId, UserId};
 use sb_table_registry::buy_in_limits_for_stake;
+use sb_table_registry::connection_broker::ConnectionBroker;
 use sb_table_registry::registry::Registry;
 use sb_table_registry::spawn_history_recorder;
 use sb_table_registry::stats_aggregator::spawn_stats_aggregator;
-use sb_table_registry::connection_broker::ConnectionBroker;
 use sb_table_registry::table_service::TableServiceImpl;
 use sb_tournament::{
     MttCommand, MttDirector, SitGoCommand, SitGoTournament, TournamentServiceImpl,
@@ -216,7 +217,6 @@ async fn main() {
     let stats_event_rx = registry.event_sender().subscribe();
     spawn_stats_aggregator(stats_event_rx, stats_repo.clone());
 
-
     // ── Club service ─────────────────────────────────────────────────
     let club_repo: Arc<dyn sb_contracts::repo_api::ClubRepo + Send + Sync> =
         Arc::new(ClubRepoImpl::new(db.clone()));
@@ -235,7 +235,6 @@ async fn main() {
         club_service.clone(),
         broker.clone(),
         badge_repo,
-
     )
     .merge(player_stats_routes(stats_repo.clone(), user_repo.clone()));
 
@@ -268,7 +267,16 @@ async fn main() {
         app_base_url.clone(),
     );
     tournament_service_impl.set_club_repo(club_repo.clone());
+    tournament_service_impl.set_club_service(club_service.clone());
     let tournament_service = Arc::new(tournament_service_impl);
+
+    // ── Club tournament routes ──────────────────────────────────────
+    let club_tournament_state = ClubTournamentState {
+        club_service: club_service.clone(),
+        club_repo: club_repo.clone(),
+        tournament_service: tournament_service.clone(),
+    };
+    let club_tournament_router = club_tournament_routes(club_tournament_state);
 
     let tournament_state = Arc::new(TournamentState {
         tournament_service: tournament_service.clone(),
@@ -326,6 +334,7 @@ async fn main() {
         .merge(hand_archive::router(archive_state.clone()))
         .merge(tournament_router)
         .merge(season_card::router(db.clone()))
+        .merge(club_tournament_router) // <── Added club tournament routes
         .layer(cors)
         .layer(CookieManagerLayer::new());
 
@@ -405,6 +414,7 @@ async fn load_existing_tournaments(
                     event_rx,
                     system_user,
                     None,
+                    None, // completion_tx = None for recovery
                 );
                 tokio::spawn(actor.run());
                 state
@@ -430,6 +440,7 @@ async fn load_existing_tournaments(
                     event_rx,
                     system_user,
                     None,
+                    None, // completion_tx = None for recovery
                 );
                 tokio::spawn(actor.run());
                 state

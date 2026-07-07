@@ -79,9 +79,11 @@ pub struct SitGoTournament {
     table_id: Option<TableId>,
     user_to_table: HashMap<UserId, TableId>,
 
-    // NEW FIELDS
     created_by: UserId,
     chat_id: Option<String>,
+
+    // NEW: completion signal
+    completion_tx: Option<oneshot::Sender<()>>,
 }
 
 impl SitGoTournament {
@@ -95,6 +97,7 @@ impl SitGoTournament {
         event_rx: tokio::sync::broadcast::Receiver<TableEvent>,
         created_by: UserId,
         chat_id: Option<String>,
+        completion_tx: Option<oneshot::Sender<()>>,
     ) -> Self {
         Self {
             tournament_id,
@@ -121,6 +124,7 @@ impl SitGoTournament {
             user_to_table: HashMap::new(),
             created_by,
             chat_id,
+            completion_tx,
         }
     }
 
@@ -138,7 +142,6 @@ impl SitGoTournament {
                     self.handle_command(cmd).await;
                 }
                 Ok(event) = self.event_rx.recv() => {
-                    // Handle only HandCompleted events
                     if let TableEvent::HandCompleted(hand_event) = event {
                         self.handle_hand_completed(hand_event).await;
                     }
@@ -294,7 +297,6 @@ impl SitGoTournament {
             turn_time_limit_ms: 30_000,
         };
 
-        // Pass created_by and chat_id
         let (cmd_tx, table_id) = self
             .registry
             .create_tournament_table(
@@ -407,23 +409,23 @@ impl SitGoTournament {
             return;
         }
 
-        if let Some(scheduler) = &mut self.blind_scheduler
-            && let Some((level, sb, bb, ante)) = scheduler.on_hand_completed()
-        {
-            if let Some(cmd_tx) = &self.table_cmd_tx {
-                let _ = cmd_tx
-                    .send(TableCommand::SetBlinds { small: sb, big: bb })
-                    .await;
+        if let Some(scheduler) = &mut self.blind_scheduler {
+            if let Some((level, sb, bb, ante)) = scheduler.on_hand_completed() {
+                if let Some(cmd_tx) = &self.table_cmd_tx {
+                    let _ = cmd_tx
+                        .send(TableCommand::SetBlinds { small: sb, big: bb })
+                        .await;
+                }
+                let msg = sb_table_registry::game_room::RoomMessage::TournamentBlindLevel {
+                    tournament_id: self.tournament_id,
+                    level,
+                    small_blind: sb.as_i64(),
+                    big_blind: bb.as_i64(),
+                    ante,
+                };
+                self.broker
+                    .broadcast_to_room(TableId::new(self.tournament_id.as_uuid()), msg);
             }
-            let msg = sb_table_registry::game_room::RoomMessage::TournamentBlindLevel {
-                tournament_id: self.tournament_id,
-                level,
-                small_blind: sb.as_i64(),
-                big_blind: bb.as_i64(),
-                ante,
-            };
-            self.broker
-                .broadcast_to_room(TableId::new(self.tournament_id.as_uuid()), msg);
         }
 
         if let Some(cmd_tx) = &self.table_cmd_tx {
@@ -523,6 +525,11 @@ impl SitGoTournament {
 
         if let Some(cmd_tx) = &self.table_cmd_tx {
             let _ = cmd_tx.send(TableCommand::Shutdown).await;
+        }
+
+        // Signal completion to the service
+        if let Some(tx) = self.completion_tx.take() {
+            let _ = tx.send(());
         }
 
         info!(tournament_id = %self.tournament_id, "Tournament completed");
