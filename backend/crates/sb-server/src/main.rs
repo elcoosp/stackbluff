@@ -226,7 +226,7 @@ async fn main() {
         Arc::new(ClubRepoImpl::new(db.clone()));
     let club_service: Arc<dyn sb_contracts::service_api::ClubService + Send + Sync> =
         Arc::new(sb_club::ClubServiceImpl::new(club_repo.clone()));
-    let broker = Arc::new(ConnectionBroker::new());
+    let _broker = Arc::new(ConnectionBroker::new());
 
     // ── GDPR repository ──────────────────────────────────────────────
     let gdpr_repo: Arc<dyn GdprRepo + Send + Sync> = Arc::new(PgGdprRepo { db: db.clone() });
@@ -290,19 +290,6 @@ async fn main() {
     // ── Create AppState ──────────────────────────────────────────────
 
     // ── REST router ──────────────────────────────────────────────────
-    let app_state = Arc::new(AppState {
-        table_service: table_service.clone(),
-        table_repo: table_repo.clone(),
-        registry: registry.clone(),
-        hand_history_repo: hand_history_repo.clone(),
-        leaderboard_query: leaderboard_repo.clone(),
-        club_service: club_service.clone(),
-        broker: broker.clone(),
-        badge_repo: badge_repo.clone(),
-        gdpr_repo: gdpr_repo.clone(),
-    });
-    let rest_router = create_router(app_state.clone())
-        .merge(player_stats_routes(stats_repo.clone(), user_repo.clone()));
 
     // ── Tournament system ────────────────────────────────────────────
     let tournament_repo = Arc::new(TournamentRepoImpl::new(db.clone()));
@@ -358,14 +345,35 @@ async fn main() {
     let viral_service_arc = Arc::new(viral_service_impl);
 
 
+    let mission_service: Arc<dyn MissionApi + Send + Sync> =
+        Arc::new(MissionServiceImpl::new(Arc::new(db.clone()), user_service));
+
+    let app_state = Arc::new(AppState {
+        table_service: table_service.clone(),
+        table_repo: table_repo.clone(),
+        registry: registry.clone(),
+        hand_history_repo: hand_history_repo.clone(),
+        leaderboard_query: leaderboard_repo.clone(),
+        club_service: club_service.clone(),
+        broker: broker.clone(),
+        badge_repo: badge_repo.clone(),
+        gdpr_repo: gdpr_repo.clone(),
+        notification_service: notification_service.clone(),
+        tournament_service: tournament_service.clone(),
+        mission_service: mission_service.clone(),
+        viral_service: viral_service_arc.clone(),
+    });
+
+    let rest_router = create_router(app_state.clone())
+        .merge(player_stats_routes(stats_repo.clone(), user_repo.clone()));
+
+
 
 
     let hand_count_observer: Arc<dyn HandCountObserver + Send + Sync> = viral_service_arc.clone();
     let replay_observer: Arc<dyn ReplayCardObserver + Send + Sync> = viral_service_arc.clone();
 
     // ── Mission service ──────────────────────────────────────────────────
-    let mission_service: Arc<dyn MissionApi + Send + Sync> =
-        Arc::new(MissionServiceImpl::new(Arc::new(db.clone()), user_service));
 
     let viral_event_rx = registry.event_sender().subscribe();
     viral_observer::spawn_viral_observer(

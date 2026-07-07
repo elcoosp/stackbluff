@@ -28,6 +28,9 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::error;
 use uuid::Uuid;
+use sb_contracts::notification_api::NotificationService;
+use sb_contracts::tournament_api::TournamentService;
+use sb_contracts::service_api::{MissionApi, ViralService};
 
 pub use gdpr_routes::gdpr_routes;
 pub use oracle_routes::oracle_routes;
@@ -35,6 +38,11 @@ pub use rate_limit::rate_limit_middleware;
 
 #[derive(Clone)]
 pub struct AppState {
+    pub notification_service: Arc<dyn NotificationService + Send + Sync>,
+    pub tournament_service: Arc<dyn TournamentService + Send + Sync>,
+    pub mission_service: Arc<dyn MissionApi + Send + Sync>,
+    pub viral_service: Arc<dyn ViralService + Send + Sync>,
+
 
     pub table_service: Arc<dyn TableService + Send + Sync>,
     pub table_repo: Arc<dyn TableRepo + Send + Sync>,
@@ -45,6 +53,7 @@ pub struct AppState {
     pub broker: Arc<sb_table_registry::connection_broker::ConnectionBroker>,
     pub badge_repo: Arc<dyn BadgeRepo + Send + Sync>,
     pub gdpr_repo: Arc<dyn GdprRepo + Send + Sync>,
+
 
 }
 

@@ -31,6 +31,56 @@ impl sb_contracts::stats_api::PlayerStatsRepo for DummyStatsRepo {
     }
 }
 
+// Dummy services for new AppState fields
+use sb_contracts::notification_api::NotificationService;
+use sb_contracts::tournament_api::TournamentService;
+use sb_contracts::service_api::{MissionApi, ViralService};
+
+struct DummyNotificationService;
+#[async_trait::async_trait]
+impl NotificationService for DummyNotificationService {
+    async fn send_telegram_message(&self, _chat_id: i64, _text: String, _keyboard: Option<serde_json::Value>) -> Result<(), sb_contracts::notification_api::NotificationError> {
+        Ok(())
+    }
+    async fn send_telegram_message_to_user(&self, _user_id: UserId, _text: String, _keyboard: Option<serde_json::Value>) -> Result<(), sb_contracts::notification_api::NotificationError> {
+        Ok(())
+    }
+    async fn answer_callback_query(&self, _callback_query_id: String, _text: Option<String>) -> Result<(), sb_contracts::notification_api::NotificationError> {
+        Ok(())
+    }
+}
+
+struct DummyTournamentService;
+#[async_trait::async_trait]
+impl TournamentService for DummyTournamentService {
+    async fn create_tournament(&self, _ctx: &RequestContext, _config: sb_contracts::tournament_api::TournamentConfig) -> Result<sb_shared_types::TournamentId, AppError> { unimplemented!() }
+    async fn register(&self, _ctx: &RequestContext, _tournament_id: sb_shared_types::TournamentId, _user_id: UserId) -> Result<(), AppError> { unimplemented!() }
+    async fn unregister(&self, _ctx: &RequestContext, _tournament_id: sb_shared_types::TournamentId, _user_id: UserId) -> Result<(), AppError> { unimplemented!() }
+    async fn get_tournament(&self, _ctx: &RequestContext, _tournament_id: sb_shared_types::TournamentId) -> Result<sb_contracts::tournament_api::TournamentSummary, AppError> { unimplemented!() }
+    async fn list_tournaments(&self, _ctx: &RequestContext, _type_filter: Option<sb_contracts::tournament_api::TournamentType>) -> Result<Vec<sb_contracts::tournament_api::TournamentSummary>, AppError> { unimplemented!() }
+    async fn get_results(&self, _ctx: &RequestContext, _tournament_id: sb_shared_types::TournamentId) -> Result<Vec<sb_contracts::tournament_api::TournamentResult>, AppError> { unimplemented!() }
+    async fn get_my_table(&self, _ctx: &RequestContext, _tournament_id: sb_shared_types::TournamentId, _user_id: UserId) -> Result<Option<TableId>, AppError> { unimplemented!() }
+}
+
+struct DummyMissionService;
+#[async_trait::async_trait]
+impl MissionApi for DummyMissionService {
+    async fn on_hand_completed(&self, _ctx: &RequestContext, _hand_result: &sb_shared_types::game_types::HandResult) -> Result<(), AppError> { unimplemented!() }
+    async fn on_share_created(&self, _ctx: &RequestContext, _share_type: &str) -> Result<(), AppError> { unimplemented!() }
+    async fn get_today_missions(&self, _ctx: &RequestContext) -> Result<Vec<sb_shared_types::missions::Mission>, AppError> { unimplemented!() }
+    async fn reroll_mission(&self, _ctx: &RequestContext, _mission_id: sb_shared_types::missions::MissionId) -> Result<sb_shared_types::missions::Mission, AppError> { unimplemented!() }
+    async fn claim_daily_reward(&self, _ctx: &RequestContext) -> Result<sb_contracts::service_api::ClaimResult, AppError> { unimplemented!() }
+}
+
+struct DummyViralService;
+#[async_trait::async_trait]
+impl ViralService for DummyViralService {
+    async fn generate_replay_card(&self, _hand_result: &sb_shared_types::game_types::HandResult, _winner_id: UserId, _table_id: TableId) -> Result<sb_contracts::service_api::ReplayCard, AppError> { unimplemented!() }
+    async fn record_referral(&self, _referrer_id: UserId, _referred_id: UserId) -> Result<(), AppError> { unimplemented!() }
+    async fn on_hand_completed(&self, _user_id: UserId) -> Result<(), AppError> { unimplemented!() }
+    async fn get_referral_stats(&self, _user_id: UserId) -> Result<sb_contracts::service_api::ReferralStats, AppError> { unimplemented!() }
+}
+
 // Mock TableRepo
 mockall::mock! {
     pub TableRepo { }
@@ -145,7 +195,16 @@ async fn test_unauthenticated_returns_401() {
 
     let broker = Arc::new(sb_table_registry::connection_broker::ConnectionBroker::new());
 
+    let notification_service = Arc::new(DummyNotificationService);
+    let tournament_service = Arc::new(DummyTournamentService);
+    let mission_service = Arc::new(DummyMissionService);
+    let viral_service = Arc::new(DummyViralService);
+
     let state = Arc::new(sb_rest_router::AppState {
+        notification_service: notification_service,
+        tournament_service: tournament_service,
+        mission_service: mission_service,
+        viral_service: viral_service,
         table_service: Arc::new(mock_service),
         table_repo: Arc::new(mock_repo),
         registry: registry,
