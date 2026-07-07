@@ -23,6 +23,7 @@ struct RoomEntry {
     table_id: TableId,
     cmd_tx: ActorSender,
     active_players: Arc<AtomicU8>,
+    #[allow(dead_code)]
     is_tournament: bool,
 }
 
@@ -576,8 +577,8 @@ impl Registry {
                 let mut rooms_to_remove = Vec::new();
                 let rooms = registry.rooms.read().await;
                 for (room_id, entry) in rooms.iter() {
-                    // Reap all empty rooms, regardless of tournament status
-                    if entry.active_players.load(Ordering::Relaxed) == 0 {
+                    // Only reap non-tournament empty rooms
+                    if entry.active_players.load(Ordering::Relaxed) == 0 && !entry.is_tournament {
                         rooms_to_remove.push(*room_id);
                     }
                 }

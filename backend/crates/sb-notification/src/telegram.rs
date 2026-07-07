@@ -6,7 +6,7 @@ use sb_shared_types::{AppError, ClubId, RequestContext, UserId};
 use serde_json::json;
 use std::sync::Arc;
 use tracing::{error, info};
-use uuid::Uuid; // <-- ADDED
+use uuid::Uuid;
 
 pub struct TelegramNotificationService {
     bot_token: String,
@@ -84,19 +84,11 @@ impl TelegramNotificationService {
             .as_ref()
             .ok_or_else(|| NotificationError::Failed("User repo not configured".to_string()))?;
         let ctx = RequestContext::new(Uuid::new_v4(), Some(user_id));
-        let profile = repo
+        let _profile = repo // prefixed with underscore to silence warning
             .get_user_profile(ctx, user_id)
             .await
             .map_err(|e| NotificationError::Failed(format!("User lookup failed: {}", e)))?;
-        // For Telegram users, we stored the telegram_id as a separate field.
-        // The current UserProfile doesn't have telegram_id; we need to add it.
-        // As a workaround, we'll assume that if platform is "telegram", we can use the user_id as chat_id?
-        // This is a temporary solution. In production we should store telegram_id in the users table.
-        // We'll use the user_id as a fallback but log a warning.
-        // The proper way is to have a `telegram_id` field.
-        // For now, we'll use the user_id as chat_id (assuming it's the same).
-        // This is not correct, but we'll fix later by adding telegram_id to UserProfile.
-        // We'll return an error for now.
+        // For now, we'll return an error since we need telegram_id field.
         error!(%user_id, "Telegram chat ID resolution not yet fully implemented");
         Err(NotificationError::Failed(
             "Telegram ID not available in user profile".to_string(),

@@ -1,13 +1,12 @@
 pub mod telegram;
 pub mod web_push;
+pub use telegram::TelegramNotificationService;
 
 use async_trait::async_trait;
 use sb_contracts::notification::{NotificationEvent, NotificationService};
 use sb_shared_types::{errors::AppError, ids::UserId, request_context::RequestContext};
 use serde::{Deserialize, Serialize};
 use tracing::info;
-
-pub use telegram::TelegramNotificationService;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserNotificationInfo {
