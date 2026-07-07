@@ -1634,6 +1634,9 @@ impl TableActor {
                     ActionError::InsufficientStack { action, .. } => {
                         format!("Insufficient stack to {}", action)
                     }
+                    ActionError::CannotCheck { to_call } => {
+                        format!("Cannot check, must call {}", to_call)
+                    }
                 };
                 self.send_error_to(&user_id, &msg);
             }
