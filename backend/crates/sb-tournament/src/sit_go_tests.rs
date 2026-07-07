@@ -64,11 +64,11 @@ fn make_payout_structure() -> sb_contracts::tournament_api::PayoutStructure {
         entries: vec![
             PayoutEntry {
                 position: 1,
-                percentage: 0.65,
+                percentage: 65.0,
             },
             PayoutEntry {
                 position: 2,
-                percentage: 0.35,
+                percentage: 35.0,
             },
         ],
     }
