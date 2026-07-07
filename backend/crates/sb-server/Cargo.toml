@@ -5,8 +5,9 @@ edition = "2024"
 rust-version = "1.94"
 
 [features]
-default = []
+default = ["test-stubs"]
 test-stubs = []
+
 [dependencies]
 serde_json = { workspace = true }
 image = { workspace = true }
@@ -45,6 +46,7 @@ sb-tournament = { path = "../sb-tournament" }
 serde.workspace = true
 bytes = { workspace = true }
 sb-viral = { path = "../sb-viral" }
+sb-notification = { path = "../sb-notification" }   # <-- ADD
 
 [dev-dependencies]
 mockall.workspace = true

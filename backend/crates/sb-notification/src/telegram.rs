@@ -6,6 +6,7 @@ use sb_shared_types::{AppError, ClubId, RequestContext, UserId};
 use serde_json::json;
 use std::sync::Arc;
 use tracing::{error, info};
+use uuid::Uuid; // <-- ADDED
 
 pub struct TelegramNotificationService {
     bot_token: String,
@@ -82,7 +83,7 @@ impl TelegramNotificationService {
             .user_repo
             .as_ref()
             .ok_or_else(|| NotificationError::Failed("User repo not configured".to_string()))?;
-        let ctx = RequestContext::new(uuid::Uuid::new_v4(), Some(user_id));
+        let ctx = RequestContext::new(Uuid::new_v4(), Some(user_id));
         let profile = repo
             .get_user_profile(ctx, user_id)
             .await

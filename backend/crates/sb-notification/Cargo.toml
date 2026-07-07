@@ -16,6 +16,7 @@ sb-shared-types = { workspace = true }
 tracing = { workspace = true }
 thiserror = { workspace = true }
 async-trait = { workspace = true }
+uuid = { workspace = true }   # <-- ADD
 
 [dev-dependencies]
 wiremock = { workspace = true }
