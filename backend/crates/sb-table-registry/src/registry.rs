@@ -1,3 +1,4 @@
+#![allow(unused_imports)]
 use crate::TableActorConfig;
 use crate::actor::{InternalCommand, LeaveResult, spawn_table_actor};
 use crate::connection_broker::ConnectionBroker;
@@ -419,6 +420,8 @@ impl Registry {
         result
     }
 
+    #[allow(unused_variables)]
+    #[allow(unused_variables)]
     pub async fn send_command(
         &self,
         room_id: TableId,
