@@ -58,9 +58,6 @@ use sb_viral::ViralServiceImpl;
 use sb_ws_handler::ws_route;
 use user_service::UserServiceImpl;
 
-// Notification import is inside the production branch below.
-// No global import of sb_notification.
-
 #[cfg(feature = "test-stubs")]
 use test_utils::notification_service::InMemoryNotificationService;
 #[cfg(feature = "test-stubs")]
@@ -144,7 +141,6 @@ async fn main() {
     // ── Auth ──────────────────────────────────────────────────────────
     let auth_config = AuthConfig::from_env();
 
-    // Initialize email service and queue
     let email_service = Arc::new(EmailService::new(&auth_config));
     let email_queue = Arc::new(EmailQueue::new(email_service));
     tracing::info!("Email queue initialized");
@@ -152,8 +148,6 @@ async fn main() {
     let auth_impl = Arc::new(
         AuthServiceImpl::new(user_repo.clone(), auth_config).with_email_support(email_queue),
     );
-
-    // Spawn rate limiter cleanup task (runs every 5 minutes)
     auth_impl.spawn_rate_limiter_cleanup(300);
     let auth_service: SharedAuthService = auth_impl.clone();
     let auth_authenticator: Arc<dyn Authenticator + Send + Sync> = auth_impl;
@@ -178,7 +172,6 @@ async fn main() {
 
     let registry = Arc::new(Registry::new(stats_repo.clone()));
 
-    // Hydrate registry – use default creator (nil user) and no chat_id
     let system_user = UserId::new(Uuid::nil());
     let db_tables = table_repo
         .list_tables()
@@ -226,7 +219,6 @@ async fn main() {
 
     spawn_hand_history_cleanup(db.clone()).await;
 
-    // ── Stats aggregator now receives TableEvent ─────────────────────
     let stats_event_rx = registry.event_sender().subscribe();
     spawn_stats_aggregator(stats_event_rx, stats_repo.clone());
 
@@ -243,26 +235,31 @@ async fn main() {
     // ── Badge repository ─────────────────────────────────────────────
     let badge_repo = Arc::new(BadgeRepoImpl::new(db.clone()));
 
-    // ── Notification service ────────────────────────────────────────
+    // ── Notification service and bot_handler (unified) ────────────────
     #[cfg(feature = "test-stubs")]
-    let notification_service: Arc<dyn sb_contracts::notification_api::NotificationService> =
-        Arc::new(InMemoryNotificationService::new());
+    let (notification_service, bot_handler) = {
+        let notif = Arc::new(InMemoryNotificationService::new());
+        let notification_service =
+            notif.clone() as Arc<dyn sb_contracts::notification_api::NotificationService>;
+        let bot_handler = Some(notif as Arc<dyn sb_contracts::notification_api::ClubNotifier>);
+        (notification_service, bot_handler)
+    };
 
     #[cfg(not(feature = "test-stubs"))]
-    let notification_service: Arc<dyn sb_contracts::notification_api::NotificationService> = {
+    let (notification_service, bot_handler) = {
         use sb_notification::TelegramNotificationService;
         let bot_token = std::env::var("TELEGRAM_BOT_TOKEN")
             .expect("TELEGRAM_BOT_TOKEN must be set in production");
-        Arc::new(
+        let notif = Arc::new(
             TelegramNotificationService::new(bot_token)
                 .with_user_repo(user_repo.clone())
                 .with_club_repo(club_repo.clone()),
-        )
+        );
+        let notification_service =
+            notif.clone() as Arc<dyn sb_contracts::notification_api::NotificationService>;
+        let bot_handler = Some(notif as Arc<dyn sb_contracts::notification_api::ClubNotifier>);
+        (notification_service, bot_handler)
     };
-
-    // ── bot_handler uses the same service (it implements ClubNotifier) ──
-    let bot_handler: Option<Arc<dyn sb_contracts::notification_api::ClubNotifier>> =
-        Some(notification_service.clone() as Arc<dyn sb_contracts::notification_api::ClubNotifier>);
 
     // ── Create AppState ──────────────────────────────────────────────
     let app_state = Arc::new(AppState {
@@ -546,14 +543,6 @@ fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
     use sb_contracts::user_resolution::{UserResolutionError, UserResolutionService};
     use sb_shared_types::{AppError, RequestContext, TableId, UserId};
 
-    // In production, the bot uses the same notification service as the rest.
-    // We don't create a new one; we pass the already-created one.
-    // However, this function is called before notification_service is created.
-    // We need to restructure: create notification service first, then pass it.
-    // For now, we'll keep the logging placeholder but this should be replaced
-    // with the real notification service in a refactor.
-    // Since the bot is only used in test-stubs for now, we'll keep it simple.
-
     struct LoggingTableService;
 
     #[async_trait]
@@ -579,8 +568,6 @@ fn build_bot_state() -> Arc<sb_bot_handler::BotState> {
         }
     }
 
-    // In production, we would reuse the actual notification_service.
-    // For now, we'll use a logging one, but the real one is used elsewhere.
     struct LoggingNotificationService;
 
     #[async_trait]

@@ -61,8 +61,21 @@ impl NotificationService for InMemoryNotificationService {
     }
 }
 
+// ── ClubNotifier implementation for test stubs ──────────────────────────
+#[cfg(feature = "test-stubs")]
+#[async_trait::async_trait]
+impl sb_contracts::notification_api::ClubNotifier for InMemoryNotificationService {
+    async fn send_club_reminder(
+        &self,
+        club_id: sb_shared_types::ClubId,
+        message: String,
+    ) -> Result<(), sb_shared_types::errors::AppError> {
+        tracing::info!(%club_id, message, "InMemoryNotificationService::send_club_reminder");
+        Ok(())
+    }
+}
 
-
+#[cfg(feature = "test-stubs")]
 #[async_trait::async_trait]
 impl sb_contracts::notification::NotificationService for InMemoryNotificationService {
     async fn send(
