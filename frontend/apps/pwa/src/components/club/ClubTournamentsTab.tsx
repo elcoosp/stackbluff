@@ -3,6 +3,7 @@ import { useClubTournaments } from '../../hooks/useClubTournaments';
 import { ScheduleTournamentDialog } from './ScheduleTournamentDialog';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
+import { TournamentResultsDisplay } from './TournamentResultsDisplay';
 
 interface ClubTournamentsTabProps {
   clubId: string;
