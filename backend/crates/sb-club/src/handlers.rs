@@ -76,7 +76,10 @@ pub async fn get_leaderboard(
     if division == 0 {
         return Err((
             StatusCode::BAD_REQUEST,
-            format!("Invalid division parameter: division must be >= 1, got {}", division),
+            format!(
+                "Invalid division parameter: division must be >= 1, got {}",
+                division
+            ),
         ));
     }
 
@@ -115,7 +118,7 @@ pub async fn rebalance_divisions(
     // Add timeout for rebalance operation (30 seconds max)
     let result = tokio::time::timeout(
         std::time::Duration::from_secs(30),
-        state.service.rebalance_divisions(&ctx, club_id, user_id)
+        state.service.rebalance_divisions(&ctx, club_id, user_id),
     )
     .await;
 
@@ -146,7 +149,6 @@ fn map_club_error(e: ClubError) -> (StatusCode, String) {
     }
 }
 
-
 pub async fn update_club_settings(
     State(state): State<ClubState>,
     Extension(ctx): Extension<RequestContext>,
@@ -159,7 +161,10 @@ pub async fn update_club_settings(
         Ok(settings) => Ok(Json(settings)),
         Err(e) => {
             tracing::error!("Failed to update club settings: {:?}", e);
-            Err((StatusCode::INTERNAL_SERVER_ERROR, "internal error".to_string()))
+            Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal error".to_string(),
+            ))
         }
     }
 }
@@ -173,7 +178,10 @@ pub async fn get_club_settings(
         Ok(settings) => Ok(Json(settings)),
         Err(e) => {
             tracing::error!("Failed to get club settings: {:?}", e);
-            Err((StatusCode::INTERNAL_SERVER_ERROR, "internal error".to_string()))
+            Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal error".to_string(),
+            ))
         }
     }
 }
@@ -194,8 +202,14 @@ pub async fn upload_banner(
     while let Ok(Some(field)) = multipart.next_field().await {
         let name: String = field.name().unwrap_or_default().to_string();
         if name == "banner" {
-            let _data: axum::body::Bytes = field.bytes().await.map_err(|_| (StatusCode::BAD_REQUEST, "invalid file".to_string()))?;
-            return Ok(Json(format!("https://cdn.example.com/club_{}_banner.png", club_id)));
+            let _data: axum::body::Bytes = field
+                .bytes()
+                .await
+                .map_err(|_| (StatusCode::BAD_REQUEST, "invalid file".to_string()))?;
+            return Ok(Json(format!(
+                "https://cdn.example.com/club_{}_banner.png",
+                club_id
+            )));
         }
     }
 
@@ -203,8 +217,8 @@ pub async fn upload_banner(
 }
 
 // === Issue #029: Club Tournament Scheduling ===
-use sb_contracts::tournament_api::{TournamentConfig, TournamentService, TournamentSummary};
 use sb_contracts::ClubRepo;
+use sb_contracts::tournament_api::{TournamentConfig, TournamentService, TournamentSummary};
 
 #[derive(Clone)]
 pub struct ClubTournamentState {
@@ -222,24 +236,34 @@ pub async fn create_club_tournament(
     let user_id = extract_user_id(&ctx)?;
 
     // Validate user is club owner
-    let club = state.club_repo.find_club_by_id(club_id)
+    let club = state
+        .club_repo
+        .find_club_by_id(club_id)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
         .ok_or_else(|| (StatusCode::NOT_FOUND, "Club not found".to_string()))?;
 
     if club.created_by != user_id {
-        return Err((StatusCode::FORBIDDEN, "Only club owner can create tournaments".to_string()));
+        return Err((
+            StatusCode::FORBIDDEN,
+            "Only club owner can create tournaments".to_string(),
+        ));
     }
 
     // Set club_id in config
     config.club_id = Some(club_id);
 
     // Create tournament
-    let tournament_id = state.tournament_service.create_tournament(&ctx, config)
+    let tournament_id = state
+        .tournament_service
+        .create_tournament(&ctx, config)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    Ok((StatusCode::CREATED, Json(serde_json::json!({ "tournament_id": tournament_id }))))
+    Ok((
+        StatusCode::CREATED,
+        Json(serde_json::json!({ "tournament_id": tournament_id })),
+    ))
 }
 
 pub async fn list_club_tournaments(
@@ -248,7 +272,9 @@ pub async fn list_club_tournaments(
     Path(_club_id): Path<ClubId>,
 ) -> Result<Json<Vec<TournamentSummary>>, (StatusCode, String)> {
     // List all tournaments and filter by club_id
-    let all_tournaments = state.tournament_service.list_tournaments(&ctx, None)
+    let all_tournaments = state
+        .tournament_service
+        .list_tournaments(&ctx, None)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
@@ -262,7 +288,13 @@ pub async fn list_club_tournaments(
 
 pub fn club_tournament_routes(state: ClubTournamentState) -> axum::Router {
     axum::Router::new()
-        .route("/clubs/:club_id/tournaments", axum::routing::post(create_club_tournament))
-        .route("/clubs/:club_id/tournaments", axum::routing::get(list_club_tournaments))
+        .route(
+            "/clubs/{club_id}/tournaments",
+            axum::routing::post(create_club_tournament),
+        )
+        .route(
+            "/clubs/{club_id}/tournaments",
+            axum::routing::get(list_club_tournaments),
+        )
         .with_state(state)
 }
