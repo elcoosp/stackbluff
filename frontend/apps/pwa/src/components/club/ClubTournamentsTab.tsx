@@ -147,13 +147,7 @@ export function ClubTournamentsTab({ clubId, isOwner }: ClubTournamentsTabProps)
   );
 }
 
-interface TournamentCardProps {
-  tournament: Tournament;
-  onRegister: (id: string, name: string) => void;
-  onUnregister: (id: string, name: string) => void;
-  isRegistering: boolean;
-  isUnregistering: boolean;
-}
+
 
 function TournamentCard({
   tournament,

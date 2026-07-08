@@ -34,5 +34,11 @@
     "e2e",
     "src",
     "../../packages/shared/src"
+  ],
+  "exclude": [
+    "e2e",
+    "src/__tests__",
+    "**/*.test.ts",
+    "**/*.spec.ts"
   ]
 }

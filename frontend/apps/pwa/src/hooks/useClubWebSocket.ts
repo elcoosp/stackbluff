@@ -1,3 +1,4 @@
+type WebSocketConnectionStatus = "connected" | "reconnecting" | "disconnected";
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';

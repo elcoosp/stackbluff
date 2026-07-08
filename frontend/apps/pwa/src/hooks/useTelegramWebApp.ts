@@ -20,3 +20,4 @@ export function useTelegramWebApp() {
 
   return { openInvoice };
 }
+// Uses window.Telegram from global declaration in shared package

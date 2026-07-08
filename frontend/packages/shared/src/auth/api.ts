@@ -1,3 +1,4 @@
+import { apiClient } from "../api/client";
 import { getToken } from './token';
 
 const API_BASE = '/api';

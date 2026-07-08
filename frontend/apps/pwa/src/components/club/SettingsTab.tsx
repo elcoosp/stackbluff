@@ -16,7 +16,7 @@ interface ClubProSettings {
 }
 
 export function SettingsTab({ clubId, settings }: { clubId: string; settings?: ClubProSettings }) {
-  const { user } = useAuthStore(); // FIXME: user may not exist
+  const { user } = useAuthStore(); // mock if needed // FIXME: user may not exist
   const isPro = user?.club_pro_expires_at ? new Date(user.club_pro_expires_at) > new Date() : false;
   const [local, setLocal] = useState<ClubProSettings>({
     banner_url: settings?.banner_url ?? null,
