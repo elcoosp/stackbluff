@@ -37,4 +37,12 @@ export const authApi = {
     }
     return response.json();
   },
+  verifyEmail: async (token: string) => {
+    const response = await fetch(`/auth/verify-email?token=${encodeURIComponent(token)}`);
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: "Verification failed" }));
+      throw new Error(error.message || "Verification failed");
+    }
+    return response.json();
+  },
 };

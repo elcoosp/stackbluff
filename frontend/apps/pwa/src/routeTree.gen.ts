@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as TournamentsRouteImport } from './routes/tournaments'
 import { Route as ShopRouteImport } from './routes/shop'
 import { Route as SettingsRouteImport } from './routes/settings'
@@ -24,6 +25,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as TableTableIdRouteImport } from './routes/table/$tableId'
 import { Route as ClubsClubIdRouteImport } from './routes/clubs.$clubId'
 
+const VerifyEmailRoute = VerifyEmailRouteImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TournamentsRoute = TournamentsRouteImport.update({
   id: '/tournaments',
   path: '/tournaments',
@@ -108,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/shop': typeof ShopRoute
   '/tournaments': typeof TournamentsRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
   '/table/$tableId': typeof TableTableIdRoute
 }
@@ -124,6 +131,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/shop': typeof ShopRoute
   '/tournaments': typeof TournamentsRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
   '/table/$tableId': typeof TableTableIdRoute
 }
@@ -141,6 +149,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/shop': typeof ShopRoute
   '/tournaments': typeof TournamentsRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
   '/table/$tableId': typeof TableTableIdRoute
 }
@@ -159,6 +168,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/shop'
     | '/tournaments'
+    | '/verify-email'
     | '/clubs/$clubId'
     | '/table/$tableId'
   fileRoutesByTo: FileRoutesByTo
@@ -175,6 +185,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/shop'
     | '/tournaments'
+    | '/verify-email'
     | '/clubs/$clubId'
     | '/table/$tableId'
   id:
@@ -191,6 +202,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/shop'
     | '/tournaments'
+    | '/verify-email'
     | '/clubs/$clubId'
     | '/table/$tableId'
   fileRoutesById: FileRoutesById
@@ -208,12 +220,20 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   ShopRoute: typeof ShopRoute
   TournamentsRoute: typeof TournamentsRoute
+  VerifyEmailRoute: typeof VerifyEmailRoute
   ClubsClubIdRoute: typeof ClubsClubIdRoute
   TableTableIdRoute: typeof TableTableIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/verify-email': {
+      id: '/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof VerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tournaments': {
       id: '/tournaments'
       path: '/tournaments'
@@ -328,6 +348,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   ShopRoute: ShopRoute,
   TournamentsRoute: TournamentsRoute,
+  VerifyEmailRoute: VerifyEmailRoute,
   ClubsClubIdRoute: ClubsClubIdRoute,
   TableTableIdRoute: TableTableIdRoute,
 }
