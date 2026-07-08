@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog } from '@stackbluff/shared/components/Dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { Loader2, Calendar, Users, Coins, Zap } from 'lucide-react';
 import { apiClient } from '@stackbluff/shared/api/client';
+import { useBlindTemplates } from '@/hooks/useBlindTemplates';
 import { z } from 'zod';
 import { useForm } from '@tanstack/react-form';
 import { cn } from '@/lib/utils';
@@ -18,9 +19,6 @@ interface ScheduleTournamentDialogProps {
   onClose: () => void;
 }
 
-
-
-
 const tournamentSchema = z.object({
   name: z.string().min(3, 'Name must be at least 3 characters').max(100),
   max_players: z.number().int().min(10, 'Minimum 10 players').max(500, 'Maximum 500 players'),
@@ -30,33 +28,12 @@ const tournamentSchema = z.object({
   blind_schedule_id: z.string(),
 });
 
-
-
-
-interface BlindTemplate {
-  id: string;
-  name: string;
-  description?: string;
-  levels: Array<{
-    level: number;
-    small_blind: number;
-    big_blind: number;
-    ante: number;
-    duration_seconds: number;
-  }>;
-}
-
 export function ScheduleTournamentDialog({ clubId, isOpen, onClose }: ScheduleTournamentDialogProps) {
   const queryClient = useQueryClient();
   const [selectedType, setSelectedType] = useState<'SitAndGo' | 'Mtt'>('SitAndGo');
 
-  // Fetch blind templates
-  const { data: templates, isLoading: templatesLoading } = useQuery<BlindTemplate[]>({
-    queryKey: ['blind-templates'],
-    queryFn: () => apiClient<BlindTemplate[]>('/tournaments/blind-templates'),
-    enabled: isOpen,
-    staleTime: 5 * 60 * 1000,
-  });
+  // Use the hook for blind templates
+  const { data: templates, isLoading: templatesLoading } = useBlindTemplates();
 
   const form = useForm({
     defaultValues: {
