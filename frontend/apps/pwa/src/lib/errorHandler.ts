@@ -1,6 +1,7 @@
 /**
  * Centralized error handling with differentiation by HTTP status
  * Includes request correlation IDs for tracing
+ * Friendly user-facing messages for known backend errors
  */
 
 import { toast } from 'sonner';
@@ -43,12 +44,10 @@ export function isAccountLocked(): boolean {
 
 export function setAccountLockout(durationSeconds: number): void {
   lockoutEndTime = Date.now() + durationSeconds * 1000;
-  // Clear any existing interval
   if (lockoutInterval) {
     clearInterval(lockoutInterval);
     lockoutInterval = null;
   }
-  // Start a timer to update UI
   lockoutInterval = setInterval(() => {
     if (getLockoutRemaining() <= 0) {
       lockoutEndTime = null;
@@ -69,15 +68,121 @@ export function clearLockout(): void {
 }
 
 /**
+ * Map backend error codes to user-friendly messages
+ * Returns null if no specific message is available
+ */
+function getUserFriendlyMessage(error: unknown, statusCode?: number): string | null {
+  if (error instanceof AppError) {
+    const msg = error.message || '';
+
+    // Transfer limit exceeded
+    if (msg.includes('TransferLimitExceeded') || msg.includes('Transfer limit exceeded')) {
+      const match = msg.match(/\d+/);
+      const limit = match ? parseInt(match[0]) : 5000;
+      return `You've reached the daily chip transfer limit (${limit}). Try again tomorrow.`;
+    }
+
+    // Rate limiting
+    if (msg.includes('RateLimited') || msg.includes('Rate limited') || statusCode === 429) {
+      return "Slow down! You're acting too fast. Please wait a moment before trying again.";
+    }
+
+    // Tournament full
+    if (msg.includes('TournamentFull') || msg.includes('tournament is full')) {
+      return 'This tournament is full. Please join another one.';
+    }
+
+    // Registration closed
+    if (msg.includes('TournamentRegistrationClosed') || msg.includes('registration is closed')) {
+      return 'Registration for this tournament is closed.';
+    }
+
+    // Tournament already started
+    if (msg.includes('TournamentAlreadyStarted') || msg.includes('already started')) {
+      return 'This tournament has already started.';
+    }
+
+    // Invalid seat
+    if (msg.includes('InvalidSeat') || msg.includes('Invalid seat')) {
+      return 'That seat is taken or invalid. Please try another seat.';
+    }
+
+    // Insufficient balance
+    if (msg.includes('Insufficient balance') || msg.includes('insufficient balance')) {
+      return "You don't have enough chips for this buy-in.";
+    }
+
+    // Not enough players
+    if (msg.includes('Not enough players') || msg.includes('Need at least 2 players')) {
+      return 'Need at least 2 players to start a hand.';
+    }
+
+    // Already registered
+    if (msg.includes('Already registered') || msg.includes('already registered')) {
+      return 'You are already registered for this tournament.';
+    }
+
+    // Not registered
+    if (msg.includes('Not registered') || msg.includes('not registered')) {
+      return 'You are not registered for this tournament.';
+    }
+
+    // Permission denied
+    if (msg.includes('Permission denied') || msg.includes('Forbidden')) {
+      return "You don't have permission to perform this action.";
+    }
+
+    // Not found
+    if (msg.includes('NotFound') || statusCode === 404) {
+      return 'The requested resource was not found.';
+    }
+
+    // Validation error
+    if (msg.includes('Validation error') || msg.includes('Invalid input')) {
+      return 'Please check your input and try again.';
+    }
+
+    // Database error
+    if (msg.includes('Database error') || msg.includes('database error')) {
+      return 'A database error occurred. Please try again later.';
+    }
+
+    // Internal server error
+    if (statusCode && statusCode >= 500) {
+      return 'Something went wrong on our end. Please try again later.';
+    }
+  }
+
+  return null;
+}
+
+/**
  * Handle API errors with appropriate user feedback
  */
 export function handleApiError(error: unknown, context: Record<string, unknown> = {}): void {
   const correlationId = context.correlationId as string || generateCorrelationId();
   const loggerWithContext = logger.child({ ...context, correlationId });
 
-  if (error instanceof AppError) {
-    loggerWithContext.error(error.message, error, error.context);
+  let userMessage = getUserFriendlyMessage(error);
+  let statusCode = undefined;
 
+  if (error instanceof AppError) {
+    statusCode = error.statusCode;
+    loggerWithContext.error(error.message, error, error.context);
+  } else if (error instanceof Error) {
+    loggerWithContext.error('Unexpected error', error);
+  } else {
+    loggerWithContext.error('Unknown error occurred');
+  }
+
+  // If we have a friendly message, use it; otherwise fallback to generic
+  if (userMessage) {
+    toast.error(userMessage);
+    return;
+  }
+
+  // Default handling based on status code
+  if (error instanceof AppError) {
     switch (error.statusCode) {
       case 401:
         toast.error('Authentication required', {
@@ -105,10 +210,9 @@ export function handleApiError(error: unknown, context: Record<string, unknown> 
         });
         break;
       case 429:
-        // Check for account lockout message
         if (error.message && error.message.includes('Account temporarily locked')) {
           const match = error.message.match(/(\d+)\s*second/);
-          const seconds = match ? parseInt(match[1]) : 900; // default 15 min
+          const seconds = match ? parseInt(match[1]) : 900;
           setAccountLockout(seconds);
           toast.error('Account locked', {
             description: `Too many failed attempts. Try again in ${Math.ceil(seconds / 60)} minutes.`,
@@ -132,12 +236,10 @@ export function handleApiError(error: unknown, context: Record<string, unknown> 
         });
     }
   } else if (error instanceof Error) {
-    loggerWithContext.error('Unexpected error', error);
     toast.error('Unexpected error', {
       description: error.message,
     });
   } else {
-    loggerWithContext.error('Unknown error occurred');
     toast.error('Unknown error', {
       description: 'An unexpected error occurred',
     });
