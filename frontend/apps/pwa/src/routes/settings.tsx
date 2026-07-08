@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, Link } from '@tanstack/react-router';
 import { NotificationsSettings } from '@/components/settings/NotificationsSettings';
 import { AccountSettings } from '@/components/settings/AccountSettings';
 import { NotificationPreferences } from '@/components/settings/NotificationPreferences';
@@ -29,7 +29,14 @@ function SettingsPage() {
 
         <AccountSettings />
 
-        {/* Additional settings sections will be added here */}
+
+        <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
+          <h3 className="text-sm font-semibold text-on-surface">Privacy & Data</h3>
+          <p className="text-xs text-on-surface-variant mt-1">Manage your data and account deletion.</p>
+          <Link to="/settings/privacy" className="text-tertiary text-sm font-medium hover:underline mt-2 inline-block">
+            Manage Privacy →
+          </Link>
+        </div>
       </div>
     </div>
   );

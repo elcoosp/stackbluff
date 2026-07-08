@@ -30,6 +30,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ClubsIndexRouteImport } from './routes/clubs/index'
 import { Route as TournamentsTournamentIdRouteImport } from './routes/tournaments/$tournamentId'
 import { Route as TableTableIdRouteImport } from './routes/table/$tableId'
+import { Route as SettingsPrivacyRouteImport } from './routes/settings/privacy'
 import { Route as PlayersUserIdRouteImport } from './routes/players/$userId'
 import { Route as HandsHandIdRouteImport } from './routes/hands/$handId'
 import { Route as ClubsJoinRouteImport } from './routes/clubs/join'
@@ -140,6 +141,11 @@ const TableTableIdRoute = TableTableIdRouteImport.update({
   path: '/table/$tableId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsPrivacyRoute = SettingsPrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const PlayersUserIdRoute = PlayersUserIdRouteImport.update({
   id: '/players/$userId',
   path: '/players/$userId',
@@ -175,7 +181,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/replays': typeof ReplaysRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/settings': typeof SettingsRoute
+  '/settings': typeof SettingsRouteWithChildren
   '/shop': typeof ShopRoute
   '/tournaments': typeof TournamentsRouteWithChildren
   '/tournaments-history': typeof TournamentsHistoryRoute
@@ -184,6 +190,7 @@ export interface FileRoutesByFullPath {
   '/clubs/join': typeof ClubsJoinRoute
   '/hands/$handId': typeof HandsHandIdRoute
   '/players/$userId': typeof PlayersUserIdRoute
+  '/settings/privacy': typeof SettingsPrivacyRoute
   '/table/$tableId': typeof TableTableIdRoute
   '/tournaments/$tournamentId': typeof TournamentsTournamentIdRoute
   '/clubs/': typeof ClubsIndexRoute
@@ -202,7 +209,7 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/replays': typeof ReplaysRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/settings': typeof SettingsRoute
+  '/settings': typeof SettingsRouteWithChildren
   '/shop': typeof ShopRoute
   '/tournaments': typeof TournamentsRouteWithChildren
   '/tournaments-history': typeof TournamentsHistoryRoute
@@ -211,6 +218,7 @@ export interface FileRoutesByTo {
   '/clubs/join': typeof ClubsJoinRoute
   '/hands/$handId': typeof HandsHandIdRoute
   '/players/$userId': typeof PlayersUserIdRoute
+  '/settings/privacy': typeof SettingsPrivacyRoute
   '/table/$tableId': typeof TableTableIdRoute
   '/tournaments/$tournamentId': typeof TournamentsTournamentIdRoute
   '/clubs': typeof ClubsIndexRoute
@@ -230,7 +238,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/replays': typeof ReplaysRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/settings': typeof SettingsRoute
+  '/settings': typeof SettingsRouteWithChildren
   '/shop': typeof ShopRoute
   '/tournaments': typeof TournamentsRouteWithChildren
   '/tournaments-history': typeof TournamentsHistoryRoute
@@ -239,6 +247,7 @@ export interface FileRoutesById {
   '/clubs/join': typeof ClubsJoinRoute
   '/hands/$handId': typeof HandsHandIdRoute
   '/players/$userId': typeof PlayersUserIdRoute
+  '/settings/privacy': typeof SettingsPrivacyRoute
   '/table/$tableId': typeof TableTableIdRoute
   '/tournaments/$tournamentId': typeof TournamentsTournamentIdRoute
   '/clubs/': typeof ClubsIndexRoute
@@ -268,6 +277,7 @@ export interface FileRouteTypes {
     | '/clubs/join'
     | '/hands/$handId'
     | '/players/$userId'
+    | '/settings/privacy'
     | '/table/$tableId'
     | '/tournaments/$tournamentId'
     | '/clubs/'
@@ -295,6 +305,7 @@ export interface FileRouteTypes {
     | '/clubs/join'
     | '/hands/$handId'
     | '/players/$userId'
+    | '/settings/privacy'
     | '/table/$tableId'
     | '/tournaments/$tournamentId'
     | '/clubs'
@@ -322,6 +333,7 @@ export interface FileRouteTypes {
     | '/clubs/join'
     | '/hands/$handId'
     | '/players/$userId'
+    | '/settings/privacy'
     | '/table/$tableId'
     | '/tournaments/$tournamentId'
     | '/clubs/'
@@ -341,7 +353,7 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   ReplaysRoute: typeof ReplaysRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
-  SettingsRoute: typeof SettingsRoute
+  SettingsRoute: typeof SettingsRouteWithChildren
   ShopRoute: typeof ShopRoute
   TournamentsRoute: typeof TournamentsRouteWithChildren
   TournamentsHistoryRoute: typeof TournamentsHistoryRoute
@@ -503,6 +515,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TableTableIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/privacy': {
+      id: '/settings/privacy'
+      path: '/privacy'
+      fullPath: '/settings/privacy'
+      preLoaderRoute: typeof SettingsPrivacyRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/players/$userId': {
       id: '/players/$userId'
       path: '/players/$userId'
@@ -534,6 +553,18 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface SettingsRouteChildren {
+  SettingsPrivacyRoute: typeof SettingsPrivacyRoute
+}
+
+const SettingsRouteChildren: SettingsRouteChildren = {
+  SettingsPrivacyRoute: SettingsPrivacyRoute,
+}
+
+const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
+  SettingsRouteChildren,
+)
+
 interface TournamentsRouteChildren {
   TournamentsTournamentIdRoute: typeof TournamentsTournamentIdRoute
 }
@@ -560,7 +591,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   ReplaysRoute: ReplaysRoute,
   ResetPasswordRoute: ResetPasswordRoute,
-  SettingsRoute: SettingsRoute,
+  SettingsRoute: SettingsRouteWithChildren,
   ShopRoute: ShopRoute,
   TournamentsRoute: TournamentsRouteWithChildren,
   TournamentsHistoryRoute: TournamentsHistoryRoute,
