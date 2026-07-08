@@ -23,6 +23,7 @@ import { Route as GuideRouteImport } from './routes/guide'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ClubsIndexRouteImport } from './routes/clubs/index'
+import { Route as TournamentsTournamentIdRouteImport } from './routes/tournaments/$tournamentId'
 import { Route as TableTableIdRouteImport } from './routes/table/$tableId'
 import { Route as ClubsJoinRouteImport } from './routes/clubs/join'
 import { Route as ClubsClubIdRouteImport } from './routes/clubs.$clubId'
@@ -97,6 +98,11 @@ const ClubsIndexRoute = ClubsIndexRouteImport.update({
   path: '/clubs/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TournamentsTournamentIdRoute = TournamentsTournamentIdRouteImport.update({
+  id: '/$tournamentId',
+  path: '/$tournamentId',
+  getParentRoute: () => TournamentsRoute,
+} as any)
 const TableTableIdRoute = TableTableIdRouteImport.update({
   id: '/table/$tableId',
   path: '/table/$tableId',
@@ -125,11 +131,12 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
   '/shop': typeof ShopRoute
-  '/tournaments': typeof TournamentsRoute
+  '/tournaments': typeof TournamentsRouteWithChildren
   '/verify-email': typeof VerifyEmailRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
   '/clubs/join': typeof ClubsJoinRoute
   '/table/$tableId': typeof TableTableIdRoute
+  '/tournaments/$tournamentId': typeof TournamentsTournamentIdRoute
   '/clubs/': typeof ClubsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -144,11 +151,12 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
   '/shop': typeof ShopRoute
-  '/tournaments': typeof TournamentsRoute
+  '/tournaments': typeof TournamentsRouteWithChildren
   '/verify-email': typeof VerifyEmailRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
   '/clubs/join': typeof ClubsJoinRoute
   '/table/$tableId': typeof TableTableIdRoute
+  '/tournaments/$tournamentId': typeof TournamentsTournamentIdRoute
   '/clubs': typeof ClubsIndexRoute
 }
 export interface FileRoutesById {
@@ -164,11 +172,12 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
   '/shop': typeof ShopRoute
-  '/tournaments': typeof TournamentsRoute
+  '/tournaments': typeof TournamentsRouteWithChildren
   '/verify-email': typeof VerifyEmailRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
   '/clubs/join': typeof ClubsJoinRoute
   '/table/$tableId': typeof TableTableIdRoute
+  '/tournaments/$tournamentId': typeof TournamentsTournamentIdRoute
   '/clubs/': typeof ClubsIndexRoute
 }
 export interface FileRouteTypes {
@@ -190,6 +199,7 @@ export interface FileRouteTypes {
     | '/clubs/$clubId'
     | '/clubs/join'
     | '/table/$tableId'
+    | '/tournaments/$tournamentId'
     | '/clubs/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -209,6 +219,7 @@ export interface FileRouteTypes {
     | '/clubs/$clubId'
     | '/clubs/join'
     | '/table/$tableId'
+    | '/tournaments/$tournamentId'
     | '/clubs'
   id:
     | '__root__'
@@ -228,6 +239,7 @@ export interface FileRouteTypes {
     | '/clubs/$clubId'
     | '/clubs/join'
     | '/table/$tableId'
+    | '/tournaments/$tournamentId'
     | '/clubs/'
   fileRoutesById: FileRoutesById
 }
@@ -243,7 +255,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SettingsRoute: typeof SettingsRoute
   ShopRoute: typeof ShopRoute
-  TournamentsRoute: typeof TournamentsRoute
+  TournamentsRoute: typeof TournamentsRouteWithChildren
   VerifyEmailRoute: typeof VerifyEmailRoute
   ClubsClubIdRoute: typeof ClubsClubIdRoute
   ClubsJoinRoute: typeof ClubsJoinRoute
@@ -351,6 +363,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClubsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tournaments/$tournamentId': {
+      id: '/tournaments/$tournamentId'
+      path: '/$tournamentId'
+      fullPath: '/tournaments/$tournamentId'
+      preLoaderRoute: typeof TournamentsTournamentIdRouteImport
+      parentRoute: typeof TournamentsRoute
+    }
     '/table/$tableId': {
       id: '/table/$tableId'
       path: '/table/$tableId'
@@ -375,6 +394,18 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface TournamentsRouteChildren {
+  TournamentsTournamentIdRoute: typeof TournamentsTournamentIdRoute
+}
+
+const TournamentsRouteChildren: TournamentsRouteChildren = {
+  TournamentsTournamentIdRoute: TournamentsTournamentIdRoute,
+}
+
+const TournamentsRouteWithChildren = TournamentsRoute._addFileChildren(
+  TournamentsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
@@ -387,7 +418,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SettingsRoute: SettingsRoute,
   ShopRoute: ShopRoute,
-  TournamentsRoute: TournamentsRoute,
+  TournamentsRoute: TournamentsRouteWithChildren,
   VerifyEmailRoute: VerifyEmailRoute,
   ClubsClubIdRoute: ClubsClubIdRoute,
   ClubsJoinRoute: ClubsJoinRoute,
