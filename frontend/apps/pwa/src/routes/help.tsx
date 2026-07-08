@@ -102,7 +102,16 @@ function HelpPage() {
           <HelpCircle className="w-8 h-8 text-tertiary" />
           Help & Support
         </h1>
+  
+      {/* Legal Links */}
+      <div className="flex flex-wrap gap-4 justify-center text-sm text-on-surface-variant border-t border-white/10 pt-6">
+        <Link to="/legal/terms" className="hover:text-tertiary transition-colors">Terms of Service</Link>
+        <span className="text-white/20">|</span>
+        <Link to="/legal/privacy" className="hover:text-tertiary transition-colors">Privacy Policy</Link>
+        <span className="text-white/20">|</span>
+        <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors">Responsible Gaming</Link>
       </div>
+    </div>
 
       {/* Quick links */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -112,7 +121,16 @@ function HelpPage() {
             <div>
               <p className="font-medium text-on-surface">Guide</p>
               <p className="text-xs text-on-surface-variant">Learn the rules</p>
-            </div>
+        
+      {/* Legal Links */}
+      <div className="flex flex-wrap gap-4 justify-center text-sm text-on-surface-variant border-t border-white/10 pt-6">
+        <Link to="/legal/terms" className="hover:text-tertiary transition-colors">Terms of Service</Link>
+        <span className="text-white/20">|</span>
+        <Link to="/legal/privacy" className="hover:text-tertiary transition-colors">Privacy Policy</Link>
+        <span className="text-white/20">|</span>
+        <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors">Responsible Gaming</Link>
+      </div>
+    </div>
             <Link to="/guide" className="ml-auto text-tertiary text-sm">View →</Link>
           </CardContent>
         </Card>
@@ -122,7 +140,16 @@ function HelpPage() {
             <div>
               <p className="font-medium text-on-surface">Community</p>
               <p className="text-xs text-on-surface-variant">Join our Discord</p>
-            </div>
+        
+      {/* Legal Links */}
+      <div className="flex flex-wrap gap-4 justify-center text-sm text-on-surface-variant border-t border-white/10 pt-6">
+        <Link to="/legal/terms" className="hover:text-tertiary transition-colors">Terms of Service</Link>
+        <span className="text-white/20">|</span>
+        <Link to="/legal/privacy" className="hover:text-tertiary transition-colors">Privacy Policy</Link>
+        <span className="text-white/20">|</span>
+        <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors">Responsible Gaming</Link>
+      </div>
+    </div>
             <a href="#" className="ml-auto text-tertiary text-sm">Join →</a>
           </CardContent>
         </Card>
@@ -132,13 +159,31 @@ function HelpPage() {
             <div>
               <p className="font-medium text-on-surface">Report Bug</p>
               <p className="text-xs text-on-surface-variant">Help us improve</p>
-            </div>
+        
+      {/* Legal Links */}
+      <div className="flex flex-wrap gap-4 justify-center text-sm text-on-surface-variant border-t border-white/10 pt-6">
+        <Link to="/legal/terms" className="hover:text-tertiary transition-colors">Terms of Service</Link>
+        <span className="text-white/20">|</span>
+        <Link to="/legal/privacy" className="hover:text-tertiary transition-colors">Privacy Policy</Link>
+        <span className="text-white/20">|</span>
+        <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors">Responsible Gaming</Link>
+      </div>
+    </div>
             <button className="ml-auto text-tertiary text-sm" onClick={() => document.getElementById('contact-form')?.scrollIntoView({ behavior: 'smooth' })}>
               Report →
             </button>
           </CardContent>
         </Card>
+  
+      {/* Legal Links */}
+      <div className="flex flex-wrap gap-4 justify-center text-sm text-on-surface-variant border-t border-white/10 pt-6">
+        <Link to="/legal/terms" className="hover:text-tertiary transition-colors">Terms of Service</Link>
+        <span className="text-white/20">|</span>
+        <Link to="/legal/privacy" className="hover:text-tertiary transition-colors">Privacy Policy</Link>
+        <span className="text-white/20">|</span>
+        <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors">Responsible Gaming</Link>
       </div>
+    </div>
 
       {/* FAQ Section */}
       <Card>
@@ -169,12 +214,39 @@ function HelpPage() {
                   {isOpen && (
                     <div className="px-4 pb-3 text-sm text-on-surface-variant border-t border-white/5 pt-2">
                       {item.answer}
-                    </div>
+                
+      {/* Legal Links */}
+      <div className="flex flex-wrap gap-4 justify-center text-sm text-on-surface-variant border-t border-white/10 pt-6">
+        <Link to="/legal/terms" className="hover:text-tertiary transition-colors">Terms of Service</Link>
+        <span className="text-white/20">|</span>
+        <Link to="/legal/privacy" className="hover:text-tertiary transition-colors">Privacy Policy</Link>
+        <span className="text-white/20">|</span>
+        <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors">Responsible Gaming</Link>
+      </div>
+    </div>
                   )}
-                </div>
+            
+      {/* Legal Links */}
+      <div className="flex flex-wrap gap-4 justify-center text-sm text-on-surface-variant border-t border-white/10 pt-6">
+        <Link to="/legal/terms" className="hover:text-tertiary transition-colors">Terms of Service</Link>
+        <span className="text-white/20">|</span>
+        <Link to="/legal/privacy" className="hover:text-tertiary transition-colors">Privacy Policy</Link>
+        <span className="text-white/20">|</span>
+        <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors">Responsible Gaming</Link>
+      </div>
+    </div>
               );
             })}
-          </div>
+      
+      {/* Legal Links */}
+      <div className="flex flex-wrap gap-4 justify-center text-sm text-on-surface-variant border-t border-white/10 pt-6">
+        <Link to="/legal/terms" className="hover:text-tertiary transition-colors">Terms of Service</Link>
+        <span className="text-white/20">|</span>
+        <Link to="/legal/privacy" className="hover:text-tertiary transition-colors">Privacy Policy</Link>
+        <span className="text-white/20">|</span>
+        <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors">Responsible Gaming</Link>
+      </div>
+    </div>
         </CardContent>
       </Card>
 
@@ -200,7 +272,16 @@ function HelpPage() {
                 className="bg-surface-container-high border-outline-variant/50 text-on-surface"
                 required
               />
-            </div>
+        
+      {/* Legal Links */}
+      <div className="flex flex-wrap gap-4 justify-center text-sm text-on-surface-variant border-t border-white/10 pt-6">
+        <Link to="/legal/terms" className="hover:text-tertiary transition-colors">Terms of Service</Link>
+        <span className="text-white/20">|</span>
+        <Link to="/legal/privacy" className="hover:text-tertiary transition-colors">Privacy Policy</Link>
+        <span className="text-white/20">|</span>
+        <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors">Responsible Gaming</Link>
+      </div>
+    </div>
             <div className="space-y-2">
               <Label htmlFor="contact-email" className="text-on-surface-variant text-xs">
                 Email Address
@@ -214,7 +295,16 @@ function HelpPage() {
                 className="bg-surface-container-high border-outline-variant/50 text-on-surface"
                 required
               />
-            </div>
+        
+      {/* Legal Links */}
+      <div className="flex flex-wrap gap-4 justify-center text-sm text-on-surface-variant border-t border-white/10 pt-6">
+        <Link to="/legal/terms" className="hover:text-tertiary transition-colors">Terms of Service</Link>
+        <span className="text-white/20">|</span>
+        <Link to="/legal/privacy" className="hover:text-tertiary transition-colors">Privacy Policy</Link>
+        <span className="text-white/20">|</span>
+        <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors">Responsible Gaming</Link>
+      </div>
+    </div>
             <div className="space-y-2">
               <Label htmlFor="contact-message" className="text-on-surface-variant text-xs">
                 Message
@@ -227,7 +317,16 @@ function HelpPage() {
                 className="bg-surface-container-high border-outline-variant/50 text-on-surface min-h-[120px]"
                 required
               />
-            </div>
+        
+      {/* Legal Links */}
+      <div className="flex flex-wrap gap-4 justify-center text-sm text-on-surface-variant border-t border-white/10 pt-6">
+        <Link to="/legal/terms" className="hover:text-tertiary transition-colors">Terms of Service</Link>
+        <span className="text-white/20">|</span>
+        <Link to="/legal/privacy" className="hover:text-tertiary transition-colors">Privacy Policy</Link>
+        <span className="text-white/20">|</span>
+        <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors">Responsible Gaming</Link>
+      </div>
+    </div>
             <Button
               type="submit"
               disabled={isSubmitting}
@@ -251,6 +350,15 @@ function HelpPage() {
           </form>
         </CardContent>
       </Card>
+
+      {/* Legal Links */}
+      <div className="flex flex-wrap gap-4 justify-center text-sm text-on-surface-variant border-t border-white/10 pt-6">
+        <Link to="/legal/terms" className="hover:text-tertiary transition-colors">Terms of Service</Link>
+        <span className="text-white/20">|</span>
+        <Link to="/legal/privacy" className="hover:text-tertiary transition-colors">Privacy Policy</Link>
+        <span className="text-white/20">|</span>
+        <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors">Responsible Gaming</Link>
+      </div>
     </div>
   );
 }

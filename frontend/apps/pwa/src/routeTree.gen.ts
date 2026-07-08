@@ -14,6 +14,7 @@ import { Route as TournamentsHistoryRouteImport } from './routes/tournaments-his
 import { Route as TournamentsRouteImport } from './routes/tournaments'
 import { Route as ShopRouteImport } from './routes/shop'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ResponsibleGamingRouteImport } from './routes/responsible-gaming'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ReplaysRouteImport } from './routes/replays'
 import { Route as RegisterRouteImport } from './routes/register'
@@ -39,6 +40,8 @@ import { Route as SettingsAudioRouteImport } from './routes/settings/audio'
 import { Route as SettingsAppearanceRouteImport } from './routes/settings/appearance'
 import { Route as SettingsAccountRouteImport } from './routes/settings/account'
 import { Route as PlayersUserIdRouteImport } from './routes/players/$userId'
+import { Route as LegalTermsRouteImport } from './routes/legal/terms'
+import { Route as LegalPrivacyRouteImport } from './routes/legal/privacy'
 import { Route as HandsHandIdRouteImport } from './routes/hands/$handId'
 import { Route as ClubsJoinRouteImport } from './routes/clubs/join'
 import { Route as ClubsClubIdRouteImport } from './routes/clubs.$clubId'
@@ -66,6 +69,11 @@ const ShopRoute = ShopRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResponsibleGamingRoute = ResponsibleGamingRouteImport.update({
+  id: '/responsible-gaming',
+  path: '/responsible-gaming',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -193,6 +201,16 @@ const PlayersUserIdRoute = PlayersUserIdRouteImport.update({
   path: '/players/$userId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LegalTermsRoute = LegalTermsRouteImport.update({
+  id: '/legal/terms',
+  path: '/legal/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalPrivacyRoute = LegalPrivacyRouteImport.update({
+  id: '/legal/privacy',
+  path: '/legal/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HandsHandIdRoute = HandsHandIdRouteImport.update({
   id: '/hands/$handId',
   path: '/hands/$handId',
@@ -224,6 +242,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/replays': typeof ReplaysRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/responsible-gaming': typeof ResponsibleGamingRoute
   '/settings': typeof SettingsRouteWithChildren
   '/shop': typeof ShopRoute
   '/tournaments': typeof TournamentsRouteWithChildren
@@ -232,6 +251,8 @@ export interface FileRoutesByFullPath {
   '/clubs/$clubId': typeof ClubsClubIdRoute
   '/clubs/join': typeof ClubsJoinRoute
   '/hands/$handId': typeof HandsHandIdRoute
+  '/legal/privacy': typeof LegalPrivacyRoute
+  '/legal/terms': typeof LegalTermsRoute
   '/players/$userId': typeof PlayersUserIdRoute
   '/settings/account': typeof SettingsAccountRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
@@ -259,6 +280,7 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/replays': typeof ReplaysRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/responsible-gaming': typeof ResponsibleGamingRoute
   '/settings': typeof SettingsRouteWithChildren
   '/shop': typeof ShopRoute
   '/tournaments': typeof TournamentsRouteWithChildren
@@ -267,6 +289,8 @@ export interface FileRoutesByTo {
   '/clubs/$clubId': typeof ClubsClubIdRoute
   '/clubs/join': typeof ClubsJoinRoute
   '/hands/$handId': typeof HandsHandIdRoute
+  '/legal/privacy': typeof LegalPrivacyRoute
+  '/legal/terms': typeof LegalTermsRoute
   '/players/$userId': typeof PlayersUserIdRoute
   '/settings/account': typeof SettingsAccountRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
@@ -295,6 +319,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/replays': typeof ReplaysRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/responsible-gaming': typeof ResponsibleGamingRoute
   '/settings': typeof SettingsRouteWithChildren
   '/shop': typeof ShopRoute
   '/tournaments': typeof TournamentsRouteWithChildren
@@ -303,6 +328,8 @@ export interface FileRoutesById {
   '/clubs/$clubId': typeof ClubsClubIdRoute
   '/clubs/join': typeof ClubsJoinRoute
   '/hands/$handId': typeof HandsHandIdRoute
+  '/legal/privacy': typeof LegalPrivacyRoute
+  '/legal/terms': typeof LegalTermsRoute
   '/players/$userId': typeof PlayersUserIdRoute
   '/settings/account': typeof SettingsAccountRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
@@ -332,6 +359,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/replays'
     | '/reset-password'
+    | '/responsible-gaming'
     | '/settings'
     | '/shop'
     | '/tournaments'
@@ -340,6 +368,8 @@ export interface FileRouteTypes {
     | '/clubs/$clubId'
     | '/clubs/join'
     | '/hands/$handId'
+    | '/legal/privacy'
+    | '/legal/terms'
     | '/players/$userId'
     | '/settings/account'
     | '/settings/appearance'
@@ -367,6 +397,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/replays'
     | '/reset-password'
+    | '/responsible-gaming'
     | '/settings'
     | '/shop'
     | '/tournaments'
@@ -375,6 +406,8 @@ export interface FileRouteTypes {
     | '/clubs/$clubId'
     | '/clubs/join'
     | '/hands/$handId'
+    | '/legal/privacy'
+    | '/legal/terms'
     | '/players/$userId'
     | '/settings/account'
     | '/settings/appearance'
@@ -402,6 +435,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/replays'
     | '/reset-password'
+    | '/responsible-gaming'
     | '/settings'
     | '/shop'
     | '/tournaments'
@@ -410,6 +444,8 @@ export interface FileRouteTypes {
     | '/clubs/$clubId'
     | '/clubs/join'
     | '/hands/$handId'
+    | '/legal/privacy'
+    | '/legal/terms'
     | '/players/$userId'
     | '/settings/account'
     | '/settings/appearance'
@@ -438,6 +474,7 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   ReplaysRoute: typeof ReplaysRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  ResponsibleGamingRoute: typeof ResponsibleGamingRoute
   SettingsRoute: typeof SettingsRouteWithChildren
   ShopRoute: typeof ShopRoute
   TournamentsRoute: typeof TournamentsRouteWithChildren
@@ -446,6 +483,8 @@ export interface RootRouteChildren {
   ClubsClubIdRoute: typeof ClubsClubIdRoute
   ClubsJoinRoute: typeof ClubsJoinRoute
   HandsHandIdRoute: typeof HandsHandIdRoute
+  LegalPrivacyRoute: typeof LegalPrivacyRoute
+  LegalTermsRoute: typeof LegalTermsRoute
   PlayersUserIdRoute: typeof PlayersUserIdRoute
   TableTableIdRoute: typeof TableTableIdRoute
   ClubsIndexRoute: typeof ClubsIndexRoute
@@ -486,6 +525,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/responsible-gaming': {
+      id: '/responsible-gaming'
+      path: '/responsible-gaming'
+      fullPath: '/responsible-gaming'
+      preLoaderRoute: typeof ResponsibleGamingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -663,6 +709,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlayersUserIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/legal/terms': {
+      id: '/legal/terms'
+      path: '/legal/terms'
+      fullPath: '/legal/terms'
+      preLoaderRoute: typeof LegalTermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/privacy': {
+      id: '/legal/privacy'
+      path: '/legal/privacy'
+      fullPath: '/legal/privacy'
+      preLoaderRoute: typeof LegalPrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/hands/$handId': {
       id: '/hands/$handId'
       path: '/hands/$handId'
@@ -738,6 +798,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   ReplaysRoute: ReplaysRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  ResponsibleGamingRoute: ResponsibleGamingRoute,
   SettingsRoute: SettingsRouteWithChildren,
   ShopRoute: ShopRoute,
   TournamentsRoute: TournamentsRouteWithChildren,
@@ -746,6 +807,8 @@ const rootRouteChildren: RootRouteChildren = {
   ClubsClubIdRoute: ClubsClubIdRoute,
   ClubsJoinRoute: ClubsJoinRoute,
   HandsHandIdRoute: HandsHandIdRoute,
+  LegalPrivacyRoute: LegalPrivacyRoute,
+  LegalTermsRoute: LegalTermsRoute,
   PlayersUserIdRoute: PlayersUserIdRoute,
   TableTableIdRoute: TableTableIdRoute,
   ClubsIndexRoute: ClubsIndexRoute,
