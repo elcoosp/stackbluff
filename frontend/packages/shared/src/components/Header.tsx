@@ -3,7 +3,7 @@ import { useAuthStore } from '../stores/authStore';
 import { removeToken } from '../auth/token';
 import { LiquidMetalButton } from '../ui/LiquidMetalButton';
 import { useState, useRef, useEffect } from 'react';
-import { LogOut, Settings, Coins, ChevronDown } from 'lucide-react';
+import { LogOut, Settings, Coins, ChevronDown , Users} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export function Header() {
