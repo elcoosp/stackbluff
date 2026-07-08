@@ -30,6 +30,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { TournamentSummary, TournamentResultEntry, PayoutEntry } from '@stackbluff/shared/types/tournament.types';
+import { BlindSchedulePreview } from '@/components/tournament/BlindSchedulePreview';
+import { PayoutStructurePreview } from '@/components/tournament/PayoutStructurePreview';
 
 export const Route = createFileRoute('/tournaments/$tournamentId')({
   component: TournamentDetailPage,
@@ -285,76 +287,20 @@ function TournamentDetailPage() {
 
       {/* Blind Schedule */}
       {tournament.blind_levels && tournament.blind_levels.length > 0 && (
-        <Card className="p-4 bg-white/5 border-white/10 mb-6">
-          <h3 className="font-semibold text-on-surface mb-3">Blind Schedule</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-on-surface-variant border-b border-white/10">
-                  <th className="text-left py-2 px-2">Level</th>
-                  <th className="text-left py-2 px-2">Small Blind</th>
-                  <th className="text-left py-2 px-2">Big Blind</th>
-                  <th className="text-left py-2 px-2">Ante</th>
-                  <th className="text-left py-2 px-2">Duration</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tournament.blind_levels.map((level, idx) => (
-                  <tr
-                    key={idx}
-                    className={cn(
-                      'border-b border-white/5',
-                      tournamentState?.blind_level === level.level ? 'bg-tertiary/10' : ''
-                    )}
-                  >
-                    <td className="py-2 px-2 font-medium text-on-surface">{level.level}</td>
-                    <td className="py-2 px-2 text-on-surface">${level.small_blind}</td>
-                    <td className="py-2 px-2 text-on-surface">${level.big_blind}</td>
-                    <td className="py-2 px-2 text-on-surface">
-                      {(level as any).ante != null && (level as any).ante > 0 ? `$${(level as any).ante}` : '-'}
-                    </td>
-                    <td className="py-2 px-2 text-on-surface-variant">
-                      {level.duration_secs || 0}s
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+        <BlindSchedulePreview
+          levels={tournament.blind_levels}
+          currentLevel={tournamentState?.blind_level}
+          className="mb-6"
+        />
       )}
 
       {/* Payout Structure */}
       {tournament.payout_structure && tournament.payout_structure.length > 0 && (
-        <Card className="p-4 bg-white/5 border-white/10 mb-6">
-          <button
-            onClick={() => setShowPayouts(!showPayouts)}
-            className="w-full flex items-center justify-between text-left"
-          >
-            <h3 className="font-semibold text-on-surface">Payout Structure</h3>
-            {showPayouts ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </button>
-          {showPayouts && (
-            <div className="mt-3 space-y-1">
-              {tournament.payout_structure.map((payout, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between px-3 py-1.5 bg-white/5 rounded-lg text-sm"
-                >
-                  <span className="text-on-surface-variant">
-                    {payout.position}{payout.position === 1 ? 'st' : payout.position === 2 ? 'nd' : 'th'}
-                  </span>
-                  <span className="text-tertiary font-mono">
-                    {payout.percentage}%
-                  </span>
-                  <span className="text-on-surface font-mono">
-                    ${Math.round((tournament.prize_pool * payout.percentage) / 100).toLocaleString()}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
+        <PayoutStructurePreview
+          entries={tournament.payout_structure}
+          prizePool={tournament.prize_pool}
+          className="mb-6"
+        />
       )}
 
       {/* Results if completed */}
