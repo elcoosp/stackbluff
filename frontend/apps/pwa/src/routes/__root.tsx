@@ -5,6 +5,7 @@ import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { useEffect } from 'react';
 import { generateAndSubmitFingerprint } from '@/services/fingerprint';
 import { EmailVerificationBanner } from '@/components/auth/EmailVerificationBanner';
+import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -38,6 +39,7 @@ function RootLayout() {
         <EmailVerificationBanner />
           <Outlet />
       </main>
+      <InstallPrompt />
       <Toaster position="bottom-right" richColors />
     </div>
   );
