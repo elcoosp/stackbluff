@@ -5,6 +5,7 @@ use sb_shared_types::AppError;
 
 /// On server startup, resolve any tournaments that were in `Running` state
 /// during a crash. Refunds remaining players and marks tournament as Cancelled.
+
 pub async fn settle_crashed_tournaments(
     repo: &dyn TournamentRepo,
     user_repo: &dyn sb_contracts::repo_api::UserRepo,
@@ -22,9 +23,21 @@ pub async fn settle_crashed_tournaments(
             "settling crashed tournament..."
         );
 
-        // Get all registrations and refund buy-ins
+        // Get results to avoid double-refunding
+        let results = repo.list_results(tournament.id).await?;
+        let result_user_ids: std::collections::HashSet<_> = results.iter().map(|r| r.user_id).collect();
+
+        // Get all registrations and refund buy-ins only if not already paid out
         let registrations = repo.list_registrations(tournament.id).await?;
         for reg in &registrations {
+            if result_user_ids.contains(&reg.user_id) {
+                info!(
+                    tournament_id = %tournament.id,
+                    user_id = %reg.user_id,
+                    "Skipping refund for player who already received prize"
+                );
+                continue;
+            }
             let ctx = sb_shared_types::RequestContext::new(uuid::Uuid::new_v4(), Some(reg.user_id));
             if let Err(e) = user_repo
                 .update_chip_balance(ctx.clone(), reg.user_id, tournament.config.buy_in.as_i64())
@@ -60,3 +73,4 @@ pub async fn settle_crashed_tournaments(
 
     Ok(())
 }
+

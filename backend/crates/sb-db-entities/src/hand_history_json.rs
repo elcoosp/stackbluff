@@ -30,6 +30,7 @@ pub struct HandAction {
     pub action_type: String,
     pub amount: Option<i64>,
     pub timestamp_ms: u64,
+    pub street: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, FromJsonQueryResult)]

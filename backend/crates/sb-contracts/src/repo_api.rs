@@ -41,11 +41,11 @@ pub struct UserProfile {
     pub club_pro_expires_at: Option<chrono::DateTime<chrono::Utc>>,
     pub season_pass_id: Option<uuid::Uuid>,
     pub season_pass_expires_at: Option<chrono::DateTime<chrono::Utc>>,
-    pub registration_order: Option<u64>,
+    pub registration_order: Option<u64>,    pub password_changed_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 #[async_trait]
-pub trait UserRepository: Send + Sync {
+pub trait UserRepo: Send + Sync {
     async fn create_user(
         &self,
         ctx: RequestContext,
@@ -384,4 +384,3 @@ pub struct UserDataExportDto {
     pub missions: serde_json::Value,
 }
 
-pub use UserRepository as UserRepo;

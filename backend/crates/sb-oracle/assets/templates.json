@@ -1,8 +1,8 @@
 [
   {
-    "id": "preflop_raise_early",
-    "name": "Early position raise",
-    "output_text": "Raising from early position with {hand_strength} strength is risky. Consider limping or folding unless you have a premium hand.",
+    "id": "preflop_open_early",
+    "name": "Early Position Open",
+    "output_text": "Raising from early position with {hand_strength} hand strength requires a tight range. Ensure you have premium pairs or high suited connectors to justify the risk of playing out of position postflop.",
     "rules": {
       "positions": [
         "early"
@@ -11,31 +11,95 @@
     }
   },
   {
-    "id": "preflop_raise_middle",
-    "name": "Middle position raise",
-    "output_text": "In middle position with {hand_strength} strength, a standard raise is fine. Watch out for resteals from blinds.",
+    "id": "preflop_open_middle",
+    "name": "Middle Position Open",
+    "output_text": "In middle position with {hand_strength} strength, a standard 2.5x-3x raise is profitable. Be prepared to fold to 3-bets from late position if your hand doesn't flop well.",
     "rules": {
       "positions": [
         "middle"
       ],
-      "min_hand_strength": 0.6
+      "min_hand_strength": 0.5
     }
   },
   {
-    "id": "preflop_raise_late",
-    "name": "Late position steal",
-    "output_text": "Stealing blinds from late position with {hand_strength} strength is profitable. Raise 2.5–3x BB.",
+    "id": "preflop_open_late",
+    "name": "Late Position Steal",
+    "output_text": "Stealing from late position with {hand_strength} strength is highly profitable. Raise 2.5x BB to apply maximum pressure on the blinds with a wide range.",
     "rules": {
       "positions": [
         "late"
       ],
-      "min_hand_strength": 0.4
+      "min_hand_strength": 0.3
+    }
+  },
+  {
+    "id": "preflop_3bet_value",
+    "name": "3-Bet for Value",
+    "output_text": "Your hand strength is {hand_strength}. This is a prime candidate for a 3-bet for value. Size it to 3x the open raise in position, or 4x out of position.",
+    "rules": {
+      "positions": [
+        "early",
+        "middle",
+        "late",
+        "blind"
+      ],
+      "min_hand_strength": 0.8
+    }
+  },
+  {
+    "id": "preflop_3bet_bluff",
+    "name": "Light 3-Bet Bluff",
+    "output_text": "With {hand_strength} strength, this is a good spot for a light 3-bet bluff, especially if the original raiser has a high fold-to-3-bet rate. Use hands with blocker value (like an Ace).",
+    "rules": {
+      "positions": [
+        "late",
+        "blind"
+      ],
+      "min_hand_strength": 0.4,
+      "max_hand_strength": 0.6
+    }
+  },
+  {
+    "id": "preflop_fold_to_3bet",
+    "name": "Fold to 3-Bet",
+    "output_text": "Facing a 3-bet with only {hand_strength} strength out of position is a losing play. Fold and wait for a better spot.",
+    "rules": {
+      "positions": [
+        "early",
+        "middle"
+      ],
+      "max_hand_strength": 0.4
+    }
+  },
+  {
+    "id": "preflop_4bet_shove",
+    "name": "4-Bet Shove",
+    "output_text": "Your hand strength is {hand_strength}. Against a aggressive 3-bettor, a 4-bet shove (or small 4-bet) maximizes fold equity and avoids tricky postflop decisions.",
+    "rules": {
+      "positions": [
+        "early",
+        "middle",
+        "late"
+      ],
+      "min_hand_strength": 0.85
+    }
+  },
+  {
+    "id": "preflop_defend_blind",
+    "name": "Blind Defense",
+    "output_text": "Defending your blind with {hand_strength} strength is acceptable against a late-position raiser, but play cautiously postflop unless you hit the board hard.",
+    "rules": {
+      "positions": [
+        "blind"
+      ],
+      "min_hand_strength": 0.4,
+      "max_hand_strength": 0.6
     }
   },
   {
     "id": "cbet_dry_board",
-    "name": "C-bet dry flop",
-    "output_text": "Dry flop favours the aggressor. A small c-bet (1/3 pot) with {hand_strength} strength often takes it down.",
+    "name": "C-Bet Dry Board",
+    "output_text": "Dry flop favors the aggressor. A small c-bet (1/3 pot) with {hand_strength} strength often takes it down immediately due to the lack of draws.",
     "rules": {
       "is_cbet_situation": true,
       "min_hand_strength": 0.3,
@@ -44,8 +108,8 @@
   },
   {
     "id": "cbet_wet_board",
-    "name": "C-bet wet board",
-    "output_text": "Wet board – many draws. Check or bet larger (2/3 pot) to deny equity. Your hand strength {hand_strength} is marginal here.",
+    "name": "C-Bet Wet Board",
+    "output_text": "Wet board with many draws. If you are going to c-bet, size up to 2/3 or 3/4 pot to deny equity to drawing hands. With {hand_strength} strength, checking is also acceptable.",
     "rules": {
       "is_cbet_situation": true,
       "min_hand_strength": 0.2,
@@ -53,9 +117,97 @@
     }
   },
   {
+    "id": "cbet_value",
+    "name": "C-Bet for Value",
+    "output_text": "With {hand_strength} strength, you should c-bet for value. Size it around 1/2 to 2/3 pot to extract value from worse hands and draws.",
+    "rules": {
+      "is_cbet_situation": true,
+      "min_hand_strength": 0.7
+    }
+  },
+  {
+    "id": "face_cbet_fold",
+    "name": "Fold to C-Bet",
+    "output_text": "You missed the flop and your hand strength is only {hand_strength}. Folding to the c-bet is the most disciplined play.",
+    "rules": {
+      "min_hand_strength": 0.0,
+      "max_hand_strength": 0.2
+    }
+  },
+  {
+    "id": "raise_cbet_bluff",
+    "name": "Raise C-Bet Bluff",
+    "output_text": "With {hand_strength} strength, raising the c-bet on a coordinated board can force folds from weak one-pair hands. Ensure you have a blocker or backdoor draws.",
+    "rules": {
+      "min_hand_strength": 0.3,
+      "max_hand_strength": 0.5
+    }
+  },
+  {
+    "id": "float_flop",
+    "name": "Float the Flop",
+    "output_text": "Calling the flop with {hand_strength} strength (floating) is profitable if you expect to take the pot away on the turn when the opponent checks.",
+    "rules": {
+      "min_hand_strength": 0.3,
+      "max_hand_strength": 0.5
+    }
+  },
+  {
+    "id": "turn_double_barrel",
+    "name": "Turn Double Barrel",
+    "output_text": "Your hand strength is {hand_strength}. A second barrel on the turn is highly effective on scare cards. Apply pressure with a 1/2 pot bet.",
+    "rules": {
+      "min_hand_strength": 0.4,
+      "max_hand_strength": 0.7
+    }
+  },
+  {
+    "id": "turn_give_up",
+    "name": "Turn Give Up",
+    "output_text": "With only {hand_strength} strength and facing continued aggression, giving up on the turn is the correct play to preserve your stack.",
+    "rules": {
+      "max_hand_strength": 0.3
+    }
+  },
+  {
+    "id": "river_value_bet",
+    "name": "River Value Bet",
+    "output_text": "Your hand strength is {hand_strength}. The river is a great spot to fire a thin value bet (1/3 to 1/2 pot) to extract from missed draws or marginal pairs.",
+    "rules": {
+      "min_hand_strength": 0.7
+    }
+  },
+  {
+    "id": "river_bluff",
+    "name": "River Bluff",
+    "output_text": "With {hand_strength} strength, a river bluff represents a strong hand. Overbet or shove if your range contains more value hands than bluffs.",
+    "rules": {
+      "max_hand_strength": 0.2
+    }
+  },
+  {
+    "id": "bluff_catch_strong",
+    "name": "Bluff Catching (Strong)",
+    "output_text": "Your hand strength {hand_strength} is strong enough to bluff-catch. Call the river bet, as you beat most of the opponent's missed draws and thin value bets.",
+    "rules": {
+      "is_bluff_catching": true,
+      "min_hand_strength": 0.7
+    }
+  },
+  {
+    "id": "bluff_catch_marginal",
+    "name": "Bluff Catching (Marginal)",
+    "output_text": "Marginal hand – {hand_strength} strength. Bluff catching is risky here; consider folding if the opponent shows little aggression or bets large.",
+    "rules": {
+      "is_bluff_catching": true,
+      "min_hand_strength": 0.4,
+      "max_hand_strength": 0.6
+    }
+  },
+  {
     "id": "pot_odds_call",
-    "name": "Pot odds justify call",
-    "output_text": "Pot odds are {pot_odds}. Your draw has roughly {hand_strength} equity. Correct call.",
+    "name": "Pot Odds Justify Call",
+    "output_text": "Pot odds are {pot_odds}. Your draw has roughly {hand_strength} equity. Mathematically, calling here is correct and profitable in the long run.",
     "rules": {
       "min_pot_odds_ratio": 2.0,
       "max_pot_odds_ratio": 4.0,
@@ -64,619 +216,219 @@
     }
   },
   {
-    "id": "flush_fold",
-    "name": "Flush draw fold",
-    "output_text": "Pot odds were {pot_odds}; your flush draw was 4:1 – correct fold.",
+    "id": "pot_odds_fold",
+    "name": "Pot Odds Justify Fold",
+    "output_text": "Pot odds are {pot_odds}; your draw was 4:1. With only {hand_strength} equity, folding is the correct mathematical decision.",
     "rules": {
       "min_pot_odds_ratio": 3.0,
-      "max_pot_odds_ratio": 5.0,
+      "max_pot_odds_ratio": 10.0,
       "min_hand_strength": 0.1,
-      "max_hand_strength": 0.3
+      "max_hand_strength": 0.2
     }
   },
   {
-    "id": "bluff_catch_strong",
-    "name": "Bluff catching with strong hand",
-    "output_text": "Your hand strength {hand_strength} is strong enough to bluff-catch. Call the river bet.",
+    "id": "implied_odds_call",
+    "name": "Implied Odds Call",
+    "output_text": "Pot odds are {pot_odds}, but with {hand_strength} equity, calling is justified if you and your opponent are deep-stacked enough to win a big pot if you hit.",
     "rules": {
-      "is_bluff_catching": true,
-      "min_hand_strength": 0.7
-    }
-  },
-  {
-    "id": "bluff_catch_weak",
-    "name": "Bluff catching marginal",
-    "output_text": "Marginal hand – {hand_strength} strength. Bluff catching is risky; consider folding if opponent shows little aggression.",
-    "rules": {
-      "is_bluff_catching": true,
-      "max_hand_strength": 0.5
+      "min_pot_odds_ratio": 1.5,
+      "max_pot_odds_ratio": 3.0,
+      "min_hand_strength": 0.2,
+      "max_hand_strength": 0.4,
+      "min_stack_bb": 50.0
     }
   },
   {
     "id": "short_stack_push",
-    "name": "Short stack push",
-    "output_text": "With {stack_bb} BB, your stack is short. Push or fold – your hand strength {hand_strength} is good enough to shove.",
+    "name": "Short Stack Push",
+    "output_text": "With {stack_bb} BB, your stack is short. Push or fold strategy is optimal. Your {hand_strength} strength is good enough to shove for fold equity.",
     "rules": {
       "max_stack_bb": 12.0,
       "min_hand_strength": 0.4
     }
   },
   {
+    "id": "short_stack_fold",
+    "name": "Short Stack Fold",
+    "output_text": "With {stack_bb} BB, you must preserve chips. Your {hand_strength} strength is too weak to shove. Fold and wait for a premium hand.",
+    "rules": {
+      "max_stack_bb": 12.0,
+      "max_hand_strength": 0.3
+    }
+  },
+  {
+    "id": "mid_stack_caution",
+    "name": "Mid Stack Caution",
+    "output_text": "With {stack_bb} BB, you have room to play postflop but must be cautious. Avoid marginal all-ins with {hand_strength} strength; focus on pot control.",
+    "rules": {
+      "min_stack_bb": 20.0,
+      "max_stack_bb": 50.0,
+      "min_hand_strength": 0.4,
+      "max_hand_strength": 0.6
+    }
+  },
+  {
     "id": "deep_stack_maneuver",
-    "name": "Deep stack play",
-    "output_text": "Deep stacked ({stack_bb} BB). Play more hands in position, avoid marginal all-ins.",
+    "name": "Deep Stack Play",
+    "output_text": "Deep stacked ({stack_bb} BB). Play more hands in position, utilize floating and raising, and avoid stacking off with marginal {hand_strength} strength.",
     "rules": {
-      "min_stack_bb": 100.0
+      "min_stack_bb": 100.0,
+      "max_hand_strength": 0.6
     }
   },
   {
-    "id": "template_13",
-    "name": "Generic 13",
-    "output_text": "Analysis #13: Consider position and pot odds. Hand strength {hand_strength} is 13.",
+    "id": "deep_stack_set_mine",
+    "name": "Deep Stack Set Mining",
+    "output_text": "Deep stacked ({stack_bb} BB). Calling with a small pair ({hand_strength} strength) is highly profitable for set mining due to massive implied odds.",
     "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
+      "min_stack_bb": 100.0,
+      "min_hand_strength": 0.2,
+      "max_hand_strength": 0.4
     }
   },
   {
-    "id": "template_14",
-    "name": "Generic 14",
-    "output_text": "Analysis #14: Consider position and pot odds. Hand strength {hand_strength} is 14.",
+    "id": "blind_vs_blind",
+    "name": "Blind vs Blind",
+    "output_text": "In a blind vs blind battle, hand values go up. Your {hand_strength} strength is often the best hand here. Raise or c-bet aggressively.",
     "rules": {
       "positions": [
-        "early",
-        "middle",
-        "late",
         "blind"
       ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
+      "min_hand_strength": 0.5
     }
   },
   {
-    "id": "template_15",
-    "name": "Generic 15",
-    "output_text": "Analysis #15: Consider position and pot odds. Hand strength {hand_strength} is 15.",
+    "id": "button_isolation",
+    "name": "Button Isolation",
+    "output_text": "A limper is in the pot. On the button with {hand_strength} strength, an isolation raise is optimal to play a bloated pot in position against a weak player.",
     "rules": {
       "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
+        "late"
       ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
+      "min_hand_strength": 0.5
     }
   },
   {
-    "id": "template_16",
-    "name": "Generic 16",
-    "output_text": "Analysis #16: Consider position and pot odds. Hand strength {hand_strength} is 16.",
+    "id": "check_raise_flop",
+    "name": "Check-Raise Flop",
+    "output_text": "Your hand strength is {hand_strength}. Out of position on a coordinated board, a check-raise maximizes value from draws and forces folds from overs.",
     "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
+      "min_hand_strength": 0.6
     }
   },
   {
-    "id": "template_17",
-    "name": "Generic 17",
-    "output_text": "Analysis #17: Consider position and pot odds. Hand strength {hand_strength} is 17.",
+    "id": "delayed_cbet",
+    "name": "Delayed C-Bet",
+    "output_text": "You checked the flop and your opponent checked back. A delayed c-bet on the turn with {hand_strength} strength takes advantage of their displayed weakness.",
     "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
+      "min_hand_strength": 0.3,
+      "max_hand_strength": 0.6
     }
   },
   {
-    "id": "template_18",
-    "name": "Generic 18",
-    "output_text": "Analysis #18: Consider position and pot odds. Hand strength {hand_strength} is 18.",
+    "id": "overbet_shove_draw",
+    "name": "Overbet Shove Draw",
+    "output_text": "With a massive draw ({hand_strength} strength) and a {stack_bb} BB stack, an overbet shove maximizes fold equity and guarantees seeing the river.",
     "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
+      "min_hand_strength": 0.5,
+      "max_hand_strength": 0.7,
+      "max_stack_bb": 40.0
     }
   },
   {
-    "id": "template_19",
-    "name": "Generic 19",
-    "output_text": "Analysis #19: Consider position and pot odds. Hand strength {hand_strength} is 19.",
+    "id": "blocker_bet_river",
+    "name": "Blocker Bet River",
+    "output_text": "With a marginal {hand_strength} strength, a small blocking bet on the river prevents your opponent from making a large bluff that you would have to fold to.",
     "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
+      "min_hand_strength": 0.4,
+      "max_hand_strength": 0.6
     }
   },
   {
-    "id": "template_20",
-    "name": "Generic 20",
-    "output_text": "Analysis #20: Consider position and pot odds. Hand strength {hand_strength} is 20.",
+    "id": "pot_control_turn",
+    "name": "Pot Control Turn",
+    "output_text": "With {hand_strength} strength out of position, checking the turn is a good pot control mechanism to keep the pot small and induce bluffs on the river.",
     "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
+      "min_hand_strength": 0.4,
+      "max_hand_strength": 0.6
     }
   },
   {
-    "id": "template_21",
-    "name": "Generic 21",
-    "output_text": "Analysis #21: Consider position and pot odds. Hand strength {hand_strength} is 21.",
+    "id": "value_overbet_river",
+    "name": "Value Overbet River",
+    "output_text": "Your hand strength is {hand_strength}, near the top of your range. An overbet on the river extracts maximum value from missed draws that will hero call.",
     "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
+      "min_hand_strength": 0.9
     }
   },
   {
-    "id": "template_22",
-    "name": "Generic 22",
-    "output_text": "Analysis #22: Consider position and pot odds. Hand strength {hand_strength} is 22.",
+    "id": "fold_to_aggression",
+    "name": "Fold to Aggression",
+    "output_text": "You have {hand_strength} strength and face a raise. Without a premium hand, folding to aggression avoids playing a bloated pot out of position.",
     "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
+      "max_hand_strength": 0.5
     }
   },
   {
-    "id": "template_23",
-    "name": "Generic 23",
-    "output_text": "Analysis #23: Consider position and pot odds. Hand strength {hand_strength} is 23.",
+    "id": "trap_preflop",
+    "name": "Trap Preflop",
+    "output_text": "With absolute {hand_strength} strength, flat-calling preflop traps the raiser. Ensure stacks are deep enough to get paid off if you hit.",
     "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
+      "min_hand_strength": 0.9,
+      "min_stack_bb": 50.0
     }
   },
   {
-    "id": "template_24",
-    "name": "Generic 24",
-    "output_text": "Analysis #24: Consider position and pot odds. Hand strength {hand_strength} is 24.",
+    "id": "squeeze_play",
+    "name": "Squeeze Play",
+    "output_text": "With a raiser and multiple callers, a squeeze play (large 3-bet) with {hand_strength} strength generates massive fold equity and wins a bloated pot preflop.",
     "rules": {
+      "min_hand_strength": 0.4,
+      "max_hand_strength": 0.6,
       "positions": [
-        "early",
-        "middle",
         "late",
         "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
+      ]
     }
   },
   {
-    "id": "template_25",
-    "name": "Generic 25",
-    "output_text": "Analysis #25: Consider position and pot odds. Hand strength {hand_strength} is 25.",
+    "id": "check_call_draw",
+    "name": "Check-Call Draw",
+    "output_text": "With {hand_strength} strength on a draw, checking and calling keeps your opponent's bluffs in their range and disguises your draw.",
     "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
+      "min_hand_strength": 0.4,
+      "max_hand_strength": 0.6,
+      "min_pot_odds_ratio": 1.5,
+      "max_pot_odds_ratio": 3.0
     }
   },
   {
-    "id": "template_26",
-    "name": "Generic 26",
-    "output_text": "Analysis #26: Consider position and pot odds. Hand strength {hand_strength} is 26.",
+    "id": "give_up_river",
+    "name": "Give Up River",
+    "output_text": "You missed your draw and your hand strength is {hand_strength}. With no showdown value, checking and folding to any bet is the correct play.",
     "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
+      "max_hand_strength": 0.1
     }
   },
   {
-    "id": "template_27",
-    "name": "Generic 27",
-    "output_text": "Analysis #27: Consider position and pot odds. Hand strength {hand_strength} is 27.",
+    "id": "call_river_value",
+    "name": "Call River Value",
+    "output_text": "With {hand_strength} strength, calling a river bet in position extracts value from the opponent's missed bluffs and thin value bets.",
     "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
+      "min_hand_strength": 0.6,
+      "max_hand_strength": 0.8
     }
   },
   {
-    "id": "template_28",
-    "name": "Generic 28",
-    "output_text": "Analysis #28: Consider position and pot odds. Hand strength {hand_strength} is 28.",
+    "id": "min_raise_steal",
+    "name": "Min Raise Steal",
+    "output_text": "With {stack_bb} BB effective, a min-raise steal from late position with {hand_strength} strength risks the minimum to win the blinds.",
     "rules": {
       "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
+        "late"
       ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
-    }
-  },
-  {
-    "id": "template_29",
-    "name": "Generic 29",
-    "output_text": "Analysis #29: Consider position and pot odds. Hand strength {hand_strength} is 29.",
-    "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
-    }
-  },
-  {
-    "id": "template_30",
-    "name": "Generic 30",
-    "output_text": "Analysis #30: Consider position and pot odds. Hand strength {hand_strength} is 30.",
-    "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
-    }
-  },
-  {
-    "id": "template_31",
-    "name": "Generic 31",
-    "output_text": "Analysis #31: Consider position and pot odds. Hand strength {hand_strength} is 31.",
-    "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
-    }
-  },
-  {
-    "id": "template_32",
-    "name": "Generic 32",
-    "output_text": "Analysis #32: Consider position and pot odds. Hand strength {hand_strength} is 32.",
-    "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
-    }
-  },
-  {
-    "id": "template_33",
-    "name": "Generic 33",
-    "output_text": "Analysis #33: Consider position and pot odds. Hand strength {hand_strength} is 33.",
-    "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
-    }
-  },
-  {
-    "id": "template_34",
-    "name": "Generic 34",
-    "output_text": "Analysis #34: Consider position and pot odds. Hand strength {hand_strength} is 34.",
-    "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
-    }
-  },
-  {
-    "id": "template_35",
-    "name": "Generic 35",
-    "output_text": "Analysis #35: Consider position and pot odds. Hand strength {hand_strength} is 35.",
-    "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
-    }
-  },
-  {
-    "id": "template_36",
-    "name": "Generic 36",
-    "output_text": "Analysis #36: Consider position and pot odds. Hand strength {hand_strength} is 36.",
-    "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
-    }
-  },
-  {
-    "id": "template_37",
-    "name": "Generic 37",
-    "output_text": "Analysis #37: Consider position and pot odds. Hand strength {hand_strength} is 37.",
-    "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
-    }
-  },
-  {
-    "id": "template_38",
-    "name": "Generic 38",
-    "output_text": "Analysis #38: Consider position and pot odds. Hand strength {hand_strength} is 38.",
-    "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
-    }
-  },
-  {
-    "id": "template_39",
-    "name": "Generic 39",
-    "output_text": "Analysis #39: Consider position and pot odds. Hand strength {hand_strength} is 39.",
-    "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
-    }
-  },
-  {
-    "id": "template_40",
-    "name": "Generic 40",
-    "output_text": "Analysis #40: Consider position and pot odds. Hand strength {hand_strength} is 40.",
-    "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
-    }
-  },
-  {
-    "id": "template_41",
-    "name": "Generic 41",
-    "output_text": "Analysis #41: Consider position and pot odds. Hand strength {hand_strength} is 41.",
-    "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
-    }
-  },
-  {
-    "id": "template_42",
-    "name": "Generic 42",
-    "output_text": "Analysis #42: Consider position and pot odds. Hand strength {hand_strength} is 42.",
-    "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
-    }
-  },
-  {
-    "id": "template_43",
-    "name": "Generic 43",
-    "output_text": "Analysis #43: Consider position and pot odds. Hand strength {hand_strength} is 43.",
-    "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
-    }
-  },
-  {
-    "id": "template_44",
-    "name": "Generic 44",
-    "output_text": "Analysis #44: Consider position and pot odds. Hand strength {hand_strength} is 44.",
-    "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
-    }
-  },
-  {
-    "id": "template_45",
-    "name": "Generic 45",
-    "output_text": "Analysis #45: Consider position and pot odds. Hand strength {hand_strength} is 45.",
-    "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
-    }
-  },
-  {
-    "id": "template_46",
-    "name": "Generic 46",
-    "output_text": "Analysis #46: Consider position and pot odds. Hand strength {hand_strength} is 46.",
-    "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
-    }
-  },
-  {
-    "id": "template_47",
-    "name": "Generic 47",
-    "output_text": "Analysis #47: Consider position and pot odds. Hand strength {hand_strength} is 47.",
-    "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
-    }
-  },
-  {
-    "id": "template_48",
-    "name": "Generic 48",
-    "output_text": "Analysis #48: Consider position and pot odds. Hand strength {hand_strength} is 48.",
-    "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
-    }
-  },
-  {
-    "id": "template_49",
-    "name": "Generic 49",
-    "output_text": "Analysis #49: Consider position and pot odds. Hand strength {hand_strength} is 49.",
-    "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
-    }
-  },
-  {
-    "id": "template_50",
-    "name": "Generic 50",
-    "output_text": "Analysis #50: Consider position and pot odds. Hand strength {hand_strength} is 50.",
-    "rules": {
-      "positions": [
-        "early",
-        "middle",
-        "late",
-        "blind"
-      ],
-      "min_pot_odds_ratio": 0.0,
-      "max_pot_odds_ratio": 10.0
+      "min_hand_strength": 0.3,
+      "max_stack_bb": 30.0
     }
   }
 ]

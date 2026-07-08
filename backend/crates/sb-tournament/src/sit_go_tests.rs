@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use tokio::sync::mpsc;
 
-use sb_contracts::tournament_api::TournamentConfig;
+use sb_contracts::tournament_api::{TournamentConfig, TournamentType};
 use sb_shared_types::{ChipAmount, TournamentId, UserId};
 use sb_table_registry::connection_broker::ConnectionBroker;
 
@@ -64,11 +64,11 @@ fn make_payout_structure() -> sb_contracts::tournament_api::PayoutStructure {
         entries: vec![
             PayoutEntry {
                 position: 1,
-                percentage: 0.65,
+                percentage: 65.0,
             },
             PayoutEntry {
                 position: 2,
-                percentage: 0.35,
+                percentage: 35.0,
             },
         ],
     }

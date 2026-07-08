@@ -12,6 +12,7 @@ use tokio::sync::mpsc;
 
 use sb_contracts::stats_api::PlayerStatsRepo;
 use sb_game_engine::game_state::{Action, ActionError, GameState};
+use sb_game_engine::analytics::{run_monte_carlo, get_strength_score};
 use sb_shared_types::AppError;
 use sb_shared_types::player_stats::PlayerStatsDto;
 use sb_shared_types::{ActionType, ChipAmount, PlayerId, StakeLevel, TableConfig, TableId, UserId};
@@ -261,6 +262,7 @@ pub enum InternalCommand {
         player_id: PlayerId,
         stack: ChipAmount,
         seat: Option<u8>,
+        display_name: String,
         respond_to: tokio::sync::oneshot::Sender<Result<u8, AppError>>,
     },
     TransferPlayerOut {
@@ -368,7 +370,7 @@ impl ActiveHand {
         let tx = cmd_tx.clone();
         let handle = tokio::spawn(async move {
             sleep(Duration::from_millis(duration_ms)).await;
-            let _ = tx.send(InternalCommand::Timeout { user_id }).await;
+            let _: Result<_, _> = tx.send(InternalCommand::Timeout { user_id }).await;
         });
         self.timeout_handle = Some(handle);
     }
@@ -452,7 +454,7 @@ fn build_analytics(hand: &ActiveHand, user_id: UserId) -> Option<AnalyticsPayloa
     let (strength, _winning_cards) = sb_game_engine::evaluate::evaluate_best_hand(&all_cards);
 
     let best_hand_name = get_hand_description(&strength);
-    let base_strength = get_strength_score(&strength);
+    let base_strength = get_strength_score(strength.rank);
     let win_prob = run_monte_carlo(&hole_cards, comm_cards, 300);
 
     Some(AnalyticsPayload {
@@ -463,96 +465,9 @@ fn build_analytics(hand: &ActiveHand, user_id: UserId) -> Option<AnalyticsPayloa
     })
 }
 
-fn get_strength_score(strength: &sb_game_engine::evaluate::HandStrength) -> u8 {
-    use sb_game_engine::hand_rank::HandRank;
 
-    let base = match strength.rank {
-        HandRank::HighCard => 0,
-        HandRank::OnePair => 25,
-        HandRank::TwoPair => 45,
-        HandRank::ThreeOfAKind => 60,
-        HandRank::Straight => 70,
-        HandRank::Flush => 80,
-        HandRank::FullHouse => 88,
-        HandRank::FourOfAKind => 95,
-        HandRank::StraightFlush => 99,
-    };
 
-    if let Some(&kicker) = strength.kickers.first() {
-        let bonus = (kicker - 2) / 4;
-        let total = base + bonus;
-        if total > 100 { 100 } else { total }
-    } else {
-        base
-    }
-}
 
-fn run_monte_carlo(
-    hero_cards: &[sb_shared_types::Card; 2],
-    community_cards: &[sb_shared_types::Card],
-    iterations: u32,
-) -> u8 {
-    use rand::seq::SliceRandom;
-    use sb_shared_types::{Card, Rank, Suit};
-
-    let mut wins = 0;
-    let mut ties = 0;
-
-    let mut remaining_deck: Vec<Card> = Vec::new();
-    for suit in [Suit::Clubs, Suit::Diamonds, Suit::Hearts, Suit::Spades] {
-        for rank in [
-            Rank::Two,
-            Rank::Three,
-            Rank::Four,
-            Rank::Five,
-            Rank::Six,
-            Rank::Seven,
-            Rank::Eight,
-            Rank::Nine,
-            Rank::Ten,
-            Rank::Jack,
-            Rank::Queen,
-            Rank::King,
-            Rank::Ace,
-        ] {
-            let c = Card { suit, rank };
-            if !hero_cards.contains(&c) && !community_cards.contains(&c) {
-                remaining_deck.push(c);
-            }
-        }
-    }
-
-    let mut rng = rand::rng();
-
-    for _ in 0..iterations {
-        remaining_deck.shuffle(&mut rng);
-
-        let opp_cards: [Card; 2] = [remaining_deck[0], remaining_deck[1]];
-        let fill_count = 5 - community_cards.len();
-        let fill_comm: Vec<Card> = remaining_deck[2..2 + fill_count].to_vec();
-
-        let mut hero_comm = community_cards.to_vec();
-        hero_comm.extend_from_slice(&fill_comm);
-        let hero_comm_5: [Card; 5] = hero_comm[..5].try_into().unwrap();
-
-        let mut opp_comm = community_cards.to_vec();
-        opp_comm.extend_from_slice(&fill_comm);
-        let opp_comm_5: [Card; 5] = opp_comm[..5].try_into().unwrap();
-
-        let (hero_strength, _) =
-            sb_game_engine::evaluate::evaluate_hand_strength(hero_cards, &hero_comm_5);
-        let (opp_strength, _) =
-            sb_game_engine::evaluate::evaluate_hand_strength(&opp_cards, &opp_comm_5);
-
-        match hero_strength.cmp(&opp_strength) {
-            std::cmp::Ordering::Greater => wins += 1,
-            std::cmp::Ordering::Equal => ties += 1,
-            _ => {}
-        }
-    }
-
-    (((wins as f32) + (ties as f32) * 0.5) / iterations as f32 * 100.0) as u8
-}
 
 pub struct TableActor {
     pub created_by: sb_shared_types::UserId,
@@ -638,7 +553,7 @@ impl TableActor {
         msg: RoomMessage,
     ) {
         for tx in user_senders.values() {
-            let _ = tx.send(msg.clone());
+            let _: Result<_, _> = tx.send(msg.clone());
         }
     }
 
@@ -648,7 +563,7 @@ impl TableActor {
         msg: RoomMessage,
     ) {
         if let Some(tx) = user_senders.get(user_id) {
-            let _ = tx.send(msg);
+            let _: Result<_, _> = tx.send(msg);
         }
     }
 
@@ -657,7 +572,7 @@ impl TableActor {
             broker.broadcast_to_room(self.room_id, msg);
         } else {
             for tx in self.user_senders.values() {
-                let _ = tx.send(msg.clone());
+                let _: Result<_, _> = tx.send(msg.clone());
             }
         }
     }
@@ -666,7 +581,7 @@ impl TableActor {
         if let Some(broker) = &self.broker {
             broker.send_to_user(*user_id, msg);
         } else if let Some(tx) = self.user_senders.get(user_id) {
-            let _ = tx.send(msg);
+            let _: Result<_, _> = tx.send(msg);
         }
     }
 
@@ -804,13 +719,7 @@ impl TableActor {
                 self.paused = false;
                 let _ = respond_to.send(Ok(()));
             }
-            InternalCommand::TransferPlayerIn {
-                user_id,
-                player_id,
-                stack,
-                seat,
-                respond_to,
-            } => {
+            InternalCommand::TransferPlayerIn { user_id, player_id, stack, seat, display_name: _, respond_to } => {
                 let seat = match seat {
                     Some(s) => {
                         if s >= self.config.max_players
@@ -840,7 +749,7 @@ impl TableActor {
                         }
                     }
                 };
-                let player = Player::new(user_id, "".to_string(), seat, stack);
+                let player = Player::new(user_id, format!("Player_{}", user_id), seat, stack);
                 self.players.insert(
                     user_id,
                     Player {
@@ -1254,8 +1163,6 @@ impl TableActor {
             warn!("Hand already in progress");
             return;
         }
-        self.prune_cooldowns();
-        self.prune_cooldowns();
 
         let active_players_count = self
             .players
@@ -1564,6 +1471,7 @@ impl TableActor {
                         action_type: format!("{:?}", action_type).to_lowercase(),
                         amount: amount.map(|a| a.as_i64()),
                         timestamp_ms: elapsed_ms,
+                    street: street_name(&hand.state),
                     });
                 }
 
@@ -1635,6 +1543,9 @@ impl TableActor {
                     ActionError::ShowdownNotActionable => "No actions in showdown".into(),
                     ActionError::InsufficientStack { action, .. } => {
                         format!("Insufficient stack to {}", action)
+                    }
+                    ActionError::CannotCheck { to_call } => {
+                        format!("Cannot check, must call {}", to_call)
                     }
                 };
                 self.send_error_to(&user_id, &msg);

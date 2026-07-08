@@ -1,8 +1,8 @@
+pub mod game_room;
 pub mod actor;
 pub use actor::TableActorConfig;
 pub mod connection_broker;
 pub mod events;
-pub mod game_room;
 pub mod registry;
 pub mod stats_aggregator;
 pub mod table_service;

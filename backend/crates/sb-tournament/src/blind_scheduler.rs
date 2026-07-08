@@ -14,7 +14,6 @@ pub struct BlindScheduler {
     current_level_index: usize,
     level_start: Instant,
     pending_advance: Arc<AtomicBool>,
-    _timer: Option<tokio::task::JoinHandle<()>>,
 }
 
 impl BlindScheduler {
@@ -28,7 +27,6 @@ impl BlindScheduler {
             current_level_index: 0,
             level_start: Instant::now(),
             pending_advance: Arc::new(AtomicBool::new(false)),
-            _timer: None,
         }
     }
 
@@ -76,19 +74,8 @@ impl BlindScheduler {
     pub fn start_timer(&mut self) -> tokio::task::JoinHandle<()> {
         let pending = self.pending_advance.clone();
         let levels = self.levels.clone();
-        let handle = tokio::spawn(async move {
-            for level in &levels {
-                let dur = Duration::from_secs(level.duration_seconds as u64);
-                tokio::time::sleep(dur).await;
-                pending.store(true, Ordering::SeqCst);
-            }
-        });
-        self._timer = Some(handle);
-        // Return a new handle for the caller (the original is stored in self._timer)
-        let pending = self.pending_advance.clone();
-        let levels = self.levels.clone();
         tokio::spawn(async move {
-            for level in &levels {
+            for level in levels {
                 let dur = Duration::from_secs(level.duration_seconds as u64);
                 tokio::time::sleep(dur).await;
                 pending.store(true, Ordering::SeqCst);

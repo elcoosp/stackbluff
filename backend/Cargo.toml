@@ -20,7 +20,8 @@ members = [
     "crates/sb-club",
     "crates/sb-server",
     "crates/sb-tournament",
-        "crates/sb-notification",
+    "crates/sb-notification",
+    "crates/sb-bot-handler",
 ]
 
 [workspace.package]
@@ -32,7 +33,7 @@ anyhow = { version = "1.0.102" }
 uuid = { version = "1.23.0", features = ["v4", "serde"] }
 dashmap = { version = "6.2.1", features = ["serde"] }
 image = { version = "0.25.5", default-features = false, features = ["png"] }
-tokio-cron-scheduler = "0.11"
+tokio-cron-scheduler = "0.15.1"
 sb-notification = { path = "crates/sb-notification" }
 bytes = "1.10"
 figment = { version = "0.10", features = ["toml", "env"] }
@@ -50,7 +51,7 @@ axum-extra = { version = "0.10", features = ["cookie"] }
     async-stripe = { version = "=1.0.0-rc.6", features = ["default-tls"] }
 metrics = "0.24"
 
-tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.23", features = ["env-filter", "json"] }
 sb-server = { path = "crates/sb-server" }
 sb-club = { path = "crates/sb-club" }
 futures = { version = "0.3.32", default-features = false, features = ["std", "async-await"] }

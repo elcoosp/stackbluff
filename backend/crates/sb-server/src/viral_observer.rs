@@ -75,7 +75,7 @@ pub fn spawn_viral_observer(
                             .and_then(|p| p.user_id)
                         {
                             let hand_result = HandResult {
-                                hero_raised_preflop: false,
+                                hero_raised_preflop: event.players.seats.iter().find(|p| p.user_id == Some(user_id)).map_or(false, |p| p.raised_preflop),
                                 went_to_showdown: true,
                                 hero_went_allin: false,
                             };

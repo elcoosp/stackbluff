@@ -1,7 +1,6 @@
 mod leaderboard_refresh;
 #[cfg(feature = "test-stubs")]
 mod test_utils;
-mod user_resolution_service;
 mod user_service;
 mod viral_observer;
 
@@ -57,7 +56,6 @@ use sb_tournament::{
 };
 use sb_viral::ViralServiceImpl;
 use sb_ws_handler::ws_route;
-use user_resolution_service::UserResolutionServiceImpl;
 use user_service::UserServiceImpl;
 
 #[cfg(feature = "test-stubs")]
@@ -106,10 +104,12 @@ async fn reschedule_tournament_reminders(
 #[tokio::main]
 async fn main() {
     dotenvy::dotenv().expect("Failed to load .env");
-    tracing_subscriber::fmt().init();
+    tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .json()
+        .init();
 
-    let db_url = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "sqlite://stackbluff.db?mode=rwc".to_string());
+    let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
 
     let db = Database::connect(&db_url)
         .await
@@ -226,7 +226,7 @@ async fn main() {
         Arc::new(ClubRepoImpl::new(db.clone()));
     let club_service: Arc<dyn sb_contracts::service_api::ClubService + Send + Sync> =
         Arc::new(sb_club::ClubServiceImpl::new(club_repo.clone()));
-    let broker = Arc::new(ConnectionBroker::new());
+    let _broker = Arc::new(ConnectionBroker::new());
 
     // ── GDPR repository ──────────────────────────────────────────────
     let gdpr_repo: Arc<dyn GdprRepo + Send + Sync> = Arc::new(PgGdprRepo { db: db.clone() });
@@ -288,21 +288,8 @@ async fn main() {
     };
 
     // ── Create AppState ──────────────────────────────────────────────
-    let app_state = Arc::new(AppState {
-        table_service: table_service.clone(),
-        table_repo: table_repo.clone(),
-        registry: registry.clone(),
-        hand_history_repo: hand_history_repo.clone(),
-        leaderboard_query: leaderboard_repo.clone(),
-        club_service: club_service.clone(),
-        broker: broker.clone(),
-        badge_repo: badge_repo.clone(),
-        gdpr_repo: gdpr_repo.clone(),
-    });
 
     // ── REST router ──────────────────────────────────────────────────
-    let rest_router = create_router(app_state.clone())
-        .merge(player_stats_routes(stats_repo.clone(), user_repo.clone()));
 
     // ── Tournament system ────────────────────────────────────────────
     let tournament_repo = Arc::new(TournamentRepoImpl::new(db.clone()));
@@ -333,10 +320,10 @@ async fn main() {
     let club_tournament_router = club_tournament_routes(club_tournament_state);
 
     let tournament_state = Arc::new(TournamentState {
-        tournament_service: tournament_service.clone(),
         registry: registry.clone(),
         broker: broker.clone(),
         tournament_repo: tournament_repo.clone(),
+        tournament_service: tournament_service.clone(),
         user_repo: user_repo.clone(),
     });
 
@@ -357,12 +344,36 @@ async fn main() {
 
     let viral_service_arc = Arc::new(viral_service_impl);
 
+
+    let mission_service: Arc<dyn MissionApi + Send + Sync> =
+        Arc::new(MissionServiceImpl::new(Arc::new(db.clone()), user_service));
+
+    let app_state = Arc::new(AppState {
+        table_service: table_service.clone(),
+        table_repo: table_repo.clone(),
+        registry: registry.clone(),
+        hand_history_repo: hand_history_repo.clone(),
+        leaderboard_query: leaderboard_repo.clone(),
+        club_service: club_service.clone(),
+        broker: broker.clone(),
+        badge_repo: badge_repo.clone(),
+        gdpr_repo: gdpr_repo.clone(),
+        notification_service: notification_service.clone(),
+        tournament_service: tournament_service.clone(),
+        mission_service: mission_service.clone(),
+        viral_service: viral_service_arc.clone(),
+    });
+
+    let rest_router = create_router(app_state.clone())
+        .merge(player_stats_routes(stats_repo.clone(), user_repo.clone()));
+
+
+
+
     let hand_count_observer: Arc<dyn HandCountObserver + Send + Sync> = viral_service_arc.clone();
     let replay_observer: Arc<dyn ReplayCardObserver + Send + Sync> = viral_service_arc.clone();
 
     // ── Mission service ──────────────────────────────────────────────────
-    let mission_service: Arc<dyn MissionApi + Send + Sync> =
-        Arc::new(MissionServiceImpl::new(Arc::new(db.clone()), user_service));
 
     let viral_event_rx = registry.event_sender().subscribe();
     viral_observer::spawn_viral_observer(
@@ -380,10 +391,11 @@ async fn main() {
     );
 
     // ── CORS ──────────────────────────────────────────────────────────
-    let allowed_origins = vec![
-        "http://localhost:5173".parse().unwrap(),
-        "http://localhost:5174".parse().unwrap(),
-    ];
+let cors_origins_env = std::env::var("CORS_ORIGINS").unwrap_or_else(|_| "http://localhost:5173,http://localhost:5174".to_string());
+    let allowed_origins: Vec<axum::http::HeaderValue> = cors_origins_env
+        .split(',')
+        .filter_map(|s| s.parse().ok())
+        .collect();
     let cors = CorsLayer::new()
         .allow_origin(allowed_origins.clone())
         .allow_credentials(true)
@@ -408,7 +420,9 @@ async fn main() {
     });
 
     // ── Build main router ────────────────────────────────────────────
+    let metrics_route = axum::Router::new().route("/metrics", axum::routing::get(metrics_handler));
     let app = Router::new()
+        .merge(metrics_route)
         .merge(rest_router)
         .merge(ws_router)
         .merge(auth_router(auth_service))
@@ -582,4 +596,14 @@ async fn start_gdpr_job(state: std::sync::Arc<AppState>) {
 #[allow(dead_code)]
 pub fn spawn_gdpr_scheduler(state: std::sync::Arc<AppState>) {
     tokio::spawn(start_gdpr_job(state));
+}
+
+// Metrics endpoint
+use prometheus::{Encoder, TextEncoder};
+async fn metrics_handler() -> String {
+    let encoder = TextEncoder::new();
+    let metric_families = prometheus::gather();
+    let mut buffer = Vec::new();
+    encoder.encode(&metric_families, &mut buffer).unwrap();
+    String::from_utf8(buffer).unwrap()
 }

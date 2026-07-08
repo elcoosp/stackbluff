@@ -55,6 +55,8 @@ pub enum ActionError {
         attempted: ChipAmount,
         min: ChipAmount,
     },
+    #[error("Cannot check, must call {to_call}")]
+    CannotCheck { to_call: ChipAmount },
     #[error("Game already finished")]
     HandComplete,
     #[error("Cannot act in showdown")]
@@ -319,10 +321,8 @@ impl GameState {
             }
             Action::Check => {
                 if self.round_bets[idx] != self.smallest_bet {
-                    return Err(ActionError::InvalidRaise {
-                        attempted: ChipAmount::new(0).unwrap(),
-                        min: self.min_raise,
-                    });
+                    let to_call = self.smallest_bet - self.round_bets[idx];
+                    return Err(ActionError::CannotCheck { to_call });
                 }
                 self.players[idx].acted_this_round = true;
                 debug!(player = ?self.players[idx].player_id, "Check");
@@ -413,6 +413,17 @@ impl GameState {
         }
 
         self.current_player_index = next;
+        // Safety: if current player is folded or all-in, advance again
+        let mut safety = 0;
+        while safety < self.players.len() {
+            let p = &self.players[self.current_player_index];
+            if p.has_folded || p.is_all_in {
+                self.current_player_index = (self.current_player_index + 1) % self.players.len();
+                safety += 1;
+            } else {
+                break;
+            }
+        }
 
         if self.round_complete() {
             self.end_round();
