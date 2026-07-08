@@ -22,6 +22,7 @@ export const CreateIntentRequestSchema = z.object({
 
 export const CreateIntentResponseSchema = z.object({
   client_secret: z.string().optional(),
+  checkout_url: z.string().url().optional(),
   redirect_url: z.string().url().optional(),
   invoice_link: z.string().url().optional(),
   payment_id: z.string().optional(),

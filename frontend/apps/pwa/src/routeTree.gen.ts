@@ -31,6 +31,7 @@ import { Route as ClubsIndexRouteImport } from './routes/clubs/index'
 import { Route as TournamentsTournamentIdRouteImport } from './routes/tournaments/$tournamentId'
 import { Route as TableTableIdRouteImport } from './routes/table/$tableId'
 import { Route as SettingsPrivacyRouteImport } from './routes/settings/privacy'
+import { Route as SettingsPaymentsRouteImport } from './routes/settings/payments'
 import { Route as PlayersUserIdRouteImport } from './routes/players/$userId'
 import { Route as HandsHandIdRouteImport } from './routes/hands/$handId'
 import { Route as ClubsJoinRouteImport } from './routes/clubs/join'
@@ -146,6 +147,11 @@ const SettingsPrivacyRoute = SettingsPrivacyRouteImport.update({
   path: '/privacy',
   getParentRoute: () => SettingsRoute,
 } as any)
+const SettingsPaymentsRoute = SettingsPaymentsRouteImport.update({
+  id: '/payments',
+  path: '/payments',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const PlayersUserIdRoute = PlayersUserIdRouteImport.update({
   id: '/players/$userId',
   path: '/players/$userId',
@@ -190,6 +196,7 @@ export interface FileRoutesByFullPath {
   '/clubs/join': typeof ClubsJoinRoute
   '/hands/$handId': typeof HandsHandIdRoute
   '/players/$userId': typeof PlayersUserIdRoute
+  '/settings/payments': typeof SettingsPaymentsRoute
   '/settings/privacy': typeof SettingsPrivacyRoute
   '/table/$tableId': typeof TableTableIdRoute
   '/tournaments/$tournamentId': typeof TournamentsTournamentIdRoute
@@ -218,6 +225,7 @@ export interface FileRoutesByTo {
   '/clubs/join': typeof ClubsJoinRoute
   '/hands/$handId': typeof HandsHandIdRoute
   '/players/$userId': typeof PlayersUserIdRoute
+  '/settings/payments': typeof SettingsPaymentsRoute
   '/settings/privacy': typeof SettingsPrivacyRoute
   '/table/$tableId': typeof TableTableIdRoute
   '/tournaments/$tournamentId': typeof TournamentsTournamentIdRoute
@@ -247,6 +255,7 @@ export interface FileRoutesById {
   '/clubs/join': typeof ClubsJoinRoute
   '/hands/$handId': typeof HandsHandIdRoute
   '/players/$userId': typeof PlayersUserIdRoute
+  '/settings/payments': typeof SettingsPaymentsRoute
   '/settings/privacy': typeof SettingsPrivacyRoute
   '/table/$tableId': typeof TableTableIdRoute
   '/tournaments/$tournamentId': typeof TournamentsTournamentIdRoute
@@ -277,6 +286,7 @@ export interface FileRouteTypes {
     | '/clubs/join'
     | '/hands/$handId'
     | '/players/$userId'
+    | '/settings/payments'
     | '/settings/privacy'
     | '/table/$tableId'
     | '/tournaments/$tournamentId'
@@ -305,6 +315,7 @@ export interface FileRouteTypes {
     | '/clubs/join'
     | '/hands/$handId'
     | '/players/$userId'
+    | '/settings/payments'
     | '/settings/privacy'
     | '/table/$tableId'
     | '/tournaments/$tournamentId'
@@ -333,6 +344,7 @@ export interface FileRouteTypes {
     | '/clubs/join'
     | '/hands/$handId'
     | '/players/$userId'
+    | '/settings/payments'
     | '/settings/privacy'
     | '/table/$tableId'
     | '/tournaments/$tournamentId'
@@ -522,6 +534,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsPrivacyRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/settings/payments': {
+      id: '/settings/payments'
+      path: '/payments'
+      fullPath: '/settings/payments'
+      preLoaderRoute: typeof SettingsPaymentsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/players/$userId': {
       id: '/players/$userId'
       path: '/players/$userId'
@@ -554,10 +573,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface SettingsRouteChildren {
+  SettingsPaymentsRoute: typeof SettingsPaymentsRoute
   SettingsPrivacyRoute: typeof SettingsPrivacyRoute
 }
 
 const SettingsRouteChildren: SettingsRouteChildren = {
+  SettingsPaymentsRoute: SettingsPaymentsRoute,
   SettingsPrivacyRoute: SettingsPrivacyRoute,
 }
 

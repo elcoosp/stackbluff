@@ -36,9 +36,33 @@ function SettingsPage() {
           <Link to="/settings/privacy" className="text-tertiary text-sm font-medium hover:underline mt-2 inline-block">
             Manage Privacy →
           </Link>
+        
+        <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
+          <h3 className="text-sm font-semibold text-on-surface">Payments</h3>
+          <p className="text-xs text-on-surface-variant mt-1">View your purchase history and invoices.</p>
+          <Link to="/settings/payments" className="text-tertiary text-sm font-medium hover:underline mt-2 inline-block">
+            View Purchase History →
+          </Link>
         </div>
       </div>
-    </div>
+      
+        <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
+          <h3 className="text-sm font-semibold text-on-surface">Payments</h3>
+          <p className="text-xs text-on-surface-variant mt-1">View your purchase history and invoices.</p>
+          <Link to="/settings/payments" className="text-tertiary text-sm font-medium hover:underline mt-2 inline-block">
+            View Purchase History →
+          </Link>
+        </div>
+      </div>
+    
+        <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
+          <h3 className="text-sm font-semibold text-on-surface">Payments</h3>
+          <p className="text-xs text-on-surface-variant mt-1">View your purchase history and invoices.</p>
+          <Link to="/settings/payments" className="text-tertiary text-sm font-medium hover:underline mt-2 inline-block">
+            View Purchase History →
+          </Link>
+        </div>
+      </div>
   );
 }
 
