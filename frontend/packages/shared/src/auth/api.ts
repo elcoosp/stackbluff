@@ -56,4 +56,16 @@ export const authApi = {
     }
     return response.json();
   },
+  telegramAuth: async (initData: string) => {
+    const response = await fetch('/auth/telegram', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ init_data: initData }),
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: "Telegram authentication failed" }));
+      throw new Error(error.message || "Telegram authentication failed");
+    }
+    return response.json();
+  },
 };
