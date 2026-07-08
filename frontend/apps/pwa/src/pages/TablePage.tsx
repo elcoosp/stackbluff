@@ -43,7 +43,6 @@ import { FinalTableBanner } from '../components/tournament/FinalTableBanner';
 import { useTournamentStore } from '@stackbluff/shared/stores/tournamentStore';
 import type { TournamentResultEntry } from '@stackbluff/shared/types/tournament.types';
 import { tournamentApi } from '@stackbluff/shared/api/tournamentApi';
-import { TablePreviewThumbnail } from '@/components/game/TablePreviewThumbnail';
 
 function Fallback({ error, resetErrorBoundary }: any) {
   return (
@@ -255,6 +254,7 @@ export function TablePage() {
   const [isJoining, setIsJoining] = useState(false);
   const [isAddingTable, setIsAddingTable] = useState(false);
   const [statsUserId, setStatsUserId] = useState<string | null>(null);
+  const isTournament = !!tournamentId;
   const [resultsModalOpen, setResultsModalOpen] = useState(false);
   const [resultsData, setResultsData] = useState<TournamentResultEntry[]>([]);
   const [finalTableVisible, setFinalTableVisible] = useState(false);
@@ -513,7 +513,7 @@ export function TablePage() {
     } else if (heroStack > 0 && !isAddingTable) {
       setShowRebuyDialog(false);
     }
-  }, [heroStack, connectionStatus, hasJoined, isJoining, game.handInProgress, isObserving, isAddingTable]);
+  }, [heroStack, connectionStatus, hasJoined, isJoining, game.handInProgress, isObserving, isAddingTable, isTournament]);
 
   // Prevent "Disconnected" flash on initial mount
   const [showDisconnect, setShowDisconnect] = useState(false);
@@ -710,12 +710,18 @@ export function TablePage() {
         {/* Vertical Glass Morphism Multi-table Rail */}
         <div className="absolute right-3 top-1/2 -translate-y-1/2 z-[1000] flex flex-col items-center gap-3">
           {roomIds.map((rId) => (
-            <TablePreviewThumbnail
+            <motion.button
               key={rId}
-              roomId={rId}
-              room={rooms[rId]}
-              isActive={rId === activeRoomId}
               onClick={() => useGameStore.getState().setActiveRoom(rId)}
+              whileTap={{ x: -6, scale: 1.3 }}
+              whileHover={{ x: -2 }}
+              className={cn(
+                "rounded-full backdrop-blur-md border transition-all duration-200",
+                rId === activeRoomId
+                  ? "w-4 h-4 bg-emerald-500/80 border-white/60 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+                  : "w-3 h-3 bg-white/15 border-white/30 hover:bg-white/30"
+              )}
+              aria-label={`Switch to table ${rId.slice(0, 4)}`}
             />
           ))}
           <motion.button
