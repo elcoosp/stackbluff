@@ -117,6 +117,7 @@ impl PaymentService for RealPaymentService {
                 let client_secret = session
                     .client_secret
                     .ok_or_else(|| AppError::Internal("No client secret".into()))?;
+            let checkout_url = session.url.clone();
 
                 PaymentRepo::insert_pending(
                     &self.db,
@@ -137,7 +138,10 @@ impl PaymentService for RealPaymentService {
                     "Created Stripe Checkout Session and pending record"
                 );
 
-                Ok(client_secret)
+                Ok(serde_json::json!({
+            "client_secret": client_secret,
+            "checkout_url": checkout_url
+        }).to_string())
             }
             "telegram_stars" => {
                 let synthetic_id = format!(
