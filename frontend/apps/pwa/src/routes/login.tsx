@@ -5,14 +5,15 @@ import { z } from 'zod';
 import { authApi } from '@stackbluff/shared/auth/api';
 import { setToken } from '@stackbluff/shared/auth/token';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
-import { GlassPanel } from "@stackbluff/shared/ui/GlassPanel";
-import { LiquidMetalButton } from "@stackbluff/shared/ui/LiquidMetalButton";
+import { GlassPanel } from '@stackbluff/shared/ui/GlassPanel';
+import { LiquidMetalButton } from '@stackbluff/shared/ui/LiquidMetalButton';
 import { Link } from '@tanstack/react-router';
 import { Mail, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useIsMiniApp } from '@stackbluff/shared/hooks/usePaymentProvider';
 
 const loginSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Invalid email address'),
@@ -27,7 +28,9 @@ export const Route = createFileRoute('/login')({
 function LoginPage() {
   const navigate = useNavigate();
   const setAuth = useAuthStore((s) => s.setAuth);
-  const mutation = useMutation({
+  const isMiniApp = useIsMiniApp();
+
+  const loginMutation = useMutation({
     mutationFn: authApi.login,
     onSuccess: (data) => {
       setToken(data.token);
@@ -38,10 +41,23 @@ function LoginPage() {
       toast.error(error.message || 'Invalid credentials');
     },
   });
+
+  const telegramMutation = useMutation({
+    mutationFn: authApi.telegramAuth,
+    onSuccess: (data) => {
+      setToken(data.token);
+      setAuth(data.user, data.token, data.balance || 0);
+      navigate({ to: '/' });
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Telegram authentication failed');
+    },
+  });
+
   const form = useForm({
     defaultValues: { email: '', password: '' },
     validators: { onChange: loginSchema },
-    onSubmit: ({ value }) => mutation.mutate(value),
+    onSubmit: ({ value }) => loginMutation.mutate(value),
   });
 
   return (
@@ -54,91 +70,130 @@ function LoginPage() {
         </div>
         <GlassPanel>
           <form onSubmit={(e) => { e.preventDefault(); form.handleSubmit(); }} className="space-y-6">
-            <form.Field name="email">
-              {(field) => (
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="email"
-                    className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase"
-                  >
-                    Email Address
-                  </Label>
-                  <div className="relative mt-2">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="email"
-                      type="email"
-                      value={field.state.value}
-                      onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      placeholder="user@stackbluff.com"
-                      className="pl-9 bg-background/50 border-white/10 text-on-surface placeholder:text-muted-foreground/50 focus-visible:ring-tertiary"
-                    />
+            {isMiniApp && (
+              <div className="space-y-4">
+                <LiquidMetalButton
+                  type="button"
+                  onClick={() => {
+                    const initData = window.Telegram?.WebApp?.initData;
+                    if (!initData) {
+                      toast.error('Telegram environment not detected');
+                      return;
+                    }
+                    telegramMutation.mutate(initData);
+                  }}
+                  disabled={telegramMutation.isPending}
+                  variant="emerald"
+                  className="w-full"
+                >
+                  {telegramMutation.isPending ? 'AUTHENTICATING...' : 'LOGIN WITH TELEGRAM'}
+                </LiquidMetalButton>
+                <div className="relative my-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-white/10" />
                   </div>
-                  <div className="min-h-[1.5rem] overflow-hidden">
-                    <AnimatePresence mode="wait">
-                      {field.state.meta.errors.length > 0 && (
-                        <motion.p
-                          initial={{ opacity: 0, y: -4 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -4 }}
-                          transition={{ duration: 0.2 }}
-                          className="text-xs font-data-mono text-red-400 mt-1"
-                        >
-                          {field.state.meta.errors.map((e: any) => e?.message || String(e)).join(', ')}
-                        </motion.p>
-                      )}
-                    </AnimatePresence>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-black/60 px-2 text-on-surface-variant">or</span>
                   </div>
                 </div>
-              )}
-            </form.Field>
+              </div>
+            )}
 
-            <form.Field name="password">
-              {(field) => (
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="password"
-                    className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase"
-                  >
-                    Password
-                  </Label>
-                  <div className="relative mt-2">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="password"
-                      type="password"
-                      value={field.state.value}
-                      onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      placeholder="••••••••"
-                      className="pl-9 bg-background/50 border-white/10 text-on-surface placeholder:text-muted-foreground/50 focus-visible:ring-tertiary"
-                    />
-                  </div>
-                  <div className="min-h-[1.5rem] overflow-hidden">
-                    <AnimatePresence mode="wait">
-                      {field.state.meta.errors.length > 0 && (
-                        <motion.p
-                          initial={{ opacity: 0, y: -4 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -4 }}
-                          transition={{ duration: 0.2 }}
-                          className="text-xs font-data-mono text-red-400 mt-1"
-                        >
-                          {field.state.meta.errors.map((e: any) => e?.message || String(e)).join(', ')}
-                        </motion.p>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                </div>
-              )}
-            </form.Field>
+            {!isMiniApp && (
+              <>
+                <form.Field name="email">
+                  {(field) => (
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="email"
+                        className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase"
+                      >
+                        Email Address
+                      </Label>
+                      <div className="relative mt-2">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="email"
+                          type="email"
+                          value={field.state.value}
+                          onBlur={field.handleBlur}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          placeholder="user@stackbluff.com"
+                          className="pl-9 bg-background/50 border-white/10 text-on-surface placeholder:text-muted-foreground/50 focus-visible:ring-tertiary"
+                        />
+                      </div>
+                      <div className="min-h-[1.5rem] overflow-hidden">
+                        <AnimatePresence mode="wait">
+                          {field.state.meta.errors.length > 0 && (
+                            <motion.p
+                              initial={{ opacity: 0, y: -4 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -4 }}
+                              transition={{ duration: 0.2 }}
+                              className="text-xs font-data-mono text-red-400 mt-1"
+                            >
+                              {field.state.meta.errors.map((e: any) => e?.message || String(e)).join(', ')}
+                            </motion.p>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </div>
+                  )}
+                </form.Field>
 
-            <LiquidMetalButton type="submit" disabled={mutation.isPending} variant="silver" className="w-full">
-              {mutation.isPending ? 'AUTHENTICATING...' : 'SIGN IN'}
-            </LiquidMetalButton>
+                <form.Field name="password">
+                  {(field) => (
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="password"
+                        className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase"
+                      >
+                        Password
+                      </Label>
+                      <div className="relative mt-2">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="password"
+                          type="password"
+                          value={field.state.value}
+                          onBlur={field.handleBlur}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          placeholder="••••••••"
+                          className="pl-9 bg-background/50 border-white/10 text-on-surface placeholder:text-muted-foreground/50 focus-visible:ring-tertiary"
+                        />
+                      </div>
+                      <div className="min-h-[1.5rem] overflow-hidden">
+                        <AnimatePresence mode="wait">
+                          {field.state.meta.errors.length > 0 && (
+                            <motion.p
+                              initial={{ opacity: 0, y: -4 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -4 }}
+                              transition={{ duration: 0.2 }}
+                              className="text-xs font-data-mono text-red-400 mt-1"
+                            >
+                              {field.state.meta.errors.map((e: any) => e?.message || String(e)).join(', ')}
+                            </motion.p>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </div>
+                  )}
+                </form.Field>
 
-            <div className="text-center pt-4">
+                <LiquidMetalButton type="submit" disabled={loginMutation.isPending} variant="silver" className="w-full">
+                  {loginMutation.isPending ? 'AUTHENTICATING...' : 'SIGN IN'}
+                </LiquidMetalButton>
+              </>
+            )}
+
+            <div className="text-center">
+              <Link to="/forgot-password" className="font-label-caps text-[10px] text-on-surface-variant hover:text-on-surface transition-all tracking-widest uppercase">
+                FORGOT PASSWORD?
+              </Link>
+            </div>
+
+            <div className="text-center pt-2">
               <Link to="/register" className="font-label-caps text-[10px] text-on-surface-variant hover:text-on-surface transition-all tracking-widest uppercase">
                 NEW TO STACKBLUFF? <span className="text-tertiary">CREATE ACCOUNT</span>
               </Link>
