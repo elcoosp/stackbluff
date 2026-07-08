@@ -6,20 +6,7 @@ import type {
   ShareContent,
 } from './types';
 
-declare global {
-  interface Window {
-    Telegram: {
-      WebApp: {
-        ready(): void;
-        expand(): void;
-        initDataUnsafe?: {
-          user?: {
-            id: number;
-            first_name?: string;
-            last_name?: string;
-            username?: string;
-            photo_url?: string;
-          };
+;
         };
         sendData(data: string): void;
         shareToStory?(mediaUrl: string, options?: unknown): void;
