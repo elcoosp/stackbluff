@@ -20,6 +20,7 @@
     "@radix-ui/react-select": "^2.3.0",
     "@radix-ui/react-slot": "^1.2.5",
     "@stackbluff/shared": "workspace:*",
+    "@stripe/stripe-js": "^9.9.0",
     "@tanstack/react-virtual": "^3.14.3",
     "class-variance-authority": "^0.7.1",
     "motion": "^12.40.0",

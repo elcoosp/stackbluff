@@ -19,12 +19,11 @@ interface PurchaseDialogProps {
 export function PurchaseDialog({ onConfirm }: PurchaseDialogProps) {
   const isMini = useIsMiniApp();
   const shop = useShopStore();
-
   const product = shop.selectedProduct;
 
   return (
     <Dialog open={shop.isDialogOpen} onOpenChange={(open) => shop.setDialogOpen(open)}>
-      <DialogContent className="bg-[#1a1a1a] text-white">
+      <DialogContent className="bg-[#1a1a1a] text-white max-w-md">
         <DialogHeader>
           <DialogTitle>Confirm Purchase</DialogTitle>
         </DialogHeader>

@@ -4,6 +4,7 @@ import { useShopStore } from '../stores/shopStore';
 import { createPaymentIntent } from '../lib/shopApi';
 import { usePaymentProvider } from './usePaymentProvider';
 import { useTelegramWebApp } from './useTelegramWebApp';
+import { redirectToStripeCheckout } from '../lib/stripe';
 
 export function usePurchaseFlow() {
   const queryClient = useQueryClient();
@@ -43,6 +44,18 @@ export function usePurchaseFlow() {
     try {
       const intent = await createPaymentIntent({ product_id: product.id, provider });
 
+      // ── Stripe Checkout ──────────────────────────────────────────────
+      if (provider === 'stripe' && intent.client_secret) {
+        // Use the checkout_url if provided, otherwise fallback
+        redirectToStripeCheckout(intent.client_secret, (intent as any).checkout_url);
+        shop.setDialogOpen(false);
+        shop.setToast({ message: 'Redirecting to payment...', type: 'success' });
+        stopPolling();
+        shop.setPurchasing(false);
+        return;
+      }
+
+      // ── Telegram Stars ───────────────────────────────────────────────
       if (provider === 'telegram_stars' && intent.invoice_link) {
         const opened = openInvoice(intent.invoice_link, (result) => {
           if (result.status === 'paid') {
@@ -61,16 +74,17 @@ export function usePurchaseFlow() {
           shop.setPurchasing(false);
           shop.setDialogOpen(false);
         }
-      } else if (intent.redirect_url) {
+        return;
+      }
+
+      // ── Fallback ──────────────────────────────────────────────────────
+      if (intent.redirect_url) {
         window.location.assign(intent.redirect_url);
         return;
-      } else if (intent.client_secret) {
-        shop.setError('Stripe.js integration not yet configured.');
-        shop.setPurchasing(false);
-      } else {
-        shop.setError('Invalid payment response.');
-        shop.setPurchasing(false);
       }
+
+      shop.setError('Invalid payment response.');
+      shop.setPurchasing(false);
     } catch (err) {
       const rawMsg = err instanceof Error ? err.message : 'Purchase failed';
       const msg = rawMsg.length > 120 ? 'Purchase failed. Please try again.' : rawMsg;
@@ -78,7 +92,7 @@ export function usePurchaseFlow() {
       shop.setToast({ message: msg, type: 'error' });
       shop.setPurchasing(false);
     }
-  }, [shop, provider, openInvoice, startPolling]);
+  }, [shop, provider, openInvoice, startPolling, stopPolling]);
 
   return { confirmPurchase, stopPolling };
 }
