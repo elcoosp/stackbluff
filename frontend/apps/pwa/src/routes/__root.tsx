@@ -4,6 +4,7 @@ import { Toaster } from 'sonner';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { useEffect } from 'react';
 import { generateAndSubmitFingerprint } from '@/services/fingerprint';
+import { EmailVerificationBanner } from '@/components/auth/EmailVerificationBanner';
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -34,7 +35,8 @@ function RootLayout() {
     <div className="h-full">
       <Header />  {/* fixed header, out of flow */}
       <main className="mt-16 h-[calc(100vh-64px)] overflow-y-auto">
-        <Outlet />
+        <EmailVerificationBanner />
+          <Outlet />
       </main>
       <Toaster position="bottom-right" richColors />
     </div>
