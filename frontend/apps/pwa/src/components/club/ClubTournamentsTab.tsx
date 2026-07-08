@@ -155,7 +155,7 @@ function TournamentCard({
   onUnregister,
   isRegistering,
   isUnregistering,
-}: TournamentCardProps) {
+: any) {
   const startDate = new Date(tournament.scheduled_start);
   const isFull = tournament.current_registrations >= tournament.max_players;
   const spotsLeft = tournament.max_players - tournament.current_registrations;

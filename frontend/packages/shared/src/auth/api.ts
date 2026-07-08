@@ -20,7 +20,7 @@ export const authApi = {
   login: (creds: LoginCredentials) => request<AuthResponse>('/auth/login', { method: 'POST', body: JSON.stringify(creds) }),
   register: (data: RegisterData) => request<AuthResponse>('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
   forgotPassword: async (email: string) => {
-    const response = await apiClient.post('/auth/forgot-password', { email });
+    const response = await fetch('/auth/forgot-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
     if (!response.ok) {
       throw new Error('Failed to send reset link');
     }

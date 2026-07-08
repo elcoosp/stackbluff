@@ -16,7 +16,7 @@ interface ClubProSettings {
 }
 
 export function SettingsTab({ clubId, settings }: { clubId: string; settings?: ClubProSettings }) {
-  const { user } = useAuthStore(); // mock if needed // FIXME: user may not exist
+  const { user } = useAuthStore() as any; // mock if needed // FIXME: user may not exist
   const isPro = user?.club_pro_expires_at ? new Date(user.club_pro_expires_at) > new Date() : false;
   const [local, setLocal] = useState<ClubProSettings>({
     banner_url: settings?.banner_url ?? null,
@@ -27,7 +27,7 @@ export function SettingsTab({ clubId, settings }: { clubId: string; settings?: C
   const qc = useQueryClient();
 
   const update = useMutation({
-    mutationFn: (d: ClubProSettings) => fetch(`/api/clubs/${clubId}/settings`, d),
+    mutationFn: (d: ClubProSettings) => fetch(`/api/clubs/${clubId}/settings`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d) }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["club", clubId] }),
   });
 
@@ -35,8 +35,8 @@ export function SettingsTab({ clubId, settings }: { clubId: string; settings?: C
     mutationFn: async (file: File) => {
       const f = new FormData();
       f.append("banner", file);
-      const r = await fetch(`/api/clubs/${clubId}/banner`, f, { headers: { "Content-Type": "multipart/form-data" } });
-      return r.data.url as string;
+      const r = await fetch(`/api/clubs/${clubId}/banner`, { method: "POST", body: f });
+      return r.json().then(data => data.url);
     },
     onSuccess: (url) => { setLocal((s) => ({ ...s, banner_url: url })); setPreview(url); },
   });

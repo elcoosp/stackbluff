@@ -30,7 +30,7 @@ export function useGameHandCompletion() {
       return;
     }
 
-    const currentRoomId = activeRoom?.id || activeRoom?.roomId || "unknown";
+    const currentRoomId = (activeRoom && typeof activeRoom === "object" && "roomId" in activeRoom) ? activeRoom.roomId : (activeRoom && typeof activeRoom === "object" && "id" in activeRoom ? activeRoom.id : "unknown");
     const currentShowdown = activeRoom.showdownReveal;
     const currentHandInProgress = activeRoom.handInProgress;
 
