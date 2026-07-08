@@ -2,11 +2,24 @@ import { clubWebSocket } from '../lib/websocket';
 import { create } from 'zustand';
 import { apiClient } from '../api/client';
 
+interface MeResponse {
+  id: string;
+  username: string;
+  email?: string;
+  email_verified_at?: string | null;
+  platform?: string;
+  club_pro_expires_at?: string | null;
+  chip_balance: number;
+}
+
+
 interface User {
   id: string;
   username: string;
   email?: string;
-  club_pro_expires_at?: string;
+  email_verified_at?: string | null;
+  platform?: string;
+  club_pro_expires_at?: string | null;
 }
 
 interface AuthState {
@@ -41,16 +54,17 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
 
     try {
-      const data = await apiClient<{
-        id: string;
-        username: string;
-        email?: string;
-        club_pro_expires_at?: string;
-        chip_balance: number;
-      }>('/auth/me', { method: 'GET' });
+      const data = await apiClient<MeResponse>('/auth/me', { method: 'GET' });
 
       set({
-        user: { id: data.id, username: data.username, email: data.email },
+        user: {
+          id: data.id,
+          username: data.username,
+          email: data.email,
+          email_verified_at: data.email_verified_at || null,
+          platform: data.platform || 'pwa',
+          club_pro_expires_at: data.club_pro_expires_at || null,
+        },
         balance: data.chip_balance,
         isAuthenticated: true,
         isLoading: false

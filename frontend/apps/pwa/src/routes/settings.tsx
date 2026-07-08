@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { NotificationsSettings } from '@/components/settings/NotificationsSettings';
+import { AccountSettings } from '@/components/settings/AccountSettings';
 
 /**
  * Settings page route – user preferences and account management.
@@ -22,6 +23,8 @@ function SettingsPage() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         <NotificationsSettings />
+
+        <AccountSettings />
 
         {/* Additional settings sections will be added here */}
       </div>

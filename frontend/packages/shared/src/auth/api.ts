@@ -45,4 +45,15 @@ export const authApi = {
     }
     return response.json();
   },
+  resendVerification: async () => {
+    const response = await fetch('/auth/resend-verification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: "Failed to resend verification" }));
+      throw new Error(error.message || "Failed to resend verification");
+    }
+    return response.json();
+  },
 };
