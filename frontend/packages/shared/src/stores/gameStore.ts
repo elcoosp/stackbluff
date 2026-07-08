@@ -17,6 +17,7 @@ export interface Seat {
   hand_description?: string;
   is_showdown_revealed?: boolean;
   winningCards?: any[];
+  sitting_out?: boolean;
 }
 
 export interface Card {
