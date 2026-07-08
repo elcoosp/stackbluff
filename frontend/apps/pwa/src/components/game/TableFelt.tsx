@@ -39,7 +39,7 @@ export const TableRail = ({ isMobile }: { isMobile?: boolean }) => {
   );
 };
 
-export const TableFelt = ({ isMobile }: { isMobile?: boolean }) => {
+export const TableFelt = ({ isMobile, ...props }: { isMobile?: boolean }) => {
   const r = isMobile ? '28px' : '100px';
 
   /* Mobile: radial gradient kept but softened — doesn't go to near-black.
@@ -62,7 +62,7 @@ export const TableFelt = ({ isMobile }: { isMobile?: boolean }) => {
 
   return (
     <div
-      className="absolute inset-0 z-[1]"
+      className="absolute inset-0 z-[1]" data-club-felt
       style={{
         borderRadius: r,
         background: gradient,
