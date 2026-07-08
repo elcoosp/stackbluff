@@ -16,6 +16,7 @@ import { Route as ShopRouteImport } from './routes/shop'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as ReferralsRouteImport } from './routes/referrals'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as MissionsRouteImport } from './routes/missions'
 import { Route as LoginRouteImport } from './routes/login'
@@ -64,6 +65,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReferralsRoute = ReferralsRouteImport.update({
+  id: '/referrals',
+  path: '/referrals',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfileRoute = ProfileRouteImport.update({
@@ -146,6 +152,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/missions': typeof MissionsRoute
   '/profile': typeof ProfileRoute
+  '/referrals': typeof ReferralsRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
@@ -169,6 +176,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/missions': typeof MissionsRoute
   '/profile': typeof ProfileRoute
+  '/referrals': typeof ReferralsRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
@@ -193,6 +201,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/missions': typeof MissionsRoute
   '/profile': typeof ProfileRoute
+  '/referrals': typeof ReferralsRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
@@ -218,6 +227,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/missions'
     | '/profile'
+    | '/referrals'
     | '/register'
     | '/reset-password'
     | '/settings'
@@ -241,6 +251,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/missions'
     | '/profile'
+    | '/referrals'
     | '/register'
     | '/reset-password'
     | '/settings'
@@ -264,6 +275,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/missions'
     | '/profile'
+    | '/referrals'
     | '/register'
     | '/reset-password'
     | '/settings'
@@ -288,6 +300,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   MissionsRoute: typeof MissionsRoute
   ProfileRoute: typeof ProfileRoute
+  ReferralsRoute: typeof ReferralsRoute
   RegisterRoute: typeof RegisterRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SettingsRoute: typeof SettingsRoute
@@ -351,6 +364,13 @@ declare module '@tanstack/react-router' {
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/referrals': {
+      id: '/referrals'
+      path: '/referrals'
+      fullPath: '/referrals'
+      preLoaderRoute: typeof ReferralsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profile': {
@@ -475,6 +495,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   MissionsRoute: MissionsRoute,
   ProfileRoute: ProfileRoute,
+  ReferralsRoute: ReferralsRoute,
   RegisterRoute: RegisterRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SettingsRoute: SettingsRoute,
