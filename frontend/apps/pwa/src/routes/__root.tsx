@@ -3,6 +3,7 @@ import { Header } from '@stackbluff/shared/components/Header';
 import { Toaster } from 'sonner';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { useEffect } from 'react';
+import { generateAndSubmitFingerprint } from '@/services/fingerprint';
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -10,6 +11,18 @@ export const Route = createRootRoute({
 
 function RootLayout() {
   const { isAuthenticated, user, loadUser } = useAuthStore();
+
+  // Submit device fingerprint after authentication
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        generateAndSubmitFingerprint(token).catch((err) => {
+          console.warn('Fingerprint submission failed:', err);
+        });
+      }
+    }
+  }, [isAuthenticated, user]);
 
   useEffect(() => {
     if (isAuthenticated && !user) {

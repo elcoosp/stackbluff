@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useGameStore, TableState, ActionRequired } from '@stackbluff/shared/stores/gameStore';
 import { toast } from 'sonner';
 import { useTournamentStore } from '@stackbluff/shared/stores/tournamentStore';
+import { generateAndSubmitFingerprint } from '@/services/fingerprint';
 
 function getToken(): string | null {
   return localStorage.getItem('auth_token');
@@ -278,6 +279,13 @@ export function useGameWebSocket(tableId: string) {
     wsRef.current = ws;
 
     ws.onopen = () => {
+      // Submit fingerprint on reconnect
+      const token = getToken();
+      if (token) {
+        generateAndSubmitFingerprint(token).catch((err) => {
+          console.warn('Fingerprint submission on reconnect failed:', err);
+        });
+      }
       if (!mountedRef.current) return;
       setConnectionStatus('connected');
       reconnectAttempts.current = 0;
