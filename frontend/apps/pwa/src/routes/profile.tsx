@@ -9,6 +9,7 @@ import { AvatarUpload } from '@/components/settings/AvatarUpload';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { SeasonCardDisplay } from '@/components/profile/SeasonCardDisplay';
 import { Trophy, Coins, Calendar, Award, Crown, TrendingUp, Target, Flame } from 'lucide-react';
 import type { PlayerStats } from '@/types/player-stats';
 
@@ -173,16 +174,16 @@ function ProfilePage() {
         </CardContent>
       </Card>
 
-      {/* Season Card Preview – placeholder */}
+      {/* Season Cards Section */}
       <Card>
         <CardHeader>
           <CardTitle className="text-sm font-semibold text-on-surface flex items-center gap-2">
             <Calendar className="w-4 h-4 text-tertiary" />
-            Season Progress
+            Season Cards
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-sm text-on-surface-variant">Season card feature coming soon.</div>
+          <SeasonCardDisplay />
         </CardContent>
       </Card>
     </div>

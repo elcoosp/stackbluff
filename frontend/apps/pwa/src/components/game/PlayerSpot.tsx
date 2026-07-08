@@ -9,6 +9,7 @@ import { Badge } from './Badge';
 import { ChipStack } from './ChipStack';
 import { PlayerSpotBadge } from './PlayerSpotBadge';
 import { useFeedback } from '@stackbluff/shared/hooks/useFeedback';
+import { RankTierBadge } from '@/components/game/RankTierBadge';
 
 interface PlayerSpotProps {
   seat: any;
@@ -166,6 +167,8 @@ export function PlayerSpot({
         {/* Player info */}
         <div className="mt-1.5 text-center">
           <div className="flex items-center justify-center gap-1">
+            {/* Rank badge */}
+            {seat.rank_tier && <RankTierBadge tier={seat.rank_tier} size="sm" showLabel={false} className="ml-0.5" />}
             <span
               className={cn(
                 'font-medium truncate max-w-[60px]',
@@ -182,6 +185,8 @@ export function PlayerSpot({
 
           {/* Stack */}
           <div className="flex items-center justify-center gap-1">
+            {/* Rank badge */}
+            {seat.rank_tier && <RankTierBadge tier={seat.rank_tier} size="sm" showLabel={false} className="ml-0.5" />}
             <ChipStack amount={stack} size={isMobile ? 'text-[8px]' : 'text-[10px]'} />
 
             {/* Time bank display (only for hero) */}
