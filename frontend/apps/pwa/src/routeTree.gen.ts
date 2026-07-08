@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
+import { Route as TournamentsHistoryRouteImport } from './routes/tournaments-history'
 import { Route as TournamentsRouteImport } from './routes/tournaments'
 import { Route as ShopRouteImport } from './routes/shop'
 import { Route as SettingsRouteImport } from './routes/settings'
@@ -31,6 +32,11 @@ import { Route as ClubsClubIdRouteImport } from './routes/clubs.$clubId'
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
   id: '/verify-email',
   path: '/verify-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TournamentsHistoryRoute = TournamentsHistoryRouteImport.update({
+  id: '/tournaments-history',
+  path: '/tournaments-history',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TournamentsRoute = TournamentsRouteImport.update({
@@ -132,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/shop': typeof ShopRoute
   '/tournaments': typeof TournamentsRouteWithChildren
+  '/tournaments-history': typeof TournamentsHistoryRoute
   '/verify-email': typeof VerifyEmailRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
   '/clubs/join': typeof ClubsJoinRoute
@@ -152,6 +159,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/shop': typeof ShopRoute
   '/tournaments': typeof TournamentsRouteWithChildren
+  '/tournaments-history': typeof TournamentsHistoryRoute
   '/verify-email': typeof VerifyEmailRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
   '/clubs/join': typeof ClubsJoinRoute
@@ -173,6 +181,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/shop': typeof ShopRoute
   '/tournaments': typeof TournamentsRouteWithChildren
+  '/tournaments-history': typeof TournamentsHistoryRoute
   '/verify-email': typeof VerifyEmailRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
   '/clubs/join': typeof ClubsJoinRoute
@@ -195,6 +204,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/shop'
     | '/tournaments'
+    | '/tournaments-history'
     | '/verify-email'
     | '/clubs/$clubId'
     | '/clubs/join'
@@ -215,6 +225,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/shop'
     | '/tournaments'
+    | '/tournaments-history'
     | '/verify-email'
     | '/clubs/$clubId'
     | '/clubs/join'
@@ -235,6 +246,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/shop'
     | '/tournaments'
+    | '/tournaments-history'
     | '/verify-email'
     | '/clubs/$clubId'
     | '/clubs/join'
@@ -256,6 +268,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   ShopRoute: typeof ShopRoute
   TournamentsRoute: typeof TournamentsRouteWithChildren
+  TournamentsHistoryRoute: typeof TournamentsHistoryRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   ClubsClubIdRoute: typeof ClubsClubIdRoute
   ClubsJoinRoute: typeof ClubsJoinRoute
@@ -270,6 +283,13 @@ declare module '@tanstack/react-router' {
       path: '/verify-email'
       fullPath: '/verify-email'
       preLoaderRoute: typeof VerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tournaments-history': {
+      id: '/tournaments-history'
+      path: '/tournaments-history'
+      fullPath: '/tournaments-history'
+      preLoaderRoute: typeof TournamentsHistoryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/tournaments': {
@@ -419,6 +439,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   ShopRoute: ShopRoute,
   TournamentsRoute: TournamentsRouteWithChildren,
+  TournamentsHistoryRoute: TournamentsHistoryRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   ClubsClubIdRoute: ClubsClubIdRoute,
   ClubsJoinRoute: ClubsJoinRoute,
