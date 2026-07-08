@@ -30,8 +30,13 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ClubsIndexRouteImport } from './routes/clubs/index'
 import { Route as TournamentsTournamentIdRouteImport } from './routes/tournaments/$tournamentId'
 import { Route as TableTableIdRouteImport } from './routes/table/$tableId'
+import { Route as SettingsTelegramRouteImport } from './routes/settings/telegram'
 import { Route as SettingsPrivacyRouteImport } from './routes/settings/privacy'
 import { Route as SettingsPaymentsRouteImport } from './routes/settings/payments'
+import { Route as SettingsNotificationsRouteImport } from './routes/settings/notifications'
+import { Route as SettingsAudioRouteImport } from './routes/settings/audio'
+import { Route as SettingsAppearanceRouteImport } from './routes/settings/appearance'
+import { Route as SettingsAccountRouteImport } from './routes/settings/account'
 import { Route as PlayersUserIdRouteImport } from './routes/players/$userId'
 import { Route as HandsHandIdRouteImport } from './routes/hands/$handId'
 import { Route as ClubsJoinRouteImport } from './routes/clubs/join'
@@ -142,6 +147,11 @@ const TableTableIdRoute = TableTableIdRouteImport.update({
   path: '/table/$tableId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsTelegramRoute = SettingsTelegramRouteImport.update({
+  id: '/telegram',
+  path: '/telegram',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const SettingsPrivacyRoute = SettingsPrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
@@ -150,6 +160,26 @@ const SettingsPrivacyRoute = SettingsPrivacyRouteImport.update({
 const SettingsPaymentsRoute = SettingsPaymentsRouteImport.update({
   id: '/payments',
   path: '/payments',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsNotificationsRoute = SettingsNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsAudioRoute = SettingsAudioRouteImport.update({
+  id: '/audio',
+  path: '/audio',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsAppearanceRoute = SettingsAppearanceRouteImport.update({
+  id: '/appearance',
+  path: '/appearance',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsAccountRoute = SettingsAccountRouteImport.update({
+  id: '/account',
+  path: '/account',
   getParentRoute: () => SettingsRoute,
 } as any)
 const PlayersUserIdRoute = PlayersUserIdRouteImport.update({
@@ -196,8 +226,13 @@ export interface FileRoutesByFullPath {
   '/clubs/join': typeof ClubsJoinRoute
   '/hands/$handId': typeof HandsHandIdRoute
   '/players/$userId': typeof PlayersUserIdRoute
+  '/settings/account': typeof SettingsAccountRoute
+  '/settings/appearance': typeof SettingsAppearanceRoute
+  '/settings/audio': typeof SettingsAudioRoute
+  '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/payments': typeof SettingsPaymentsRoute
   '/settings/privacy': typeof SettingsPrivacyRoute
+  '/settings/telegram': typeof SettingsTelegramRoute
   '/table/$tableId': typeof TableTableIdRoute
   '/tournaments/$tournamentId': typeof TournamentsTournamentIdRoute
   '/clubs/': typeof ClubsIndexRoute
@@ -225,8 +260,13 @@ export interface FileRoutesByTo {
   '/clubs/join': typeof ClubsJoinRoute
   '/hands/$handId': typeof HandsHandIdRoute
   '/players/$userId': typeof PlayersUserIdRoute
+  '/settings/account': typeof SettingsAccountRoute
+  '/settings/appearance': typeof SettingsAppearanceRoute
+  '/settings/audio': typeof SettingsAudioRoute
+  '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/payments': typeof SettingsPaymentsRoute
   '/settings/privacy': typeof SettingsPrivacyRoute
+  '/settings/telegram': typeof SettingsTelegramRoute
   '/table/$tableId': typeof TableTableIdRoute
   '/tournaments/$tournamentId': typeof TournamentsTournamentIdRoute
   '/clubs': typeof ClubsIndexRoute
@@ -255,8 +295,13 @@ export interface FileRoutesById {
   '/clubs/join': typeof ClubsJoinRoute
   '/hands/$handId': typeof HandsHandIdRoute
   '/players/$userId': typeof PlayersUserIdRoute
+  '/settings/account': typeof SettingsAccountRoute
+  '/settings/appearance': typeof SettingsAppearanceRoute
+  '/settings/audio': typeof SettingsAudioRoute
+  '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/payments': typeof SettingsPaymentsRoute
   '/settings/privacy': typeof SettingsPrivacyRoute
+  '/settings/telegram': typeof SettingsTelegramRoute
   '/table/$tableId': typeof TableTableIdRoute
   '/tournaments/$tournamentId': typeof TournamentsTournamentIdRoute
   '/clubs/': typeof ClubsIndexRoute
@@ -286,8 +331,13 @@ export interface FileRouteTypes {
     | '/clubs/join'
     | '/hands/$handId'
     | '/players/$userId'
+    | '/settings/account'
+    | '/settings/appearance'
+    | '/settings/audio'
+    | '/settings/notifications'
     | '/settings/payments'
     | '/settings/privacy'
+    | '/settings/telegram'
     | '/table/$tableId'
     | '/tournaments/$tournamentId'
     | '/clubs/'
@@ -315,8 +365,13 @@ export interface FileRouteTypes {
     | '/clubs/join'
     | '/hands/$handId'
     | '/players/$userId'
+    | '/settings/account'
+    | '/settings/appearance'
+    | '/settings/audio'
+    | '/settings/notifications'
     | '/settings/payments'
     | '/settings/privacy'
+    | '/settings/telegram'
     | '/table/$tableId'
     | '/tournaments/$tournamentId'
     | '/clubs'
@@ -344,8 +399,13 @@ export interface FileRouteTypes {
     | '/clubs/join'
     | '/hands/$handId'
     | '/players/$userId'
+    | '/settings/account'
+    | '/settings/appearance'
+    | '/settings/audio'
+    | '/settings/notifications'
     | '/settings/payments'
     | '/settings/privacy'
+    | '/settings/telegram'
     | '/table/$tableId'
     | '/tournaments/$tournamentId'
     | '/clubs/'
@@ -527,6 +587,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TableTableIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/telegram': {
+      id: '/settings/telegram'
+      path: '/telegram'
+      fullPath: '/settings/telegram'
+      preLoaderRoute: typeof SettingsTelegramRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/privacy': {
       id: '/settings/privacy'
       path: '/privacy'
@@ -539,6 +606,34 @@ declare module '@tanstack/react-router' {
       path: '/payments'
       fullPath: '/settings/payments'
       preLoaderRoute: typeof SettingsPaymentsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/notifications': {
+      id: '/settings/notifications'
+      path: '/notifications'
+      fullPath: '/settings/notifications'
+      preLoaderRoute: typeof SettingsNotificationsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/audio': {
+      id: '/settings/audio'
+      path: '/audio'
+      fullPath: '/settings/audio'
+      preLoaderRoute: typeof SettingsAudioRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/appearance': {
+      id: '/settings/appearance'
+      path: '/appearance'
+      fullPath: '/settings/appearance'
+      preLoaderRoute: typeof SettingsAppearanceRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/account': {
+      id: '/settings/account'
+      path: '/account'
+      fullPath: '/settings/account'
+      preLoaderRoute: typeof SettingsAccountRouteImport
       parentRoute: typeof SettingsRoute
     }
     '/players/$userId': {
@@ -573,13 +668,23 @@ declare module '@tanstack/react-router' {
 }
 
 interface SettingsRouteChildren {
+  SettingsAccountRoute: typeof SettingsAccountRoute
+  SettingsAppearanceRoute: typeof SettingsAppearanceRoute
+  SettingsAudioRoute: typeof SettingsAudioRoute
+  SettingsNotificationsRoute: typeof SettingsNotificationsRoute
   SettingsPaymentsRoute: typeof SettingsPaymentsRoute
   SettingsPrivacyRoute: typeof SettingsPrivacyRoute
+  SettingsTelegramRoute: typeof SettingsTelegramRoute
 }
 
 const SettingsRouteChildren: SettingsRouteChildren = {
+  SettingsAccountRoute: SettingsAccountRoute,
+  SettingsAppearanceRoute: SettingsAppearanceRoute,
+  SettingsAudioRoute: SettingsAudioRoute,
+  SettingsNotificationsRoute: SettingsNotificationsRoute,
   SettingsPaymentsRoute: SettingsPaymentsRoute,
   SettingsPrivacyRoute: SettingsPrivacyRoute,
+  SettingsTelegramRoute: SettingsTelegramRoute,
 }
 
 const SettingsRouteWithChildren = SettingsRoute._addFileChildren(

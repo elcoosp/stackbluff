@@ -2,67 +2,93 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import { NotificationsSettings } from '@/components/settings/NotificationsSettings';
 import { AccountSettings } from '@/components/settings/AccountSettings';
 import { NotificationPreferences } from '@/components/settings/NotificationPreferences';
+import {
+  User,
+  Bell,
+  Palette,
+  Volume2,
+  Shield,
+  CreditCard,
+  Send,
+  ChevronRight,
+} from 'lucide-react';
 
-/**
- * Settings page route – user preferences and account management.
- * Issue #006 created this page; #036 adds the notifications section.
- */
 function SettingsPage() {
+  const settingsSections = [
+    {
+      title: 'Account',
+      description: 'Manage your profile, password, and email',
+      icon: User,
+      to: '/settings/account',
+    },
+    {
+      title: 'Notifications',
+      description: 'Push notifications and alert preferences',
+      icon: Bell,
+      to: '/settings/notifications',
+    },
+    {
+      title: 'Appearance',
+      description: 'Theme, felt color, and visual preferences',
+      icon: Palette,
+      to: '/settings/appearance',
+    },
+    {
+      title: 'Audio',
+      description: 'Sound effects, music, and haptics',
+      icon: Volume2,
+      to: '/settings/audio',
+    },
+    {
+      title: 'Privacy & Data',
+      description: 'GDPR, data export, and account deletion',
+      icon: Shield,
+      to: '/settings/privacy',
+    },
+    {
+      title: 'Payments',
+      description: 'Purchase history and invoices',
+      icon: CreditCard,
+      to: '/settings/payments',
+    },
+    {
+      title: 'Telegram',
+      description: 'Link your Telegram account for notifications',
+      icon: Send,
+      to: '/settings/telegram',
+    },
+  ];
+
   return (
-    <div
-      style={{
-        maxWidth: '48rem',
-        margin: '0 auto',
-        padding: '2rem 1rem',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-        color: '#fff',
-      }}
-    >
-      <h1 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '1.5rem' }}>
-        ⚙️ Settings
-      </h1>
+    <div className="max-w-2xl mx-auto p-6">
+      <h1 className="font-display-lg text-3xl text-on-surface mb-6">⚙️ Settings</h1>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        <NotificationPreferences />
-
-        <NotificationsSettings />
-
-        <AccountSettings />
-
-
-        <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
-          <h3 className="text-sm font-semibold text-on-surface">Privacy & Data</h3>
-          <p className="text-xs text-on-surface-variant mt-1">Manage your data and account deletion.</p>
-          <Link to="/settings/privacy" className="text-tertiary text-sm font-medium hover:underline mt-2 inline-block">
-            Manage Privacy →
-          </Link>
-        
-        <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
-          <h3 className="text-sm font-semibold text-on-surface">Payments</h3>
-          <p className="text-xs text-on-surface-variant mt-1">View your purchase history and invoices.</p>
-          <Link to="/settings/payments" className="text-tertiary text-sm font-medium hover:underline mt-2 inline-block">
-            View Purchase History →
-          </Link>
-        </div>
+      <div className="space-y-3">
+        {settingsSections.map((section) => {
+          const Icon = section.icon;
+          return (
+            <Link
+              key={section.to}
+              to={section.to}
+              className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 hover:border-tertiary/30 transition-all group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="p-2 bg-white/5 rounded-lg">
+                  <Icon className="w-5 h-5 text-tertiary" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-on-surface group-hover:text-tertiary transition-colors">
+                    {section.title}
+                  </h3>
+                  <p className="text-xs text-on-surface-variant">{section.description}</p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-on-surface-variant group-hover:text-tertiary transition-colors" />
+            </Link>
+          );
+        })}
       </div>
-      
-        <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
-          <h3 className="text-sm font-semibold text-on-surface">Payments</h3>
-          <p className="text-xs text-on-surface-variant mt-1">View your purchase history and invoices.</p>
-          <Link to="/settings/payments" className="text-tertiary text-sm font-medium hover:underline mt-2 inline-block">
-            View Purchase History →
-          </Link>
-        </div>
-      </div>
-    
-        <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
-          <h3 className="text-sm font-semibold text-on-surface">Payments</h3>
-          <p className="text-xs text-on-surface-variant mt-1">View your purchase history and invoices.</p>
-          <Link to="/settings/payments" className="text-tertiary text-sm font-medium hover:underline mt-2 inline-block">
-            View Purchase History →
-          </Link>
-        </div>
-      </div>
+    </div>
   );
 }
 
