@@ -24,6 +24,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as LobbyRouteImport } from './routes/lobby'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as HistoryRouteImport } from './routes/history'
+import { Route as HelpRouteImport } from './routes/help'
 import { Route as GuideRouteImport } from './routes/guide'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as IndexRouteImport } from './routes/index'
@@ -117,6 +118,11 @@ const HistoryRoute = HistoryRouteImport.update({
   path: '/history',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HelpRoute = HelpRouteImport.update({
+  id: '/help',
+  path: '/help',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GuideRoute = GuideRouteImport.update({
   id: '/guide',
   path: '/guide',
@@ -207,6 +213,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/guide': typeof GuideRoute
+  '/help': typeof HelpRoute
   '/history': typeof HistoryRoute
   '/leaderboard': typeof LeaderboardRoute
   '/lobby': typeof LobbyRoute
@@ -241,6 +248,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/guide': typeof GuideRoute
+  '/help': typeof HelpRoute
   '/history': typeof HistoryRoute
   '/leaderboard': typeof LeaderboardRoute
   '/lobby': typeof LobbyRoute
@@ -276,6 +284,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/guide': typeof GuideRoute
+  '/help': typeof HelpRoute
   '/history': typeof HistoryRoute
   '/leaderboard': typeof LeaderboardRoute
   '/lobby': typeof LobbyRoute
@@ -312,6 +321,7 @@ export interface FileRouteTypes {
     | '/'
     | '/forgot-password'
     | '/guide'
+    | '/help'
     | '/history'
     | '/leaderboard'
     | '/lobby'
@@ -346,6 +356,7 @@ export interface FileRouteTypes {
     | '/'
     | '/forgot-password'
     | '/guide'
+    | '/help'
     | '/history'
     | '/leaderboard'
     | '/lobby'
@@ -380,6 +391,7 @@ export interface FileRouteTypes {
     | '/'
     | '/forgot-password'
     | '/guide'
+    | '/help'
     | '/history'
     | '/leaderboard'
     | '/lobby'
@@ -415,6 +427,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   GuideRoute: typeof GuideRoute
+  HelpRoute: typeof HelpRoute
   HistoryRoute: typeof HistoryRoute
   LeaderboardRoute: typeof LeaderboardRoute
   LobbyRoute: typeof LobbyRoute
@@ -543,6 +556,13 @@ declare module '@tanstack/react-router' {
       path: '/history'
       fullPath: '/history'
       preLoaderRoute: typeof HistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/help': {
+      id: '/help'
+      path: '/help'
+      fullPath: '/help'
+      preLoaderRoute: typeof HelpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/guide': {
@@ -707,6 +727,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   GuideRoute: GuideRoute,
+  HelpRoute: HelpRoute,
   HistoryRoute: HistoryRoute,
   LeaderboardRoute: LeaderboardRoute,
   LobbyRoute: LobbyRoute,
