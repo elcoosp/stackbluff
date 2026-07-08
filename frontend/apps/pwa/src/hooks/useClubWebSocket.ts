@@ -3,13 +3,13 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { getToken } from '@stackbluff/shared/auth/token';
 import { ClubWebSocketEventSchema } from '../lib/schemas';
-import type { ClubWebSocketEvent, WebSocketConnectionStatus } from '../lib/schemas';
+import type { ClubWebSocketEvent } from "../lib/schemas";;
 import { logger } from '../lib/logger';
 import { WEBSOCKET } from '../lib/constants';
 
 function useWebSocketConnection(clubId: string) {
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const reconnectAttemptsRef = useRef(0);
   const [connectionStatus, setConnectionStatus] = useState<WebSocketConnectionStatus>('disconnected');
 

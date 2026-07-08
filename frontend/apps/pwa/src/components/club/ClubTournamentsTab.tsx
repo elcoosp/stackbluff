@@ -1,5 +1,5 @@
-import { useClubTournaments, type Tournament } from '../../hooks/useClubTournaments';
-import { Card } from '@stackbluff/shared/ui/Card';
+import { useClubTournaments } from "../../hooks/useClubTournaments";;
+import { Card } from "@/components/ui/card";
 import { toast } from 'sonner';
 
 interface ClubTournamentsTabProps {

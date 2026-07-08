@@ -8,7 +8,7 @@ export function useTelegramWebApp() {
   const openInvoice = useCallback(
     (url: string, onResult: (result: TelegramInvoiceResult) => void): boolean => {
       const tg = window.Telegram?.WebApp;
-      if (!tg?.openInvoice) return false;
+      if (!tg || typeof tg.openInvoice !== 'function') return false;
 
       tg.openInvoice(url, (status) => {
         onResult({ status });

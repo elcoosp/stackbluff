@@ -9,7 +9,7 @@ export default defineConfig({
     testTimeout: 120000,
     hookTimeout: 60000,
     globalSetup: ['e2e/setup/globalSetup.ts'],
-    globalTeardown: ['e2e/setup/globalTeardown.ts'],
+    setupFiles: ['e2e/setup/globalTeardown.ts'], // use setupFiles for teardown
     reporters: ['verbose'],
     fileParallelism: false,
     env: {

@@ -36,7 +36,7 @@ export default function ShopPage() {
   }, [productsData, shop]);
 
   const handlePurchase = useCallback(
-    (product: ReturnType<typeof shop.setProducts> extends void ? never : Parameters<typeof shop.selectProduct>[0]) => {
+    (product: any) => {
       shop.selectProduct(product);
       shop.setDialogOpen(true);
       shop.setError(null);

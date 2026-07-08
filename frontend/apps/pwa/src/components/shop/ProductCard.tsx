@@ -2,9 +2,9 @@ import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { useIsMiniApp } from '../../hooks/usePaymentProvider';
 import { useHasActiveSeasonPass, useHasActiveClubPro, useIsClubOwner, useSeasonPassExpiry } from '../../hooks/useEntitlements';
-import { GlassPanel } from '@stackbluff/shared/ui/GlassPanel';
-import { LiquidMetalButton } from '@stackbluff/shared/ui/LiquidMetalButton';
-import { Card } from '../ui/Card';
+import { GlassPanel } from "@stackbluff/shared/ui/GlassPanel";
+import { LiquidMetalButton } from "@stackbluff/shared/ui/LiquidMetalButton";
+import { Card } from '../ui/card';
 import type { Product } from '../../stores/shopStore';
 import { SeasonPassTimer } from './SeasonPassTimer';
 

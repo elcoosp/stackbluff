@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams } from '@tanstack/react-router';
-import { GlassPanel } from '@stackbluff/shared/ui/GlassPanel';
-import { Card } from '@stackbluff/shared/ui/Card';
+import { GlassPanel } from "@stackbluff/shared/ui/GlassPanel";
+import { Card } from "@/components/ui/card";
 import { useClubDetails } from '../hooks/useClubDetails';
 import { useClubWebSocket } from '../hooks/useClubWebSocket';
 import { ClubHeader } from '../components/club/ClubHeader';

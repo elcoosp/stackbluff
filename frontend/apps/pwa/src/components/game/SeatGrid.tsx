@@ -91,7 +91,7 @@ export const SeatGrid = ({
             }}
           >
             <PlayerSpot
-              seat={seat}
+              {...seat}
               isHero={isHero}
               isMobile={!isDesktop}
               isDealer={isDealer}

@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { useAuthStore } from "@/stores/authStore";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
+// // import axios from "axios";
 
 const VALID_COLORS = [
   "#1a6b42", "#2d7a5a", "#3d8b6b", "#4a9c7a",
@@ -16,7 +16,7 @@ interface ClubProSettings {
 }
 
 export function SettingsTab({ clubId, settings }: { clubId: string; settings?: ClubProSettings }) {
-  const { user } = useAuthStore();
+  const { user } = useAuthStore(); // FIXME: user may not exist
   const isPro = user?.club_pro_expires_at ? new Date(user.club_pro_expires_at) > new Date() : false;
   const [local, setLocal] = useState<ClubProSettings>({
     banner_url: settings?.banner_url ?? null,
@@ -27,7 +27,7 @@ export function SettingsTab({ clubId, settings }: { clubId: string; settings?: C
   const qc = useQueryClient();
 
   const update = useMutation({
-    mutationFn: (d: ClubProSettings) => axios.patch(`/api/clubs/${clubId}/settings`, d),
+    mutationFn: (d: ClubProSettings) => fetch(`/api/clubs/${clubId}/settings`, d),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["club", clubId] }),
   });
 
@@ -35,7 +35,7 @@ export function SettingsTab({ clubId, settings }: { clubId: string; settings?: C
     mutationFn: async (file: File) => {
       const f = new FormData();
       f.append("banner", file);
-      const r = await axios.post(`/api/clubs/${clubId}/banner`, f, { headers: { "Content-Type": "multipart/form-data" } });
+      const r = await fetch(`/api/clubs/${clubId}/banner`, f, { headers: { "Content-Type": "multipart/form-data" } });
       return r.data.url as string;
     },
     onSuccess: (url) => { setLocal((s) => ({ ...s, banner_url: url })); setPreview(url); },

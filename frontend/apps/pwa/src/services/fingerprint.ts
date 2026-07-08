@@ -17,11 +17,11 @@ export function collectFingerprintComponents(): string {
   try {
     const canvas = document.createElement('canvas');
     const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-    if (gl) {
-      const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+    if (gl && 'getExtension' in gl && 'getParameter' in gl) {
+      const debugInfo = (gl as any).getExtension('WEBGL_debug_renderer_info');
       if (debugInfo) {
-        const vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
-        const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+        const vendor = (gl as any).getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+        const renderer = (gl as any).getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
         components.push(`webgl_vendor:${vendor}`);
         components.push(`webgl_renderer:${renderer}`);
       }

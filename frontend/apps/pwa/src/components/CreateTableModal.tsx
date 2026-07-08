@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@stackbluff/shared';
-import { LiquidMetalButton } from '@stackbluff/shared/ui/LiquidMetalButton';
+import { LiquidMetalButton } from "@stackbluff/shared/ui/LiquidMetalButton";
 import { Dialog } from '@stackbluff/shared/components/Dialog'; // Using the new primitive
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

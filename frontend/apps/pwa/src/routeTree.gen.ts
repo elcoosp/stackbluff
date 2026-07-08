@@ -10,24 +10,22 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TournamentsRouteImport } from './routes/tournaments'
-import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ShopRouteImport } from './routes/shop'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LobbyRouteImport } from './routes/lobby'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as GuideRouteImport } from './routes/guide'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TableTableIdRouteImport } from './routes/table/$tableId'
+import { Route as ClubsClubIdRouteImport } from './routes/clubs.$clubId'
 
 const TournamentsRoute = TournamentsRouteImport.update({
   id: '/tournaments',
   path: '/tournaments',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ShopRoute = ShopRouteImport.update({
@@ -35,9 +33,19 @@ const ShopRoute = ShopRouteImport.update({
   path: '/shop',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -60,6 +68,11 @@ const GuideRoute = GuideRouteImport.update({
   path: '/guide',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -70,93 +83,119 @@ const TableTableIdRoute = TableTableIdRouteImport.update({
   path: '/table/$tableId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClubsClubIdRoute = ClubsClubIdRouteImport.update({
+  id: '/clubs/$clubId',
+  path: '/clubs/$clubId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/guide': typeof GuideRoute
   '/leaderboard': typeof LeaderboardRoute
   '/lobby': typeof LobbyRoute
   '/login': typeof LoginRoute
+  '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/settings': typeof SettingsRoute
   '/shop': typeof ShopRoute
   '/tournaments': typeof TournamentsRoute
+  '/clubs/$clubId': typeof ClubsClubIdRoute
   '/table/$tableId': typeof TableTableIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/guide': typeof GuideRoute
   '/leaderboard': typeof LeaderboardRoute
   '/lobby': typeof LobbyRoute
   '/login': typeof LoginRoute
+  '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/settings': typeof SettingsRoute
   '/shop': typeof ShopRoute
   '/tournaments': typeof TournamentsRoute
+  '/clubs/$clubId': typeof ClubsClubIdRoute
   '/table/$tableId': typeof TableTableIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/guide': typeof GuideRoute
   '/leaderboard': typeof LeaderboardRoute
   '/lobby': typeof LobbyRoute
   '/login': typeof LoginRoute
+  '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/settings': typeof SettingsRoute
   '/shop': typeof ShopRoute
   '/tournaments': typeof TournamentsRoute
+  '/clubs/$clubId': typeof ClubsClubIdRoute
   '/table/$tableId': typeof TableTableIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-  | '/'
-  | '/guide'
-  | '/leaderboard'
-  | '/lobby'
-  | '/login'
-  | '/register'
-  | '/settings'
-  | '/shop'
-  | '/tournaments'
-  | '/table/$tableId'
+    | '/'
+    | '/forgot-password'
+    | '/guide'
+    | '/leaderboard'
+    | '/lobby'
+    | '/login'
+    | '/profile'
+    | '/register'
+    | '/settings'
+    | '/shop'
+    | '/tournaments'
+    | '/clubs/$clubId'
+    | '/table/$tableId'
   fileRoutesByTo: FileRoutesByTo
   to:
-  | '/'
-  | '/guide'
-  | '/leaderboard'
-  | '/lobby'
-  | '/login'
-  | '/register'
-  | '/settings'
-  | '/shop'
-  | '/tournaments'
-  | '/table/$tableId'
+    | '/'
+    | '/forgot-password'
+    | '/guide'
+    | '/leaderboard'
+    | '/lobby'
+    | '/login'
+    | '/profile'
+    | '/register'
+    | '/settings'
+    | '/shop'
+    | '/tournaments'
+    | '/clubs/$clubId'
+    | '/table/$tableId'
   id:
-  | '__root__'
-  | '/'
-  | '/guide'
-  | '/leaderboard'
-  | '/lobby'
-  | '/login'
-  | '/register'
-  | '/settings'
-  | '/shop'
-  | '/tournaments'
-  | '/table/$tableId'
+    | '__root__'
+    | '/'
+    | '/forgot-password'
+    | '/guide'
+    | '/leaderboard'
+    | '/lobby'
+    | '/login'
+    | '/profile'
+    | '/register'
+    | '/settings'
+    | '/shop'
+    | '/tournaments'
+    | '/clubs/$clubId'
+    | '/table/$tableId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   GuideRoute: typeof GuideRoute
   LeaderboardRoute: typeof LeaderboardRoute
   LobbyRoute: typeof LobbyRoute
   LoginRoute: typeof LoginRoute
+  ProfileRoute: typeof ProfileRoute
   RegisterRoute: typeof RegisterRoute
   SettingsRoute: typeof SettingsRoute
   ShopRoute: typeof ShopRoute
   TournamentsRoute: typeof TournamentsRoute
+  ClubsClubIdRoute: typeof ClubsClubIdRoute
   TableTableIdRoute: typeof TableTableIdRoute
 }
 
@@ -169,13 +208,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TournamentsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/shop': {
       id: '/shop'
       path: '/shop'
@@ -183,11 +215,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShopRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/register': {
       id: '/register'
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -218,6 +264,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GuideRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -232,19 +285,29 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TableTableIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/clubs/$clubId': {
+      id: '/clubs/$clubId'
+      path: '/clubs/$clubId'
+      fullPath: '/clubs/$clubId'
+      preLoaderRoute: typeof ClubsClubIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   GuideRoute: GuideRoute,
   LeaderboardRoute: LeaderboardRoute,
   LobbyRoute: LobbyRoute,
   LoginRoute: LoginRoute,
+  ProfileRoute: ProfileRoute,
   RegisterRoute: RegisterRoute,
   SettingsRoute: SettingsRoute,
   ShopRoute: ShopRoute,
   TournamentsRoute: TournamentsRoute,
+  ClubsClubIdRoute: ClubsClubIdRoute,
   TableTableIdRoute: TableTableIdRoute,
 }
 export const routeTree = rootRouteImport

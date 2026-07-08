@@ -32,7 +32,7 @@ function generateCorrelationId(): string {
  */
 export function handleApiError(error: unknown, context: Record<string, unknown> = {}): void {
   const correlationId = context.correlationId as string || generateCorrelationId();
-  const loggerWithContext = logger.withContext({ ...context, correlationId });
+  const loggerWithContext = logger.child({ ...context, correlationId });
 
   if (error instanceof AppError) {
     loggerWithContext.error(error.message, error, error.context);
@@ -97,7 +97,7 @@ export async function apiRequest<T>(
   context: Record<string, unknown> = {}
 ): Promise<T> {
   const correlationId = generateCorrelationId();
-  const loggerWithContext = logger.withContext({ ...context, correlationId, endpoint });
+  const loggerWithContext = logger.child({ ...context, correlationId, endpoint });
 
   try {
     const headers = new Headers(options.headers);

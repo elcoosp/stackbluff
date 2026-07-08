@@ -18,4 +18,11 @@ export interface AuthResponse { token: string; user: { id: string; username: str
 export const authApi = {
   login: (creds: LoginCredentials) => request<AuthResponse>('/auth/login', { method: 'POST', body: JSON.stringify(creds) }),
   register: (data: RegisterData) => request<AuthResponse>('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
+  forgotPassword: async (email: string) => {
+    const response = await apiClient.post('/auth/forgot-password', { email });
+    if (!response.ok) {
+      throw new Error('Failed to send reset link');
+    }
+    return response.json();
+  },
 };

@@ -130,7 +130,7 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
         logo_url: formData.logo_url || null,
         ...(hasClubPro && {
           pro_settings: {
-            banner_url: formData.banner_url || null,
+            banner_url: formData.banner_url || undefined,
             chip_preset: formData.chip_preset,
             felt_colour: formData.felt_colour,
           },

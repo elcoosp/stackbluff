@@ -1,8 +1,8 @@
 import { useIsMiniApp } from '../../hooks/usePaymentProvider';
 import { useShopStore } from '../../stores/shopStore';
-import { LiquidMetalButton } from '@stackbluff/shared/ui/LiquidMetalButton';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/Dialog';
-import { Button } from '../ui/Button';
+import { LiquidMetalButton } from "@stackbluff/shared/ui/LiquidMetalButton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import { Button } from '../ui/button';
 import type { Product } from '../../stores/shopStore';
 
 function formatPrice(product: Product, isMini: boolean): string {

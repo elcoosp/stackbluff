@@ -41,7 +41,7 @@ export type CreateIntentResponse = z.infer<typeof CreateIntentResponseSchema>;
 export type UserMe = z.infer<typeof UserMeSchema>;
 
 export async function fetchProducts(): Promise<ProductResponse> {
-  const res = await apiClient.get('/shop/products');
+  const res = await fetch('/shop/products');
   if (!res.ok) {
     const body = await res.text().catch(() => 'Unknown error');
     throw new Error(`Failed to fetch products: ${res.status} ${body}`);
@@ -52,7 +52,7 @@ export async function fetchProducts(): Promise<ProductResponse> {
 
 export async function createPaymentIntent(req: CreateIntentRequest): Promise<CreateIntentResponse> {
   const validated = CreateIntentRequestSchema.parse(req);
-  const res = await apiClient.post('/payments/create-intent', validated);
+  const res = await fetch('/payments/create-intent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(validated) });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.message || `Payment intent creation failed: ${res.status}`);
@@ -62,7 +62,7 @@ export async function createPaymentIntent(req: CreateIntentRequest): Promise<Cre
 }
 
 export async function fetchUserMe(): Promise<UserMe> {
-  const res = await apiClient.get('/user/me');
+  const res = await fetch('/user/me');
   if (!res.ok) {
     const body = await res.text().catch(() => 'Unknown error');
     throw new Error(`Failed to fetch user profile: ${res.status} ${body}`);
