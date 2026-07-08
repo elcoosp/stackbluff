@@ -9,11 +9,15 @@ import { useTournamentStore } from '@stackbluff/shared/stores/tournamentStore';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { toast } from 'sonner';
 import type { TournamentSummary } from '@stackbluff/shared/types/tournament.types';
+import { cn } from '@/lib/utils';
 
 // @ts-ignore – route will be added to route tree on dev server restart
 export const Route = createFileRoute('/tournaments')({
   component: TournamentsPage,
 });
+
+type TypeFilter = 'All' | 'SitAndGo' | 'Mtt';
+type StatusFilter = 'All' | 'Registering' | 'Running' | 'Completed';
 
 function TournamentsPage() {
   const navigate = useNavigate();
@@ -28,11 +32,20 @@ function TournamentsPage() {
     tournament: null,
   });
 
-  // Fetch ALL tournaments to avoid caching issues during state transitions
-  const tournamentsQuery = useTournamentsQuery({});
-  const allTournaments = (tournamentsQuery.data || []).filter(
-    (t) => t.status === 'Registering' || t.status === 'Running'
-  );
+  // Filter state
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('All');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
+
+  // Fetch tournaments with type filter
+  const typeParam = typeFilter !== 'All' ? typeFilter : undefined;
+  const tournamentsQuery = useTournamentsQuery({ type: typeParam });
+  const allTournaments = tournamentsQuery.data || [];
+
+  // Apply status filter client-side
+  const filteredTournaments = allTournaments.filter((t) => {
+    if (statusFilter === 'All') return true;
+    return t.status === statusFilter;
+  });
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -140,8 +153,14 @@ function TournamentsPage() {
   };
 
   const handleResults = (tournamentId: string) => {
-    toast.info('Results view coming soon');
+    navigate({
+      to: '/tournaments/$tournamentId',
+      params: { tournamentId },
+    });
   };
+
+  const typeTabs: TypeFilter[] = ['All', 'SitAndGo', 'Mtt'];
+  const statusTabs: StatusFilter[] = ['All', 'Registering', 'Running', 'Completed'];
 
   return (
     <div className="flex-1 relative">
@@ -158,15 +177,51 @@ function TournamentsPage() {
           </div>
         </div>
 
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="flex flex-wrap gap-1 bg-white/5 rounded-lg p-1">
+            {typeTabs.map((type) => (
+              <button
+                key={type}
+                onClick={() => setTypeFilter(type)}
+                className={cn(
+                  'px-4 py-1.5 text-xs font-medium rounded-md transition-colors',
+                  typeFilter === type
+                    ? 'bg-tertiary text-on-tertiary'
+                    : 'text-on-surface-variant hover:text-on-surface hover:bg-white/10'
+                )}
+              >
+                {type === 'All' ? 'All Types' : type === 'SitAndGo' ? 'Sit & Go' : 'MTT'}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-1 bg-white/5 rounded-lg p-1">
+            {statusTabs.map((status) => (
+              <button
+                key={status}
+                onClick={() => setStatusFilter(status)}
+                className={cn(
+                  'px-4 py-1.5 text-xs font-medium rounded-md transition-colors',
+                  statusFilter === status
+                    ? 'bg-tertiary text-on-tertiary'
+                    : 'text-on-surface-variant hover:text-on-surface hover:bg-white/10'
+                )}
+              >
+                {status === 'All' ? 'All Status' : status}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="flex flex-col gap-3">
           {tournamentsQuery.isLoading ? (
             <div className="text-center py-8 text-on-surface-variant text-sm">Loading tournaments...</div>
           ) : tournamentsQuery.error ? (
             <div className="text-red-400 text-sm text-center py-8">Failed to load tournaments. Retrying...</div>
-          ) : allTournaments.length === 0 ? (
-            <div className="text-center py-8 text-on-surface-variant text-sm">No tournaments available right now.</div>
+          ) : filteredTournaments.length === 0 ? (
+            <div className="text-center py-8 text-on-surface-variant text-sm">No tournaments match the current filters.</div>
           ) : (
-            allTournaments.map((tournament) => {
+            filteredTournaments.map((tournament) => {
               const cached = tournamentCache[tournament.id];
               const registered = cached?.registered ?? tournament.registered;
               const isRegistered = userId ? !!(registeredUsers[tournament.id]?.[userId]) : false;

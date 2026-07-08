@@ -11,7 +11,7 @@ export function useTournamentsQuery(filter?: { status?: TournamentStatus; type?:
     queryKey: ['tournaments', filter?.status, filter?.type],
     queryFn: async () => {
       try {
-        const result = await tournamentApi.list(filter);
+        const result = await tournamentApi.list(filter?.type ? { type: filter.type } : undefined);
         return result || [];
       } catch (error) {
         console.error('Failed to fetch tournaments:', error);
