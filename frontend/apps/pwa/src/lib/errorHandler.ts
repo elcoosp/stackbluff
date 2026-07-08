@@ -27,6 +27,47 @@ function generateCorrelationId(): string {
   return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 }
 
+// Lockout state management
+let lockoutEndTime: number | null = null;
+let lockoutInterval: NodeJS.Timeout | null = null;
+
+export function getLockoutRemaining(): number {
+  if (!lockoutEndTime) return 0;
+  return Math.max(0, Math.round((lockoutEndTime - Date.now()) / 1000));
+}
+
+export function isAccountLocked(): boolean {
+  if (!lockoutEndTime) return false;
+  return Date.now() < lockoutEndTime;
+}
+
+export function setAccountLockout(durationSeconds: number): void {
+  lockoutEndTime = Date.now() + durationSeconds * 1000;
+  // Clear any existing interval
+  if (lockoutInterval) {
+    clearInterval(lockoutInterval);
+    lockoutInterval = null;
+  }
+  // Start a timer to update UI
+  lockoutInterval = setInterval(() => {
+    if (getLockoutRemaining() <= 0) {
+      lockoutEndTime = null;
+      if (lockoutInterval) {
+        clearInterval(lockoutInterval);
+        lockoutInterval = null;
+      }
+    }
+  }, 1000);
+}
+
+export function clearLockout(): void {
+  lockoutEndTime = null;
+  if (lockoutInterval) {
+    clearInterval(lockoutInterval);
+    lockoutInterval = null;
+  }
+}
+
 /**
  * Handle API errors with appropriate user feedback
  */
@@ -62,6 +103,21 @@ export function handleApiError(error: unknown, context: Record<string, unknown> 
         toast.error('Validation error', {
           description: error.message,
         });
+        break;
+      case 429:
+        // Check for account lockout message
+        if (error.message && error.message.includes('Account temporarily locked')) {
+          const match = error.message.match(/(\d+)\s*second/);
+          const seconds = match ? parseInt(match[1]) : 900; // default 15 min
+          setAccountLockout(seconds);
+          toast.error('Account locked', {
+            description: `Too many failed attempts. Try again in ${Math.ceil(seconds / 60)} minutes.`,
+          });
+        } else {
+          toast.error('Too many requests', {
+            description: error.message,
+          });
+        }
         break;
       case 500:
       case 502:

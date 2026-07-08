@@ -2,6 +2,7 @@ import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
 import { useMutation } from '@tanstack/react-query';
 import { z } from 'zod';
+import { useState, useEffect } from 'react';
 import { authApi } from '@stackbluff/shared/auth/api';
 import { setToken } from '@stackbluff/shared/auth/token';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
@@ -13,6 +14,7 @@ import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
+import { isAccountLocked, getLockoutRemaining, clearLockout } from '@/lib/errorHandler';
 
 const loginSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Invalid email address'),
@@ -27,8 +29,28 @@ export const Route = createFileRoute('/login')({
 function LoginPage() {
   const navigate = useNavigate();
   const setAuth = useAuthStore((s) => s.setAuth);
-  // Detect if running inside Telegram Mini App
   const isMiniApp = typeof window !== 'undefined' && !!window.Telegram?.WebApp;
+
+  const [lockoutSeconds, setLockoutSeconds] = useState(0);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (isAccountLocked()) {
+      const update = () => {
+        const remaining = getLockoutRemaining();
+        setLockoutSeconds(remaining);
+        if (remaining <= 0) {
+          if (interval) clearInterval(interval);
+          clearLockout();
+        }
+      };
+      update();
+      interval = setInterval(update, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, []);
 
   const loginMutation = useMutation({
     mutationFn: authApi.login,
@@ -68,6 +90,8 @@ function LoginPage() {
     }
     telegramMutation.mutate(initData);
   };
+
+  const isLocked = isAccountLocked();
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
@@ -183,7 +207,18 @@ function LoginPage() {
                   )}
                 </form.Field>
 
-                <LiquidMetalButton type="submit" disabled={loginMutation.isPending} variant="silver" className="w-full">
+                {isLocked && (
+                  <div className="text-center text-red-400 text-sm font-mono">
+                    Account locked. Try again in {lockoutSeconds} seconds.
+                  </div>
+                )}
+
+                <LiquidMetalButton
+                  type="submit"
+                  disabled={loginMutation.isPending || isLocked}
+                  variant="silver"
+                  className="w-full"
+                >
                   {loginMutation.isPending ? 'AUTHENTICATING...' : 'SIGN IN'}
                 </LiquidMetalButton>
               </>
