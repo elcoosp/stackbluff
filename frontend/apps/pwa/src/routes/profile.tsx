@@ -5,6 +5,7 @@ import { useBadges } from '@/hooks/useBadges';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@stackbluff/shared/api/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AvatarUpload } from '@/components/settings/AvatarUpload';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -79,6 +80,9 @@ function ProfilePage() {
           <AvatarImage src={undefined} />
           <AvatarFallback className="bg-surface-container text-3xl text-on-surface">{initial}</AvatarFallback>
         </Avatar>
+        <div className="flex-shrink-0">
+          <AvatarUpload onAvatarUpdated={() => window.location.reload()} />
+        </div>
         <div className="flex-1">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-3xl font-bold text-on-surface">{displayName}</h1>
