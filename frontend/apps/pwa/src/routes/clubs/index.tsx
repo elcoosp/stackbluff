@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, Users, Crown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
+import { CreateClubModal } from '@/components/club/CreateClubModal';
 
 interface Club {
   id: string;
@@ -32,12 +33,7 @@ function ClubsListPage() {
   });
 
   const handleCreateClub = () => {
-    // Navigate to a create club page or open a modal
-    // For now, we'll show a simple prompt
-    const name = prompt('Enter club name:');
-    if (!name?.trim()) return;
-    // We'll implement creation in Phase 3.3
-    toast.info('Club creation will be implemented in Phase 3.3');
+    setIsCreateOpen(true);
   };
 
   if (isLoading) {
