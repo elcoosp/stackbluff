@@ -13,7 +13,6 @@ import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useIsMiniApp } from '@stackbluff/shared/hooks/usePaymentProvider';
 
 const loginSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Invalid email address'),
@@ -28,7 +27,8 @@ export const Route = createFileRoute('/login')({
 function LoginPage() {
   const navigate = useNavigate();
   const setAuth = useAuthStore((s) => s.setAuth);
-  const isMiniApp = useIsMiniApp();
+  // Detect if running inside Telegram Mini App
+  const isMiniApp = typeof window !== 'undefined' && !!window.Telegram?.WebApp;
 
   const loginMutation = useMutation({
     mutationFn: authApi.login,
@@ -60,6 +60,15 @@ function LoginPage() {
     onSubmit: ({ value }) => loginMutation.mutate(value),
   });
 
+  const handleTelegramLogin = () => {
+    const initData = window.Telegram?.WebApp?.initData;
+    if (!initData) {
+      toast.error('Telegram environment not detected or initData missing');
+      return;
+    }
+    telegramMutation.mutate(initData);
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#1a1b1e_0%,_#0a0a0a_100%)]" />
@@ -74,14 +83,7 @@ function LoginPage() {
               <div className="space-y-4">
                 <LiquidMetalButton
                   type="button"
-                  onClick={() => {
-                    const initData = window.Telegram?.WebApp?.initData;
-                    if (!initData) {
-                      toast.error('Telegram environment not detected');
-                      return;
-                    }
-                    telegramMutation.mutate(initData);
-                  }}
+                  onClick={handleTelegramLogin}
                   disabled={telegramMutation.isPending}
                   variant="emerald"
                   className="w-full"
