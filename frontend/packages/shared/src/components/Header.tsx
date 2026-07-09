@@ -3,7 +3,22 @@ import { useAuthStore } from '../stores/authStore';
 import { removeToken } from '../auth/token';
 import { LiquidMetalButton } from '../ui/LiquidMetalButton';
 import { useState, useRef, useEffect } from 'react';
-import { LogOut, Settings, Coins, ChevronDown , Users} from 'lucide-react';
+import {
+  LogOut,
+  Settings,
+  Coins,
+  ChevronDown,
+  LayoutGrid,
+  Trophy,
+  Users,
+  TrendingUp,
+  ShoppingBag,
+  Target,
+  Share2,
+  History,
+  BookOpen,
+  HelpCircle,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export function Header() {
@@ -18,7 +33,6 @@ export function Header() {
     navigate({ to: '/login' });
   };
 
-  // Click outside handler
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -33,9 +47,8 @@ export function Header() {
     return name?.charAt(0).toUpperCase() || 'U';
   };
 
-  // Toggle function with event handling
   const toggleDropdown = (e: React.MouseEvent) => {
-    e.stopPropagation(); // prevent parent handlers
+    e.stopPropagation();
     setDropdownOpen((prev) => !prev);
   };
 
@@ -59,7 +72,6 @@ export function Header() {
       </Link>
 
       <div className="flex items-center gap-2 md:gap-4 h-full">
-        {/* ═══ PORTAL TARGET FOR TABLE ACTIONS ═══ */}
         <div id="header-portal-actions" className="flex items-center gap-1 h-full"></div>
 
         <AnimatePresence mode="wait">
@@ -89,7 +101,6 @@ export function Header() {
               </div>
 
               <div className="relative h-full flex items-center" ref={dropdownRef}>
-                {/* ─── Added data-testid="user-menu" ─── */}
                 <button
                   type="button"
                   onClick={toggleDropdown}
@@ -112,35 +123,54 @@ export function Header() {
                       animate="animate"
                       exit="exit"
                       variants={dropdownVariants as any}
-                      className="absolute right-0 top-full mt-2 w-44 max-w-[calc(100vw-1rem)] bg-surface-container border border-outline-variant rounded-lg shadow-xl py-2 z-[2000] backdrop-blur-md origin-top-right"
+                      className="absolute right-0 top-full mt-2 w-56 max-w-[calc(100vw-1rem)] bg-surface-container border border-outline-variant rounded-lg shadow-xl py-2 z-[2000] backdrop-blur-md origin-top-right"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="px-4 py-2 border-b border-outline-variant mb-1">
                         <p className="font-data-mono text-sm text-on-surface truncate">{user.username}</p>
                         <p className="font-label-caps text-[10px] text-on-surface-variant truncate">{user.email}</p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDropdownOpen(false);
-                          navigate({ to: '/lobby' });
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-2 text-on-surface hover:bg-surface-container-high transition-colors"
-                      >
-                        <Settings className="w-4 h-4" />
-                        <span className="font-label-caps text-xs">Settings</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          handleLogout();
-                          setDropdownOpen(false);
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-2 text-on-surface hover:bg-surface-container-high transition-colors"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        <span className="font-label-caps text-xs">Logout</span>
-                      </button>
+
+                      <div className="px-2 py-1">
+                        <MenuItem icon={<LayoutGrid className="w-4 h-4" />} label="Lobby" onClick={() => { setDropdownOpen(false); navigate({ to: '/lobby' }); }} />
+                        <MenuItem icon={<Trophy className="w-4 h-4" />} label="Tournaments" onClick={() => { setDropdownOpen(false); navigate({ to: '/tournaments' }); }} />
+                        <MenuItem icon={<Users className="w-4 h-4" />} label="Clubs" onClick={() => { setDropdownOpen(false); navigate({ to: '/clubs' }); }} />
+                        <MenuItem icon={<TrendingUp className="w-4 h-4" />} label="Leaderboard" onClick={() => { setDropdownOpen(false); navigate({ to: '/leaderboard' }); }} />
+                        <MenuItem icon={<ShoppingBag className="w-4 h-4" />} label="Shop" onClick={() => { setDropdownOpen(false); navigate({ to: '/shop' }); }} />
+                      </div>
+
+                      <div className="border-t border-outline-variant/50 my-1"></div>
+
+                      <div className="px-2 py-1">
+                        <MenuItem icon={<Target className="w-4 h-4" />} label="Missions" onClick={() => { setDropdownOpen(false); navigate({ to: '/missions' }); }} />
+                        <MenuItem icon={<Share2 className="w-4 h-4" />} label="Referrals" onClick={() => { setDropdownOpen(false); navigate({ to: '/referrals' }); }} />
+                        <MenuItem icon={<History className="w-4 h-4" />} label="Replays" onClick={() => { setDropdownOpen(false); navigate({ to: '/replays' }); }} />
+                        <MenuItem icon={<BookOpen className="w-4 h-4" />} label="Hand History" onClick={() => { setDropdownOpen(false); navigate({ to: '/history' }); }} />
+                        <MenuItem icon={<BookOpen className="w-4 h-4" />} label="Guide" onClick={() => { setDropdownOpen(false); navigate({ to: '/guide' }); }} />
+                      </div>
+
+                      <div className="border-t border-outline-variant/50 my-1"></div>
+
+                      <div className="px-2 py-1">
+                        <MenuItem icon={<Settings className="w-4 h-4" />} label="Settings" onClick={() => { setDropdownOpen(false); navigate({ to: '/settings' }); }} />
+                        <MenuItem icon={<HelpCircle className="w-4 h-4" />} label="Help & Support" onClick={() => { setDropdownOpen(false); navigate({ to: '/help' }); }} />
+                      </div>
+
+                      <div className="border-t border-outline-variant/50 my-1"></div>
+
+                      <div className="px-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleLogout();
+                            setDropdownOpen(false);
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          <span className="font-label-caps text-xs">Logout</span>
+                        </button>
+                      </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -168,5 +198,26 @@ export function Header() {
         </AnimatePresence>
       </div>
     </nav>
+  );
+}
+
+function MenuItem({
+  icon,
+  label,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full flex items-center gap-3 px-4 py-2 text-on-surface hover:bg-surface-container-high rounded-lg transition-colors"
+    >
+      {icon}
+      <span className="font-label-caps text-xs">{label}</span>
+    </button>
   );
 }
