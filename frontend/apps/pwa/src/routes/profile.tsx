@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useBadges } from '@/hooks/useBadges';
@@ -7,10 +7,22 @@ import { apiClient } from '@stackbluff/shared/api/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AvatarUpload } from '@/components/settings/AvatarUpload';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { SeasonCardDisplay } from '@/components/profile/SeasonCardDisplay';
-import { Trophy, Coins, Calendar, Award, Crown, TrendingUp, Target, Flame } from 'lucide-react';
+import {
+  Trophy,
+  Coins,
+  Calendar,
+  Award,
+  Crown,
+  TrendingUp,
+  Target,
+  History,
+  Film,
+  Users,
+  Building2,
+  Settings,
+} from 'lucide-react';
 import type { PlayerStats } from '@/types/player-stats';
 
 export const Route = createFileRoute('/profile')({
@@ -57,7 +69,6 @@ function ProfilePage() {
   // Use available user fields; fallback to defaults
   const displayName = user?.username || 'Player';
   const balance = profile?.balance ?? 0;
-  const initial = displayName.charAt(0).toUpperCase();
 
   // Stats
   const handsPlayed = stats?.hands_played || 0;
@@ -77,22 +88,8 @@ function ProfilePage() {
     <div className="max-w-4xl mx-auto p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-        <Avatar className="w-24 h-24 border-2 border-tertiary/30">
-          <AvatarImage src={undefined} />
-          <AvatarFallback className="bg-surface-container text-3xl text-on-surface">{initial}</AvatarFallback>
-        </Avatar>
-        <div className="flex-shrink-0">
-          <AvatarUpload onAvatarUpdated={() => window.location.reload()} />
-        </div>
-      {/* Quick links */}
-      <div className="flex flex-wrap gap-3 mt-2">
-        <Link to="/history" className="text-sm text-on-surface-variant hover:text-tertiary transition-colors">📜 Hand History</Link>
-        <Link to="/replays" className="text-sm text-on-surface-variant hover:text-tertiary transition-colors">🎬 Replays</Link>
-        <Link to="/missions" className="text-sm text-on-surface-variant hover:text-tertiary transition-colors">🎯 Missions</Link>
-        <Link to="/referrals" className="text-sm text-on-surface-variant hover:text-tertiary transition-colors">👥 Referrals</Link>
-        <Link to="/clubs" className="text-sm text-on-surface-variant hover:text-tertiary transition-colors">🏛️ Clubs</Link>
-        <Link to="/settings" className="text-sm text-on-surface-variant hover:text-tertiary transition-colors">⚙️ Settings</Link>
-      </div>
+        {/* Single Avatar with upload capability */}
+        <AvatarUpload onAvatarUpdated={() => window.location.reload()} />
 
         <div className="flex-1">
           <div className="flex items-center gap-3 flex-wrap">
@@ -103,7 +100,6 @@ function ProfilePage() {
                 Founding Member
               </Badge>
             )}
-            {/* Rank badge – placeholder */}
             <Badge variant="outline" className="border-tertiary/30 text-tertiary">
               <Trophy className="w-3 h-3 mr-1" />
               Silver
@@ -124,6 +120,34 @@ function ProfilePage() {
         >
           Edit Profile
         </button>
+      </div>
+
+      {/* Quick links with icons */}
+      <div className="flex flex-wrap gap-3 mt-2 border-t border-white/10 pt-4">
+        <Link to="/history" className="flex items-center gap-1.5 text-sm text-on-surface-variant hover:text-tertiary transition-colors">
+          <History className="w-4 h-4" />
+          Hand History
+        </Link>
+        <Link to="/replays" className="flex items-center gap-1.5 text-sm text-on-surface-variant hover:text-tertiary transition-colors">
+          <Film className="w-4 h-4" />
+          Replays
+        </Link>
+        <Link to="/missions" className="flex items-center gap-1.5 text-sm text-on-surface-variant hover:text-tertiary transition-colors">
+          <Target className="w-4 h-4" />
+          Missions
+        </Link>
+        <Link to="/referrals" className="flex items-center gap-1.5 text-sm text-on-surface-variant hover:text-tertiary transition-colors">
+          <Users className="w-4 h-4" />
+          Referrals
+        </Link>
+        <Link to="/clubs" className="flex items-center gap-1.5 text-sm text-on-surface-variant hover:text-tertiary transition-colors">
+          <Building2 className="w-4 h-4" />
+          Clubs
+        </Link>
+        <Link to="/settings" className="flex items-center gap-1.5 text-sm text-on-surface-variant hover:text-tertiary transition-colors">
+          <Settings className="w-4 h-4" />
+          Settings
+        </Link>
       </div>
 
       {/* Stats Grid */}
