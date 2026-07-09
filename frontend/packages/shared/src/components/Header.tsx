@@ -145,7 +145,7 @@ export function Header() {
                         <MenuItem icon={<Target className="w-4 h-4" />} label="Missions" onClick={() => { setDropdownOpen(false); navigate({ to: '/missions' }); }} />
                         <MenuItem icon={<Share2 className="w-4 h-4" />} label="Referrals" onClick={() => { setDropdownOpen(false); navigate({ to: '/referrals' }); }} />
                         <MenuItem icon={<History className="w-4 h-4" />} label="Replays" onClick={() => { setDropdownOpen(false); navigate({ to: '/replays' }); }} />
-                        <MenuItem icon={<BookOpen className="w-4 h-4" />} label="Hand History" onClick={() => { setDropdownOpen(false); navigate({ to: '/history' }); }} />
+                        <MenuItem icon={<FileText className="w-4 h-4" />} label="Hand History" onClick={() => { setDropdownOpen(false); navigate({ to: '/history' }); }} />
                         <MenuItem icon={<BookOpen className="w-4 h-4" />} label="Guide" onClick={() => { setDropdownOpen(false); navigate({ to: '/guide' }); }} />
                       </div>
 
