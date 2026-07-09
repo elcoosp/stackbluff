@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useTournamentsQuery } from '../hooks/useTournamentsQuery';
 import { TournamentCard } from '../components/tournament/TournamentCard';
 import { TournamentBuyInDialog } from '../components/tournament/TournamentBuyInDialog';
