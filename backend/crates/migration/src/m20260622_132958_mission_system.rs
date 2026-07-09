@@ -10,35 +10,35 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(DailyMission::Table)
+                    .table(DailyMissions::Table)
                     .if_not_exists()
                     .col(
-                        ColumnDef::new(DailyMission::Id)
+                        ColumnDef::new(DailyMissions::Id)
                             .integer()
                             .not_null()
                             .auto_increment()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(DailyMission::UserId).uuid().not_null())
-                    .col(ColumnDef::new(DailyMission::AssignedDate).date().not_null())
+                    .col(ColumnDef::new(DailyMissions::UserId).uuid().not_null())
+                    .col(ColumnDef::new(DailyMissions::AssignedDate).date().not_null())
                     .col(
-                        ColumnDef::new(DailyMission::MissionType)
+                        ColumnDef::new(DailyMissions::MissionType)
                             .string()
                             .not_null(),
                     )
-                    .col(ColumnDef::new(DailyMission::Progress).integer().default(0))
+                    .col(ColumnDef::new(DailyMissions::Progress).integer().default(0))
                     .col(
-                        ColumnDef::new(DailyMission::Completed)
+                        ColumnDef::new(DailyMissions::Completed)
                             .boolean()
                             .default(false),
                     )
                     .col(
-                        ColumnDef::new(DailyMission::Rerolled)
+                        ColumnDef::new(DailyMissions::Rerolled)
                             .boolean()
                             .default(false),
                     )
                     .col(
-                        ColumnDef::new(DailyMission::RewardClaimed)
+                        ColumnDef::new(DailyMissions::RewardClaimed)
                             .boolean()
                             .default(false),
                     )
@@ -50,10 +50,10 @@ impl MigrationTrait for Migration {
             .create_index(
                 Index::create()
                     .name("idx-daily_mission-unique")
-                    .table(DailyMission::Table)
-                    .col(DailyMission::UserId)
-                    .col(DailyMission::AssignedDate)
-                    .col(DailyMission::MissionType)
+                    .table(DailyMissions::Table)
+                    .col(DailyMissions::UserId)
+                    .col(DailyMissions::AssignedDate)
+                    .col(DailyMissions::MissionType)
                     .unique()
                     .if_not_exists()
                     .to_owned(),
@@ -208,7 +208,7 @@ impl MigrationTrait for Migration {
 
         // Drop tables
         manager
-            .drop_table(Table::drop().table(DailyMission::Table).to_owned())
+            .drop_table(Table::drop().table(DailyMissions::Table).to_owned())
             .await?;
         manager
             .drop_table(Table::drop().table(MissionDefinition::Table).to_owned())
@@ -222,7 +222,7 @@ impl MigrationTrait for Migration {
 }
 
 #[derive(DeriveIden)]
-enum DailyMission {
+enum DailyMissions {
     Table,
     Id,
     UserId,
