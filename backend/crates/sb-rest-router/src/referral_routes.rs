@@ -4,7 +4,7 @@ use axum::{
     http::StatusCode,
     routing::get,
 };
-use sb_shared_types::{RequestContext, UserId};
+use sb_shared_types::RequestContext;
 use serde::Serialize;
 use std::sync::Arc;
 

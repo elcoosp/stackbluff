@@ -31,6 +31,7 @@ mod m20260630_add_email_verified_at;
 mod m20260630_add_password_changed_at;
 mod m20250702_add_tournament_name;
 mod m20260710_000001_add_hand_count_to_referral;
+mod m20260614_145806_add_referrals_and_counters;
 
 use sea_orm_migration::prelude::*;
 
@@ -57,7 +58,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260630_add_password_changed_at::Migration),
             // 3. Additional tables
             Box::new(m20250614_create_payment_intents::Migration),
-            // Box::new(m20260614_145806_add_referrals_and_counters::Migration), // removed
+            Box::new(m20260614_145806_add_referrals_and_counters::Migration),
             Box::new(m20260614_171633_create_anti_cheat_events::Migration),
             Box::new(m20260101_000008_player_statistics::Migration),
             Box::new(m20250101_000001_add_participants_to_hand_history::Migration),
