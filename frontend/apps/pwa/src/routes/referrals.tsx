@@ -214,22 +214,35 @@ function ReferralsPage() {
               <LinkIcon className="w-4 h-4 text-on-surface-variant/50 flex-shrink-0" />
               <span className="text-sm text-on-surface truncate">{referralLink}</span>
             </div>
-          </div>
-          <div className="flex gap-2 flex-shrink-0 self-end">
-            <Button onClick={handleCopyLink} variant="outline" size="sm" className="border-white/10" aria-label="Copy referral link">
-              <Copy className="w-4 h-4 mr-1" />
-              Copy
-            </Button>
-            <Button onClick={() => handleShare(\'twitter\')} variant="outline" size="sm" className="border-white/10" aria-label="Share on X (Twitter)">
-              <X className="w-4 h-4" />
-            </Button>
-            <Button onClick={() => handleShare(\'telegram\')} variant="outline" size="sm" className="border-white/10" aria-label="Share on Telegram">
-              <Send className="w-4 h-4" />
-            </Button>
-            <Button onClick={() => handleShare(\'whatsapp\')} variant="outline" size="sm" className="border-white/10" aria-label="Share on WhatsApp">
-              <MessageCircle className="w-4 h-4" />
-            </Button>
-          </div>
+          </div>          <div className="flex gap-2 flex-shrink-0 self-end">
+
+                      <Button onClick={handleCopyLink} variant="outline" size="sm" className="border-white/10" aria-label="Copy referral link">
+
+                        <Copy className="w-4 h-4 mr-1" />
+
+                        Copy
+
+                      </Button>
+
+                      <Button onClick={() => handleShare('twitter')} variant="outline" size="sm" className="border-white/10" aria-label="Share on X (Twitter)">
+
+                        <X className="w-4 h-4" />
+
+                      </Button>
+
+                      <Button onClick={() => handleShare('telegram')} variant="outline" size="sm" className="border-white/10" aria-label="Share on Telegram">
+
+                        <Send className="w-4 h-4" />
+
+                      </Button>
+
+                      <Button onClick={() => handleShare('whatsapp')} variant="outline" size="sm" className="border-white/10" aria-label="Share on WhatsApp">
+
+                        <MessageCircle className="w-4 h-4" />
+
+                      </Button>
+
+                    </div>
         </div>
       </Card>
 
