@@ -27,6 +27,9 @@ import { apiClient } from '@stackbluff/shared';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { Leaderboard } from "../components/Leaderboard";
 
+import { LobbyTabs } from '@/components/lobby/LobbyTabs';
+import { removeToken } from '@stackbluff/shared/auth/token';
+
 const STAKE_CONFIG = {
   Micro: { text: "$0.02/$0.05", bb: 5 },
   Low: { text: "$0.10/$0.25", bb: 25 },
@@ -62,6 +65,7 @@ function LobbyPage() {
     table: null,
   });
   const balance = useAuthStore((s) => s.balance);
+  const logout = useAuthStore((s) => s.logout);
 
   const { data: tables = [], isLoading, error, refetch } = useQuery<Table[]>({
     queryKey: ['tables'],
@@ -189,11 +193,7 @@ function LobbyPage() {
               <h1 className="font-display-lg text-3xl md:text-display-lg text-on-surface mb-2">Game Lobby</h1>
               <p className="text-on-surface-variant max-w-md text-sm md:text-base">Join high-stakes rooms or competitive tournaments. Precision poker for the sophisticated player.</p>
             </div>
-            <div className="flex gap-1 md:gap-2 bg-surface-container p-1 rounded-xl border border-outline-variant self-start md:self-auto">
-              <button className="px-3 md:px-6 py-1.5 md:py-2 rounded-lg bg-surface-container-highest text-tertiary font-label-caps text-xs md:text-sm transition-all">Cash Games</button>
-              <button onClick={() => navigate({ to: "/tournaments" })} className="px-3 md:px-6 py-1.5 md:py-2 rounded-lg text-on-surface-variant hover:text-on-surface font-label-caps text-xs md:text-sm transition-all">Tournaments</button>
-              <button className="px-3 md:px-6 py-1.5 md:py-2 rounded-lg text-on-surface-variant hover:text-on-surface font-label-caps text-xs md:text-sm transition-all">Clubs</button>
-            </div>
+            <LobbyTabs />
           </div>
 
           {/* Sorting buttons (mobile) */}

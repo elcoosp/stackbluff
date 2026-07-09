@@ -22,6 +22,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { ErrorState } from '@/components/ui/ErrorState';
+
 export const Route = createFileRoute('/replays')({
   component: ReplaysPage,
 });
@@ -70,15 +72,7 @@ function ReplaysPage() {
   }
 
   if (error || !replays) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] p-6">
-        <Card className="max-w-md w-full p-6 text-center">
-          <h2 className="text-xl font-semibold text-red-400 mb-2">Error</h2>
-          <p className="text-on-surface-variant text-sm">Failed to load replay cards.</p>
-          <Button onClick={() => refetch()} className="mt-4">Retry</Button>
-        </Card>
-      </div>
-    );
+    return <ErrorState onRetry={() => refetch()} message="Failed to load replay cards." />;
   }
 
   if (replays.length === 0) {

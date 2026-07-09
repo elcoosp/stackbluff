@@ -83,7 +83,7 @@ function LeaderboardPage() {
       <div className="flex justify-center items-end gap-4 mb-10">
         {topThree.map((entry, idx) => {
           const rank = idx + 1;
-          const heights = ['h-32', 'h-48', 'h-24'];
+          const heights = ['h-48', 'h-32', 'h-24'];
           const colors = ['text-yellow-400', 'text-gray-300', 'text-amber-600'];
           const medals = ['🥇', '🥈', '🥉'];
           const isCurrentUser = entry.user_id === currentUser?.id;

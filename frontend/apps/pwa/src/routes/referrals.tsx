@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
+
+import { ErrorState } from '@/components/ui/ErrorState';
 import {
   Users,
   Gift,
@@ -127,15 +129,7 @@ function ReferralsPage() {
   }
 
   if (statsError || referralsError || !stats) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] p-6">
-        <Card className="max-w-md w-full p-6 text-center">
-          <h2 className="text-xl font-semibold text-red-400 mb-2">Error</h2>
-          <p className="text-on-surface-variant text-sm">Failed to load referral data.</p>
-          <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button>
-        </Card>
-      </div>
-    );
+    return <ErrorState onRetry={() => window.location.reload()} message="Failed to load referral data." />;
   }
 
   const { total_referred, bonus_earned, pending_bonus } = stats;

@@ -9,6 +9,8 @@ import { toast } from 'sonner';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { CreateClubModal } from '@/components/club/CreateClubModal';
 
+import { ErrorState } from '@/components/ui/ErrorState';
+
 interface Club {
   id: string;
   name: string;
@@ -45,14 +47,7 @@ function ClubsListPage() {
   }
 
   if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full gap-4">
-        <p className="text-red-400">Failed to load clubs</p>
-        <Button onClick={() => refetch()} variant="outline">
-          Retry
-        </Button>
-      </div>
-    );
+    return <ErrorState onRetry={() => refetch()} message="Failed to load clubs" />;
   }
 
   return (

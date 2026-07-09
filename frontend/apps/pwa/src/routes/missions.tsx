@@ -9,6 +9,8 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+
+import { ErrorState } from '@/components/ui/ErrorState';
 import {
   Trophy,
   Target,
@@ -111,15 +113,7 @@ function MissionsPage() {
   }
 
   if (error || !missions) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] p-6">
-        <Card className="max-w-md w-full p-6 text-center">
-          <h2 className="text-xl font-semibold text-red-400 mb-2">Error</h2>
-          <p className="text-on-surface-variant text-sm">Failed to load missions.</p>
-          <Button onClick={() => refetch()} className="mt-4">Retry</Button>
-        </Card>
-      </div>
-    );
+    return <ErrorState onRetry={() => refetch()} message="Failed to load missions." />;
   }
 
   const allCompleted = missions.every((m) => m.completed);

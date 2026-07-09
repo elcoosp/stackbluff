@@ -12,6 +12,8 @@ import type { TournamentSummary } from '@stackbluff/shared/types/tournament.type
 import { cn } from '@/lib/utils';
 import { History } from 'lucide-react';
 
+import { LobbyTabs } from '@/components/lobby/LobbyTabs';
+
 // @ts-ignore – route will be added to route tree on dev server restart
 export const Route = createFileRoute('/tournaments')({
   component: TournamentsPage,
@@ -168,23 +170,25 @@ function TournamentsPage() {
       <div className="absolute inset-0 carbon-bg pointer-events-none" />
       <div className="max-w-6xl mx-auto p-4 md:p-6 lg:p-8 pb-28 md:pb-8 relative z-10">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 mb-8 md:mb-12">
-          <div className="flex items-start justify-between w-full">
-            <div>
-              <h1 className="font-display-lg text-3xl md:text-display-lg text-on-surface mb-2 flex items-center gap-2">
-                Tournaments
-              </h1>
-              <p className="text-on-surface-variant max-w-md text-sm md:text-base">
-                Sit & Go and Multi-Table Tournaments. Register now and compete for the prize pool.
-              </p>
-            </div>
-            <Link
-              to="/tournaments-history"
-              className="mt-1 text-sm text-tertiary hover:text-tertiary/80 transition-colors flex items-center gap-1"
-            >
-              <History className="w-4 h-4" />
-              History
-            </Link>
+          <div>
+            <h1 className="font-display-lg text-3xl md:text-display-lg text-on-surface mb-2 flex items-center gap-2">
+              Tournaments
+            </h1>
+            <p className="text-on-surface-variant max-w-md text-sm md:text-base">
+              Sit & Go and Multi-Table Tournaments. Register now and compete for the prize pool.
+            </p>
           </div>
+          <LobbyTabs />
+        </div>
+
+        <div className="flex items-center justify-between mb-4">
+          <Link
+            to="/tournaments-history"
+            className="text-sm text-tertiary hover:text-tertiary/80 transition-colors flex items-center gap-1"
+          >
+            <History className="w-4 h-4" />
+            History
+          </Link>
         </div>
 
         {/* Filters */}
