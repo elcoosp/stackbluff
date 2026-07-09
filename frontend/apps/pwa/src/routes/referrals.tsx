@@ -207,7 +207,7 @@ function ReferralsPage() {
 
       {/* Referral Link */}
       <Card className="p-4 bg-white/5 border-white/10">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch gap-3">
           <div className="flex-1 min-w-0">
             <p className="text-sm text-on-surface-variant">Your referral link</p>
             <div className="flex items-center gap-2 mt-1 bg-black/30 rounded-lg px-3 py-2">
@@ -215,7 +215,7 @@ function ReferralsPage() {
               <span className="text-sm text-on-surface truncate">{referralLink}</span>
             </div>
           </div>
-          <div className="flex gap-2 flex-shrink-0">
+          <div className="flex gap-2 flex-shrink-0 self-end">
             <Button onClick={handleCopyLink} variant="outline" size="sm" className="border-white/10">
               <Copy className="w-4 h-4 mr-1" />
               Copy
