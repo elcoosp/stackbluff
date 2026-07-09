@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { apiClient } from '@stackbluff/shared/api/client';
@@ -100,13 +100,16 @@ function PrivacySettingsPage() {
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
-      <div>
+      <div className="flex items-center gap-3 mb-6">
+        <Link to="/settings" className="p-2 rounded-lg hover:bg-white/5 transition-colors">
+          <ArrowLeft className="w-5 h-5 text-on-surface-variant" />
+        </Link>
         <h1 className="font-display-lg text-3xl text-on-surface flex items-center gap-2">
           <Shield className="w-8 h-8 text-tertiary" />
           Privacy & Data
         </h1>
-        <p className="text-on-surface-variant text-sm mt-1">Manage your account data and privacy settings.</p>
       </div>
+      <p className="text-on-surface-variant text-sm -mt-4 mb-6">Manage your account data and privacy settings.</p>
 
       {/* Data Export */}
       <Card>
