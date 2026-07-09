@@ -9,6 +9,7 @@ import {
   Volume2,
   Shield,
   CreditCard,
+  Settings,
   Send,
   ChevronRight,
 } from 'lucide-react';

@@ -47,17 +47,20 @@ export function EmailVerificationBanner() {
         <span className="text-yellow-200">
           Please verify your email address to unlock all features.
         </span>
-        <button
-          onClick={handleResend}
-          disabled={isResending}
-          className="text-yellow-400 hover:text-yellow-300 underline-offset-2 underline font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isResending ? 'Sending...' : 'Resend verification email'}
-        </button>
-        <span className="text-yellow-200/60">|</span>
-        <Link to="/settings" className="text-yellow-400 hover:text-yellow-300 underline-offset-2 underline">
-          Settings
-        </Link>
+        <div>
+
+          <button
+            onClick={handleResend}
+            disabled={isResending}
+            className="text-yellow-400 hover:text-yellow-300 underline-offset-2 underline font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isResending ? 'Sending...' : 'Resend verification email'}
+          </button>
+          <span className="text-yellow-200/60"> | </span>
+          <Link to="/settings" className="text-yellow-400 hover:text-yellow-300 underline-offset-2 underline">
+            Settings
+          </Link>
+        </div>
       </div>
     </div>
   );

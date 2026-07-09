@@ -13,6 +13,13 @@ import {
   Plus,
   ArrowUpDown,
   Wallet,
+  Users,
+  TrendingUp,
+  ShoppingBag,
+  Target,
+  Share2,
+  BookOpen,
+  Settings,
 } from 'lucide-react';
 import { CreateTableModal } from '../components/CreateTableModal';
 import { BuyInDialog } from '../components/game/BuyInDialog';

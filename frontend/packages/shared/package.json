@@ -2,6 +2,7 @@
   "name": "@stackbluff/shared",
   "version": "0.0.1",
   "type": "module",
+  "check": "tsc --noEmit",
   "dependencies": {
     "motion": "^12.40.0"
   }
