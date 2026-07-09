@@ -216,17 +216,17 @@ function ReferralsPage() {
             </div>
           </div>
           <div className="flex gap-2 flex-shrink-0 self-end">
-            <Button onClick={handleCopyLink} variant="outline" size="sm" className="border-white/10"> aria-label="Copy referral link"
+            <Button onClick={handleCopyLink} variant="outline" size="sm" className="border-white/10" aria-label="Copy referral link">
               <Copy className="w-4 h-4 mr-1" />
               Copy
             </Button>
-            <Button onClick={() => handleShare('twitter')} variant="outline" size="sm" className="border-white/10"> aria-label="Share on X (Twitter)"
+            <Button onClick={() => handleShare(\'twitter\')} variant="outline" size="sm" className="border-white/10" aria-label="Share on X (Twitter)">
               <X className="w-4 h-4" />
             </Button>
-            <Button onClick={() => handleShare('telegram')} variant="outline" size="sm" className="border-white/10"> aria-label="Share on Telegram"
+            <Button onClick={() => handleShare(\'telegram\')} variant="outline" size="sm" className="border-white/10" aria-label="Share on Telegram">
               <Send className="w-4 h-4" />
             </Button>
-            <Button onClick={() => handleShare('whatsapp')} variant="outline" size="sm" className="border-white/10"> aria-label="Share on WhatsApp"
+            <Button onClick={() => handleShare(\'whatsapp\')} variant="outline" size="sm" className="border-white/10" aria-label="Share on WhatsApp">
               <MessageCircle className="w-4 h-4" />
             </Button>
           </div>
