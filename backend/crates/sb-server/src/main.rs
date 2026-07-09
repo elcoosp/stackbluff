@@ -46,6 +46,7 @@ use sb_db_repos::referral_repo::ReferralRepositoryImpl;
 use sb_db_repos::tournament_repo::TournamentRepoImpl;
 use sb_db_repos::user_repo::UserRepoImpl;
 use sb_mission::service::MissionServiceImpl;
+use sb_mission::mission_routes;
 use sb_rest_router::player_stats::player_stats_routes;
 use sb_rest_router::season_card;
 use sb_rest_router::tournament_routes::{self, TournamentState};
@@ -356,7 +357,8 @@ async fn main() {
     let viral_service_arc = Arc::new(viral_service_impl);
 
     let mission_service: Arc<dyn MissionApi + Send + Sync> =
-        Arc::new(MissionServiceImpl::new(Arc::new(db.clone()), user_service));
+        Arc::new(MissionServiceImpl::new(Arc::new(db.clone()), user_service.clone()));
+    let mission_router = sb_mission::mission_routes(Arc::new(db.clone()), user_service.clone());
 
     let app_state = Arc::new(AppState {
         table_service: table_service.clone(),
@@ -433,7 +435,10 @@ async fn main() {
     //  FIX: Add SharedAuthService as an Extension so auth middleware can find it.
     //  Also keep the RequestContext middleware.
     // ═══════════════════════════════════════════════════════════════════
-    let app = Router::new()
+    
+    let mission_router = sb_mission::mission_routes(Arc::new(db.clone()), user_service.clone());
+
+let app = Router::new()
         .merge(metrics_route)
         .merge(rest_router)
         .merge(ws_router)
@@ -444,6 +449,7 @@ async fn main() {
         .merge(tournament_router)
         .merge(season_card::router(db.clone()))
         .merge(club_tournament_router)
+        .merge(mission_router)
         // RequestContext middleware
         .layer(middleware::from_fn(request_context_middleware))
         // Provide SharedAuthService to all handlers (this fixes the 500)
