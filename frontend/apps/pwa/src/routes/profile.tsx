@@ -84,6 +84,16 @@ function ProfilePage() {
         <div className="flex-shrink-0">
           <AvatarUpload onAvatarUpdated={() => window.location.reload()} />
         </div>
+      {/* Quick links */}
+      <div className="flex flex-wrap gap-3 mt-2">
+        <Link to="/history" className="text-sm text-on-surface-variant hover:text-tertiary transition-colors">📜 Hand History</Link>
+        <Link to="/replays" className="text-sm text-on-surface-variant hover:text-tertiary transition-colors">🎬 Replays</Link>
+        <Link to="/missions" className="text-sm text-on-surface-variant hover:text-tertiary transition-colors">🎯 Missions</Link>
+        <Link to="/referrals" className="text-sm text-on-surface-variant hover:text-tertiary transition-colors">👥 Referrals</Link>
+        <Link to="/clubs" className="text-sm text-on-surface-variant hover:text-tertiary transition-colors">🏛️ Clubs</Link>
+        <Link to="/settings" className="text-sm text-on-surface-variant hover:text-tertiary transition-colors">⚙️ Settings</Link>
+      </div>
+
         <div className="flex-1">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-3xl font-bold text-on-surface">{displayName}</h1>
