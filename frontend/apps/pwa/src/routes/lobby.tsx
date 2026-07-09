@@ -111,13 +111,47 @@ function LobbyPage() {
             <Trophy className="w-5 h-5" />
             <span className="font-label-caps text-label-caps">Tournaments</span>
           </button>
-          <button className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
-            <History className="w-5 h-5" />
-            <span className="font-label-caps text-label-caps">History</span>
+          <button onClick={() => navigate({ to: "/clubs" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
+            <Users className="w-5 h-5" />
+            <span className="font-label-caps text-label-caps">Clubs</span>
           </button>
-          <button className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
-            <BarChart3 className="w-5 h-5" />
-            <span className="font-label-caps text-label-caps">Strategy</span>
+          <button onClick={() => navigate({ to: "/leaderboard" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
+            <TrendingUp className="w-5 h-5" />
+            <span className="font-label-caps text-label-caps">Leaderboard</span>
+          </button>
+          <button onClick={() => navigate({ to: "/shop" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
+            <ShoppingBag className="w-5 h-5" />
+            <span className="font-label-caps text-label-caps">Shop</span>
+          </button>
+          <div className="border-t border-outline-variant/50 my-2"></div>
+          <button onClick={() => navigate({ to: "/missions" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
+            <Target className="w-5 h-5" />
+            <span className="font-label-caps text-label-caps">Missions</span>
+          </button>
+          <button onClick={() => navigate({ to: "/referrals" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
+            <Share2 className="w-5 h-5" />
+            <span className="font-label-caps text-label-caps">Referrals</span>
+          </button>
+          <button onClick={() => navigate({ to: "/replays" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
+            <History className="w-5 h-5" />
+            <span className="font-label-caps text-label-caps">Replays</span>
+          </button>
+          <button onClick={() => navigate({ to: "/history" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
+            <BookOpen className="w-5 h-5" />
+            <span className="font-label-caps text-label-caps">Hand History</span>
+          </button>
+          <div className="border-t border-outline-variant/50 my-2"></div>
+          <button onClick={() => navigate({ to: "/guide" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
+            <BookOpen className="w-5 h-5" />
+            <span className="font-label-caps text-label-caps">Guide</span>
+          </button>
+          <button onClick={() => navigate({ to: "/help" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
+            <HelpCircle className="w-5 h-5" />
+            <span className="font-label-caps text-label-caps">Help & Support</span>
+          </button>
+          <button onClick={() => navigate({ to: "/settings" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
+            <Settings className="w-5 h-5" />
+            <span className="font-label-caps text-label-caps">Settings</span>
           </button>
         </nav>
 
@@ -125,16 +159,17 @@ function LobbyPage() {
           <Button onClick={() => setModalOpen(true)} className="w-full mb-4 py-3 rounded-lg liquid-metal font-label-caps text-label-caps active:scale-95 transition-transform uppercase">
             <Plus className="w-4 h-4 mr-2" /> New Table
           </Button>
-          <button className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface w-full transition-colors font-label-caps text-label-caps">
-            <HelpCircle className="w-5 h-5" />
-            <span className="font-label-caps text-label-caps">Support</span>
-          </button>
-          <button className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface w-full transition-colors font-label-caps text-label-caps">
+          <button onClick={() => {
+            removeToken();
+            logout();
+            navigate({ to: '/login' });
+          }} className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:bg-red-500/10 w-full transition-colors font-label-caps text-label-caps">
             <LogOut className="w-5 h-5" />
-            <span className="font-label-caps text-label-caps">Exit</span>
+            <span className="font-label-caps text-label-caps">Logout</span>
           </button>
         </div>
       </aside>
+
 
       {/* Main content */}
       <section className="flex-1 relative min-w-0">
