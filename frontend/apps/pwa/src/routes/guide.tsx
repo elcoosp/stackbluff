@@ -21,18 +21,18 @@ export const Route = createFileRoute('/guide')({
   component: GuidePage,
 });
 
-// Hand ranks ordered from highest to lowest
+// Hand ranks ordered from highest to lowest – no emojis
 const HAND_RANKS = [
-  { name: 'Royal Flush', description: 'Ace, King, Queen, Jack, 10, all same suit', emoji: '👑' },
-  { name: 'Straight Flush', description: 'Five consecutive cards, all same suit', emoji: '🔥' },
-  { name: 'Four of a Kind', description: 'Four cards of the same rank', emoji: '💎' },
-  { name: 'Full House', description: 'Three of a kind + a pair', emoji: '🏠' },
-  { name: 'Flush', description: 'Five cards, all same suit', emoji: '🌈' },
-  { name: 'Straight', description: 'Five consecutive cards', emoji: '📏' },
-  { name: 'Three of a Kind', description: 'Three cards of the same rank', emoji: '📌' },
-  { name: 'Two Pair', description: 'Two different pairs', emoji: '👫' },
-  { name: 'One Pair', description: 'Two cards of the same rank', emoji: '🤝' },
-  { name: 'High Card', description: 'Highest card wins when no other hand is made', emoji: '📈' },
+  { name: 'Royal Flush', description: 'Ace, King, Queen, Jack, 10, all same suit' },
+  { name: 'Straight Flush', description: 'Five consecutive cards, all same suit' },
+  { name: 'Four of a Kind', description: 'Four cards of the same rank' },
+  { name: 'Full House', description: 'Three of a kind + a pair' },
+  { name: 'Flush', description: 'Five cards, all same suit' },
+  { name: 'Straight', description: 'Five consecutive cards' },
+  { name: 'Three of a Kind', description: 'Three cards of the same rank' },
+  { name: 'Two Pair', description: 'Two different pairs' },
+  { name: 'One Pair', description: 'Two cards of the same rank' },
+  { name: 'High Card', description: 'Highest card wins when no other hand is made' },
 ];
 
 // Texas Hold'em position guide
@@ -66,7 +66,7 @@ function GuidePage() {
       </div>
 
       <Tabs defaultValue="hand-ranks" className="space-y-6">
-        <TabsList className="bg-white/5 border border-white/10 rounded-lg p-1 overflow-x-auto flex-wrap">
+        <TabsList className="bg-white/5 border border-white/10 rounded-lg p-1 overflow-x-auto overflow-y-hidden flex-nowrap">
           <TabsTrigger value="hand-ranks">Hand Ranks</TabsTrigger>
           <TabsTrigger value="positions">Positions</TabsTrigger>
           <TabsTrigger value="terms">Key Terms</TabsTrigger>
@@ -82,7 +82,6 @@ function GuidePage() {
             {HAND_RANKS.map((hand, idx) => (
               <Card key={idx} className="bg-white/5 border-white/10">
                 <CardContent className="p-4 flex items-center gap-3">
-                  <span className="text-2xl">{hand.emoji}</span>
                   <div>
                     <h3 className="font-semibold text-on-surface">{hand.name}</h3>
                     <p className="text-xs text-on-surface-variant">{hand.description}</p>
