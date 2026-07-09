@@ -10,35 +10,35 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(DailyMission::Table)
+                    .table(DailyMissions::Table)
                     .if_not_exists()
                     .col(
-                        ColumnDef::new(DailyMission::Id)
+                        ColumnDef::new(DailyMissions::Id)
                             .integer()
                             .not_null()
                             .auto_increment()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(DailyMission::UserId).uuid().not_null())
-                    .col(ColumnDef::new(DailyMission::AssignedDate).date().not_null())
+                    .col(ColumnDef::new(DailyMissions::UserId).uuid().not_null())
+                    .col(ColumnDef::new(DailyMissions::AssignedDate).date().not_null())
                     .col(
-                        ColumnDef::new(DailyMission::MissionType)
+                        ColumnDef::new(DailyMissions::MissionType)
                             .string()
                             .not_null(),
                     )
-                    .col(ColumnDef::new(DailyMission::Progress).integer().default(0))
+                    .col(ColumnDef::new(DailyMissions::Progress).integer().default(0))
                     .col(
-                        ColumnDef::new(DailyMission::Completed)
+                        ColumnDef::new(DailyMissions::Completed)
                             .boolean()
                             .default(false),
                     )
                     .col(
-                        ColumnDef::new(DailyMission::Rerolled)
+                        ColumnDef::new(DailyMissions::Rerolled)
                             .boolean()
                             .default(false),
                     )
                     .col(
-                        ColumnDef::new(DailyMission::RewardClaimed)
+                        ColumnDef::new(DailyMissions::RewardClaimed)
                             .boolean()
                             .default(false),
                     )
@@ -46,15 +46,14 @@ impl MigrationTrait for Migration {
             )
             .await?;
 
-        // Index with IF NOT EXISTS – prevents “index already exists” errors
         manager
             .create_index(
                 Index::create()
                     .name("idx-daily_mission-unique")
-                    .table(DailyMission::Table)
-                    .col(DailyMission::UserId)
-                    .col(DailyMission::AssignedDate)
-                    .col(DailyMission::MissionType)
+                    .table(DailyMissions::Table)
+                    .col(DailyMissions::UserId)
+                    .col(DailyMissions::AssignedDate)
+                    .col(DailyMissions::MissionType)
                     .unique()
                     .if_not_exists()
                     .to_owned(),
@@ -105,20 +104,20 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(Streak::Table)
+                    .table(Streaks::Table)
                     .if_not_exists()
                     .col(
-                        ColumnDef::new(Streak::UserId)
+                        ColumnDef::new(Streaks::UserId)
                             .uuid()
                             .not_null()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(Streak::CurrentStreak).integer().default(0))
-                    .col(ColumnDef::new(Streak::LongestStreak).integer().default(0))
-                    .col(ColumnDef::new(Streak::LastCompletionDate).date())
-                    .col(ColumnDef::new(Streak::ShieldAvailable).integer().default(0))
+                    .col(ColumnDef::new(Streaks::CurrentStreak).integer().default(0))
+                    .col(ColumnDef::new(Streaks::LongestStreak).integer().default(0))
+                    .col(ColumnDef::new(Streaks::LastCompletionDate).date())
+                    .col(ColumnDef::new(Streaks::ShieldAvailable).integer().default(0))
                     .col(
-                        ColumnDef::new(Streak::BonusAwardedStreak)
+                        ColumnDef::new(Streaks::BonusAwardedStreak)
                             .integer()
                             .default(0),
                     )
@@ -126,51 +125,58 @@ impl MigrationTrait for Migration {
             )
             .await?;
 
-        // Helper to add a column and ignore “duplicate column” errors
-        async fn add_column(
+        // Helper to add a column, ignoring "duplicate column" errors.
+        // Accepts a ColumnDef by value (use .to_owned() on the builder).
+        async fn add_column_if_not_exists(
             manager: &SchemaManager<'_>,
-            table: Alias,
-            col_def: &mut ColumnDef,
+            table: &str,
+            col_def: ColumnDef,
         ) -> Result<(), DbErr> {
-            let stmt = Table::alter()
-                .table(table)
-                .add_column(col_def.to_owned())
+            let alter = Table::alter()
+                .table(Alias::new(table))
+                .add_column(col_def)
                 .to_owned();
-            if let Err(e) = manager.alter_table(stmt).await {
-                let msg = e.to_string();
-                if msg.contains("duplicate column name") {
-                    Ok(())
-                } else {
-                    Err(e)
+
+            match manager.alter_table(alter).await {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    let msg = e.to_string();
+                    if msg.contains("duplicate column name") {
+                        Ok(())
+                    } else {
+                        Err(e)
+                    }
                 }
-            } else {
-                Ok(())
             }
         }
 
-        // Add columns one by one (SQLite limitation) – pass mutable references
-        add_column(
+        // Add columns one by one, calling .to_owned() on the builders.
+        add_column_if_not_exists(
             manager,
-            Alias::new("users"),
+            "users",
             ColumnDef::new(Alias::new("streak_count"))
                 .integer()
-                .default(0),
+                .default(0)
+                .to_owned(),
         )
         .await?;
 
-        add_column(
+        add_column_if_not_exists(
             manager,
-            Alias::new("users"),
-            ColumnDef::new(Alias::new("last_streak_date")).date(),
+            "users",
+            ColumnDef::new(Alias::new("last_streak_date"))
+                .date()
+                .to_owned(),
         )
         .await?;
 
-        add_column(
+        add_column_if_not_exists(
             manager,
-            Alias::new("users"),
+            "users",
             ColumnDef::new(Alias::new("weekly_bonus_awarded_streak"))
                 .integer()
-                .default(0),
+                .default(0)
+                .to_owned(),
         )
         .await?;
 
@@ -178,41 +184,44 @@ impl MigrationTrait for Migration {
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        // Helper to drop a column and ignore “no such column” errors
-        async fn drop_column(
+        // SQLite does not support DROP COLUMN in older versions.
+        // We'll attempt to drop columns and ignore "no such column" errors.
+        async fn drop_column_if_exists(
             manager: &SchemaManager<'_>,
-            table: Alias,
+            table: &str,
             column: &str,
         ) -> Result<(), DbErr> {
-            let stmt = Table::alter()
-                .table(table)
+            let alter = Table::alter()
+                .table(Alias::new(table))
                 .drop_column(Alias::new(column))
                 .to_owned();
-            if let Err(e) = manager.alter_table(stmt).await {
-                let msg = e.to_string();
-                if msg.contains("no such column") {
-                    Ok(())
-                } else {
-                    Err(e)
+
+            match manager.alter_table(alter).await {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    let msg = e.to_string();
+                    if msg.contains("no such column") {
+                        Ok(())
+                    } else {
+                        Err(e)
+                    }
                 }
-            } else {
-                Ok(())
             }
         }
 
-        drop_column(manager, Alias::new("users"), "streak_count").await?;
-        drop_column(manager, Alias::new("users"), "last_streak_date").await?;
-        drop_column(manager, Alias::new("users"), "weekly_bonus_awarded_streak").await?;
+        drop_column_if_exists(manager, "users", "streak_count").await?;
+        drop_column_if_exists(manager, "users", "last_streak_date").await?;
+        drop_column_if_exists(manager, "users", "weekly_bonus_awarded_streak").await?;
 
         // Drop tables
         manager
-            .drop_table(Table::drop().table(DailyMission::Table).to_owned())
+            .drop_table(Table::drop().table(DailyMissions::Table).to_owned())
             .await?;
         manager
             .drop_table(Table::drop().table(MissionDefinition::Table).to_owned())
             .await?;
         manager
-            .drop_table(Table::drop().table(Streak::Table).to_owned())
+            .drop_table(Table::drop().table(Streaks::Table).to_owned())
             .await?;
 
         Ok(())
@@ -220,7 +229,7 @@ impl MigrationTrait for Migration {
 }
 
 #[derive(DeriveIden)]
-enum DailyMission {
+enum DailyMissions {
     Table,
     Id,
     UserId,
@@ -245,7 +254,7 @@ enum MissionDefinition {
 }
 
 #[derive(DeriveIden)]
-enum Streak {
+enum Streaks {
     Table,
     UserId,
     CurrentStreak,
