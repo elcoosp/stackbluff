@@ -158,8 +158,9 @@ function HandHistoryCard({ hand }: { hand: HandSummary }) {
   const winner = hand.winners[0];
   const isWin = winner?.user_id === userId;
 
-  const handleView = () => {
-    toast.info('Hand detail view coming soon!');
+  const navigate = useNavigate();
+  const handleView = (handId: string) => {
+    navigate({ to: '/hands/$handId', params: { handId } });
   };
 
   return (
@@ -209,7 +210,7 @@ function HandHistoryCard({ hand }: { hand: HandSummary }) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={handleView}
+            onClick={() => handleView(hand.id)}
             className="text-on-surface-variant hover:text-on-surface"
           >
             <Eye className="w-4 h-4 mr-1" />
