@@ -1,6 +1,6 @@
 use axum::{
     Json, Router,
-    extract::State,
+    extract::{State, Extension},
     http::StatusCode,
     routing::{get, post},
 };
@@ -8,7 +8,6 @@ use sb_contracts::service_api::MissionApi;
 use sb_shared_types::missions::{Mission, MissionId};
 use sb_shared_types::request_context::RequestContext;
 use std::sync::Arc;
-use uuid::Uuid;
 
 pub fn mission_routes(service: Arc<dyn MissionApi>) -> Router {
     Router::new()
@@ -18,18 +17,10 @@ pub fn mission_routes(service: Arc<dyn MissionApi>) -> Router {
         .with_state(service)
 }
 
-fn default_ctx() -> RequestContext {
-    RequestContext {
-        request_id: Uuid::nil(),
-        ip: String::new(),
-        user_id: None,
-    }
-}
-
 async fn get_today(
+    Extension(ctx): Extension<RequestContext>,
     State(svc): State<Arc<dyn MissionApi>>,
 ) -> Result<Json<Vec<Mission>>, (StatusCode, String)> {
-    let ctx = default_ctx();
     let missions = svc
         .get_today_missions(&ctx)
         .await
@@ -38,9 +29,9 @@ async fn get_today(
 }
 
 async fn claim(
+    Extension(ctx): Extension<RequestContext>,
     State(svc): State<Arc<dyn MissionApi>>,
 ) -> Result<Json<sb_contracts::service_api::ClaimResult>, (StatusCode, String)> {
-    let ctx = default_ctx();
     let res = svc
         .claim_daily_reward(&ctx)
         .await
@@ -49,10 +40,10 @@ async fn claim(
 }
 
 async fn reroll(
+    Extension(ctx): Extension<RequestContext>,
     State(svc): State<Arc<dyn MissionApi>>,
     Json(payload): Json<RerollPayload>,
 ) -> Result<Json<Mission>, (StatusCode, String)> {
-    let ctx = default_ctx();
     let mission = svc
         .reroll_mission(&ctx, payload.mission_id)
         .await

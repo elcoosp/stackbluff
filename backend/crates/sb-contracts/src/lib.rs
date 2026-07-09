@@ -12,6 +12,7 @@ pub mod service_api;
 pub mod stats_api;
 pub mod tournament_api;
 pub mod user_resolution;
+pub mod product_api;
 
 pub use lobby_api::{CreateTableInput, TableService};
 pub use service_api::{ClubService, ReferralStats, ReplayCard, UserService, ViralService};

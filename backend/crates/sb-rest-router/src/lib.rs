@@ -10,6 +10,7 @@ pub mod rate_limit;
 pub mod routes;
 pub mod season_card;
 pub mod tournament_routes;
+pub mod shop_routes;
 
 use axum::{
     Router,
@@ -55,6 +56,8 @@ pub struct AppState {
     pub broker: Arc<sb_table_registry::connection_broker::ConnectionBroker>,
     pub badge_repo: Arc<dyn BadgeRepo + Send + Sync>,
     pub gdpr_repo: Arc<dyn GdprRepo + Send + Sync>,
+    pub product_repo: Arc<dyn sb_contracts::product_api::ProductRepo + Send + Sync>,
+    pub payment_service: Arc<dyn sb_contracts::service_api::PaymentService + Send + Sync>,
 
 
 }
@@ -79,6 +82,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .merge(protected_routes)
         .merge(gdpr_routes())
         .merge(hand_history_routes::hand_history_routes())
+                .merge(shop_routes::shop_routes())
         .with_state(state)
 }
 

@@ -48,6 +48,7 @@ serde.workspace = true
 bytes = { workspace = true }
 sb-viral = { path = "../sb-viral" }
 sb-notification = { path = "../sb-notification" }   # <-- ADD
+sb-payment = { path = "../sb-payment" }
 
 [dev-dependencies]
 mockall.workspace = true

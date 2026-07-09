@@ -1,6 +1,5 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
-import { useUserProfile } from '@/hooks/useUserProfile';
 import { useBadges } from '@/hooks/useBadges';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@stackbluff/shared/api/client';
@@ -32,10 +31,9 @@ export const Route = createFileRoute('/profile')({
 function ProfilePage() {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthStore();
-  const { data: profile, isLoading: profileLoading } = useUserProfile();
   const { data: badges, isLoading: badgesLoading } = useBadges();
 
-  // Fetch player stats
+  // Fetch player stats (always called)
   const { data: stats, isLoading: statsLoading } = useQuery<PlayerStats>({
     queryKey: ['player-stats', user?.id],
     queryFn: () => apiClient<PlayerStats>(`/players/${user?.id}/stats`),
@@ -43,6 +41,10 @@ function ProfilePage() {
     staleTime: 30_000,
   });
 
+  const isLoading = badgesLoading || statsLoading;
+  const balance = useAuthStore((s) => s.balance);
+
+  // If not authenticated, show sign-in screen (no early return)
   if (!isAuthenticated) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-6">
@@ -60,17 +62,12 @@ function ProfilePage() {
     );
   }
 
-  const isLoading = profileLoading || badgesLoading || statsLoading;
-
   if (isLoading) {
     return <ProfileSkeleton />;
   }
 
   // Use available user fields; fallback to defaults
-  const displayName = user?.username || 'Player';
-  const balance = profile?.balance ?? 0;
-
-  // Stats
+  const displayName = user?.username || 'Player';// Stats
   const handsPlayed = stats?.hands_played || 0;
   const winRate = stats?.win_rate ?? 0;
   const vpip = stats?.vpip ?? 0;

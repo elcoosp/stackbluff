@@ -19,7 +19,7 @@ import {
   Target,
   Share2,
   BookOpen,
-  Settings,
+  Settings, FileText
 } from 'lucide-react';
 import { CreateTableModal } from '../components/CreateTableModal';
 import { BuyInDialog } from '../components/game/BuyInDialog';
@@ -148,7 +148,7 @@ function LobbyPage() {
             <span className="font-label-caps text-label-caps">Replays</span>
           </button>
           <button onClick={() => navigate({ to: "/history" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
-            <BookOpen className="w-5 h-5" />
+            <FileText className="w-5 h-5" />
             <span className="font-label-caps text-label-caps">Hand History</span>
           </button>
           <div className="border-t border-outline-variant/50 my-2"></div>

@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useShopProducts } from '../hooks/useShopProducts';
-import { useUserProfile } from '../hooks/useUserProfile';
 import { usePurchaseFlow } from '../hooks/usePurchaseFlow';
 import { useShopStore } from '../stores/shopStore';
 import { ProductCard } from '../components/shop/ProductCard';
@@ -20,42 +19,63 @@ const CATEGORY_LABELS: Record<Category, string> = {
 export default function ShopPage() {
   const shop = useShopStore();
   const { data: productsData, isLoading: productsLoading } = useShopProducts();
-  const { isLoading: userLoading } = useUserProfile();
-  const { confirmPurchase, stopPolling } = usePurchaseFlow();
+  const { confirmPurchase, stopPolling, isProcessing } = usePurchaseFlow();
   const [category, setCategory] = useState<Category>('all');
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
+  // Compute transformed products
+  const transformedProducts = useMemo(() => {
+    if (!productsData) return [];
+    return productsData.map((p) => ({
+      id: p.id,
+      name: p.name,
+      description:
+        p.product_type === 'chips'
+          ? `${p.chips_amount?.toLocaleString() ?? '0'} Chips`
+          : p.product_type === 'season_pass'
+            ? `${p.duration_days ?? 30} days of unlimited Oracle access`
+            : p.description,
+      priceEur: p.price_eur,
+      priceStars: p.price_stars,
+      type: p.product_type,
+      chipsAmount: p.chips_amount,
+      durationDays: p.duration_days,
+    }));
+  }, [productsData]);
+
+  // Sync local products with store (only once)
   useEffect(() => {
-    if (productsData?.products) {
-      shop.setProducts(
-        productsData.products.map((p) => ({
-          id: p.id,
-          name: p.name,
-          description:
-            p.type === 'chips'
-              ? `${p.chips_amount?.toLocaleString() ?? '0'} Chips`
-              : p.type === 'season_pass'
-              ? '8 weeks of unlimited Oracle access'
-              : 'Unlock club customization features',
-          priceEur: p.price_eur,
-          priceStars: p.price_stars,
-          type: p.type,
-          chipsAmount: p.chips_amount,
-          durationDays: p.duration_days,
-        }))
-      );
+    if (transformedProducts.length === 0) return;
+    const currentIds = shop.products.map(p => p.id).sort().join(',');
+    const newIds = transformedProducts.map(p => p.id).sort().join(',');
+    if (currentIds !== newIds) {
+      shop.setProducts(transformedProducts);
     }
-  }, [productsData, shop]);
+  }, [transformedProducts, shop]);
 
   const handlePurchase = useCallback(
     (product: any) => {
+      setSelectedProduct(product);
+      setDialogOpen(true);
       shop.selectProduct(product);
-      shop.setDialogOpen(true);
-      shop.setError(null);
     },
     [shop]
   );
 
-  const isLoading = productsLoading || userLoading;
+  const handleDialogClose = () => {
+    setDialogOpen(false);
+    setSelectedProduct(null);
+    shop.setDialogOpen(false);
+  };
+
+  const handleConfirm = async () => {
+    await confirmPurchase();
+    setDialogOpen(false);
+    setSelectedProduct(null);
+  };
+
+  const isLoading = productsLoading;
   const products = shop.products;
 
   const filteredProducts = category === 'all'
@@ -106,7 +126,16 @@ export default function ShopPage() {
         </div>
       </div>
 
-      <PurchaseDialog onConfirm={confirmPurchase} />
+      <PurchaseDialog
+        open={dialogOpen}
+        onClose={handleDialogClose}
+        onConfirm={handleConfirm}
+        productName={selectedProduct?.name}
+        priceEur={selectedProduct?.priceEur}
+        priceStars={selectedProduct?.priceStars}
+        provider="stripe"
+        isProcessing={isProcessing}
+      />
       <PurchaseToast />
     </div>
   );

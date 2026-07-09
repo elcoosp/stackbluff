@@ -1,98 +1,55 @@
-import { useCallback, useRef } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { useShopStore } from '../stores/shopStore';
-import { createPaymentIntent } from '../lib/shopApi';
-import { usePaymentProvider } from './usePaymentProvider';
-import { useTelegramWebApp } from './useTelegramWebApp';
-import { redirectToStripeCheckout } from '../lib/stripe';
+import { createPaymentIntent, CreateIntentRequest } from '../lib/shopApi';
+import { toast } from 'sonner';
 
 export function usePurchaseFlow() {
-  const queryClient = useQueryClient();
   const shop = useShopStore();
-  const provider = usePaymentProvider();
-  const { openInvoice } = useTelegramWebApp();
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const startPolling = useCallback(() => {
-    if (pollRef.current) return;
-    let attempts = 0;
-    const maxAttempts = 12;
-    pollRef.current = setInterval(() => {
-      attempts++;
-      queryClient.invalidateQueries({ queryKey: ['user-me'] });
-      if (attempts >= maxAttempts && pollRef.current) {
-        clearInterval(pollRef.current);
-        pollRef.current = null;
-      }
-    }, 5000);
-  }, [queryClient]);
-
-  const stopPolling = useCallback(() => {
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
-    }
-  }, []);
-
-  const confirmPurchase = useCallback(async () => {
+  const confirmPurchase = async () => {
     const product = shop.selectedProduct;
-    if (!product) return;
+    if (!product) {
+      toast.error('No product selected');
+      return;
+    }
 
-    shop.setPurchasing(true);
+    setIsProcessing(true);
     shop.setError(null);
 
     try {
-      const intent = await createPaymentIntent({ product_id: product.id, provider });
+      const req: CreateIntentRequest = {
+        product_id: product.id,
+        provider: 'stripe', // TODO: allow user to choose
+      };
+      const response = await createPaymentIntent(req);
 
-      // ── Stripe Checkout ──────────────────────────────────────────────
-      if (provider === 'stripe' && intent.client_secret) {
-        // Use the checkout_url if provided, otherwise fallback
-        redirectToStripeCheckout(intent.client_secret, (intent as any).checkout_url);
-        shop.setDialogOpen(false);
-        shop.setToast({ message: 'Redirecting to payment...', type: 'success' });
-        stopPolling();
-        shop.setPurchasing(false);
-        return;
+      if (response.checkout_url) {
+        // Redirect to Stripe Checkout
+        window.location.href = response.checkout_url;
+      } else if (response.invoice_link) {
+        // For Telegram Stars, open invoice link
+        window.open(response.invoice_link, '_blank');
+      } else if (response.client_secret) {
+        // Handle payment intent client secret (for custom payment flow)
+        toast.success('Payment intent created');
+      } else {
+        toast.success('Purchase initiated!');
       }
 
-      // ── Telegram Stars ───────────────────────────────────────────────
-      if (provider === 'telegram_stars' && intent.invoice_link) {
-        const opened = openInvoice(intent.invoice_link, (result) => {
-          if (result.status === 'paid') {
-            shop.setDialogOpen(false);
-            shop.setToast({ message: 'Purchase successful!', type: 'success' });
-            startPolling();
-          } else {
-            shop.setError('Payment was not completed.');
-            shop.setToast({ message: 'Payment cancelled.', type: 'error' });
-          }
-          shop.setPurchasing(false);
-        });
-
-        if (!opened) {
-          window.open(intent.invoice_link, '_blank');
-          shop.setPurchasing(false);
-          shop.setDialogOpen(false);
-        }
-        return;
-      }
-
-      // ── Fallback ──────────────────────────────────────────────────────
-      if (intent.redirect_url) {
-        window.location.assign(intent.redirect_url);
-        return;
-      }
-
-      shop.setError('Invalid payment response.');
-      shop.setPurchasing(false);
-    } catch (err) {
-      const rawMsg = err instanceof Error ? err.message : 'Purchase failed';
-      const msg = rawMsg.length > 120 ? 'Purchase failed. Please try again.' : rawMsg;
-      shop.setError(msg);
-      shop.setToast({ message: msg, type: 'error' });
-      shop.setPurchasing(false);
+      shop.setDialogOpen(false);
+    } catch (error: any) {
+      const message = error.message || 'Purchase failed';
+      shop.setError(message);
+      toast.error(message);
+    } finally {
+      setIsProcessing(false);
     }
-  }, [shop, provider, openInvoice, startPolling, stopPolling]);
+  };
 
-  return { confirmPurchase, stopPolling };
+  const stopPolling = () => {
+    // No polling needed for now
+  };
+
+  return { confirmPurchase, stopPolling, isProcessing };
 }

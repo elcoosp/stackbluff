@@ -13,6 +13,7 @@ mod m20260614_152713_add_referrer_id_index;
 mod m20260614_171633_create_anti_cheat_events;
 mod m20260615_add_password_hash_to_users;
 mod m20260616_seed_base_tables;
+mod m20260709_000001_create_products_table;
 mod m20260617_add_table_name;
 mod m20260622_132958_mission_system;
 mod m20260624_create_tournament_tables;
@@ -72,7 +73,8 @@ impl MigratorTrait for Migrator {
             Box::new(m20260625_seed_tournaments::Migration),
             // 6. Data migrations (MUST run AFTER all columns exist)
             Box::new(m20260629162121_grandfather_existing_users::Migration),
-            // 7. New migrations
+            // 7. Products table
+            Box::new(m20260709_000001_create_products_table::Migration),
         ]
     }
 }

@@ -1,53 +1,76 @@
-import { useIsMiniApp } from '../../hooks/usePaymentProvider';
-import { useShopStore } from '../../stores/shopStore';
-import { LiquidMetalButton } from "@stackbluff/shared/ui/LiquidMetalButton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
-import { Button } from '../ui/button';
-import type { Product } from '../../stores/shopStore';
-
-function formatPrice(product: Product, isMini: boolean): string {
-  if (isMini) {
-    return `${product.priceStars} Stars`;
-  }
-  return `€${product.priceEur.toFixed(2)}`;
-}
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { Loader2 } from 'lucide-react';
 
 interface PurchaseDialogProps {
+  open: boolean;
+  onClose: () => void;
   onConfirm: () => void;
+  productName?: string;
+  priceEur?: number;
+  priceStars?: number;
+  provider?: 'stripe' | 'telegram_stars'; // default 'stripe'
+  isProcessing?: boolean;
 }
 
-export function PurchaseDialog({ onConfirm }: PurchaseDialogProps) {
-  const isMini = useIsMiniApp();
-  const shop = useShopStore();
-  const product = shop.selectedProduct;
+export function PurchaseDialog({
+  open,
+  onClose,
+  onConfirm,
+  productName,
+  priceEur,
+  priceStars,
+  provider = 'stripe',
+  isProcessing = false,
+}: PurchaseDialogProps) {
+  // Determine which price to display based on provider
+  let priceDisplay = '';
+  if (provider === 'telegram_stars' && priceStars !== undefined && priceStars > 0) {
+    priceDisplay = `${priceStars} ⭐`;
+  } else if (priceEur !== undefined && priceEur > 0) {
+    priceDisplay = `€${priceEur.toFixed(2)}`;
+  }
 
   return (
-    <Dialog open={shop.isDialogOpen} onOpenChange={(open) => shop.setDialogOpen(open)}>
-      <DialogContent className="bg-[#1a1a1a] text-white max-w-md">
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="bg-surface-container border border-white/10 rounded-xl max-w-md p-6">
         <DialogHeader>
-          <DialogTitle>Confirm Purchase</DialogTitle>
+          <DialogTitle className="text-on-surface text-xl font-semibold text-center">
+            Confirm Purchase
+          </DialogTitle>
         </DialogHeader>
-        {product ? (
-          <div className="space-y-4 py-4">
-            <p>
-              You are about to purchase <strong>{product.name}</strong> for{' '}
-              <strong>{formatPrice(product, isMini)}</strong>.
-            </p>
-            {shop.error ? <p className="text-sm text-red-400">{shop.error}</p> : null}
-            <div className="flex justify-end gap-3">
-              <Button
-                variant="outline"
-                onClick={() => shop.setDialogOpen(false)}
-                disabled={shop.isPurchasing}
-              >
-                Cancel
-              </Button>
-              <LiquidMetalButton onClick={onConfirm} disabled={shop.isPurchasing}>
-                {shop.isPurchasing ? 'Processing...' : 'Confirm'}
-              </LiquidMetalButton>
-            </div>
+        <div className="space-y-4">
+          <p className="text-on-surface-variant text-sm text-center">
+            You are about to purchase <span className="text-on-surface font-medium">{productName || 'this item'}</span>
+            {priceDisplay && <span className="text-tertiary font-mono ml-1">for {priceDisplay}</span>}
+            .
+          </p>
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="outline"
+              onClick={onClose}
+              disabled={isProcessing}
+              className="flex-1 border-white/20 text-on-surface-variant hover:bg-white/5 hover:text-on-surface"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={onConfirm}
+              disabled={isProcessing}
+              className="flex-1 bg-tertiary text-on-tertiary hover:bg-tertiary/80"
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                'Confirm'
+              )}
+            </Button>
           </div>
-        ) : null}
+        </div>
       </DialogContent>
     </Dialog>
   );

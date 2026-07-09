@@ -194,6 +194,55 @@ impl sb_contracts::repo_api::GdprRepo for DummyGdprRepo {
 }
 
 // Dummy ClubRepo for tests
+
+struct DummyProductRepo;
+#[async_trait::async_trait]
+impl sb_contracts::product_api::ProductRepo for DummyProductRepo {
+    async fn list_products(&self) -> Result<Vec<sb_contracts::product_api::Product>, sb_contracts::repo_api::PersistenceError> {
+        Ok(vec![])
+    }
+}
+
+struct DummyPaymentService;
+#[async_trait::async_trait]
+impl sb_contracts::service_api::PaymentService for DummyPaymentService {
+    async fn create_product_purchase(
+        &self,
+        _user_id: sb_shared_types::UserId,
+        _product_id: uuid::Uuid,
+        _provider: String,
+        _metadata: serde_json::Value,
+    ) -> Result<String, sb_shared_types::AppError> {
+        Ok("dummy".to_string())
+    }
+    async fn create_intent(
+        &self,
+        _user_id: sb_shared_types::UserId,
+        _amount: sb_shared_types::ChipAmount,
+        _currency: String,
+        _provider: String,
+        _metadata: serde_json::Value,
+    ) -> Result<String, sb_shared_types::AppError> {
+        Ok("dummy".to_string())
+    }
+    async fn confirm_payment(
+        &self,
+        _payment_id: &str,
+        _provider: &str,
+        _status: &str,
+        _completed_at: Option<chrono::DateTime<chrono::Utc>>,
+    ) -> Result<(), sb_shared_types::AppError> {
+        Ok(())
+    }
+    async fn award_chips_on_success(
+        &self,
+        _user_id: sb_shared_types::UserId,
+        _amount: sb_shared_types::ChipAmount,
+    ) -> Result<(), sb_shared_types::AppError> {
+        Ok(())
+    }
+}
+
 struct DummyClubRepo;
 
 #[async_trait::async_trait]
@@ -351,6 +400,8 @@ async fn test_unauthenticated_returns_401() {
         broker: broker,
         badge_repo: badge_repo,
         gdpr_repo: gdpr_repo,
+        product_repo: Arc::new(DummyProductRepo),
+        payment_service: Arc::new(DummyPaymentService),
     });
 
     // Create a dummy auth service for the middleware

@@ -15,6 +15,7 @@ import {
   Diamond,
   Club,
   Spade,
+  Check,
 } from 'lucide-react';
 
 export const Route = createFileRoute('/guide')({
@@ -139,10 +140,10 @@ function GuidePage() {
                 <CardTitle className="text-sm font-semibold text-on-surface">Preflop Basics</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-on-surface-variant">
-                <p>✅ Play tight in early positions, wider in late positions</p>
-                <p>✅ Raise or fold – avoid limping (just calling)</p>
-                <p>✅ 3‑bet with strong hands, 4‑bet with premiums</p>
-                <p>✅ Suited connectors and high cards play well in position</p>
+                <div className="flex items-start gap-2"><Check className="w-4 h-4 text-tertiary mt-0.5 flex-shrink-0" /><span className="text-sm text-on-surface-variant">Play tight in early positions, wider in late positions</span></div>
+                <div className="flex items-start gap-2"><Check className="w-4 h-4 text-tertiary mt-0.5 flex-shrink-0" /><span className="text-sm text-on-surface-variant">Raise or fold – avoid limping (just calling)</span></div>
+                <div className="flex items-start gap-2"><Check className="w-4 h-4 text-tertiary mt-0.5 flex-shrink-0" /><span className="text-sm text-on-surface-variant">3‑bet with strong hands, 4‑bet with premiums</span></div>
+                <div className="flex items-start gap-2"><Check className="w-4 h-4 text-tertiary mt-0.5 flex-shrink-0" /><span className="text-sm text-on-surface-variant">Suited connectors and high cards play well in position</span></div>
               </CardContent>
             </Card>
             <Card className="bg-white/5 border-white/10">
@@ -150,10 +151,10 @@ function GuidePage() {
                 <CardTitle className="text-sm font-semibold text-on-surface">Postflop Fundamentals</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-on-surface-variant">
-                <p>✅ C‑bet frequently when you were the aggressor</p>
-                <p>✅ Consider your opponent's range, not just your hand</p>
-                <p>✅ Bet for value with strong hands, bluff with weak ones</p>
-                <p>✅ Use pot odds to decide if calling is profitable</p>
+                <div className="flex items-start gap-2"><Check className="w-4 h-4 text-tertiary mt-0.5 flex-shrink-0" /><span className="text-sm text-on-surface-variant">C‑bet frequently when you were the aggressor</span></div>
+                <div className="flex items-start gap-2"><Check className="w-4 h-4 text-tertiary mt-0.5 flex-shrink-0" /><span className="text-sm text-on-surface-variant">Consider your opponent's range, not just your hand</span></div>
+                <div className="flex items-start gap-2"><Check className="w-4 h-4 text-tertiary mt-0.5 flex-shrink-0" /><span className="text-sm text-on-surface-variant">Bet for value with strong hands, bluff with weak ones</span></div>
+                <div className="flex items-start gap-2"><Check className="w-4 h-4 text-tertiary mt-0.5 flex-shrink-0" /><span className="text-sm text-on-surface-variant">Use pot odds to decide if calling is profitable</span></div>
               </CardContent>
             </Card>
             <Card className="bg-white/5 border-white/10 md:col-span-2">
@@ -161,10 +162,10 @@ function GuidePage() {
                 <CardTitle className="text-sm font-semibold text-on-surface">Tournament Strategy</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-on-surface-variant">
-                <p>✅ Preserve your stack – avoid marginal all-ins early</p>
-                <p>✅ Apply pressure on the bubble</p>
-                <p>✅ Understand ICM – chip values change as payouts approach</p>
-                <p>✅ Adjust to increasing blinds and antes</p>
+                <div className="flex items-start gap-2"><Check className="w-4 h-4 text-tertiary mt-0.5 flex-shrink-0" /><span className="text-sm text-on-surface-variant">Preserve your stack – avoid marginal all-ins early</span></div>
+                <div className="flex items-start gap-2"><Check className="w-4 h-4 text-tertiary mt-0.5 flex-shrink-0" /><span className="text-sm text-on-surface-variant">Apply pressure on the bubble</span></div>
+                <div className="flex items-start gap-2"><Check className="w-4 h-4 text-tertiary mt-0.5 flex-shrink-0" /><span className="text-sm text-on-surface-variant">Understand ICM – chip values change as payouts approach</span></div>
+                <div className="flex items-start gap-2"><Check className="w-4 h-4 text-tertiary mt-0.5 flex-shrink-0" /><span className="text-sm text-on-surface-variant">Adjust to increasing blinds and antes</span></div>
               </CardContent>
             </Card>
           </div>

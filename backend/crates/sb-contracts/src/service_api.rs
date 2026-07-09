@@ -92,6 +92,14 @@ pub enum AntiCheatError {
 
 #[async_trait::async_trait]
 pub trait PaymentService: Send + Sync {
+
+    async fn create_product_purchase(
+        &self,
+        user_id: sb_shared_types::UserId,
+        product_id: uuid::Uuid,
+        provider: String,
+        metadata: serde_json::Value,
+    ) -> Result<String, sb_shared_types::AppError>;
     async fn create_intent(
         &self,
         user_id: sb_shared_types::UserId,
