@@ -13,7 +13,7 @@ Cargo.lock
 *.jpeg
 *.png
 wr.sh
-dump.txt
+dump*.txt
 stackbluff.db
 stackbluff.db-shm
 stackbluff.db-wal

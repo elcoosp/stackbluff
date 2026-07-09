@@ -21787,7 +21787,7 @@ function ClubsListPage() {
           <h1 className="font-display-lg text-3xl text-on-surface">Clubs</h1>
           <p className="text-on-surface-variant text-sm">Manage your clubs and join new ones</p>
         </div>
-        <Button onClick={handleCreateClub} className="flex items-center gap-2">
+        <Button onClick={handleCreateClub} className="flex items-center gap-2 bg-tertiary text-on-tertiary hover:bg-tertiary-fixed">
           <Plus className="w-4 h-4" />
           Create Club
         </Button>
@@ -21823,7 +21823,7 @@ function ClubsListPage() {
           <Users className="w-12 h-12 text-on-surface-variant/30 mx-auto mb-4" />
           <p className="text-on-surface-variant">You haven't joined any clubs yet.</p>
           <p className="text-on-surface-variant/60 text-sm mt-2">Create a club or join one with an invite.</p>
-          <Button onClick={handleCreateClub} className="mt-4">
+          <Button onClick={handleCreateClub} className="mt-4 bg-tertiary text-on-tertiary hover:bg-tertiary-fixed">
             <Plus className="w-4 h-4 mr-2" />
             Create Your First Club
           </Button>
@@ -22328,6 +22328,7 @@ function LoginPage() {
 === frontend/apps/pwa/src/routes/missions.tsx ===
 import { createFileRoute, useNavigate, Link } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { apiClient } from '@stackbluff/shared/api/client';
 import { toast } from 'sonner';
@@ -22337,7 +22338,6 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-
 import { ErrorState } from '@/components/ui/ErrorState';
 import {
   Trophy,
@@ -22351,7 +22351,8 @@ import {
   Users,
   Share2,
   TrendingUp,
-  Calendar
+  Calendar,
+  Coins,
 } from 'lucide-react';
 
 export const Route = createFileRoute('/missions')({
@@ -22376,12 +22377,31 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   weekly: <Calendar className="w-4 h-4 text-blue-400" />,
 };
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] },
+  },
+};
+
 function MissionsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isAuthenticated } = useAuthStore();
 
-  // Fetch today's missions
   const { data: missions, isLoading, error, refetch } = useQuery<Mission[]>({
     queryKey: ['missions', 'today'],
     queryFn: () => apiClient<Mission[]>('/missions/today'),
@@ -22389,11 +22409,12 @@ function MissionsPage() {
     staleTime: 60_000,
   });
 
-  // Claim daily reward
   const claimMutation = useMutation({
-    mutationFn: () => apiClient<{ chips_awarded: number; streak_count: number; weekly_bonus_awarded: boolean }>('/missions/claim', {
-      method: 'POST',
-    }),
+    mutationFn: () =>
+      apiClient<{ chips_awarded: number; streak_count: number; weekly_bonus_awarded: boolean }>(
+        '/missions/claim',
+        { method: 'POST' }
+      ),
     onSuccess: (data) => {
       toast.success(`Claimed ${data.chips_awarded} chips!`);
       if (data.weekly_bonus_awarded) {
@@ -22407,13 +22428,13 @@ function MissionsPage() {
     },
   });
 
-  // Reroll mission
   const rerollMutation = useMutation({
-    mutationFn: (missionId: number) => apiClient<Mission>('/missions/reroll', {
-      method: 'POST',
-      body: JSON.stringify({ mission_id: missionId }),
-    }),
-    onSuccess: (newMission) => {
+    mutationFn: (missionId: number) =>
+      apiClient<Mission>('/missions/reroll', {
+        method: 'POST',
+        body: JSON.stringify({ mission_id: missionId }),
+      }),
+    onSuccess: () => {
       toast.success('Mission rerolled!');
       queryClient.invalidateQueries({ queryKey: ['missions'] });
     },
@@ -22450,10 +22471,16 @@ function MissionsPage() {
   const overallProgress = totalTarget > 0 ? (totalProgress / totalTarget) * 100 : 0;
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="max-w-4xl mx-auto p-6 space-y-8">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="flex flex-col md:flex-row md:items-center justify-between gap-4"
+      >
         <div>
-          <h1 className="font-display-lg text-3xl text-on-surface flex items-center gap-2">
+          <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface flex items-center gap-3">
             <Trophy className="w-8 h-8 text-yellow-400" />
             Daily Missions
           </h1>
@@ -22465,30 +22492,55 @@ function MissionsPage() {
           onClick={() => claimMutation.mutate()}
           disabled={!allCompleted || claimMutation.isPending}
           className={cn(
-            'flex items-center gap-2',
-            allCompleted ? 'bg-tertiary text-on-tertiary' : 'bg-white/10 text-on-surface-variant cursor-not-allowed'
+            'flex items-center gap-2 px-6 py-3 rounded-xl font-data-mono text-sm uppercase tracking-wider transition-all',
+            allCompleted
+              ? 'bg-tertiary text-on-tertiary hover:bg-tertiary-fixed shadow-lg shadow-tertiary/30'
+              : 'bg-white/5 text-on-surface-variant/40 cursor-not-allowed border border-white/10'
           )}
         >
-          <Gift className="w-4 h-4" />
+          <Gift className="w-5 h-5" />
           {claimMutation.isPending ? 'Claiming...' : 'Claim Reward'}
         </Button>
-      </div>
+      </motion.div>
 
-      {/* Overall progress */}
-      <Card className="p-4 bg-white/5 border-white/10">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-on-surface-variant">Overall Progress</span>
-          <span className="text-sm font-mono text-tertiary">{Math.round(overallProgress)}%</span>
-        </div>
-        <Progress value={overallProgress} className="h-2 mt-2" indicatorClassName="bg-tertiary" />
-        <div className="flex justify-between text-xs text-on-surface-variant mt-1">
-          <span>{missions.filter(m => m.completed).length} / {missions.length} completed</span>
-          {allCompleted && <span className="text-tertiary">🎉 All done!</span>}
-        </div>
-      </Card>
+      {/* Overall Progress */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.1 }}
+      >
+        <Card className="p-5 bg-white/5 backdrop-blur-sm border-white/10 shadow-xl">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-on-surface-variant">Overall Progress</span>
+            <span className="font-data-mono text-sm text-tertiary font-bold">
+              {Math.round(overallProgress)}%
+            </span>
+          </div>
+          <Progress
+            value={overallProgress}
+            className="h-2 mt-3 bg-white/10"
+            indicatorClassName="bg-gradient-to-r from-tertiary to-emerald-400"
+          />
+          <div className="flex justify-between text-xs text-on-surface-variant mt-2">
+            <span>
+              {missions.filter((m) => m.completed).length} / {missions.length} completed
+            </span>
+            {allCompleted && (
+              <span className="text-tertiary font-medium flex items-center gap-1">
+                <CheckCircle className="w-3.5 h-3.5" /> All done!
+              </span>
+            )}
+          </div>
+        </Card>
+      </motion.div>
 
-      {/* Mission list */}
-      <div className="space-y-4">
+      {/* Mission List */}
+      <motion.div
+        className="space-y-4"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
         {missions.map((mission) => {
           const isCompleted = mission.completed;
           const progress = mission.target > 0 ? (mission.progress / mission.target) * 100 : 0;
@@ -22496,67 +22548,103 @@ function MissionsPage() {
           const canReroll = !mission.completed && mission.progress === 0;
 
           return (
-            <Card key={mission.id} className={cn(
-              'p-4 border transition-colors',
-              isCompleted ? 'border-tertiary/30 bg-tertiary/5' : 'border-white/10'
-            )}>
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
-                  {isCompleted ? <CheckCircle className="w-5 h-5 text-tertiary" /> : categoryIcon}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-medium text-on-surface">{mission.description}</h3>
-                    <Badge variant="outline" className="text-[10px] border-white/20 text-on-surface-variant">
-                      {mission.mission_type.replace(/_/g, ' ')}
-                    </Badge>
+            <motion.div key={mission.id} variants={itemVariants}>
+              <Card
+                className={cn(
+                  'p-5 border transition-all duration-300 hover:border-tertiary/40 hover:bg-white/5 backdrop-blur-sm group',
+                  isCompleted
+                    ? 'border-tertiary/30 bg-tertiary/5'
+                    : 'border-white/10 bg-white/5'
+                )}
+              >
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-lg border border-white/10 group-hover:border-tertiary/30 transition-colors">
+                    {isCompleted ? (
+                      <CheckCircle className="w-6 h-6 text-tertiary" />
+                    ) : (
+                      categoryIcon
+                    )}
                   </div>
-                  <div className="flex items-center gap-4 mt-1">
-                    <span className="text-sm text-tertiary font-mono flex items-center gap-1">
-                      <Gift className="w-3 h-3" />
-                      +{mission.reward_chips} chips
-                    </span>
-                    <span className="text-xs text-on-surface-variant">
-                      {mission.progress} / {mission.target}
-                    </span>
-                  </div>
-                  <div className="mt-2">
-                    <Progress value={progress} className="h-1.5" indicatorClassName={isCompleted ? 'bg-tertiary' : 'bg-white/30'} />
-                  </div>
-                </div>
-                <div className="flex-shrink-0">
-                  {isCompleted ? (
-                    <span className="text-xs text-tertiary font-medium">✓ Completed</span>
-                  ) : (
-                    canReroll && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => rerollMutation.mutate(mission.id)}
-                        disabled={rerollMutation.isPending}
-                        className="text-on-surface-variant hover:text-on-surface"
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-headline-md text-base text-on-surface leading-tight">
+                        {mission.description}
+                      </h3>
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] border-white/20 text-on-surface-variant bg-white/5"
                       >
-                        <RotateCcw className="w-4 h-4" />
-                      </Button>
-                    )
-                  )}
+                        {mission.mission_type.replace(/_/g, ' ')}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-4 mt-1.5">
+                      <span className="text-sm text-tertiary font-data-mono flex items-center gap-1">
+                        <Coins className="w-4 h-4" />
+                        +{mission.reward_chips}
+                      </span>
+                      <span className="text-xs font-mono text-on-surface-variant">
+                        {mission.progress} / {mission.target}
+                      </span>
+                    </div>
+                    <div className="mt-2.5">
+                      <Progress
+                        value={progress}
+                        className="h-1.5 bg-white/10"
+                        indicatorClassName={isCompleted ? 'bg-tertiary' : 'bg-white/30'}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex-shrink-0 self-center">
+                    {isCompleted ? (
+                      <span className="text-xs font-medium text-tertiary flex items-center gap-1">
+                        <CheckCircle className="w-4 h-4" /> Done
+                      </span>
+                    ) : (
+                      canReroll && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => rerollMutation.mutate(mission.id)}
+                          disabled={rerollMutation.isPending}
+                          className="text-on-surface-variant hover:text-tertiary hover:bg-tertiary/10 rounded-full p-2 h-auto w-auto"
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                        </Button>
+                      )
+                    )}
+                  </div>
                 </div>
-              </div>
-            </Card>
+              </Card>
+            </motion.div>
           );
         })}
-      </div>
+      </motion.div>
 
-      {/* Streak info */}
-      <Card className="p-4 bg-white/5 border-white/10">
-        <div className="flex items-center gap-3">
-          <Flame className="w-6 h-6 text-orange-400" />
-          <div>
-            <p className="text-sm text-on-surface">Streak</p>
-            <p className="text-xs text-on-surface-variant">Complete all missions daily to build your streak!</p>
+      {/* Streak & Bonus Info */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.2 }}
+      >
+        <Card className="p-5 bg-white/5 backdrop-blur-sm border-white/10 shadow-xl flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
+              <Flame className="w-5 h-5 text-orange-400" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-on-surface">Streak</p>
+              <p className="text-xs text-on-surface-variant">
+                Complete all missions daily to build your streak!
+              </p>
+            </div>
           </div>
-        </div>
-      </Card>
+          <div className="ml-auto flex items-center gap-2">
+            <Badge variant="outline" className="border-tertiary/30 text-tertiary">
+              🔥 7 days
+            </Badge>
+          </div>
+        </Card>
+      </motion.div>
     </div>
   );
 }
@@ -22569,15 +22657,15 @@ function MissionsSkeleton() {
           <Skeleton className="h-8 w-48 bg-white/5" />
           <Skeleton className="h-4 w-64 bg-white/5 mt-1" />
         </div>
-        <Skeleton className="h-10 w-32 bg-white/5 rounded-lg" />
+        <Skeleton className="h-10 w-32 bg-white/5 rounded-xl" />
       </div>
       <Skeleton className="h-20 bg-white/5 rounded-xl" />
       <div className="space-y-4">
         {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-24 bg-white/5 rounded-xl" />
+          <Skeleton key={i} className="h-28 bg-white/5 rounded-xl" />
         ))}
       </div>
-      <Skeleton className="h-16 bg-white/5 rounded-xl" />
+      <Skeleton className="h-20 bg-white/5 rounded-xl" />
     </div>
   );
 }

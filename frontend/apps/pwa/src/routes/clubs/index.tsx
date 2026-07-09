@@ -57,7 +57,7 @@ function ClubsListPage() {
           <h1 className="font-display-lg text-3xl text-on-surface">Clubs</h1>
           <p className="text-on-surface-variant text-sm">Manage your clubs and join new ones</p>
         </div>
-        <Button onClick={handleCreateClub} className="flex items-center gap-2">
+        <Button onClick={handleCreateClub} className="flex items-center gap-2 bg-tertiary text-on-tertiary hover:bg-tertiary-fixed">
           <Plus className="w-4 h-4" />
           Create Club
         </Button>
@@ -93,7 +93,7 @@ function ClubsListPage() {
           <Users className="w-12 h-12 text-on-surface-variant/30 mx-auto mb-4" />
           <p className="text-on-surface-variant">You haven't joined any clubs yet.</p>
           <p className="text-on-surface-variant/60 text-sm mt-2">Create a club or join one with an invite.</p>
-          <Button onClick={handleCreateClub} className="mt-4">
+          <Button onClick={handleCreateClub} className="mt-4 bg-tertiary text-on-tertiary hover:bg-tertiary-fixed">
             <Plus className="w-4 h-4 mr-2" />
             Create Your First Club
           </Button>

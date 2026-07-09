@@ -9,6 +9,7 @@ pub mod player_stats;
 pub mod rate_limit;
 pub mod routes;
 pub mod season_card;
+pub mod referral_routes;
 pub mod tournament_routes;
 pub mod shop_routes;
 
@@ -83,6 +84,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .merge(gdpr_routes())
         .merge(hand_history_routes::hand_history_routes())
                 .merge(shop_routes::shop_routes())
+        .merge(referral_routes::referral_routes())
         .with_state(state)
 }
 

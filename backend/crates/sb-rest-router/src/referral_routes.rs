@@ -1,22 +1,22 @@
 use axum::{
-    Router,
+    Json, Router,
     extract::{Extension, State},
     http::StatusCode,
-    response::Json,
     routing::get,
 };
-use std::sync::Arc;
-use uuid::Uuid;
-
-use sb_auth::middleware::AuthUser;
-use sb_contracts::service_api::{ReferralStats, ViralService};
-use sb_shared_types::UserId;
+use sb_shared_types::{RequestContext, UserId};
 use serde::Serialize;
-
-use crate::{AppState, ErrorResponse, internal_error, bad_request};
+use std::sync::Arc;
 
 #[derive(Serialize)]
-pub struct ReferralRecord {
+pub struct ReferralStatsResponse {
+    pub total_referred: i64,
+    pub bonus_earned: i64,
+    pub pending_bonus: i64,
+}
+
+#[derive(Serialize)]
+pub struct ReferralRecordResponse {
     pub referred_id: String,
     pub display_name: Option<String>,
     pub hand_count: i32,
@@ -24,49 +24,46 @@ pub struct ReferralRecord {
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
-pub fn referral_routes() -> Router<Arc<AppState>> {
+pub fn referral_routes() -> Router<Arc<crate::AppState>> {
     Router::new()
         .route("/referrals/stats", get(get_referral_stats))
         .route("/referrals/list", get(get_referral_list))
 }
 
 async fn get_referral_stats(
-    Extension(auth_user): Extension<AuthUser>,
-    State(state): State<Arc<AppState>>,
-) -> Result<Json<ReferralStats>, (StatusCode, Json<ErrorResponse>)> {
-    let user_id = UserId::new(
-        Uuid::parse_str(&auth_user.user_id)
-            .map_err(|_| bad_request("INVALID_USER", "Invalid user ID"))?,
-    );
-
+    Extension(ctx): Extension<RequestContext>,
+    State(state): State<Arc<crate::AppState>>,
+) -> Result<Json<ReferralStatsResponse>, (StatusCode, String)> {
+    let user_id = ctx
+        .user_id
+        .ok_or((StatusCode::UNAUTHORIZED, "Unauthorized".to_string()))?;
     let stats = state
         .viral_service
         .get_referral_stats(user_id)
         .await
-        .map_err(|e| internal_error(e))?;
-
-    Ok(Json(stats))
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(ReferralStatsResponse {
+        total_referred: stats.total_referred,
+        bonus_earned: stats.bonus_earned,
+        pending_bonus: stats.pending_bonus,
+    }))
 }
 
 async fn get_referral_list(
-    Extension(auth_user): Extension<AuthUser>,
-    State(state): State<Arc<AppState>>,
-) -> Result<Json<Vec<ReferralRecord>>, (StatusCode, Json<ErrorResponse>)> {
-    let user_id = UserId::new(
-        Uuid::parse_str(&auth_user.user_id)
-            .map_err(|_| bad_request("INVALID_USER", "Invalid user ID"))?,
-    );
-
+    Extension(ctx): Extension<RequestContext>,
+    State(state): State<Arc<crate::AppState>>,
+) -> Result<Json<Vec<ReferralRecordResponse>>, (StatusCode, String)> {
+    let user_id = ctx
+        .user_id
+        .ok_or((StatusCode::UNAUTHORIZED, "Unauthorized".to_string()))?;
     let records = state
         .viral_service
         .get_referral_list(user_id)
         .await
-        .map_err(|e| internal_error(e))?;
-
-    // Convert to the response type
-    let response: Vec<ReferralRecord> = records
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let response: Vec<ReferralRecordResponse> = records
         .into_iter()
-        .map(|r| ReferralRecord {
+        .map(|r| ReferralRecordResponse {
             referred_id: r.referred_id.to_string(),
             display_name: r.display_name,
             hand_count: r.hand_count,
@@ -74,6 +71,5 @@ async fn get_referral_list(
             created_at: r.created_at,
         })
         .collect();
-
     Ok(Json(response))
 }

@@ -196,28 +196,53 @@ impl MissionApi for MissionServiceImpl {
             return Err(AppError::from("Cannot reroll completed mission"));
         }
 
+        // Collect all mission types already assigned today (excluding the one being rerolled)
+        let mut assigned_types = std::collections::HashSet::new();
+        for (i, assignment) in assignments.iter().enumerate() {
+            if i != idx {
+                assigned_types.insert(assignment.mission_type.clone());
+            }
+        }
+
+        // Get all definitions and filter out those already assigned
+        let pool = all_mission_definitions();
+        let mut candidates: Vec<_> = pool
+            .iter()
+            .filter(|(t, _, _, _, _)| !assigned_types.contains(t))
+            .collect();
+
+        if candidates.is_empty() {
+            // Fallback: use "play_10_hands"
+            candidates = pool
+                .iter()
+                .filter(|(t, _, _, _, _)| *t == "play_10_hands")
+                .collect();
+            if candidates.is_empty() {
+                return Err(AppError::from("No available mission types to reroll to"));
+            }
+        }
+
+        // Pick a random index to avoid trait issues
+        let idx_choice = rand::rng().random_range(0..candidates.len());
+        let (new_type, desc, reward, target, category) = candidates[idx_choice];
+
         let mut active: daily_mission::ActiveModel = assignments[idx].clone().into();
-        active.mission_type = Set("play_10_hands".to_string());
+        active.mission_type = Set(new_type.to_string());
         active.progress = Set(0);
         active.rerolled = Set(true);
         let updated = ActiveModelTrait::update(active, self.db.as_ref())
             .await
             .map_err(|e| AppError::from(e.to_string()))?;
 
-        let pool = all_mission_definitions();
-        let def = pool
-            .iter()
-            .find(|(t, _, _, _, _)| t == "play_10_hands")
-            .unwrap();
         Ok(Mission {
             id: mission_id,
             mission_type: updated.mission_type.clone(),
-            description: def.1.clone(),
-            reward_chips: def.2,
+            description: desc.clone(),
+            reward_chips: *reward,
             completed: updated.completed,
             progress: updated.progress as u32,
-            target: def.3,
-            category: def.4.clone(),
+            target: *target,
+            category: category.clone(),
         })
     }
 
