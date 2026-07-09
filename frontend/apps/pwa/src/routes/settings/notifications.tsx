@@ -34,7 +34,7 @@ function NotificationsSettingsPage() {
         <Link to="/settings" className="p-2 rounded-lg hover:bg-white/5 transition-colors">
           <ArrowLeft className="w-5 h-5 text-on-surface-variant" />
         </Link>
-        <h1 className="font-display-lg text-2xl text-on-surface">Notification Settings</h1>
+        <h1 className="font-display-lg text-2xl text-on-surface flex items-center gap-2"><Bell className="w-6 h-6 text-tertiary" />Notification Settings</h1>
       </div>
 
       <NotificationPreferences />
