@@ -68,6 +68,31 @@ function ClubsListPage() {
         </Button>
       </div>
 
+      {/* Invite join form */}
+      <div className="flex flex-col sm:flex-row items-center gap-3 p-4 bg-white/5 border border-white/10 rounded-xl mb-6">
+        <input
+          type="text"
+          placeholder="Enter invite code"
+          id="invite-code-input"
+          className="flex-1 w-full bg-surface-container-high border border-white/10 rounded-lg px-4 py-2 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-tertiary"
+        />
+        <Button
+          onClick={() => {
+            const input = document.getElementById('invite-code-input') as HTMLInputElement;
+            const code = input?.value.trim();
+            if (code) {
+              navigate({ to: '/clubs/join', search: { invite: code } });
+            } else {
+              toast.error('Please enter an invite code');
+            }
+          }}
+          className="flex items-center gap-2 bg-tertiary text-on-tertiary hover:bg-tertiary-fixed"
+        >
+          <Users className="w-4 h-4" />
+          Join Club
+        </Button>
+      </div>
+
       {clubs && clubs.length === 0 ? (
         <div className="text-center py-12 border border-white/10 rounded-xl bg-surface-container/50">
           <Users className="w-12 h-12 text-on-surface-variant/30 mx-auto mb-4" />
