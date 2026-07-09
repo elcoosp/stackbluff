@@ -61,7 +61,13 @@ function SettingsPage() {
 
   return (
     <div className="max-w-2xl mx-auto p-6">
-      <h1 className="font-display-lg text-3xl text-on-surface mb-6">⚙️ Settings</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="font-display-lg text-3xl text-on-surface">⚙️ Settings</h1>
+        <Link to="/profile" className="text-sm text-tertiary hover:text-tertiary/80 transition-colors flex items-center gap-1">
+          <User className="w-4 h-4" />
+          Profile
+        </Link>
+      </div>
 
       <div className="space-y-3">
         {settingsSections.map((section) => {
