@@ -181,12 +181,12 @@ function LeaderboardPage() {
           <span className="text-sm text-on-surface-variant">Your Rank</span>
           <span className="text-2xl font-bold text-tertiary">#{userRank}</span>
           <span className="text-sm text-on-surface-variant">|</span>
-          <span className="text-sm text-on-surface font-medium">
+          <Link to="/profile" className="text-sm text-on-surface font-medium hover:text-tertiary transition-colors">
             {displayEntries.find((e) => e.user_id === currentUser?.id)?.display_name}
-          </span>
-          <span className="text-sm text-tertiary font-mono">
+          </Link>
+          <Link to="/profile" className="text-sm text-tertiary font-mono hover:text-tertiary/80 transition-colors">
             ${displayEntries.find((e) => e.user_id === currentUser?.id)?.total_chips_won.toLocaleString()}
-          </span>
+          </Link>
         </motion.div>
       )}
     </div>
