@@ -7,7 +7,7 @@ mod m20250701_000001_add_telegram_chat_id_to_clubs;
 mod m20260101_000008_player_statistics;
 mod m20260607_000001_create_all_tables;
 mod m20260607_000002_create_clubs_tables;
-mod m20260614_145806_add_referrals_and_counters;
+// mod m20260614_145806_add_referrals_and_counters; // removed – table already exists
 mod m20260614_152712_add_registration_order_to_users;
 mod m20260614_152713_add_referrer_id_index;
 mod m20260614_171633_create_anti_cheat_events;
@@ -30,6 +30,7 @@ mod m20260629_000001_add_division_to_club_memberships;
 mod m20260630_add_email_verified_at;
 mod m20260630_add_password_changed_at;
 mod m20250702_add_tournament_name;
+mod m20260710_000001_add_hand_count_to_referral;
 
 use sea_orm_migration::prelude::*;
 
@@ -41,6 +42,7 @@ impl MigratorTrait for Migrator {
         vec![
             // 1. Core tables
             Box::new(m20260607_000001_create_all_tables::Migration),
+            Box::new(m20260710_000001_add_hand_count_to_referral::Migration),
             Box::new(m20260607_000002_create_clubs_tables::Migration),
             // 2. Add columns to existing tables (MUST BE BEFORE SEEDING)
             Box::new(m20260617_add_table_name::Migration),
@@ -55,7 +57,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260630_add_password_changed_at::Migration),
             // 3. Additional tables
             Box::new(m20250614_create_payment_intents::Migration),
-            Box::new(m20260614_145806_add_referrals_and_counters::Migration),
+            // Box::new(m20260614_145806_add_referrals_and_counters::Migration), // removed
             Box::new(m20260614_171633_create_anti_cheat_events::Migration),
             Box::new(m20260101_000008_player_statistics::Migration),
             Box::new(m20250101_000001_add_participants_to_hand_history::Migration),
