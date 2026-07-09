@@ -179,6 +179,122 @@ impl sb_contracts::repo_api::GdprRepo for DummyGdprRepo {
     }
 }
 
+// Dummy ClubRepo for tests
+struct DummyClubRepo;
+
+#[async_trait::async_trait]
+impl sb_contracts::repo_api::ClubRepo for DummyClubRepo {
+    async fn create_club(
+        &self,
+        _name: &str,
+        _logo_url: Option<&str>,
+        _created_by: sb_shared_types::UserId,
+    ) -> Result<sb_shared_types::ClubId, sb_contracts::ClubError> {
+        unimplemented!()
+    }
+    async fn find_club_by_id(
+        &self,
+        _club_id: sb_shared_types::ClubId,
+    ) -> Result<Option<sb_contracts::repo_api::Club>, sb_contracts::ClubError> {
+        Ok(None)
+    }
+    async fn join_club(
+        &self,
+        _club_id: sb_shared_types::ClubId,
+        _user_id: sb_shared_types::UserId,
+    ) -> Result<(), sb_contracts::ClubError> {
+        Ok(())
+    }
+    async fn is_member(
+        &self,
+        _club_id: sb_shared_types::ClubId,
+        _user_id: sb_shared_types::UserId,
+    ) -> Result<bool, sb_contracts::ClubError> {
+        Ok(false)
+    }
+    async fn get_member_count(
+        &self,
+        _club_id: sb_shared_types::ClubId,
+    ) -> Result<u64, sb_contracts::ClubError> {
+        Ok(0)
+    }
+    async fn get_telegram_chat_id(
+        &self,
+        _club_id: sb_shared_types::ClubId,
+    ) -> Result<Option<i64>, sb_contracts::ClubError> {
+        Ok(None)
+    }
+    async fn get_leaderboard_page(
+        &self,
+        _club_id: sb_shared_types::ClubId,
+        _division: u32,
+    ) -> Result<sb_contracts::repo_api::LeaderboardPage, sb_contracts::ClubError> {
+        unimplemented!()
+    }
+    async fn increment_weekly_xp(
+        &self,
+        _club_id: sb_shared_types::ClubId,
+        _user_id: sb_shared_types::UserId,
+        _xp: i64,
+    ) -> Result<(), sb_contracts::ClubError> {
+        Ok(())
+    }
+    async fn refresh_leaderboard(
+        &self,
+        _club_id: sb_shared_types::ClubId,
+    ) -> Result<(), sb_contracts::ClubError> {
+        Ok(())
+    }
+    async fn get_all_club_ids(&self) -> Result<Vec<sb_shared_types::ClubId>, sb_contracts::ClubError> {
+        Ok(vec![])
+    }
+    async fn update_club_pro_settings(
+        &self,
+        _club_id: sb_shared_types::ClubId,
+        _settings: serde_json::Value,
+    ) -> Result<(), sb_contracts::repo_api::PersistenceError> {
+        Ok(())
+    }
+    async fn get_club_pro_settings(
+        &self,
+        _club_id: sb_shared_types::ClubId,
+    ) -> Result<Option<serde_json::Value>, sb_contracts::repo_api::PersistenceError> {
+        Ok(None)
+    }
+    async fn get_tables_by_club_id(
+        &self,
+        _club_id: sb_shared_types::ClubId,
+    ) -> Result<Vec<sb_shared_types::TableId>, sb_contracts::repo_api::PersistenceError> {
+        Ok(vec![])
+    }
+    async fn get_user_division(
+        &self,
+        _club_id: sb_shared_types::ClubId,
+        _user_id: sb_shared_types::UserId,
+    ) -> Result<Option<u32>, sb_contracts::ClubError> {
+        Ok(None)
+    }
+    async fn rebalance_divisions(
+        &self,
+        _club_id: sb_shared_types::ClubId,
+    ) -> Result<(), sb_contracts::ClubError> {
+        Ok(())
+    }
+    async fn is_club_owner(
+        &self,
+        _club_id: sb_shared_types::ClubId,
+        _user_id: sb_shared_types::UserId,
+    ) -> Result<bool, sb_contracts::ClubError> {
+        Ok(false)
+    }
+    async fn get_user_clubs(
+        &self,
+        _user_id: sb_shared_types::UserId,
+    ) -> Result<Vec<sb_shared_types::ClubId>, sb_contracts::ClubError> {
+        Ok(vec![])
+    }
+}
+
 #[tokio::test]
 async fn test_unauthenticated_returns_401() {
     let mock_service = MockTableService::new();
@@ -217,12 +333,12 @@ async fn test_unauthenticated_returns_401() {
         hand_history_repo: hand_history_repo,
         leaderboard_query: leaderboard_query,
         club_service: club_service,
+        club_repo: Arc::new(DummyClubRepo),
         broker: broker,
         badge_repo: badge_repo,
         gdpr_repo: gdpr_repo,
     });
 
-    
     // Create a dummy auth service for the middleware
     let auth_config = AuthConfig::from_env();
     let user_repo = Arc::new(sb_db_repos::user_repo::UserRepoImpl::new(tokio::sync::mpsc::unbounded_channel().0));
@@ -233,7 +349,6 @@ async fn test_unauthenticated_returns_401() {
             req.extensions_mut().insert(auth_service.clone());
             next.run(req)
         }));
-
 
     let server = TestServer::new(app);
     let resp = server.get("/lobby").await;

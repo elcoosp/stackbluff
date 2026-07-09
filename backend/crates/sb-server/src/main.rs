@@ -365,6 +365,7 @@ async fn main() {
         hand_history_repo: hand_history_repo.clone(),
         leaderboard_query: leaderboard_repo.clone(),
         club_service: club_service.clone(),
+        club_repo: club_repo.clone(),
         broker: broker.clone(),
         badge_repo: badge_repo.clone(),
         gdpr_repo: gdpr_repo.clone(),

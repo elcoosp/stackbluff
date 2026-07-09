@@ -3,20 +3,66 @@ use axum::{
     extract::{Extension, Path, State},
     http::StatusCode,
     response::Json,
-    routing::{patch, post},
+    routing::{get, patch, post},
 };
-use sb_auth::middleware::AuthUser;
-use sb_contracts::service_api::{ClubProSettings, UpdateClubSettingsRequest};
-use sb_shared_types::{ClubId, RequestContext, UserId};
+use serde::Serialize;
 use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::{AppState, ErrorResponse, bad_request, forbidden, internal_error};
+use sb_auth::middleware::AuthUser;
+use sb_contracts::service_api::{ClubProSettings, UpdateClubSettingsRequest};
+use sb_shared_types::{ClubId, RequestContext, UserId};
+
+#[derive(Serialize)]
+pub struct ClubSummary {
+    pub id: Uuid,
+    pub name: String,
+    pub logo_url: Option<String>,
+    pub members_count: u64,
+    pub is_owner: bool,
+}
 
 pub fn club_routes() -> Router<Arc<AppState>> {
     Router::new()
+        .route("/clubs", get(list_clubs))
         .route("/clubs/{club_id}/settings", patch(update_club_settings))
         .route("/clubs/{club_id}/banner", post(upload_club_banner))
+}
+
+#[axum::debug_handler]
+async fn list_clubs(
+    Extension(auth_user): Extension<AuthUser>,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<Vec<ClubSummary>>, (StatusCode, Json<ErrorResponse>)> {
+    let user_id = UserId::new(
+        Uuid::parse_str(&auth_user.user_id)
+            .map_err(|_| bad_request("INVALID_USER", "Invalid user ID"))?,
+    );
+
+    let club_ids = state.club_repo.get_user_clubs(user_id)
+        .await
+        .map_err(|e| internal_error(e))?;
+
+    let mut summaries = Vec::new();
+    for club_id in club_ids {
+        let club = state.club_repo.find_club_by_id(club_id)
+            .await
+            .map_err(|e| internal_error(e))?
+            .ok_or_else(|| bad_request("CLUB_NOT_FOUND", "Club not found"))?;
+        let member_count = state.club_repo.get_member_count(club_id)
+            .await
+            .map_err(|e| internal_error(e))?;
+        let is_owner = club.created_by == user_id;
+        summaries.push(ClubSummary {
+            id: club_id.as_uuid(),
+            name: club.name,
+            logo_url: club.logo_url,
+            members_count: member_count,
+            is_owner,
+        });
+    }
+    Ok(Json(summaries))
 }
 
 #[axum::debug_handler]
@@ -44,7 +90,6 @@ async fn update_club_settings(
     Ok(Json(settings))
 }
 
-
 #[axum::debug_handler]
 async fn upload_club_banner(
     Extension(auth_user): Extension<AuthUser>,
@@ -59,13 +104,13 @@ async fn upload_club_banner(
 
     // Verify ownership & Pro status
     let club_owner = state.club_service.find_club_owner(club_id).await
-        .map_err(internal_error)?;
+        .map_err(|e| internal_error(e))?;
     if club_owner != Some(user_id) {
         return Err(forbidden("Only the club owner can upload a banner"));
     }
 
     let is_pro = state.club_service.is_club_pro_active(user_id).await
-        .map_err(internal_error)?;
+        .map_err(|e| internal_error(e))?;
     if !is_pro {
         return Err(forbidden("Club Pro subscription required"));
     }

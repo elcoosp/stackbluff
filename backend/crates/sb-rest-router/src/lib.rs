@@ -51,6 +51,7 @@ pub struct AppState {
     pub hand_history_repo: Arc<dyn HandHistoryRepository + Send + Sync>,
     pub leaderboard_query: Arc<dyn sb_contracts::leaderboard::LeaderboardQuery + Send + Sync>,
     pub club_service: Arc<dyn sb_contracts::service_api::ClubService + Send + Sync>,
+    pub club_repo: Arc<dyn sb_contracts::repo_api::ClubRepo + Send + Sync>,
     pub broker: Arc<sb_table_registry::connection_broker::ConnectionBroker>,
     pub badge_repo: Arc<dyn BadgeRepo + Send + Sync>,
     pub gdpr_repo: Arc<dyn GdprRepo + Send + Sync>,

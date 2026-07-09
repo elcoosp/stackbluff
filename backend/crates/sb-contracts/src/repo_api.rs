@@ -285,6 +285,8 @@ pub trait ClubRepo: Send + Sync {
     async fn rebalance_divisions(&self, club_id: ClubId) -> ClubResult<()>;
 
     async fn is_club_owner(&self, club_id: ClubId, user_id: UserId) -> ClubResult<bool>;
+
+    async fn get_user_clubs(&self, user_id: UserId) -> ClubResult<Vec<ClubId>>;
 }
 
 // ── Referral repository ───────────────────────────────────────

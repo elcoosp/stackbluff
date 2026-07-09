@@ -446,6 +446,20 @@ impl ClubRepo for ClubRepoImpl {
             .map(|c| c.owner_id == user_id.as_uuid())
             .unwrap_or(false))
     }
+
+    async fn get_user_clubs(&self, user_id: UserId) -> Result<Vec<ClubId>, ClubError> {
+        use club_memberships::Column;
+        let memberships = club_memberships::Entity::find()
+            .filter(Column::UserId.eq(user_id.as_uuid()))
+            .all(&self.db)
+            .await
+            .map_err(|e| ClubError::Database(e.to_string()))?;
+
+        Ok(memberships
+            .into_iter()
+            .map(|m| ClubId::new(m.club_id))
+            .collect())
+    }
 }
 
 /// Detect UNIQUE constraint violation from sea_orm::DbErr.
