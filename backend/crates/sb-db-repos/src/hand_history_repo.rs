@@ -191,6 +191,102 @@ impl HandHistoryRepository for HandHistoryRepoImpl {
             .map_err(|e| PersistenceError::Database(e.to_string()))?;
         Ok(count)
     }
+
+    async fn list_user_hands(
+        &self,
+        _ctx: RequestContext,
+        user_id: Uuid,
+        limit: u64,
+        cursor: Option<HandCursor>,
+    ) -> PersistenceResult<HandSummaryPage> {
+        use hand_history::Column;
+        use sea_orm::{Condition, QueryOrder};
+        use std::collections::HashMap;
+        use sb_shared_types::PlayerId;
+        use sb_contracts::repo_api::{WinnerSummary, HandSummary};
+        use sb_db_entities::hand_history_json::{HandPlayers, HandResult};
+
+        let pattern = format!(",{},", user_id);
+        let mut query = hand_history::Entity::find()
+            .filter(Column::Participants.like(&pattern))
+            .order_by_desc(Column::PlayedAt)
+            .order_by_desc(Column::Id);
+
+        if let Some((played_at, id)) = cursor {
+            query = query.filter(
+                Condition::any()
+                    .add(Column::PlayedAt.lt(played_at))
+                    .add(
+                        Condition::all()
+                            .add(Column::PlayedAt.eq(played_at))
+                            .add(Column::Id.lt(id)),
+                    ),
+            );
+        }
+
+        let models = query
+            .all(&self.db)
+            .await
+            .map_err(|e| PersistenceError::Database(e.to_string()))?;
+
+        let has_next = models.len() > limit as usize;
+        let models = if has_next { &models[..limit as usize] } else { &models[..] };
+
+        let mut summaries = Vec::with_capacity(models.len());
+        for m in models {
+            let players: HandPlayers = m.players_json.clone();
+            let result: HandResult = m.result_json.clone();
+
+            let pid_to_uid: HashMap<PlayerId, sb_shared_types::UserId> = players
+                .seats
+                .iter()
+                .filter_map(|p| p.user_id.map(|u| (p.player_id, u)))
+                .collect();
+
+            let pot = result.winners.iter().map(|w| w.amount_won).sum();
+
+            let winners: Vec<WinnerSummary> = result
+                .winners
+                .iter()
+                .map(|w| WinnerSummary {
+                    user_id: pid_to_uid
+                        .get(&w.player_id)
+                        .copied()
+                        .unwrap_or_else(|| sb_shared_types::UserId::new(w.player_id.0)),
+                    amount: w.amount_won,
+                    hand_rank: w.hand_description.clone(),
+                })
+                .collect();
+
+            let community_cards = result.community_cards.clone();
+            let winner_hole_cards = result.winners.first().and_then(|winner| {
+                players
+                    .seats
+                    .iter()
+                    .find(|seat| seat.player_id == winner.player_id)
+                    .and_then(|seat| seat.hole_cards.clone())
+                    .map(|arr| arr.to_vec())
+            });
+
+            summaries.push(HandSummary {
+                id: m.id,
+                table_id: sb_shared_types::TableId::new(m.table_id),
+                played_at: m.played_at,
+                pot,
+                winners,
+                community_cards,
+                winner_hole_cards,
+            });
+        }
+
+        let next_cursor = if has_next {
+            models.last().map(|m| (m.played_at, m.id))
+        } else {
+            None
+        };
+
+        Ok((summaries, next_cursor))
+    }
 }
 
 /// Spawns a background task that deletes hand history records older than

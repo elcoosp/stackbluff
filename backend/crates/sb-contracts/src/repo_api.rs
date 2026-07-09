@@ -166,6 +166,14 @@ pub trait HandHistoryRepository: Send + Sync {
         table_id: TableId,
         user_id: UserId,
     ) -> PersistenceResult<u64>;
+
+    async fn list_user_hands(
+        &self,
+        ctx: RequestContext,
+        user_id: Uuid,
+        limit: u64,
+        cursor: Option<HandCursor>,
+    ) -> PersistenceResult<HandSummaryPage>;
 }
 
 // ── Club domain types ────────────────────────────────────────

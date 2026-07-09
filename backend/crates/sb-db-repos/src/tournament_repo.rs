@@ -184,6 +184,7 @@ impl TournamentRepo for TournamentRepoImpl {
     async fn list_tournaments(
         &self,
         type_filter: Option<TournamentType>,
+        status_filter: Option<TournamentStatus>,
     ) -> Result<Vec<TournamentRecord>, AppError> {
         let models = tournament::Entity::find()
             .order_by_desc(tournament::Column::CreatedAt)
@@ -198,6 +199,12 @@ impl TournamentRepo for TournamentRepoImpl {
                     && rec.config.tournament_type != *filter
                 {
                     return None;
+                }
+                if let Some(status) = &status_filter {
+                    let _status_str = format!("{:?}", status);
+                    if rec.status != *status {
+                        return None;
+                    }
                 }
                 Some(rec)
             })

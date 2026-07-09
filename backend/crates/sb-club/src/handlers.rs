@@ -274,7 +274,7 @@ pub async fn list_club_tournaments(
     // List all tournaments and filter by club_id
     let all_tournaments = state
         .tournament_service
-        .list_tournaments(&ctx, None)
+        .list_tournaments(&ctx, None, None)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 

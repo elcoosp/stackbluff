@@ -8,7 +8,7 @@ use sb_rest_router::create_router;
 use sb_auth::{AuthServiceImpl, SharedAuthService};
 use sb_auth::config::AuthConfig;
 use sb_shared_types::{AppError, RequestContext, StakeLevel, TableId, UserId};
-use sb_db_repos::user_repo::UserRepoImpl;
+use uuid::Uuid;
 use sb_table_registry::Registry;
 use std::sync::Arc;
 
@@ -60,7 +60,7 @@ impl TournamentService for DummyTournamentService {
     async fn register(&self, _ctx: &RequestContext, _tournament_id: sb_shared_types::TournamentId, _user_id: UserId) -> Result<(), AppError> { unimplemented!() }
     async fn unregister(&self, _ctx: &RequestContext, _tournament_id: sb_shared_types::TournamentId, _user_id: UserId) -> Result<(), AppError> { unimplemented!() }
     async fn get_tournament(&self, _ctx: &RequestContext, _tournament_id: sb_shared_types::TournamentId) -> Result<sb_contracts::tournament_api::TournamentSummary, AppError> { unimplemented!() }
-    async fn list_tournaments(&self, _ctx: &RequestContext, _type_filter: Option<sb_contracts::tournament_api::TournamentType>) -> Result<Vec<sb_contracts::tournament_api::TournamentSummary>, AppError> { unimplemented!() }
+    async fn list_tournaments(&self, _ctx: &RequestContext, _type_filter: Option<sb_contracts::tournament_api::TournamentType>, _status_filter: Option<sb_contracts::tournament_api::TournamentStatus>) -> Result<Vec<sb_contracts::tournament_api::TournamentSummary>, AppError> { unimplemented!() }
     async fn get_results(&self, _ctx: &RequestContext, _tournament_id: sb_shared_types::TournamentId) -> Result<Vec<sb_contracts::tournament_api::TournamentResult>, AppError> { unimplemented!() }
     async fn get_my_table(&self, _ctx: &RequestContext, _tournament_id: sb_shared_types::TournamentId, _user_id: UserId) -> Result<Option<TableId>, AppError> { unimplemented!() }
 }
@@ -131,6 +131,9 @@ mockall::mock! {
         }
         async fn count_user_hands(&self, _ctx: RequestContext, _table_id: TableId, _user_id: UserId) -> Result<u64, sb_contracts::repo_api::PersistenceError> {
             Ok(0)
+        }
+        async fn list_user_hands(&self, _ctx: RequestContext, _user_id: Uuid, _limit: u64, _cursor: Option<sb_contracts::repo_api::HandCursor>) -> Result<sb_contracts::repo_api::HandSummaryPage, sb_contracts::repo_api::PersistenceError> {
+            Ok((vec![], None))
         }
     }
 }

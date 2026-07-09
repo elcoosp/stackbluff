@@ -1,6 +1,6 @@
 use axum::{
     Json, Router,
-    extract::{Extension, Path, State},
+    extract::{Extension, Path, State, Query},
     http::StatusCode,
     routing::{get, post},
 };
@@ -108,16 +108,39 @@ async fn create_tournament(
     Ok(Json(CreateTournamentResponse { tournament_id }))
 }
 
+
+#[derive(Deserialize)]
+pub struct ListTournamentsQuery {
+    #[serde(rename = "type")]
+    pub type_filter: Option<String>,
+    pub status: Option<String>,
+}
+
 async fn list_tournaments(
     State(state): State<Arc<TournamentState>>,
+    Query(query): Query<ListTournamentsQuery>,
 ) -> Result<
     Json<Vec<sb_contracts::tournament_api::TournamentSummary>>,
     (StatusCode, Json<serde_json::Value>),
 > {
+    use sb_contracts::tournament_api::TournamentType;
+    let type_filter = query.type_filter.and_then(|s| match s.as_str() {
+        "SitAndGo" => Some(TournamentType::SitAndGo),
+        "Mtt" => Some(TournamentType::Mtt),
+        _ => None,
+    });
+    let status_filter = query.status.and_then(|s| match s.as_str() {
+        "Registering" => Some(sb_contracts::tournament_api::TournamentStatus::Registering),
+        "Running" => Some(sb_contracts::tournament_api::TournamentStatus::Running),
+        "Completed" => Some(sb_contracts::tournament_api::TournamentStatus::Completed),
+        "Cancelled" => Some(sb_contracts::tournament_api::TournamentStatus::Cancelled),
+        _ => None,
+    });
+
     let ctx = sb_shared_types::RequestContext::new(uuid::Uuid::new_v4(), None);
     let tournaments = state
         .tournament_service
-        .list_tournaments(&ctx, None)
+        .list_tournaments(&ctx, type_filter, status_filter)
         .await
         .map_err(|e| {
             (

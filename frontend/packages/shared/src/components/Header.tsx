@@ -18,6 +18,7 @@ import {
   History,
   BookOpen,
   HelpCircle,
+  FileText,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 

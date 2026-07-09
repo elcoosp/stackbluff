@@ -11,7 +11,7 @@ pub async fn settle_crashed_tournaments(
     user_repo: &dyn sb_contracts::repo_api::UserRepo,
 ) -> Result<(), AppError> {
     let running = repo
-        .list_tournaments(None)
+        .list_tournaments(None, None)
         .await?
         .into_iter()
         .filter(|t| t.status == TournamentStatus::Running)

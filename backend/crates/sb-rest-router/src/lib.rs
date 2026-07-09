@@ -1,3 +1,4 @@
+pub mod hand_history_routes;
 pub mod anti_cheat_routes;
 pub mod club_routes;
 pub mod gdpr_routes;
@@ -76,6 +77,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .merge(leaderboard::leaderboard_routes())
         .merge(protected_routes)
         .merge(gdpr_routes())
+        .merge(hand_history_routes::hand_history_routes())
         .with_state(state)
 }
 

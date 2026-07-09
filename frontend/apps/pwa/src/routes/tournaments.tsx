@@ -10,6 +10,7 @@ import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { toast } from 'sonner';
 import type { TournamentSummary } from '@stackbluff/shared/types/tournament.types';
 import { cn } from '@/lib/utils';
+import { History } from 'lucide-react';
 
 // @ts-ignore – route will be added to route tree on dev server restart
 export const Route = createFileRoute('/tournaments')({

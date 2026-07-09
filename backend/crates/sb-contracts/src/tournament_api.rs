@@ -137,6 +137,7 @@ pub trait TournamentService: Send + Sync {
         &self,
         ctx: &RequestContext,
         type_filter: Option<TournamentType>,
+        status_filter: Option<TournamentStatus>,
     ) -> Result<Vec<TournamentSummary>, AppError>;
 
     async fn get_results(
@@ -196,6 +197,7 @@ pub trait TournamentRepo: Send + Sync {
     async fn list_tournaments(
         &self,
         type_filter: Option<TournamentType>,
+        status_filter: Option<TournamentStatus>,
     ) -> Result<Vec<TournamentRecord>, AppError>;
 
     async fn set_status(
