@@ -152,6 +152,7 @@ export function Header() {
                       <div className="border-t border-outline-variant/50 my-1"></div>
 
                       <div className="px-2 py-1">
+                        <MenuItem icon={<User className="w-4 h-4" />} label="Profile" onClick={() => { setDropdownOpen(false); navigate({ to: '/profile' }); }} />
                         <MenuItem icon={<Settings className="w-4 h-4" />} label="Settings" onClick={() => { setDropdownOpen(false); navigate({ to: '/settings' }); }} />
                         <MenuItem icon={<HelpCircle className="w-4 h-4" />} label="Help & Support" onClick={() => { setDropdownOpen(false); navigate({ to: '/help' }); }} />
                       </div>
