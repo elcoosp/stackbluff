@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertTriangle, Download, Trash2, Shield, Loader2, CheckCircle } from 'lucide-react';
+import { AlertTriangle, Download, Trash2, Shield, Loader2, CheckCircle, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 
@@ -104,8 +104,7 @@ function PrivacySettingsPage() {
         <Link to="/settings" className="p-2 rounded-lg hover:bg-white/5 transition-colors">
           <ArrowLeft className="w-5 h-5 text-on-surface-variant" />
         </Link>
-        <h1 className="font-display-lg text-3xl text-on-surface flex items-center gap-2">
-          <Shield className="w-8 h-8 text-tertiary" />
+        <h1 className="font-display-lg text-2xl text-on-surface">
           Privacy & Data
         </h1>
       </div>
