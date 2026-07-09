@@ -57,7 +57,7 @@ export function SeasonCardDisplay() {
         </div>
       )}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {cards.map((card) => (
+        {(cards || []).map((card) => (
           <Card key={card.season_id} className="bg-white/5 border-white/10 overflow-hidden group hover:border-tertiary/30 transition-colors">
             <CardContent className="p-0">
               {card.card_image_url ? (
