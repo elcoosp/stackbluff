@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@stackbluff/shared/api/client';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Bell } from 'lucide-react';
 
 interface NotificationSettings {
   tournamentReminder60: boolean;
@@ -114,7 +114,10 @@ export function NotificationPreferences() {
   if (isLoading) {
     return (
       <section className="p-6 rounded-xl bg-white/5 border border-white/10">
-        <h3 className="text-lg font-semibold mb-2">🔔 Notification Preferences</h3>
+        <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+          <Bell className="w-5 h-5 text-tertiary" />
+          Notification Preferences
+        </h3>
         <div className="space-y-3 animate-pulse">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <div key={i} className="h-12 bg-white/5 rounded-lg" />
@@ -126,7 +129,10 @@ export function NotificationPreferences() {
 
   return (
     <section className="p-6 rounded-xl bg-white/5 border border-white/10">
-      <h3 className="text-lg font-semibold mb-2">🔔 Notification Preferences</h3>
+      <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+        <Bell className="w-5 h-5 text-tertiary" />
+        Notification Preferences
+      </h3>
       <p className="text-sm text-gray-400 mb-4">
         Choose which notifications you receive. Changes are saved to your account.
       </p>
