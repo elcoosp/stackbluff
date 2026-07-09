@@ -28,7 +28,6 @@ use sb_auth::{
     AuthServiceImpl, Authenticator, SharedAuthService, config::AuthConfig, email::EmailService,
     email_queue::EmailQueue, routes::auth_router,
 };
-use sb_auth::middleware::auth_middleware_with_context;
 use sb_club::handlers::{ClubTournamentState, club_tournament_routes};
 use sb_contracts::async_hooks::{HandCountObserver, ReplayCardObserver};
 use sb_contracts::lobby_api::{TableRepo, TableService};
@@ -80,8 +79,8 @@ mod season_card_generator;
 
 // ─── Middleware that provides RequestContext ──────────────────────
 
+
 async fn request_context_middleware(mut req: Request, next: Next) -> Response {
-    // Generate a request ID (Uuid) from header or new one
     let request_id = req
         .headers()
         .get("x-correlation-id")
@@ -89,7 +88,6 @@ async fn request_context_middleware(mut req: Request, next: Next) -> Response {
         .and_then(|s| Uuid::parse_str(s).ok())
         .unwrap_or_else(Uuid::new_v4);
 
-    // Get client IP from forwarded header, fallback to "0.0.0.0"
     let ip = req
         .headers()
         .get("x-forwarded-for")
@@ -97,15 +95,40 @@ async fn request_context_middleware(mut req: Request, next: Next) -> Response {
         .map(|s| s.to_string())
         .unwrap_or_else(|| "0.0.0.0".to_string());
 
+    let mut user_id = None;
+
+    // Try to get token from Authorization header or cookie
+    let token = req
+        .headers()
+        .get("Authorization")
+        .and_then(|h| h.to_str().ok())
+        .and_then(|h| h.strip_prefix("Bearer "))
+        .map(|t| t.to_string())
+        .or_else(|| {
+            req.extensions()
+                .get::<tower_cookies::Cookies>()
+                .and_then(|cookies| cookies.get("token").map(|c| c.value().to_string()))
+        });
+
+    if let Some(token) = token {
+        // Get auth service from extensions (should be added by Extension layer)
+        if let Some(auth_service) = req.extensions().get::<SharedAuthService>() {
+            if let Ok(claims) = auth_service.verify_token(&token).await {
+                user_id = Some(claims.user_id);
+            }
+        }
+    }
+
     let ctx = RequestContext {
         request_id,
         ip,
-        user_id: None,
+        user_id,
     };
 
     req.extensions_mut().insert(ctx);
     next.run(req).await
 }
+
 
 // ─── Rest of your code ─────────────────────────────────────────────
 
@@ -451,8 +474,7 @@ let event_rx = registry.event_sender().subscribe();
     //  Also keep the RequestContext middleware.
     // ═══════════════════════════════════════════════════════════════════
 
-    let mission_router = sb_mission::mission_routes(Arc::new(db.clone()), user_svc.clone())
-    .layer(middleware::from_fn(auth_middleware_with_context));
+    let mission_router = sb_mission::mission_routes(Arc::new(db.clone()), user_svc.clone());
 
 let app = Router::new()
         .merge(metrics_route)
@@ -467,9 +489,9 @@ let app = Router::new()
         .merge(club_tournament_router)
         .merge(mission_router)
         // RequestContext middleware
-        .layer(middleware::from_fn(request_context_middleware))
-        // Provide SharedAuthService to all handlers (this fixes the 500)
         .layer(Extension(auth_service.clone()))
+        // Provide SharedAuthService to all handlers (this fixes the 500)
+        .layer(middleware::from_fn(request_context_middleware))
         .layer(axum::extract::DefaultBodyLimit::max(1024 * 1024 * 10))
         .layer(cors)
         .layer(CookieManagerLayer::new());
