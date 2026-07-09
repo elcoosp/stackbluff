@@ -42,12 +42,12 @@ use sb_db_repos::gdpr_repo::PgGdprRepo;
 use sb_db_repos::hand_history_repo::{HandHistoryRepoImpl, spawn_hand_history_cleanup};
 use sb_db_repos::init_writer_loop;
 use sb_db_repos::player_stats_repo::PlayerStatsRepoImpl;
+use sb_db_repos::product_repo::ProductRepoImpl;
 use sb_db_repos::referral_repo::ReferralRepositoryImpl;
 use sb_db_repos::tournament_repo::TournamentRepoImpl;
 use sb_db_repos::user_repo::UserRepoImpl;
-use sb_db_repos::product_repo::ProductRepoImpl;
-use sb_payment::RealPaymentService;
 use sb_mission::service::MissionServiceImpl;
+use sb_payment::RealPaymentService;
 use sb_rest_router::player_stats::player_stats_routes;
 use sb_rest_router::season_card;
 use sb_rest_router::tournament_routes::{self, TournamentState};
@@ -78,7 +78,6 @@ mod r2_storage;
 mod season_card_generator;
 
 // ─── Middleware that provides RequestContext ──────────────────────
-
 
 async fn request_context_middleware(mut req: Request, next: Next) -> Response {
     let request_id = req
@@ -113,10 +112,20 @@ async fn request_context_middleware(mut req: Request, next: Next) -> Response {
     if let Some(token) = token {
         // Get auth service from extensions (should be added by Extension layer)
         if let Some(auth_service) = req.extensions().get::<SharedAuthService>() {
-            if let Ok(claims) = auth_service.verify_token(&token).await {
-                user_id = Some(claims.user_id);
+            match auth_service.verify_token(&token).await {
+                Ok(claims) => {
+                    user_id = Some(claims.user_id);
+                    tracing::debug!(user_id = %user_id.unwrap(), "Token verified, user ID set in context");
+                }
+                Err(e) => {
+                    tracing::warn!(error = %e, "Token verification failed");
+                }
             }
+        } else {
+            tracing::warn!("SharedAuthService not found in request extensions");
         }
+    } else {
+        tracing::debug!("No token found in request");
     }
 
     let ctx = RequestContext {
@@ -128,7 +137,6 @@ async fn request_context_middleware(mut req: Request, next: Next) -> Response {
     req.extensions_mut().insert(ctx);
     next.run(req).await
 }
-
 
 // ─── Rest of your code ─────────────────────────────────────────────
 
@@ -164,10 +172,8 @@ async fn main() {
     let writer_handle = init_writer_loop(db.clone(), None);
     let user_repo: Arc<dyn UserRepo> = Arc::new(UserRepoImpl::new(writer_handle.sender.clone()));
 
-    
-    
     let user_svc = Arc::new(UserServiceImpl::new(user_repo.clone()));
-// ── Crash recovery ────────────────────────────────────────────────
+    // ── Crash recovery ────────────────────────────────────────────────
     {
         let tournament_repo = TournamentRepoImpl::new(db.clone());
         if let Err(e) = sb_tournament::crash_recovery::settle_crashed_tournaments(
@@ -256,17 +262,18 @@ async fn main() {
         HandHistoryRepoImpl::new(writer_handle.sender.clone(), db.clone()),
     );
 
-
-    let product_repo: Arc<dyn sb_contracts::product_api::ProductRepo + Send + Sync> = Arc::new(ProductRepoImpl::new(db.clone()));
+    let product_repo: Arc<dyn sb_contracts::product_api::ProductRepo + Send + Sync> =
+        Arc::new(ProductRepoImpl::new(db.clone()));
     let payment_config = sb_payment::PaymentConfig::from_env().expect("Payment config");
-    let stripe_secret_key = std::env::var("STRIPE_SECRET_KEY").expect("STRIPE_SECRET_KEY must be set");
+    let stripe_secret_key =
+        std::env::var("STRIPE_SECRET_KEY").expect("STRIPE_SECRET_KEY must be set");
     let payment_service = Arc::new(RealPaymentService::new(
         db.clone(),
         stripe_secret_key,
         user_svc.clone(),
         payment_config,
     ));
-let event_rx = registry.event_sender().subscribe();
+    let event_rx = registry.event_sender().subscribe();
     spawn_history_recorder(event_rx, hand_history_repo.clone());
 
     spawn_hand_history_cleanup(db.clone()).await;
@@ -393,8 +400,10 @@ let event_rx = registry.event_sender().subscribe();
 
     let viral_service_arc = Arc::new(viral_service_impl);
 
-    let mission_service: Arc<dyn MissionApi + Send + Sync> =
-        Arc::new(MissionServiceImpl::new(Arc::new(db.clone()), user_svc.clone()));
+    let mission_service: Arc<dyn MissionApi + Send + Sync> = Arc::new(MissionServiceImpl::new(
+        Arc::new(db.clone()),
+        user_svc.clone(),
+    ));
     let app_state = Arc::new(AppState {
         table_service: table_service.clone(),
         table_repo: table_repo.clone(),
@@ -476,7 +485,7 @@ let event_rx = registry.event_sender().subscribe();
 
     let mission_router = sb_mission::mission_routes(Arc::new(db.clone()), user_svc.clone());
 
-let app = Router::new()
+    let app = Router::new()
         .merge(metrics_route)
         .merge(rest_router)
         .merge(ws_router)
@@ -488,13 +497,14 @@ let app = Router::new()
         .merge(season_card::router(db.clone()))
         .merge(club_tournament_router)
         .merge(mission_router)
-        // RequestContext middleware
         .layer(Extension(auth_service.clone()))
-        // Provide SharedAuthService to all handlers (this fixes the 500)
         .layer(middleware::from_fn(request_context_middleware))
         .layer(axum::extract::DefaultBodyLimit::max(1024 * 1024 * 10))
         .layer(cors)
-        .layer(CookieManagerLayer::new());
+        .layer(CookieManagerLayer::new())
+        .layer(Extension(auth_service.clone()))
+        .layer(middleware::from_fn(request_context_middleware))
+        .layer(axum::extract::DefaultBodyLimit::max(1024 * 1024 * 10));
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
         .await
