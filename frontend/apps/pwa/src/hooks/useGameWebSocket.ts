@@ -57,7 +57,7 @@ const parseMessage = (data: any) => {
         user_id: p.user_id,
         display_name: p.display_name || 'Player',
         stack: p.stack,
-        current_bet: p.current_bet,
+        current_bet: p.current_bet ?? 0,
         is_all_in: p.is_all_in,
         is_folded: p.is_folded,
         is_leaving: p.is_leaving || false,

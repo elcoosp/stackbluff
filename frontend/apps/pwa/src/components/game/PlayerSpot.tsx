@@ -432,7 +432,7 @@ export const PlayerSpot = memo(({
     </motion.div>
   );
 
-  const formattedStack = stack >= 1000 ? `$${(stack / 1000).toFixed(stack % 1000 === 0 ? 0 : 1)}k` : `$${stack}`;
+  const formattedStack = (stack ?? 0) >= 1000 ? `$${((stack ?? 0) / 1000).toFixed((stack ?? 0) % 1000 === 0 ? 0 : 1)}k` : `$${stack ?? 0}`;
 
   const bankrollElement = (
     <span className={cn(
