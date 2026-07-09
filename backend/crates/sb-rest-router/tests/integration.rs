@@ -146,6 +146,9 @@ mockall::mock! {
         async fn list_user_hands(&self, _ctx: RequestContext, _user_id: Uuid, _limit: u64, _cursor: Option<sb_contracts::repo_api::HandCursor>) -> Result<sb_contracts::repo_api::HandSummaryPage, sb_contracts::repo_api::PersistenceError> {
             Ok((vec![], None))
         }
+        async fn list_user_replays(&self, _ctx: RequestContext, _user_id: Uuid) -> Result<Vec<sb_contracts::repo_api::ReplayCard>, sb_contracts::repo_api::PersistenceError> {
+            Ok(vec![])
+        }
     }
 }
 

@@ -174,6 +174,12 @@ pub trait HandHistoryRepository: Send + Sync {
         limit: u64,
         cursor: Option<HandCursor>,
     ) -> PersistenceResult<HandSummaryPage>;
+
+    async fn list_user_replays(
+        &self,
+        ctx: RequestContext,
+        user_id: Uuid,
+    ) -> PersistenceResult<Vec<ReplayCard>>;
 }
 
 // ── Club domain types ────────────────────────────────────────
@@ -406,4 +412,18 @@ pub struct ReferralRecord {
     pub hand_count: i32,
     pub bonus_awarded: bool,
     pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ReplayCard {
+    pub id: Uuid,
+    pub hand_description: String,
+    pub winner_name: String,
+    pub winner_id: UserId,
+    pub pot: i64,
+    pub played_at: chrono::DateTime<chrono::Utc>,
+    pub table_id: TableId,
+    pub community_cards: Vec<String>,
+    pub winner_cards: Option<Vec<String>>,
+    pub share_url: String,
 }
