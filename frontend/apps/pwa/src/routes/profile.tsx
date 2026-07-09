@@ -123,7 +123,7 @@ function ProfilePage() {
       </div>
 
       {/* Quick links with icons */}
-      <div className="flex flex-wrap gap-3 mt-2 border-t border-white/10 pt-4">
+      <div className="flex flex-wrap gap-2 sm:gap-3 mt-2 border-t border-white/10 pt-4">
         <Link to="/history" className="flex items-center gap-1.5 text-sm text-on-surface-variant hover:text-tertiary transition-colors">
           <History className="w-4 h-4" />
           Hand History
@@ -151,7 +151,7 @@ function ProfilePage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Hands Played" value={handsPlayed} icon={<Target className="w-4 h-4" />} />
         <StatCard label="Win Rate" value={`${(winRate * 100).toFixed(1)}%`} icon={<TrendingUp className="w-4 h-4" />} />
         <StatCard label="Net Profit" value={`$${netProfit.toLocaleString()}`} icon={<Coins className="w-4 h-4" />} />
@@ -259,7 +259,7 @@ function ProfileSkeleton() {
         </div>
         <Skeleton className="h-10 w-24 bg-white/5 rounded-lg" />
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[1, 2, 3, 4].map((i) => (
           <Skeleton key={i} className="h-24 bg-white/5 rounded-xl" />
         ))}
