@@ -302,6 +302,15 @@ function LobbyPage() {
             ))}
           </div>
         </div>
+
+        {/* Legal Links Footer */}
+        <div className="flex flex-wrap gap-4 justify-center text-sm text-on-surface-variant border-t border-white/10 pt-4 mt-8">
+          <Link to="/legal/terms" className="hover:text-tertiary transition-colors">Terms of Service</Link>
+          <span className="text-white/20">|</span>
+          <Link to="/legal/privacy" className="hover:text-tertiary transition-colors">Privacy Policy</Link>
+          <span className="text-white/20">|</span>
+          <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors">Responsible Gaming</Link>
+        </div>
       </section>
 
       {/* Modals */}
