@@ -1105,6 +1105,8 @@ export type {
 
 export type WebSocketConnectionStatus = 'connected' | 'reconnecting' | 'disconnected';
 
+=== frontend/apps/pwa/src/.DS_Store ===
+   Bud1            †                                                           e svSrnlong                                           r o u t e svSrnlong                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         @      €                                        @      €                                          @      €                                          @                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   E   †                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       DSDB                                 `      À                                               @      €                                          @      €                                          @                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
 === frontend/apps/pwa/src/App.test.tsx ===
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
@@ -15948,7 +15950,7 @@ export function useGameWebSocket(tableId: string) {
     const url = token ? `${baseWs}/ws/game?token=${encodeURIComponent(token)}` : `${baseWs}/ws/game`;
 
     const ws = new WebSocket(url);
-    
+
 
     wsRef.current = ws;
 
@@ -21420,6 +21422,13 @@ const STAKE_CONFIG = {
 
 const getStakeBB = (stakeLevel: keyof typeof STAKE_CONFIG) => STAKE_CONFIG[stakeLevel]?.bb ?? 0;
 
+// Helper to convert table name to kebab-case for image fetching
+const toKebabCase = (str: string) =>
+  str
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
 interface Table {
   table_id: string;
   name: string;
@@ -21456,7 +21465,7 @@ function LobbyPage() {
     setSortConfig((current) => {
       if (current.key === key) {
         if (current.direction === 'asc') return { key, direction: 'desc' };
-        if (current.direction === 'desc') return { key: 'none', direction: 'asc' };
+        if (current.direction === 'desc') return { key, direction: 'none', direction: 'asc' };
       }
       return { key, direction: 'asc' };
     });
@@ -21485,7 +21494,7 @@ function LobbyPage() {
   return (
     <div className="flex min-h-screen w-full relative">
       {/* Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 bg-surface-container-low border-r border-outline-variant py-gutter space-y-4 sticky top-0 h-screen">
+      <aside className="hidden md:flex flex-col w-64 bg-surface-container-low border-r border-outline-variant py-gutter sticky top-0 h-screen">
         <div className="px-6 pt-6 mb-8">
           <div className="p-4 rounded-lg bg-surface-container-highest razor-highlight border border-outline-variant">
             <h3 className="font-headline-md text-headline-md text-on-surface mb-1">StackBluff Elite</h3>
@@ -21611,82 +21620,96 @@ function LobbyPage() {
               <div className="col-span-4 text-right">Action</div>
             </div>
 
-            {sortedTables.map((table, i) => (
-              <motion.div
-                layout
-                key={table.table_id}
-                className="flex flex-col lg:grid lg:grid-cols-12 items-start lg:items-center px-4 lg:px-8 py-4 lg:py-5 bg-surface-container-lowest/80 backdrop-blur-xl border border-white/10 rounded-xl razor-highlight group hover:border-tertiary/40 transition-colors duration-200 gap-3 lg:gap-0"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  delay: i * 0.05,
-                  layout: { duration: 0.3, ease: "easeInOut" }
-                }}
-              >
-                <div className="w-full lg:col-span-4 flex items-start lg:items-center gap-3 lg:gap-4">
+            {sortedTables.map((table, i) => {
+              const imageUrl = `/images/tables/${toKebabCase(table.name)}.png`;
+
+              return (
+                <motion.div
+                  layout
+                  key={table.table_id}
+                  className="flex flex-col lg:grid lg:grid-cols-12 items-start lg:items-center px-4 lg:px-8 py-4 lg:py-5 border border-white/10 rounded-xl razor-highlight group hover:border-tertiary/40 transition-all duration-300 gap-3 lg:gap-0 overflow-hidden relative"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    delay: i * 0.05,
+                    layout: { duration: 0.3, ease: "easeInOut" }
+                  }}
+                >
+                  {/* Background Image Layer - Blurs by default, unblurs on hover */}
                   <div
-                    className={`mt-1.5 lg:mt-0 w-1.5 h-1.5 rounded-full shrink-0 ${table.status === 'active'
-                      ? 'bg-tertiary status-led animate-pulse'
-                      : 'bg-outline-variant'
-                      }`}
+                    className="absolute inset-0 w-full h-full bg-cover bg-center blur-md scale-105 group-hover:blur-none group-hover:scale-100 transition-all duration-500 ease-in-out z-0"
+                    style={{ backgroundImage: `url(${imageUrl})` }}
                   />
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-headline-md text-base text-on-surface truncate">{table.name}</h4>
-                    <p className="text-[10px] text-outline font-label-caps mt-0.5">NO LIMIT HOLD'EM</p>
-                    <div className="flex items-center gap-3 mt-2.5 lg:hidden">
-                      <span className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-md px-2 py-0.5 text-[10px] font-data-mono text-tertiary tracking-wide">
-                        {STAKE_CONFIG[table.stake_level]?.text || table.stake_level}
-                      </span>
-                      <span className="text-[10px] text-on-surface-variant font-data-mono">
-                        {table.current_players}/{table.max_players} seated
-                      </span>
+                  {/* Gradient Overlay Layer - Less dark, smooth transition */}
+                  <div
+                    className="absolute inset-0 w-full h-full z-0 transition-all duration-500 bg-gradient-to-r from-[#0a0a0c]/85 via-[#0a0a0c]/50 to-[#0a0a0c]/85 group-hover:from-[#0a0a0c]/75 group-hover:via-[#0a0a0c]/35 group-hover:to-[#0a0a0c]/75"
+                  />
+
+                  <div className="w-full lg:col-span-4 flex items-start lg:items-center gap-3 lg:gap-4 relative z-10">
+                    <div
+                      className={`mt-1.5 lg:mt-0 w-1.5 h-1.5 rounded-full shrink-0 ${table.status === 'active'
+                        ? 'bg-tertiary status-led animate-pulse'
+                        : 'bg-outline-variant'
+                        }`}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-headline-md text-base text-on-surface truncate">{table.name}</h4>
+                      <p className="text-[10px] text-outline font-label-caps mt-0.5">NO LIMIT HOLD'EM</p>
+                      <div className="flex items-center gap-3 mt-2.5 lg:hidden">
+                        <span className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-md px-2 py-0.5 text-[10px] font-data-mono text-tertiary tracking-wide">
+                          {STAKE_CONFIG[table.stake_level]?.text || table.stake_level}
+                        </span>
+                        <span className="text-[10px] text-on-surface-variant font-data-mono">
+                          {table.current_players}/{table.max_players} seated
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="hidden lg:block lg:col-span-2 text-center font-data-mono text-on-surface">
-                  {STAKE_CONFIG[table.stake_level]?.text || table.stake_level}
-                </div>
-
-                <div className="hidden lg:flex lg:col-span-2 text-center flex-col items-center">
-                  <div className="flex gap-1">
-                    {Array.from({ length: table.max_players }).map((_, idx) => (
-                      <span
-                        key={idx}
-                        className={`w-1.5 h-1.5 rounded-full transition-colors ${idx < table.current_players ? 'bg-tertiary/70' : 'bg-outline-variant/30'
-                          }`}
-                      />
-                    ))}
+                  <div className="hidden lg:block lg:col-span-2 text-center font-data-mono text-on-surface relative z-10">
+                    {STAKE_CONFIG[table.stake_level]?.text || table.stake_level}
                   </div>
-                  <span className="text-[10px] text-outline mt-1 font-data-mono">
-                    {table.current_players}/{table.max_players}
-                  </span>
-                </div>
 
-                <div className="w-full lg:col-span-4 flex lg:justify-end gap-2 mt-1 lg:mt-0">
-                  {/* Updated Observe Button */}
-                  <Button
-                    variant="outline"
-                    onClick={() =>
-                      navigate({
-                        to: '/table/$tableId',
-                        params: { tableId: table.table_id },
-                        search: { observe: 'true' } // Pass observe flag
-                      })
-                    }
-                    className="flex-1 lg:flex-initial px-3 lg:px-4 py-2 border-outline-variant text-on-surface hover:border-tertiary hover:text-tertiary hover:bg-tertiary/10 font-label-caps text-[10px] uppercase tracking-wider rounded-lg"
-                  >
-                    Observe
-                  </Button>
-                  <Button
-                    onClick={() => setBuyInModal({ open: true, table })}
-                    className="flex-1 lg:flex-initial px-3 lg:px-4 py-2 bg-tertiary text-on-tertiary font-label-caps text-[10px] hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg shadow-emerald-500/10 rounded-lg"
-                  >
-                    <Wallet className="w-3.5 h-3.5 mr-1.5" /> Buy In
-                  </Button>
-                </div>
-              </motion.div>
-            ))}
+                  <div className="hidden lg:flex lg:col-span-2 text-center flex-col items-center relative z-10">
+                    <div className="flex gap-1">
+                      {Array.from({ length: table.max_players }).map((_, idx) => (
+                        <span
+                          key={idx}
+                          className={`w-1.5 h-1.5 rounded-full transition-colors ${idx < table.current_players ? 'bg-tertiary/70' : 'bg-outline-variant/30'
+                            }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-[10px] text-outline mt-1 font-data-mono">
+                      {table.current_players}/{table.max_players}
+                    </span>
+                  </div>
+
+                  <div className="w-full lg:col-span-4 flex lg:justify-end gap-2 mt-1 lg:mt-0 relative z-10">
+                    {/* Updated Observe Button */}
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        navigate({
+                          to: '/table/$tableId',
+                          params: { tableId: table.table_id },
+                          search: { observe: 'true' } // Pass observe flag
+                        })
+                      }
+                      className="flex-1 lg:flex-initial px-3 lg:px-4 py-2 border-outline-variant text-on-surface hover:border-tertiary hover:text-tertiary hover:bg-tertiary/10 font-label-caps text-[10px] uppercase tracking-wider rounded-lg"
+                    >
+                      Observe
+                    </Button>
+                    <Button
+                      onClick={() => setBuyInModal({ open: true, table })}
+                      className="flex-1 lg:flex-initial px-3 lg:px-4 py-2 bg-tertiary text-on-tertiary font-label-caps text-[10px] hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg shadow-emerald-500/10 rounded-lg"
+                    >
+                      <Wallet className="w-3.5 h-3.5 mr-1.5" /> Buy In
+                    </Button>
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
 
@@ -27538,4 +27561,3 @@ export async function unsubscribeFromPush(): Promise<boolean> {
     return false;
   }
 }
-
