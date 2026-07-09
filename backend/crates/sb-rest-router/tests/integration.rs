@@ -78,10 +78,21 @@ impl MissionApi for DummyMissionService {
 struct DummyViralService;
 #[async_trait::async_trait]
 impl ViralService for DummyViralService {
-    async fn generate_replay_card(&self, _hand_result: &sb_shared_types::game_types::HandResult, _winner_id: UserId, _table_id: TableId) -> Result<sb_contracts::service_api::ReplayCard, AppError> { unimplemented!() }
-    async fn record_referral(&self, _referrer_id: UserId, _referred_id: UserId) -> Result<(), AppError> { unimplemented!() }
-    async fn on_hand_completed(&self, _user_id: UserId) -> Result<(), AppError> { unimplemented!() }
-    async fn get_referral_stats(&self, _user_id: UserId) -> Result<sb_contracts::service_api::ReferralStats, AppError> { unimplemented!() }
+    async fn generate_replay_card(&self, _hand_result: &sb_shared_types::game_types::HandResult, _winner_id: UserId, _table_id: TableId) -> Result<sb_contracts::service_api::ReplayCard, AppError> {
+        unimplemented!()
+    }
+    async fn record_referral(&self, _referrer_id: UserId, _referred_id: UserId) -> Result<(), AppError> {
+        unimplemented!()
+    }
+    async fn on_hand_completed(&self, _user_id: UserId) -> Result<(), AppError> {
+        unimplemented!()
+    }
+    async fn get_referral_stats(&self, _user_id: UserId) -> Result<sb_contracts::service_api::ReferralStats, AppError> {
+        unimplemented!()
+    }
+    async fn get_referral_list(&self, _user_id: UserId) -> Result<Vec<sb_contracts::repo_api::ReferralRecord>, AppError> {
+        unimplemented!()
+    }
 }
 
 // Mock TableRepo

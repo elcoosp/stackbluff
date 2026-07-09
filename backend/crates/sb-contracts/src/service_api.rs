@@ -40,6 +40,8 @@ pub trait ViralService: Send + Sync {
     ) -> Result<(), AppError>;
     async fn on_hand_completed(&self, user_id: UserId) -> Result<(), AppError>;
     async fn get_referral_stats(&self, user_id: UserId) -> Result<ReferralStats, AppError>;
+
+    async fn get_referral_list(&self, user_id: UserId) -> Result<Vec<crate::repo_api::ReferralRecord>, AppError>;
 }
 
 #[async_trait]

@@ -315,7 +315,11 @@ pub trait ReferralRepository: Send + Sync {
         db: &impl sea_orm::ConnectionTrait,
         referrer_id: UserId,
     ) -> Result<i64, PersistenceError>;
-}
+
+    async fn list_referrals(
+        &self,
+        referrer_id: UserId,
+    ) -> Result<Vec<ReferralRecord>, PersistenceError>;}
 
 // ── Badge repository ──────────────────────────────────────────
 
@@ -394,3 +398,12 @@ pub struct UserDataExportDto {
     pub missions: serde_json::Value,
 }
 
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ReferralRecord {
+    pub referred_id: UserId,
+    pub display_name: Option<String>,
+    pub hand_count: i32,
+    pub bonus_awarded: bool,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}

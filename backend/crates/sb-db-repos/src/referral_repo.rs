@@ -3,6 +3,7 @@ use sb_contracts::repo_api::ReferralRepository;
 use sb_contracts::service_api::ReferralStats;
 use sb_db_entities::{prelude::*, referral};
 use sb_shared_types::{AppError, UserId};
+use sb_contracts::repo_api::PersistenceError;
 use sea_orm::prelude::Expr;
 use sea_orm::{
     ActiveModelTrait, Condition, DatabaseConnection, EntityTrait, ExprTrait, QueryFilter, Set,
@@ -151,4 +152,35 @@ impl ReferralRepository for ReferralRepositoryImpl {
 
         Ok(count as i64)
     }
+
+    async fn list_referrals(
+        &self,
+        referrer_id: sb_shared_types::ids::UserId,
+    ) -> Result<Vec<sb_contracts::repo_api::ReferralRecord>, sb_contracts::persistence_error::PersistenceError> {
+        use sb_db_entities::referral::{self, Entity as ReferralEntity};
+        use sea_orm::{ColumnTrait, QueryFilter, QueryOrder};
+
+        let models = ReferralEntity::find()
+            .filter(referral::Column::ReferrerId.eq(referrer_id.0))
+            .order_by_desc(referral::Column::CreatedAt)
+            .all(&self.db)
+            .await
+            .map_err(|e| PersistenceError::Database(e.to_string()))?;
+
+        let mut records = Vec::new();
+        for m in models {
+            // Get display name from user repo? For now, we leave it None.
+            // In production, we'd join with users table.
+            // But we can later enhance.
+            records.push(sb_contracts::repo_api::ReferralRecord {
+                referred_id: sb_shared_types::UserId::new(Uuid::parse_str(&m.referred_id).map_err(|_| PersistenceError::InvalidData("invalid referred_id UUID".into()))?),
+                display_name: None,
+                hand_count: m.hand_count,
+                bonus_awarded: m.bonus_awarded,
+                created_at: m.created_at.and_utc(),
+            });
+        }
+        Ok(records)
+    }
+
 }

@@ -57,8 +57,23 @@ async fn get_referral_list(
             .map_err(|_| bad_request("INVALID_USER", "Invalid user ID"))?,
     );
 
-    // Use viral_service to get referral list (we'll need to add this method to ViralService)
-    // For now, we'll return empty list as a placeholder.
-    // TODO: Add get_referral_list to ViralService trait and implement.
-    Ok(Json(vec![]))
+    let records = state
+        .viral_service
+        .get_referral_list(user_id)
+        .await
+        .map_err(|e| internal_error(e))?;
+
+    // Convert to the response type
+    let response: Vec<ReferralRecord> = records
+        .into_iter()
+        .map(|r| ReferralRecord {
+            referred_id: r.referred_id.to_string(),
+            display_name: r.display_name,
+            hand_count: r.hand_count,
+            bonus_awarded: r.bonus_awarded,
+            created_at: r.created_at,
+        })
+        .collect();
+
+    Ok(Json(response))
 }
