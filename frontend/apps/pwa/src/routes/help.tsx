@@ -359,6 +359,14 @@ function HelpPage() {
         <span className="text-white/20">|</span>
         <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors">Responsible Gaming</Link>
       </div>
+      {/* Legal Links */}
+      <div className="flex flex-wrap gap-4 justify-center text-sm text-on-surface-variant border-t border-white/10 pt-6">
+        <Link to="/legal/terms" className="hover:text-tertiary transition-colors">Terms of Service</Link>
+        <span className="text-white/20">|</span>
+        <Link to="/legal/privacy" className="hover:text-tertiary transition-colors">Privacy Policy</Link>
+        <span className="text-white/20">|</span>
+        <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors">Responsible Gaming</Link>
+      </div>
     </div>
   );
 }
