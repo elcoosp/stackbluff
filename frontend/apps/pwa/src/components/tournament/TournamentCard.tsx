@@ -121,7 +121,7 @@ export function TournamentCard({
         style={{ backgroundImage: `url(${bgImage})` }}
       ></div>
       <div
-        className="absolute inset-0 backdrop-blur-xl bg-surface-container-lowest/80 z-10 pointer-events-none"
+        className="absolute inset-0 backdrop-blur-md bg-gradient-to-t from-[#131315] via-[#131315]/85 to-[#131315]/60 z-10 pointer-events-none border border-[#c6c6cf]/10"
       ></div>
 
       <div className="relative z-20 w-full lg:col-span-5 flex items-start lg:items-center gap-3 lg:gap-4">
