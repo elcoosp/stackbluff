@@ -110,11 +110,13 @@ async fn request_context_middleware(mut req: Request, next: Next) -> Response {
         });
 
     if let Some(token) = token {
-        // Get auth service from extensions (should be added by Extension layer)
         if let Some(auth_service) = req.extensions().get::<SharedAuthService>() {
             match auth_service.verify_token(&token).await {
                 Ok(claims) => {
                     user_id = Some(claims.user_id);
+                    req.extensions_mut().insert(sb_auth::middleware::AuthUser {
+                        user_id: claims.user_id.0.to_string(),
+                    });
                     tracing::debug!(user_id = %user_id.unwrap(), "Token verified, user ID set in context");
                 }
                 Err(e) => {
@@ -497,14 +499,11 @@ async fn main() {
         .merge(season_card::router(db.clone()))
         .merge(club_tournament_router)
         .merge(mission_router)
-        .layer(Extension(auth_service.clone()))
-        .layer(middleware::from_fn(request_context_middleware))
         .layer(axum::extract::DefaultBodyLimit::max(1024 * 1024 * 10))
-        .layer(cors)
-        .layer(CookieManagerLayer::new())
-        .layer(Extension(auth_service.clone()))
         .layer(middleware::from_fn(request_context_middleware))
-        .layer(axum::extract::DefaultBodyLimit::max(1024 * 1024 * 10));
+        .layer(Extension(auth_service.clone()))
+        .layer(cors)
+        .layer(CookieManagerLayer::new());
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
         .await

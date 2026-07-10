@@ -1,21 +1,21 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Skeleton } from '@/components/ui/skeleton';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
   HelpCircle,
   MessageCircle,
   Send,
   ChevronDown,
-  ChevronUp,
   Bug,
   BookOpen,
   Users,
+  LifeBuoy,
+  Sparkles,
 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -68,9 +68,29 @@ const FAQ_ITEMS = [
   },
 ];
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.98 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] as const },
+  },
+};
+
 function HelpPage() {
-  const { isAuthenticated } = useAuthStore();
-  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0); // Default open the first one
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
@@ -110,191 +130,257 @@ function HelpPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-8">
+    <div className="relative max-w-4xl mx-auto p-4 md:p-8 space-y-8">
+      {/* Background Ambient Effects */}
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <Link to="/" className="p-2 rounded-lg hover:bg-white/5 transition-colors">
-          <ArrowLeft className="w-5 h-5 text-on-surface-variant" />
-        </Link>
-        <h1 className="font-display-lg text-3xl text-on-surface flex items-center gap-2">
-          <HelpCircle className="w-8 h-8 text-tertiary" />
-          Help & Support
-        </h1>
-      </div>
-
-      {/* Quick links */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-white/5 border-white/10 hover:border-tertiary/30 transition-colors">
-          <CardContent className="p-4 flex items-center gap-3">
-            <BookOpen className="w-5 h-5 text-tertiary" />
-            <div>
-              <p className="font-medium text-on-surface">Guide</p>
-              <p className="text-xs text-on-surface-variant">Learn the rules</p>
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="flex flex-col md:flex-row md:items-center justify-between gap-4"
+      >
+        <div className="flex items-center gap-4">
+          <Link
+            to="/"
+            className="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5 text-on-surface-variant" />
+          </Link>
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles className="w-4 h-4 text-cyan-400" />
+              <span className="text-xs font-data-mono uppercase tracking-widest text-cyan-400">
+                Assistance
+              </span>
             </div>
-            <Link to="/guide" className="ml-auto text-tertiary text-sm">
-              View →
-            </Link>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white/5 border-white/10 hover:border-tertiary/30 transition-colors">
-          <CardContent className="p-4 flex items-center gap-3">
-            <Users className="w-5 h-5 text-tertiary" />
-            <div>
-              <p className="font-medium text-on-surface">Community</p>
-              <p className="text-xs text-on-surface-variant">Join our Discord</p>
-            </div>
-            <a href="#" className="ml-auto text-tertiary text-sm">
-              Join →
-            </a>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white/5 border-white/10 hover:border-tertiary/30 transition-colors">
-          <CardContent className="p-4 flex items-center gap-3">
-            <Bug className="w-5 h-5 text-tertiary" />
-            <div>
-              <p className="font-medium text-on-surface">Report Bug</p>
-              <p className="text-xs text-on-surface-variant">Help us improve</p>
-            </div>
-            <button
-              className="ml-auto text-tertiary text-sm"
-              onClick={() =>
-                document.getElementById('contact-form')?.scrollIntoView({ behavior: 'smooth' })
-              }
-            >
-              Report →
-            </button>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* FAQ Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-on-surface flex items-center gap-2">
-            <HelpCircle className="w-5 h-5 text-tertiary" />
-            Frequently Asked Questions
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {FAQ_ITEMS.map((item, index) => {
-              const isOpen = openFaqIndex === index;
-              return (
-                <div key={index} className="border border-white/10 rounded-lg overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => toggleFaq(index)}
-                    className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-white/5 transition-colors"
-                  >
-                    <span className="text-sm font-medium text-on-surface">{item.question}</span>
-                    {isOpen ? (
-                      <ChevronUp className="w-4 h-4 text-on-surface-variant" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4 text-on-surface-variant" />
-                    )}
-                  </button>
-                  {isOpen && (
-                    <div className="px-4 pb-3 text-sm text-on-surface-variant border-t border-white/5 pt-2">
-                      {item.answer}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface">
+              Help & Support
+            </h1>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </motion.div>
 
-      {/* Contact Form */}
-      <Card id="contact-form">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-on-surface flex items-center gap-2">
-            <MessageCircle className="w-5 h-5 text-tertiary" />
-            Contact Support
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="contact-name" className="text-on-surface-variant text-xs">
-                Your Name
-              </Label>
-              <Input
-                id="contact-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="John Doe"
-                className="bg-surface-container-high border-outline-variant/50 text-on-surface"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="contact-email" className="text-on-surface-variant text-xs">
-                Email Address
-              </Label>
-              <Input
-                id="contact-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="john@example.com"
-                className="bg-surface-container-high border-outline-variant/50 text-on-surface"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="contact-message" className="text-on-surface-variant text-xs">
-                Message
-              </Label>
-              <Textarea
-                id="contact-message"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Describe your issue or question..."
-                className="bg-surface-container-high border-outline-variant/50 text-on-surface min-h-[120px]"
-                required
-              />
-            </div>
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="bg-tertiary text-on-tertiary hover:bg-tertiary/80 w-full"
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="space-y-8"
+      >
+        {/* Quick Links */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <motion.div variants={itemVariants}>
+            <Link to="/guide" className="block h-full">
+              <Card className="p-5 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl hover:bg-white/[0.07] hover:border-white/20 transition-all duration-300 group h-full">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 transition-transform duration-300 group-hover:scale-110">
+                    <BookOpen className="w-6 h-6" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-headline-md text-base text-on-surface">Guide</p>
+                    <p className="text-xs text-on-surface-variant">Learn the rules</p>
+                  </div>
+                  <ChevronDown className="w-5 h-5 text-on-surface-variant -rotate-90 group-hover:text-on-surface transition-colors" />
+                </div>
+              </Card>
+            </Link>
+          </motion.div>
+
+          <motion.div variants={itemVariants}>
+            <a href="#" className="block h-full">
+              <Card className="p-5 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl hover:bg-white/[0.07] hover:border-white/20 transition-all duration-300 group h-full">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 transition-transform duration-300 group-hover:scale-110">
+                    <Users className="w-6 h-6" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-headline-md text-base text-on-surface">Community</p>
+                    <p className="text-xs text-on-surface-variant">Join our Discord</p>
+                  </div>
+                  <ChevronDown className="w-5 h-5 text-on-surface-variant -rotate-90 group-hover:text-on-surface transition-colors" />
+                </div>
+              </Card>
+            </a>
+          </motion.div>
+
+          <motion.div variants={itemVariants}>
+            <button
+              onClick={() => document.getElementById('contact-form')?.scrollIntoView({ behavior: 'smooth' })}
+              className="w-full h-full text-left"
             >
-              {isSubmitting ? (
-                <>
-                  <span className="animate-spin mr-2">◌</span>
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4 mr-2" />
-                  Send Message
-                </>
-              )}
-            </Button>
-            <p className="text-xs text-on-surface-variant/50 text-center">
-              We typically respond within 24 hours.
-            </p>
-          </form>
-        </CardContent>
-      </Card>
+              <Card className="p-5 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl hover:bg-white/[0.07] hover:border-white/20 transition-all duration-300 group h-full">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 transition-transform duration-300 group-hover:scale-110">
+                    <Bug className="w-6 h-6" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-headline-md text-base text-on-surface">Report Bug</p>
+                    <p className="text-xs text-on-surface-variant">Help us improve</p>
+                  </div>
+                  <ChevronDown className="w-5 h-5 text-on-surface-variant -rotate-90 group-hover:text-on-surface transition-colors" />
+                </div>
+              </Card>
+            </button>
+          </motion.div>
+        </div>
 
-      {/* Legal Links - only once at bottom */}
-      <div className="flex flex-wrap gap-4 justify-center text-sm text-on-surface-variant border-t border-white/10 pt-6">
-        <Link to="/legal/terms" className="hover:text-tertiary transition-colors">
-          Terms of Service
-        </Link>
-        <span className="text-white/20">|</span>
-        <Link to="/legal/privacy" className="hover:text-tertiary transition-colors">
-          Privacy Policy
-        </Link>
-        <span className="text-white/20">|</span>
-        <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors">
-          Responsible Gaming
-        </Link>
-      </div>
+        {/* FAQ Section */}
+        <motion.div variants={itemVariants}>
+          <Card className="bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl shadow-xl overflow-hidden">
+            <div className="p-6 pb-4 border-b border-white/5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20">
+                  <HelpCircle className="w-5 h-5 text-cyan-400" />
+                </div>
+                <h3 className="font-headline-md text-base text-on-surface">Frequently Asked Questions</h3>
+              </div>
+            </div>
+            <div className="p-6 pt-4 space-y-3">
+              {FAQ_ITEMS.map((item, index) => {
+                const isOpen = openFaqIndex === index;
+                return (
+                  <div key={index} className={cn(
+                    "border rounded-xl overflow-hidden transition-colors duration-300",
+                    isOpen ? "bg-white/[0.04] border-white/15" : "bg-white/[0.02] border-white/5 hover:bg-white/[0.04]"
+                  )}>
+                    <button
+                      type="button"
+                      onClick={() => toggleFaq(index)}
+                      className="w-full px-4 py-4 flex items-center justify-between text-left"
+                    >
+                      <span className="text-sm font-medium text-on-surface pr-4">{item.question}</span>
+                      <motion.div
+                        animate={{ rotate: isOpen ? 180 : 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="flex-shrink-0"
+                      >
+                        <ChevronDown className={cn("w-4 h-4", isOpen ? "text-tertiary" : "text-on-surface-variant")} />
+                      </motion.div>
+                    </button>
+                    <AnimatePresence initial={false}>
+                      {isOpen && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.3, ease: "easeInOut" }}
+                          className="overflow-hidden"
+                        >
+                          <div className="px-4 pb-4 text-sm text-on-surface-variant">
+                            {item.answer}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        </motion.div>
+
+        {/* Contact Form */}
+        <motion.div variants={itemVariants} id="contact-form">
+          <Card className="bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl shadow-xl overflow-hidden">
+            <div className="p-6 pb-4 border-b border-white/5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-tertiary/10 flex items-center justify-center border border-tertiary/20">
+                  <MessageCircle className="w-5 h-5 text-tertiary" />
+                </div>
+                <h3 className="font-headline-md text-base text-on-surface">Contact Support</h3>
+              </div>
+            </div>
+            <div className="p-6 pt-4">
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="space-y-2">
+                    <Label htmlFor="contact-name" className="text-on-surface-variant text-xs uppercase tracking-wider">
+                      Your Name
+                    </Label>
+                    <Input
+                      id="contact-name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="John Doe"
+                      className="bg-black/20 border-white/10 rounded-xl text-on-surface focus-visible:ring-tertiary/50 focus-visible:border-tertiary/50"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="contact-email" className="text-on-surface-variant text-xs uppercase tracking-wider">
+                      Email Address
+                    </Label>
+                    <Input
+                      id="contact-email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="john@example.com"
+                      className="bg-black/20 border-white/10 rounded-xl text-on-surface focus-visible:ring-tertiary/50 focus-visible:border-tertiary/50"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contact-message" className="text-on-surface-variant text-xs uppercase tracking-wider">
+                    Message
+                  </Label>
+                  <Textarea
+                    id="contact-message"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    placeholder="Describe your issue or question..."
+                    className="bg-black/20 border-white/10 rounded-xl text-on-surface min-h-[140px] focus-visible:ring-tertiary/50 focus-visible:border-tertiary/50 resize-none"
+                    required
+                  />
+                </div>
+                <div className="flex flex-col items-center gap-3 pt-2">
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="bg-gradient-to-r from-tertiary to-emerald-400 text-on-tertiary hover:shadow-lg hover:shadow-tertiary/30 transition-all w-full md:w-auto px-12 py-3 rounded-xl"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <span className="animate-spin mr-2">◌</span>
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 mr-2" />
+                        Send Message
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-xs text-on-surface-variant/60 font-mono">
+                    We typically respond within 24 hours.
+                  </p>
+                </div>
+              </form>
+            </div>
+          </Card>
+        </motion.div>
+
+        {/* Legal Links */}
+        <motion.div
+          variants={itemVariants}
+          className="flex flex-wrap gap-4 justify-center text-sm text-on-surface-variant border-t border-white/10 pt-6"
+        >
+          <Link to="/legal/terms" className="hover:text-tertiary transition-colors">
+            Terms of Service
+          </Link>
+          <span className="text-white/20">|</span>
+          <Link to="/legal/privacy" className="hover:text-tertiary transition-colors">
+            Privacy Policy
+          </Link>
+          <span className="text-white/20">|</span>
+          <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors">
+            Responsible Gaming
+          </Link>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }

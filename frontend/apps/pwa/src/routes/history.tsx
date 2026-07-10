@@ -103,7 +103,7 @@ function HistoryPage() {
           </h1>
         </div>
         <Card className="p-12 text-center">
-          <Table className="w-12 h-12 text-on-surface-variant/30 mx-auto mb-4" />
+          <Table className="w-12 h-12 text-tertiary mx-auto mb-4" />
           <p className="text-on-surface-variant">No hands played yet.</p>
           <p className="text-on-surface-variant/60 text-sm mt-2">Start playing to see your hand history.</p>
         </Card>

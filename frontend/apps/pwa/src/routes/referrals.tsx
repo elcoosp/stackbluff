@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate, Link } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { apiClient } from '@stackbluff/shared/api/client';
 import { toast } from 'sonner';
@@ -9,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-
 import { ErrorState } from '@/components/ui/ErrorState';
 import {
   Users,
@@ -23,7 +23,10 @@ import {
   Link as LinkIcon,
   X,
   Send,
-  MessageCircle
+  MessageCircle,
+  Sparkles,
+  Coins,
+  Clock,
 } from 'lucide-react';
 
 export const Route = createFileRoute('/referrals')({
@@ -44,12 +47,32 @@ interface ReferralRecord {
   created_at: string;
 }
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.98 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] as const },
+  },
+};
+
 function ReferralsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user, isAuthenticated } = useAuthStore();
 
-  // Fetch referral stats
   const { data: stats, isLoading: statsLoading, error: statsError } = useQuery<ReferralStats>({
     queryKey: ['referrals', 'stats'],
     queryFn: () => apiClient<ReferralStats>('/referrals/stats'),
@@ -57,7 +80,6 @@ function ReferralsPage() {
     staleTime: 60_000,
   });
 
-  // Fetch referred users
   const { data: referrals, isLoading: referralsLoading, error: referralsError } = useQuery<ReferralRecord[]>({
     queryKey: ['referrals', 'list'],
     queryFn: () => apiClient<ReferralRecord[]>('/referrals/list'),
@@ -65,7 +87,6 @@ function ReferralsPage() {
     staleTime: 60_000,
   });
 
-  // Generate referral link
   const referralLink = user?.id ? `${window.location.origin}/register?ref=${user.id}` : '';
 
   const handleCopyLink = () => {
@@ -76,7 +97,6 @@ function ReferralsPage() {
         toast.error('Failed to copy link');
       });
     } else {
-      // Fallback
       const textarea = document.createElement('textarea');
       textarea.value = referralLink;
       document.body.appendChild(textarea);
@@ -111,11 +131,18 @@ function ReferralsPage() {
   if (!isAuthenticated) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-6">
-        <Card className="max-w-md w-full p-6 text-center">
-          <h2 className="text-xl font-semibold text-on-surface mb-2">Sign In Required</h2>
-          <p className="text-on-surface-variant text-sm">Please sign in to view your referral dashboard.</p>
-          <Link to="/login" className="mt-4 inline-block">
-            <Button>Sign In</Button>
+        <Card className="max-w-md w-full p-8 text-center bg-white/5 border-white/10 backdrop-blur-xl">
+          <div className="w-16 h-16 mx-auto rounded-full bg-purple-500/10 flex items-center justify-center mb-4">
+            <Users className="w-8 h-8 text-purple-400" />
+          </div>
+          <h2 className="font-display-lg text-2xl text-on-surface mb-2">Sign In Required</h2>
+          <p className="text-on-surface-variant text-sm mb-6">
+            Please sign in to view your referral dashboard and earn rewards.
+          </p>
+          <Link to="/login" className="inline-block">
+            <Button className="bg-tertiary text-on-tertiary hover:bg-tertiary-fixed px-8 py-2 rounded-xl font-medium">
+              Sign In
+            </Button>
           </Link>
         </Card>
       </div>
@@ -137,174 +164,271 @@ function ReferralsPage() {
   const progressToFounding = Math.min((bonus_earned / 10) * 100, 100);
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="font-display-lg text-3xl text-on-surface flex items-center gap-2">
-          <Users className="w-8 h-8 text-tertiary" />
+    <div className="relative max-w-4xl mx-auto p-4 md:p-8 space-y-8">
+      {/* Background Ambient Effects */}
+      <div className="absolute top-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-yellow-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <div className="flex items-center gap-2 mb-1">
+          <Sparkles className="w-4 h-4 text-purple-400" />
+          <span className="text-xs font-data-mono uppercase tracking-widest text-purple-400">
+            Viral Rewards
+          </span>
+        </div>
+        <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface flex items-center gap-3">
           Referrals
         </h1>
-        <p className="text-on-surface-variant text-sm mt-1">
-          Invite friends to StackBluff and earn rewards.
+        <p className="text-on-surface-variant text-sm mt-1 max-w-md">
+          Invite friends to StackBluff. Earn chips and unlock exclusive badges.
         </p>
-      </div>
+      </motion.div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-white/5 border-white/10">
-          <CardContent className="p-4">
-            <div className="text-on-surface-variant text-xs">Total Referrals</div>
-            <div className="text-2xl font-bold text-on-surface mt-1">{total_referred}</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-white/5 border-white/10">
-          <CardContent className="p-4">
-            <div className="text-on-surface-variant text-xs">Bonus Earned</div>
-            <div className="text-2xl font-bold text-tertiary mt-1">${bonus_earned * 100}</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-white/5 border-white/10">
-          <CardContent className="p-4">
-            <div className="text-on-surface-variant text-xs">Pending Bonus</div>
-            <div className="text-2xl font-bold text-yellow-400 mt-1">${pending_bonus * 100}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Founding Member Progress */}
-      <Card className="p-4 bg-white/5 border-white/10">
-        <div className="flex items-start gap-4">
-          <Crown className={cn(
-            'w-8 h-8 flex-shrink-0',
-            hasFoundingMember ? 'text-yellow-400' : 'text-on-surface-variant/30'
-          )} />
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-on-surface">Founding Member</h3>
-              {hasFoundingMember ? (
-                <Badge variant="default" className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
-                  <CheckCircle className="w-3 h-3 mr-1" />
-                  Unlocked!
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="border-white/20 text-on-surface-variant">
-                  {10 - bonus_earned} referrals needed
-                </Badge>
-              )}
-            </div>
-            <p className="text-sm text-on-surface-variant mt-1">
-              Refer 10 friends who play at least 5 hands to earn the Founding Member badge.
-            </p>
-            <div className="mt-2">
-              <Progress value={progressToFounding} className="h-2" indicatorClassName="bg-yellow-400" />
-              <div className="flex justify-between text-xs text-on-surface-variant mt-1">
-                <span>{bonus_earned} / 10</span>
-                <span>{Math.round(progressToFounding)}%</span>
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="space-y-6"
+      >
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <motion.div variants={itemVariants}>
+            <Card className="p-6 bg-white/5 backdrop-blur-xl border-white/10 shadow-xl rounded-2xl h-full">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">Total Referrals</span>
+                <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+                  <Users className="w-4 h-4 text-blue-400" />
+                </div>
               </div>
-            </div>
-          </div>
+              <div className="text-3xl font-bold font-data-mono text-on-surface">{total_referred}</div>
+              <p className="text-xs text-on-surface-variant mt-1 opacity-80">Friends invited</p>
+            </Card>
+          </motion.div>
+
+          <motion.div variants={itemVariants}>
+            <Card className="p-6 bg-white/5 backdrop-blur-xl border-white/10 shadow-xl rounded-2xl h-full">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">Bonus Earned</span>
+                <div className="w-8 h-8 rounded-full bg-tertiary/10 flex items-center justify-center">
+                  <Coins className="w-4 h-4 text-tertiary" />
+                </div>
+              </div>
+              <div className="text-3xl font-bold font-data-mono text-tertiary">{bonus_earned * 100}</div>
+              <p className="text-xs text-on-surface-variant mt-1 opacity-80">Chips distributed</p>
+            </Card>
+          </motion.div>
+
+          <motion.div variants={itemVariants}>
+            <Card className="p-6 bg-white/5 backdrop-blur-xl border-white/10 shadow-xl rounded-2xl h-full">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">Pending Bonus</span>
+                <div className="w-8 h-8 rounded-full bg-yellow-500/10 flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-yellow-400" />
+                </div>
+              </div>
+              <div className="text-3xl font-bold font-data-mono text-yellow-400">{pending_bonus * 100}</div>
+              <p className="text-xs text-on-surface-variant mt-1 opacity-80">Awaiting hands played</p>
+            </Card>
+          </motion.div>
         </div>
-      </Card>
 
-      {/* Referral Link */}
-      <Card className="p-4 bg-white/5 border-white/10">
-        <div className="flex flex-col sm:flex-row items-stretch gap-3">
-          <div className="flex-1 min-w-0">
-            <p className="text-sm text-on-surface-variant">Your referral link</p>
-            <div className="flex items-center gap-2 mt-1 bg-black/30 rounded-lg px-3 py-2">
-              <LinkIcon className="w-4 h-4 text-on-surface-variant/50 flex-shrink-0" />
-              <span className="text-sm text-on-surface truncate">{referralLink}</span>
-            </div>
-          </div>          <div className="flex gap-2 flex-shrink-0 self-end">
-
-                      <Button onClick={handleCopyLink} variant="outline" size="sm" className="border-white/10" aria-label="Copy referral link">
-
-                        <Copy className="w-4 h-4 mr-1" />
-
-                        Copy
-
-                      </Button>
-
-                      <Button onClick={() => handleShare('twitter')} variant="outline" size="sm" className="border-white/10" aria-label="Share on X (Twitter)">
-
-                        <X className="w-4 h-4" />
-
-                      </Button>
-
-                      <Button onClick={() => handleShare('telegram')} variant="outline" size="sm" className="border-white/10" aria-label="Share on Telegram">
-
-                        <Send className="w-4 h-4" />
-
-                      </Button>
-
-                      <Button onClick={() => handleShare('whatsapp')} variant="outline" size="sm" className="border-white/10" aria-label="Share on WhatsApp">
-
-                        <MessageCircle className="w-4 h-4" />
-
-                      </Button>
-
-                    </div>
-        </div>
-      </Card>
-
-      {/* Referred Friends List */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-semibold text-on-surface flex items-center gap-2">
-            <Users className="w-4 h-4 text-tertiary" />
-            Referred Friends
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {referrals && referrals.length > 0 ? (
-            <div className="space-y-2">
-              {referrals.map((ref) => (
-                <div key={ref.referred_id} className="flex items-center justify-between px-3 py-2 bg-white/5 rounded-lg">
-                  <div>
-                    <span className="text-sm text-on-surface">
-                      {ref.display_name || `Player ${ref.referred_id.slice(0, 8)}`}
-                    </span>
-                    <span className="text-xs text-on-surface-variant ml-2">
-                      {ref.hand_count} hands
-                    </span>
-                  </div>
-                  {ref.bonus_awarded ? (
-                    <span className="text-xs text-tertiary font-medium">✓ Bonus awarded</span>
-                  ) : ref.hand_count >= 5 ? (
-                    <span className="text-xs text-yellow-400">Pending bonus</span>
+        {/* Founding Member Progress */}
+        <motion.div variants={itemVariants}>
+          <Card className={cn(
+            "p-6 backdrop-blur-xl border shadow-xl rounded-2xl transition-colors duration-300",
+            hasFoundingMember
+              ? "bg-gradient-to-br from-yellow-500/10 to-orange-500/5 border-yellow-500/30"
+              : "bg-white/5 border-white/10"
+          )}>
+            <div className="flex items-start gap-4">
+              <div className={cn(
+                "flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center border transition-all duration-300",
+                hasFoundingMember
+                  ? "bg-yellow-500/10 border-yellow-500/30"
+                  : "bg-white/5 border-white/10"
+              )}>
+                <Crown className={cn(
+                  'w-6 h-6 transition-colors duration-300',
+                  hasFoundingMember ? 'text-yellow-400' : 'text-on-surface-variant/40'
+                )} />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-headline-md text-base text-on-surface leading-tight">Founding Member Badge</h3>
+                  {hasFoundingMember ? (
+                    <Badge variant="outline" className="text-[10px] border-yellow-500/30 text-yellow-400 bg-yellow-500/10 font-mono">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Unlocked
+                    </Badge>
                   ) : (
-                    <span className="text-xs text-on-surface-variant/50">
-                      {5 - ref.hand_count} more hands
-                    </span>
+                    <Badge variant="outline" className="text-[10px] border-white/10 text-on-surface-variant bg-white/5 font-mono">
+                      {10 - bonus_earned} referrals needed
+                    </Badge>
                   )}
                 </div>
-              ))}
+                <p className="text-sm text-on-surface-variant mt-1.5 mb-3">
+                  Refer 10 friends who play at least 5 hands to permanently unlock this exclusive badge.
+                </p>
+                <div className="relative w-full h-2 bg-black/20 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progressToFounding}%` }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full shadow-lg"
+                  />
+                </div>
+                <div className="flex justify-between text-xs text-on-surface-variant mt-2 font-mono">
+                  <span>{bonus_earned} / 10</span>
+                  <span>{Math.round(progressToFounding)}%</span>
+                </div>
+              </div>
             </div>
-          ) : (
-            <p className="text-sm text-on-surface-variant text-center py-4">
-              No referrals yet. Share your link and invite friends!
-            </p>
-          )}
-        </CardContent>
-      </Card>
+          </Card>
+        </motion.div>
+
+        {/* Referral Link & Share */}
+        <motion.div variants={itemVariants}>
+          <Card className="p-6 bg-white/5 backdrop-blur-xl border-white/10 shadow-xl rounded-2xl">
+            <div className="flex flex-col md:flex-row md:items-center gap-4">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-on-surface-variant uppercase tracking-wider mb-2">Your Referral Link</p>
+                <div className="flex items-center gap-2 bg-black/30 border border-white/5 rounded-xl px-4 py-3">
+                  <LinkIcon className="w-4 h-4 text-on-surface-variant/50 flex-shrink-0" />
+                  <span className="text-sm text-on-surface truncate font-data-mono">{referralLink}</span>
+                </div>
+              </div>
+              <div className="flex gap-2 flex-shrink-0 md:self-end">
+                <Button
+                  onClick={handleCopyLink}
+                  className="bg-tertiary text-on-tertiary hover:bg-tertiary-fixed px-4 py-2.5 rounded-xl h-auto"
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copy
+                </Button>
+                <Button
+                  onClick={() => handleShare('twitter')}
+                  variant="outline"
+                  size="icon"
+                  className="bg-white/5 border-white/10 hover:bg-white/10 rounded-xl h-auto w-auto p-2.5"
+                  title="Share on X"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+                <Button
+                  onClick={() => handleShare('telegram')}
+                  variant="outline"
+                  size="icon"
+                  className="bg-white/5 border-white/10 hover:bg-white/10 rounded-xl h-auto w-auto p-2.5"
+                  title="Share on Telegram"
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+                <Button
+                  onClick={() => handleShare('whatsapp')}
+                  variant="outline"
+                  size="icon"
+                  className="bg-white/5 border-white/10 hover:bg-white/10 rounded-xl h-auto w-auto p-2.5"
+                  title="Share on WhatsApp"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+
+        {/* Referred Friends List */}
+        <motion.div variants={itemVariants}>
+          <Card className="bg-white/5 backdrop-blur-xl border-white/10 shadow-xl rounded-2xl overflow-hidden">
+            <div className="p-6 pb-4 border-b border-white/5">
+              <h3 className="font-headline-md text-base text-on-surface flex items-center gap-2">
+                <Users className="w-5 h-5 text-purple-400" />
+                Referred Friends
+              </h3>
+              <p className="text-xs text-on-surface-variant mt-1">Track progress of players you've invited</p>
+            </div>
+            <div className="p-6 pt-4">
+              {referrals && referrals.length > 0 ? (
+                <div className="space-y-3">
+                  {referrals.map((ref) => (
+                    <motion.div
+                      key={ref.referred_id}
+                      layout
+                      className="flex items-center justify-between p-3 bg-white/[0.03] border border-white/5 rounded-xl hover:bg-white/[0.06] transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center text-xs font-bold text-purple-300 flex-shrink-0">
+                          {(ref.display_name || 'P').charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-sm text-on-surface font-medium truncate block">
+                            {ref.display_name || `Player ${ref.referred_id.slice(0, 8)}`}
+                          </span>
+                          <span className="text-xs text-on-surface-variant font-mono">
+                            {ref.hand_count} hands played
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex-shrink-0 ml-2">
+                        {ref.bonus_awarded ? (
+                          <span className="text-xs text-tertiary font-medium flex items-center gap-1 bg-tertiary/10 px-2 py-1 rounded-md">
+                            <CheckCircle className="w-3 h-3" /> Awarded
+                          </span>
+                        ) : ref.hand_count >= 5 ? (
+                          <span className="text-xs text-yellow-400 font-medium flex items-center gap-1 bg-yellow-500/10 px-2 py-1 rounded-md">
+                            <Clock className="w-3 h-3" /> Pending
+                          </span>
+                        ) : (
+                          <span className="text-xs text-on-surface-variant font-medium flex items-center gap-1 bg-white/5 px-2 py-1 rounded-md">
+                            <TrendingUp className="w-3 h-3" /> {5 - ref.hand_count} left
+                          </span>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="w-12 h-12 mx-auto rounded-full bg-white/5 flex items-center justify-center mb-3">
+                    <Users className="w-6 h-6 text-on-surface-variant/50" />
+                  </div>
+                  <p className="text-sm text-on-surface-variant font-medium">No referrals yet</p>
+                  <p className="text-xs text-on-surface-variant/70 mt-1">Share your link above to start earning chips!</p>
+                </div>
+              )}
+            </div>
+          </Card>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }
 
 function ReferralsSkeleton() {
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6 animate-pulse">
-      <div>
+    <div className="relative max-w-4xl mx-auto p-4 md:p-8 space-y-8 animate-pulse">
+      <div className="absolute top-0 right-1/4 w-96 h-96 bg-purple-500/5 rounded-full blur-[120px] pointer-events-none -z-10" />
+
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-32 bg-white/5" />
         <Skeleton className="h-8 w-48 bg-white/5" />
-        <Skeleton className="h-4 w-64 bg-white/5 mt-1" />
+        <Skeleton className="h-4 w-64 bg-white/5" />
       </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-20 bg-white/5 rounded-xl" />
+          <Skeleton key={i} className="h-32 bg-white/5 rounded-2xl" />
         ))}
       </div>
-      <Skeleton className="h-32 bg-white/5 rounded-xl" />
-      <Skeleton className="h-24 bg-white/5 rounded-xl" />
-      <Skeleton className="h-48 bg-white/5 rounded-xl" />
+
+      <Skeleton className="h-36 bg-white/5 rounded-2xl" />
+      <Skeleton className="h-24 bg-white/5 rounded-2xl" />
+      <Skeleton className="h-64 bg-white/5 rounded-2xl" />
     </div>
   );
 }
