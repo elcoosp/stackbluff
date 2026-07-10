@@ -1,8 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { Coins, Crown, Sparkles } from 'lucide-react';
+import { Coins, Crown, Sparkles, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import { getProductImageUrl } from '@/lib/productImages';
 
@@ -35,9 +34,9 @@ export function ProductCard({ product, onPurchase, className }: ProductCardProps
   const isSeasonPass = product.type === 'season_pass';
   const isClubPro = product.type === 'club_pro';
 
-  const icon = isChips ? <Coins className="w-5 h-5" /> :
-                isSeasonPass ? <Sparkles className="w-5 h-5" /> :
-                <Crown className="w-5 h-5" />;
+  const icon = isChips ? <Coins className="w-5 h-5 text-tertiary" /> :
+                isSeasonPass ? <Sparkles className="w-5 h-5 text-tertiary" /> :
+                <Crown className="w-5 h-5 text-tertiary" />;
 
   const badgeText = isChips ? 'Chips' :
                     isSeasonPass ? 'Season Pass' :
@@ -46,88 +45,90 @@ export function ProductCard({ product, onPurchase, className }: ProductCardProps
   const imageUrl = getProductImageUrl(product.id, product.name);
 
   return (
-    <Card
+    <div
       className={cn(
-        'relative overflow-hidden rounded-xl border border-white/10 transition-all duration-300 hover:scale-[1.02] hover:border-tertiary/40',
+        'relative overflow-hidden rounded-xl border border-white/10 transition-all duration-300 group hover:scale-[1.02] hover:border-tertiary/40 hover:shadow-xl hover:shadow-emerald-500/10',
         className
       )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Background Image with blur/unblur on hover */}
+      {/* Background Image with scale on hover */}
       <div
-        className="absolute inset-0 bg-cover bg-center transition-all duration-700"
+        className="absolute inset-0 bg-cover bg-center transition-all duration-700 ease-in-out"
         style={{
           backgroundImage: `url(${imageUrl})`,
-          transform: isHovered ? 'scale(1.08)' : 'scale(1)',
-          filter: isHovered ? 'blur(0px)' : 'blur(6px)',
+          transform: isHovered ? 'scale(1.05)' : 'scale(1)',
         }}
       />
 
-      {/* Dark overlay */}
+      {/* Luxury Dark Glass Overlay */}
       <div
         className="absolute inset-0 transition-all duration-500"
         style={{
           background: isHovered
-            ? 'linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.1) 100%)'
-            : 'linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 100%)',
+            ? 'linear-gradient(to bottom, rgba(19, 19, 21, 0.4) 0%, rgba(19, 19, 21, 0.8) 100%)'
+            : 'linear-gradient(to bottom, rgba(19, 19, 21, 0.7) 0%, rgba(19, 19, 21, 0.5) 100%)',
         }}
       />
 
-      {/* Content container: full height flex column */}
-      <div className="relative z-10 flex flex-col h-full min-h-[320px] p-6">
-        {/* Top section: centered vertically */}
-        <div className="flex-1 flex flex-col items-center justify-center gap-2">
-          <div className="p-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 inline-flex">
+      {/* Razor Highlight top border */}
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-tertiary/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+      {/* Content container */}
+      <div className="relative z-10 flex flex-col h-full min-h-[340px] p-6">
+        {/* Top section */}
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center">
+          <div className="p-3 rounded-full bg-black/40 backdrop-blur-md border border-white/10 inline-flex shadow-lg">
             {icon}
           </div>
-          <h3 className="font-semibold text-on-surface text-xl leading-tight drop-shadow-lg text-center">
+          <h3 className="font-headline-md text-2xl text-on-surface leading-tight drop-shadow-lg">
             {product.name}
           </h3>
-          <Badge variant="outline" className="border-tertiary/30 text-tertiary text-xs backdrop-blur-sm bg-black/20">
+          <Badge variant="outline" className="border-tertiary/40 text-tertiary text-[10px] font-label-caps uppercase tracking-widest backdrop-blur-md bg-black/30">
             {badgeText}
           </Badge>
         </div>
 
-        {/* Bottom panel: price, description, button - rounded top corners, anchored at bottom */}
+        {/* Bottom panel */}
         <div
           className={cn(
-            'mt-auto rounded-xl p-4 transition-all duration-500',
+            'mt-auto rounded-xl p-4 transition-all duration-500 border',
             isHovered
-              ? 'bg-black/40 backdrop-blur-sm border-t border-white/10'
-              : 'bg-black/60 backdrop-blur-md border-t border-white/5'
+              ? 'bg-black/60 backdrop-blur-xl border-tertiary/20 shadow-lg'
+              : 'bg-black/40 backdrop-blur-md border-white/5'
           )}
         >
-          <div className="flex flex-col gap-2 items-center">
-            <div className="flex items-center gap-4 text-sm">
+          <div className="flex flex-col gap-3 items-center">
+            <div className="flex items-center gap-4 font-data-mono">
               {product.priceEur > 0 && (
-                <span className="text-tertiary font-mono text-lg drop-shadow-lg">
+                <span className="text-tertiary text-xl drop-shadow-lg font-bold">
                   {formatPrice(product.priceEur)}
                 </span>
               )}
               {product.priceStars > 0 && (
-                <span className="text-yellow-400 font-mono text-sm drop-shadow-lg">
+                <span className="text-yellow-400 text-sm drop-shadow-lg font-bold">
                   {formatStars(product.priceStars)}
                 </span>
               )}
             </div>
-            <p className="text-sm text-on-surface-variant/90 drop-shadow-md line-clamp-2 text-center">
+            <p className="text-xs text-on-surface-variant/80 drop-shadow-md line-clamp-2 text-center font-body-md">
               {product.description}
             </p>
             <Button
               onClick={() => onPurchase(product)}
               className={cn(
-                'w-full transition-all duration-300 mt-1',
+                'w-full transition-all duration-300 mt-1 font-label-caps text-label-caps uppercase tracking-wider',
                 isHovered
-                  ? 'bg-tertiary text-on-tertiary hover:bg-tertiary/80 shadow-lg shadow-tertiary/30'
-                  : 'bg-white/10 text-on-surface backdrop-blur-sm border border-white/20 hover:bg-tertiary/80'
+                  ? 'bg-tertiary text-on-tertiary hover:bg-tertiary-fixed shadow-lg shadow-emerald-500/30'
+                  : 'bg-white/10 text-on-surface backdrop-blur-sm border border-white/20 hover:bg-tertiary hover:text-on-tertiary'
               )}
             >
-              Buy Now
+              <ShieldCheck className="w-3 h-3 mr-2" /> Buy Now
             </Button>
           </div>
         </div>
       </div>
-    </Card>
+    </div>
   );
 }
