@@ -321,7 +321,8 @@ export const PlayerSpot = memo(({
   const isActive = is_active && !is_folded && !is_all_in;
   const isFolded = is_folded;
 
-  const showCardsFaceUp = isHero || (seat.is_showdown_revealed && (hole_cards?.length ?? 0) > 0);
+  // FIX: Ensure showCardsFaceUp works when parent correctly passes hole_cards to hero
+  const showCardsFaceUp = isHero || (is_showdown_revealed && (hole_cards?.length ?? 0) > 0);
   const isLargeCards = isHero || showCardsFaceUp;
 
   const isLosingPlayer = is_showdown_revealed && !is_winner;
@@ -335,8 +336,6 @@ export const PlayerSpot = memo(({
 
   const badgePlacement = getBadgePlacement();
 
-  // --- Sizes adjusted for readability ---
-  // ONLY reduced mobile opponent width. Everything else remains untouched.
   const oppHubWidth = isMobile ? 'w-[26vw] max-w-[100px]' : 'w-[120px]';
   const oppHubPadding = isMobile ? 'p-[4px]' : 'p-1.5';
   const oppCardSize = isMobile ? 'w-[16px] h-[22px]' : 'w-[28px] h-[40px]';
@@ -432,7 +431,9 @@ export const PlayerSpot = memo(({
     </motion.div>
   );
 
-  const formattedStack = stack >= 1000 ? `$${(stack / 1000).toFixed(stack % 1000 === 0 ? 0 : 1)}k` : `$${stack}`;
+  // FIX: Safe stack fallback to prevent "$undefined"
+  const safeStack = typeof stack === 'number' ? stack : 0;
+  const formattedStack = safeStack >= 1000 ? `$${(safeStack / 1000).toFixed(safeStack % 1000 === 0 ? 0 : 1)}k` : `$${safeStack}`;
 
   const bankrollElement = (
     <span className={cn(
@@ -481,8 +482,8 @@ export const PlayerSpot = memo(({
   }, [rawVpip, rawPfr, rawAf]);
 
   const statsElement = useMemo(() => {
+    // FIX: Removed the early return for 0 values so stats always show
     if (!stats) return null;
-    if (rawVpip === 0 && rawPfr === 0 && rawAf === 0) return null;
 
     const vpipDisplay = Math.round(animatedVpip);
     const pfrDisplay = Math.round(animatedPfr);
@@ -590,7 +591,6 @@ export const PlayerSpot = memo(({
                 )}>
                   {display_name}
                 </span>
-                {/* Rank Tier Badge (added from HEAD) */}
                 {rank_tier && (
                   <RankTierBadge tier={rank_tier} size="sm" showLabel={false} className="ml-0.5" />
                 )}

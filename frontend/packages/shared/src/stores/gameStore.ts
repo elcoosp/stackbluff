@@ -17,7 +17,11 @@ export interface Seat {
   hand_description?: string;
   is_showdown_revealed?: boolean;
   winningCards?: any[];
+  winning_cards?: any[];
   sitting_out?: boolean;
+  stats?: any;
+  action?: { text: string; amount?: number | null };
+  rank_tier?: string;
 }
 
 export interface Card {
@@ -116,8 +120,6 @@ const createInitialRoomState = (): GameRoomState => ({
   lastAction: null,
 });
 
-// CRITICAL FIX: Cache a single instance of the empty state to prevent
-// infinite re-render loops in Zustand when returning default values.
 const EMPTY_ROOM_STATE = createInitialRoomState();
 
 interface GameState {
@@ -221,9 +223,15 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (seatNum === undefined) return {};
 
     const newSeats = { ...roomState.seats };
-    const seat = newSeats[Number(seatNum)];
+    const seat = { ...newSeats[Number(seatNum)] }; // Create a copy to mutate
+
     if (seat) {
-      seat.stack = new_stack;
+      // FIX 1: Only overwrite stack if the backend actually sent a new stack number
+      if (typeof new_stack === 'number') {
+        seat.stack = new_stack;
+      }
+      // FIX 2: Update the seat's action so the PlayerSpot badge updates correctly
+      seat.action = { text: action.toUpperCase(), amount };
     }
 
     return {
@@ -231,7 +239,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         ...state.rooms,
         [roomId]: {
           ...roomState,
-          seats: newSeats,
+          seats: { ...newSeats, [Number(seatNum)]: seat },
           pot: new_pot,
           lastAction: { player_id, action, amount },
         }

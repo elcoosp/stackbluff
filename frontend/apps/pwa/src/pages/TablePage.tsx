@@ -86,7 +86,6 @@ function useGameFeedback(
   const prevActionRequired = useRef(!!game.actionRequired);
   const prevRoomId = useRef(activeRoomId);
 
-  // Reset all refs when active room changes to prevent false triggers
   if (prevRoomId.current !== activeRoomId) {
     prevCommunityLen.current = game.communityCards?.length ?? 0;
     prevShowdown.current = game.showdownReveal;
@@ -178,9 +177,6 @@ function useGameFeedback(
     if (delta > 0 && prevPot.current > 0 && Math.abs(delta) > prevPot.current * 0.5) {
       trigger('roundStart');
     }
-    if (delta < 0 && prevPot.current > 0 && Math.abs(delta) >= prevPot.current * 0.5) {
-      // Pot collected – we'll trigger per winner instead
-    }
     prevPot.current = game.pot;
   }, [game.pot, trigger]);
 
@@ -230,10 +226,11 @@ export function TablePage() {
   const search = useSearch({ from: '/table/$tableId' });
   const navigate = useNavigate();
 
-  // FIX: urlBuyIn and isObserving declared early to be available to all hooks
   const isObserving = (search as any)?.observe === 'true' || (search as any)?.observe === true;
   const tournamentId = (search as any).tournamentId as string | undefined;
-  const urlBuyIn = (search as any)?.buyIn as number | undefined;
+  const urlBuyInRaw = (search as any)?.buyIn;
+  // FIX: Ensure URL buy-in is correctly parsed as a number
+  const urlBuyIn = urlBuyInRaw ? Number(urlBuyInRaw) : undefined;
 
   const { sendJoin, sendAction, sendRebuy, connectionStatus, myUserId, notSeated, sendLeave } = useGameWebSocket(tableId);
   const isDesktop = useResponsiveLayout();
@@ -261,14 +258,12 @@ export function TablePage() {
   const { isDealing } = useDealStore();
   const balance = useAuthStore((s) => s.balance);
 
-  // Clear stale rooms only when urlBuyIn actually changes
   useEffect(() => {
     if (urlBuyIn && urlBuyIn > 0) {
       useGameStore.setState({ rooms: {}, activeRoomId: null });
     }
   }, [urlBuyIn]);
 
-  // Sync activeRoomId with the tableId from the URL
   useEffect(() => {
     if (!tableId) return;
     const matchingEntry = Object.entries(rooms).find(([, r]: [string, any]) => r.tableId === tableId);
@@ -280,7 +275,6 @@ export function TablePage() {
     }
   }, [rooms, tableId, activeRoomId]);
 
-  // ── Tournament event listeners (UPDATED with tableChanged) ──
   useEffect(() => {
     const handleResult = (e: Event) => {
       const detail = (e as CustomEvent).detail;
@@ -308,14 +302,11 @@ export function TablePage() {
         setFinalTableVisible(true);
       }
     };
-    // ─── NEW: Handle table change event ───────────────────────────────
     const handleTableChanged = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (tournamentId && detail.tournamentId === tournamentId) {
         const newTableId = detail.newRoomId;
         if (newTableId) {
-          // Update store with the table ID (if the store supports it, otherwise just navigate)
-          // We use a local state or ignore store update.
           navigate({
             to: '/table/$tableId',
             params: { tableId: newTableId },
@@ -338,11 +329,9 @@ export function TablePage() {
     };
   }, [tournamentId, navigate]);
 
-  // ─── Polling fallback for table assignment ────────────────────
   useEffect(() => {
     if (!tournamentId) return;
     const tournamentState = useTournamentStore.getState().tournaments[tournamentId];
-    // Only poll if the tournament is running and we are not already on a table
     if (tournamentState?.status !== 'Running') return;
 
     const interval = setInterval(async () => {
@@ -364,7 +353,6 @@ export function TablePage() {
     return () => clearInterval(interval);
   }, [tournamentId, navigate]);
 
-  // Reset dealing state when switching tables to prevent replaying the deal animation
   useEffect(() => {
     useDealStore.setState({ isDealing: false });
   }, [activeRoomId]);
@@ -434,7 +422,8 @@ export function TablePage() {
           hand_description: player.hand_description,
           is_winner: player.is_winner,
           win_amount: player.win_amount,
-          winningCards: player.winning_cards,
+          // FIX: Changed to snake_case `winning_cards` to match PlayerSpot destructuring
+          winning_cards: player.winning_cards,
           is_showdown_revealed: true,
         };
       }
@@ -461,7 +450,6 @@ export function TablePage() {
 
   const isHeroSeated = Object.values(seatsWithShowdown).some((s: any) => s.user_id === myUserId);
 
-  // Hard reset state if backend says we are not seated anywhere
   useEffect(() => {
     if (notSeated && !isJoining) {
       setHasJoined(false);
@@ -473,7 +461,6 @@ export function TablePage() {
     }
   }, [notSeated, isJoining, isObserving]);
 
-  // Join / Rejoin Logic
   useEffect(() => {
     if (connectionStatus !== 'connected') return;
 
@@ -502,7 +489,6 @@ export function TablePage() {
     }
   }, [connectionStatus, isHeroSeated, isObserving, hasJoined, urlBuyIn, sendJoin, showRebuyDialog, isAddingTable]);
 
-  // Show Rebuy Dialog if hero runs out of chips
   useEffect(() => {
     if (isJoining && heroStack > 0) {
       setIsJoining(false);
@@ -515,7 +501,6 @@ export function TablePage() {
     }
   }, [heroStack, connectionStatus, hasJoined, isJoining, game.handInProgress, isObserving, isAddingTable, isTournament]);
 
-  // Prevent "Disconnected" flash on initial mount
   const [showDisconnect, setShowDisconnect] = useState(false);
   useEffect(() => {
     if (connectionStatus !== 'connected') {
@@ -553,7 +538,9 @@ export function TablePage() {
 
     const updateRemaining = () => {
       const now = Date.now();
-      const remaining = Math.max(0, heroTimerExpiresAt - now);
+      // FIX: Normalize seconds to milliseconds if backend sends a unix timestamp in seconds
+      const expiresAtMs = heroTimerExpiresAt > 1e12 ? heroTimerExpiresAt : heroTimerExpiresAt * 1000;
+      const remaining = Math.max(0, expiresAtMs - now);
       setHeroTimerRemainingMs(remaining);
       if (remaining <= 0 && heroIntervalRef.current) {
         clearInterval(heroIntervalRef.current);
@@ -590,7 +577,9 @@ export function TablePage() {
 
     const updateRemaining = () => {
       const now = Date.now();
-      const remaining = Math.max(0, opponentTimerExpiresAt - now);
+      // FIX: Normalize seconds to milliseconds if backend sends a unix timestamp in seconds
+      const expiresAtMs = opponentTimerExpiresAt > 1e12 ? opponentTimerExpiresAt : opponentTimerExpiresAt * 1000;
+      const remaining = Math.max(0, expiresAtMs - now);
       setOpponentTimerRemainingMs(remaining);
       if (remaining <= 0 && opponentIntervalRef.current) {
         clearInterval(opponentIntervalRef.current);
@@ -609,12 +598,13 @@ export function TablePage() {
     };
   }, [opponentTimerExpiresAt]);
 
+  // FIX: Pass null instead of 0 when timer is missing to prevent false urgent triggers
   useGameFeedback(
     game,
     activeRoomId,
     resolvedHeroSeat,
     isMyTurn,
-    heroTimerRemainingMs ?? 0,
+    heroTimerRemainingMs,
     heroTimerTotalMs,
   );
 
@@ -873,7 +863,6 @@ export function TablePage() {
               onShowStats={setStatsUserId}
             />
 
-            {/* FIX: Added keys to force remount on table switch to prevent animation replay */}
             <DealAnimationLayer
               key={`deal-${activeRoomId}`}
               isDesktop={isDesktop}

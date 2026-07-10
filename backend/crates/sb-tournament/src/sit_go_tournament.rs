@@ -12,10 +12,10 @@ use sb_contracts::tournament_api::{
 };
 use sb_shared_types::{AppError, ChipAmount, PlayerId, TableConfig, TableId, TournamentId, UserId};
 use sb_table_registry::actor::InternalCommand as TableCommand;
+use sb_table_registry::actor::InternalCommand;
 use sb_table_registry::connection_broker::ConnectionBroker;
 use sb_table_registry::events::{HandCompletedEvent, TableEvent};
 use sb_table_registry::registry::Registry;
-use sb_table_registry::actor::InternalCommand;
 
 use crate::blind_scheduler::BlindScheduler;
 use crate::payout_calculator::calculate_payouts;
@@ -328,8 +328,8 @@ impl SitGoTournament {
                 stack: player.buy_in,
                 seat: Some(seat as u8),
                 respond_to: tx,
-                                display_name: format!("Player_{}", player.user_id),
-                };
+                display_name: format!("Player_{}", player.user_id),
+            };
             cmd_tx
                 .send(cmd)
                 .await
@@ -338,7 +338,7 @@ impl SitGoTournament {
                 Ok(Ok(assigned_seat)) => {
                     let msg = sb_table_registry::game_room::RoomMessage::TournamentTableChanged {
                         tournament_id: self.tournament_id,
-                        new_room_id: TableId::new(self.tournament_id.as_uuid()),
+                        new_room_id: table_id, // FIXED: Use actual table_id
                         new_seat: assigned_seat,
                     };
                     self.broker.send_to_user(player.user_id, msg);
@@ -373,6 +373,9 @@ impl SitGoTournament {
             })
             .await;
         let _ = rx.await;
+
+        // FIXED: Send StartHand command after ResumeHand to actually deal the hand
+        let _ = cmd_tx.send(TableCommand::StartHand).await;
 
         self.broadcast_state();
         info!(tournament_id = %self.tournament_id, "Tournament running");
@@ -447,6 +450,9 @@ impl SitGoTournament {
                 })
                 .await;
             let _ = rx.await;
+
+            // FIXED: Send StartHand to deal the next hand
+            let _ = cmd_tx.send(TableCommand::StartHand).await;
         }
 
         self.broadcast_state();

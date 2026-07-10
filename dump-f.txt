@@ -1105,6 +1105,10 @@ export type {
 
 export type WebSocketConnectionStatus = 'connected' | 'reconnecting' | 'disconnected';
 
+=== frontend/apps/pwa/src/.DS_Store ===
+   Bud1                                                                      e sbwspblob                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @      €                                        @      €                                          @      €                                          @                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  r o u t e sbwspblob   ¸bplist00Ö]ShowStatusBar[ShowToolbar[ShowTabView_ContainerShowSidebar\WindowBounds[ShowSidebar		_{{500, 460}, {920, 436}}	#/;R_klmnoŠ                            ‹    r o u t e slsvCblob  Sbplist00Ú	
+WXYZ\XiconSize_showIconPreviewWcolumns_calculateAllSizes_scrollPositionYXtextSize_scrollPositionXZsortColumn_useRelativeDates_viewOptionsVersion#@0      	®$(-27<@EIMQÔWvisibleYascendingUwidthZidentifier		,TnameÔUwidthYascendingWvisibleXubiquity#Ô"#	µ\dateModifiedÔ"'[dateCreatedÔ+,	aTsizeÔ01		sTkindÔ56	dUlabelÔ:;	KWversionÔ?	XcommentsÔCDÈ^dateLastOpenedÔCHZshareOwnerÔCL_shareLastEditorÔN"YdateAddedÔSUÒ_invitationStatus#        #@*      #Àaà     Tname	                  & 8 @ T f o  Œ Ÿ ´ ½ ¾ Í Ö Þ è î ù ú û þ$-/01:;<>KTUVbklmot}~†‘“™¢£¤¦®·¸¹ÂËÌÍÏÞçèéôýþÿ$%&/023FGPYbgh             ]              y    r o u t e slsvpblob  ®bplist00Ú	
+GHIJLXiconSize_showIconPreviewWcolumns_calculateAllSizes_scrollPositionYXtextSize_scrollPositionXZsortColumn_useRelativeDates_viewOptionsVersion#@0      	Ù %*/48=AXcommentsUlabelWversion[dateCreatedTsize\dateModifiedTkindTname^dateLastOpenedÔUindexYascendingUwidthWvisible	,Ô!#	dÔ&(	KÔ+-µÔ02a	Ô5-	Ô9;	s	Ô> 		ÔBDÈ#        #@*      #Àaà     Tname	                  & 8 @ T f o  Œ Ÿ ´ ½ ¾ Ñ Ú à è ô ù(.8>FHILMVXY[\eghjktvwyzƒ…†ˆ‰’”•–Ÿ¡¢¤¥®°±²»½¾ÀÁÂËÔÝâã             M              ô    r o u t e svSrnlong                                                                                                                                                                                                                              E                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         DSDB                                 `          €                                        @      €                                          @      €                                          @       RelativeDates_viewOptionsVersion#@0      	Ù %*/48=AXcommentsUlabelWversion[dateCreatedTsize\dateModifiedTkindTname^dateLastOpenedÔUindexYascendingUwidthWvisible	,Ô!#	dÔ&(	KÔ+-µÔ02a	Ô5-	Ô9;	s	Ô> 		ÔBDÈ#        #@*      #Àaà     Tname	                  & 8 @ T f o  Œ Ÿ ´ ½ ¾ Ñ Ú à è ô ù(.8>FHILMVXY[\eghjktvwyzƒ…†ˆ‰’”•–Ÿ¡¢¤¥®°±²»½¾ÀÁÂËÔÝâã             M              ô    r o u t e svSrnlong                                                                                                                                                                                                                  
 === frontend/apps/pwa/src/App.test.tsx ===
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
@@ -4547,6 +4551,8 @@ export function Leaderboard({ userId }: LeaderboardProps) {
 
 export default Leaderboard;
 
+=== frontend/apps/pwa/src/components/.DS_Store ===
+   Bud1            %                       g a m evSrnlong                   vSrnlong                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @      €                                        @      €                                          @      €                                          @                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   E   %                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       DSDB                             `          €                                           @      €                                          @      €                                          @                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
 === frontend/apps/pwa/src/components/BadgeDisplay.tsx ===
 import { useBadges } from "../hooks/useBadges";
 import { Crown } from "lucide-react";
@@ -7555,7 +7561,8 @@ export const PlayerSpot = memo(({
   const isActive = is_active && !is_folded && !is_all_in;
   const isFolded = is_folded;
 
-  const showCardsFaceUp = isHero || (seat.is_showdown_revealed && (hole_cards?.length ?? 0) > 0);
+  // FIX: Ensure showCardsFaceUp works when parent correctly passes hole_cards to hero
+  const showCardsFaceUp = isHero || (is_showdown_revealed && (hole_cards?.length ?? 0) > 0);
   const isLargeCards = isHero || showCardsFaceUp;
 
   const isLosingPlayer = is_showdown_revealed && !is_winner;
@@ -7569,8 +7576,6 @@ export const PlayerSpot = memo(({
 
   const badgePlacement = getBadgePlacement();
 
-  // --- Sizes adjusted for readability ---
-  // ONLY reduced mobile opponent width. Everything else remains untouched.
   const oppHubWidth = isMobile ? 'w-[26vw] max-w-[100px]' : 'w-[120px]';
   const oppHubPadding = isMobile ? 'p-[4px]' : 'p-1.5';
   const oppCardSize = isMobile ? 'w-[16px] h-[22px]' : 'w-[28px] h-[40px]';
@@ -7666,7 +7671,9 @@ export const PlayerSpot = memo(({
     </motion.div>
   );
 
-  const formattedStack = stack >= 1000 ? `$${(stack / 1000).toFixed(stack % 1000 === 0 ? 0 : 1)}k` : `$${stack}`;
+  // FIX: Safe stack fallback to prevent "$undefined"
+  const safeStack = typeof stack === 'number' ? stack : 0;
+  const formattedStack = safeStack >= 1000 ? `$${(safeStack / 1000).toFixed(safeStack % 1000 === 0 ? 0 : 1)}k` : `$${safeStack}`;
 
   const bankrollElement = (
     <span className={cn(
@@ -7715,8 +7722,8 @@ export const PlayerSpot = memo(({
   }, [rawVpip, rawPfr, rawAf]);
 
   const statsElement = useMemo(() => {
+    // FIX: Removed the early return for 0 values so stats always show
     if (!stats) return null;
-    if (rawVpip === 0 && rawPfr === 0 && rawAf === 0) return null;
 
     const vpipDisplay = Math.round(animatedVpip);
     const pfrDisplay = Math.round(animatedPfr);
@@ -7824,7 +7831,6 @@ export const PlayerSpot = memo(({
                 )}>
                   {display_name}
                 </span>
-                {/* Rank Tier Badge (added from HEAD) */}
                 {rank_tier && (
                   <RankTierBadge tier={rank_tier} size="sm" showLabel={false} className="ml-0.5" />
                 )}
@@ -15730,16 +15736,16 @@ const parseMessage = (data: any) => {
         seat: p.seat,
         user_id: p.user_id,
         display_name: p.display_name || 'Player',
-        stack: p.stack,
+        stack: p.stack ?? p.chips ?? p.bankroll ?? 0, // FIX: Stack undefined fallback
         current_bet: p.current_bet,
         is_all_in: p.is_all_in,
         is_folded: p.is_folded,
         is_leaving: p.is_leaving || false,
-        is_active: !p.is_folded && !p.is_all_in,
+        is_active: p.is_active ?? (!p.is_folded && !p.is_all_in), // FIX: Improved is_active logic
         avatar_url: p.avatar_url || undefined,
         position_badge: p.position_badge || undefined,
         action: p.last_action || undefined,
-        stats: p.stats || undefined,
+        stats: p.stats || null, // FIX: Use null instead of undefined for React stability
       }));
       const communityCards = (data.community_cards || []).map(convertCard);
       return {
@@ -15777,7 +15783,7 @@ const parseMessage = (data: any) => {
         player_id: data.player_id,
         action: data.action ? data.action.toUpperCase() : data.action,
         amount: data.amount ?? undefined,
-        new_stack: data.new_stack,
+        new_stack: typeof data.new_stack === 'number' ? data.new_stack : undefined, // FIX: Prevent stack overwrite
         new_pot: data.new_pot,
       };
     }
@@ -15948,12 +15954,9 @@ export function useGameWebSocket(tableId: string) {
     const url = token ? `${baseWs}/ws/game?token=${encodeURIComponent(token)}` : `${baseWs}/ws/game`;
 
     const ws = new WebSocket(url);
-    
-
     wsRef.current = ws;
 
     ws.onopen = () => {
-      // Submit fingerprint on reconnect
       const token = getToken();
       if (token) {
         generateAndSubmitFingerprint(token).catch((err) => {
@@ -15982,7 +15985,7 @@ export function useGameWebSocket(tableId: string) {
       if (!mountedRef.current) return;
       try {
         const data = JSON.parse(event.data);
-        // Handle payment-driven entitlement updates
+
         if (data.type === 'user.updated') {
           const parsed = UserUpdatedPayloadSchema.safeParse(data);
           if (!parsed.success) {
@@ -15992,7 +15995,6 @@ export function useGameWebSocket(tableId: string) {
             const payload = msg.payload ?? msg.data ?? {};
             if (typeof payload.balance === 'number') {
               useAuthStore.getState().setBalance(payload.balance);
-              console.info('[WS] Balance updated:', payload.balance);
             }
             if (payload.season_pass_expires_at !== undefined) {
               useEntitlementsStore.getState().setSeasonPassExpiresAt(payload.season_pass_expires_at);
@@ -16006,8 +16008,6 @@ export function useGameWebSocket(tableId: string) {
           }
           return;
         }
-
-        console.debug('[WS Hook] Message received:', data);
 
         if (data.type === 'Error') {
           if (data.message.includes("Not seated")) {
@@ -16232,7 +16232,6 @@ export function useGameWebSocket(tableId: string) {
     }
   }, []);
 
-  // Auto-subscribe to tournament if tournamentId in URL
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tournamentId = urlParams.get('tournamentId');
@@ -16246,6 +16245,7 @@ export function useGameWebSocket(tableId: string) {
 
   return { sendLeave, sendJoin, sendAction, sendRebuy, sendWsMessage, connectionStatus, myUserId, notSeated };
 }
+
 === frontend/apps/pwa/src/hooks/useShopProducts.ts ===
 import { useQuery } from '@tanstack/react-query';
 import { fetchProducts } from '../lib/shopApi';
@@ -18851,7 +18851,6 @@ function useGameFeedback(
   const prevActionRequired = useRef(!!game.actionRequired);
   const prevRoomId = useRef(activeRoomId);
 
-  // Reset all refs when active room changes to prevent false triggers
   if (prevRoomId.current !== activeRoomId) {
     prevCommunityLen.current = game.communityCards?.length ?? 0;
     prevShowdown.current = game.showdownReveal;
@@ -18943,9 +18942,6 @@ function useGameFeedback(
     if (delta > 0 && prevPot.current > 0 && Math.abs(delta) > prevPot.current * 0.5) {
       trigger('roundStart');
     }
-    if (delta < 0 && prevPot.current > 0 && Math.abs(delta) >= prevPot.current * 0.5) {
-      // Pot collected â€“ we'll trigger per winner instead
-    }
     prevPot.current = game.pot;
   }, [game.pot, trigger]);
 
@@ -18995,10 +18991,11 @@ export function TablePage() {
   const search = useSearch({ from: '/table/$tableId' });
   const navigate = useNavigate();
 
-  // FIX: urlBuyIn and isObserving declared early to be available to all hooks
   const isObserving = (search as any)?.observe === 'true' || (search as any)?.observe === true;
   const tournamentId = (search as any).tournamentId as string | undefined;
-  const urlBuyIn = (search as any)?.buyIn as number | undefined;
+  const urlBuyInRaw = (search as any)?.buyIn;
+  // FIX: Ensure URL buy-in is correctly parsed as a number
+  const urlBuyIn = urlBuyInRaw ? Number(urlBuyInRaw) : undefined;
 
   const { sendJoin, sendAction, sendRebuy, connectionStatus, myUserId, notSeated, sendLeave } = useGameWebSocket(tableId);
   const isDesktop = useResponsiveLayout();
@@ -19026,14 +19023,12 @@ export function TablePage() {
   const { isDealing } = useDealStore();
   const balance = useAuthStore((s) => s.balance);
 
-  // Clear stale rooms only when urlBuyIn actually changes
   useEffect(() => {
     if (urlBuyIn && urlBuyIn > 0) {
       useGameStore.setState({ rooms: {}, activeRoomId: null });
     }
   }, [urlBuyIn]);
 
-  // Sync activeRoomId with the tableId from the URL
   useEffect(() => {
     if (!tableId) return;
     const matchingEntry = Object.entries(rooms).find(([, r]: [string, any]) => r.tableId === tableId);
@@ -19045,7 +19040,6 @@ export function TablePage() {
     }
   }, [rooms, tableId, activeRoomId]);
 
-  // â”€â”€ Tournament event listeners (UPDATED with tableChanged) â”€â”€
   useEffect(() => {
     const handleResult = (e: Event) => {
       const detail = (e as CustomEvent).detail;
@@ -19073,14 +19067,11 @@ export function TablePage() {
         setFinalTableVisible(true);
       }
     };
-    // â”€â”€â”€ NEW: Handle table change event â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const handleTableChanged = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (tournamentId && detail.tournamentId === tournamentId) {
         const newTableId = detail.newRoomId;
         if (newTableId) {
-          // Update store with the table ID (if the store supports it, otherwise just navigate)
-          // We use a local state or ignore store update.
           navigate({
             to: '/table/$tableId',
             params: { tableId: newTableId },
@@ -19103,11 +19094,9 @@ export function TablePage() {
     };
   }, [tournamentId, navigate]);
 
-  // â”€â”€â”€ Polling fallback for table assignment â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     if (!tournamentId) return;
     const tournamentState = useTournamentStore.getState().tournaments[tournamentId];
-    // Only poll if the tournament is running and we are not already on a table
     if (tournamentState?.status !== 'Running') return;
 
     const interval = setInterval(async () => {
@@ -19129,7 +19118,6 @@ export function TablePage() {
     return () => clearInterval(interval);
   }, [tournamentId, navigate]);
 
-  // Reset dealing state when switching tables to prevent replaying the deal animation
   useEffect(() => {
     useDealStore.setState({ isDealing: false });
   }, [activeRoomId]);
@@ -19199,7 +19187,8 @@ export function TablePage() {
           hand_description: player.hand_description,
           is_winner: player.is_winner,
           win_amount: player.win_amount,
-          winningCards: player.winning_cards,
+          // FIX: Changed to snake_case `winning_cards` to match PlayerSpot destructuring
+          winning_cards: player.winning_cards,
           is_showdown_revealed: true,
         };
       }
@@ -19226,7 +19215,6 @@ export function TablePage() {
 
   const isHeroSeated = Object.values(seatsWithShowdown).some((s: any) => s.user_id === myUserId);
 
-  // Hard reset state if backend says we are not seated anywhere
   useEffect(() => {
     if (notSeated && !isJoining) {
       setHasJoined(false);
@@ -19238,7 +19226,6 @@ export function TablePage() {
     }
   }, [notSeated, isJoining, isObserving]);
 
-  // Join / Rejoin Logic
   useEffect(() => {
     if (connectionStatus !== 'connected') return;
 
@@ -19267,7 +19254,6 @@ export function TablePage() {
     }
   }, [connectionStatus, isHeroSeated, isObserving, hasJoined, urlBuyIn, sendJoin, showRebuyDialog, isAddingTable]);
 
-  // Show Rebuy Dialog if hero runs out of chips
   useEffect(() => {
     if (isJoining && heroStack > 0) {
       setIsJoining(false);
@@ -19280,7 +19266,6 @@ export function TablePage() {
     }
   }, [heroStack, connectionStatus, hasJoined, isJoining, game.handInProgress, isObserving, isAddingTable, isTournament]);
 
-  // Prevent "Disconnected" flash on initial mount
   const [showDisconnect, setShowDisconnect] = useState(false);
   useEffect(() => {
     if (connectionStatus !== 'connected') {
@@ -19318,7 +19303,9 @@ export function TablePage() {
 
     const updateRemaining = () => {
       const now = Date.now();
-      const remaining = Math.max(0, heroTimerExpiresAt - now);
+      // FIX: Normalize seconds to milliseconds if backend sends a unix timestamp in seconds
+      const expiresAtMs = heroTimerExpiresAt > 1e12 ? heroTimerExpiresAt : heroTimerExpiresAt * 1000;
+      const remaining = Math.max(0, expiresAtMs - now);
       setHeroTimerRemainingMs(remaining);
       if (remaining <= 0 && heroIntervalRef.current) {
         clearInterval(heroIntervalRef.current);
@@ -19355,7 +19342,9 @@ export function TablePage() {
 
     const updateRemaining = () => {
       const now = Date.now();
-      const remaining = Math.max(0, opponentTimerExpiresAt - now);
+      // FIX: Normalize seconds to milliseconds if backend sends a unix timestamp in seconds
+      const expiresAtMs = opponentTimerExpiresAt > 1e12 ? opponentTimerExpiresAt : opponentTimerExpiresAt * 1000;
+      const remaining = Math.max(0, expiresAtMs - now);
       setOpponentTimerRemainingMs(remaining);
       if (remaining <= 0 && opponentIntervalRef.current) {
         clearInterval(opponentIntervalRef.current);
@@ -19374,12 +19363,13 @@ export function TablePage() {
     };
   }, [opponentTimerExpiresAt]);
 
+  // FIX: Pass null instead of 0 when timer is missing to prevent false urgent triggers
   useGameFeedback(
     game,
     activeRoomId,
     resolvedHeroSeat,
     isMyTurn,
-    heroTimerRemainingMs ?? 0,
+    heroTimerRemainingMs,
     heroTimerTotalMs,
   );
 
@@ -19638,7 +19628,6 @@ export function TablePage() {
               onShowStats={setStatsUserId}
             />
 
-            {/* FIX: Added keys to force remount on table switch to prevent animation replay */}
             <DealAnimationLayer
               key={`deal-${activeRoomId}`}
               isDesktop={isDesktop}
@@ -21420,6 +21409,13 @@ const STAKE_CONFIG = {
 
 const getStakeBB = (stakeLevel: keyof typeof STAKE_CONFIG) => STAKE_CONFIG[stakeLevel]?.bb ?? 0;
 
+// Helper to convert table name to kebab-case for image fetching
+const toKebabCase = (str: string) =>
+  str
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
 interface Table {
   table_id: string;
   name: string;
@@ -21456,7 +21452,7 @@ function LobbyPage() {
     setSortConfig((current) => {
       if (current.key === key) {
         if (current.direction === 'asc') return { key, direction: 'desc' };
-        if (current.direction === 'desc') return { key: 'none', direction: 'asc' };
+        if (current.direction === 'desc') return { key, direction: 'none', direction: 'asc' };
       }
       return { key, direction: 'asc' };
     });
@@ -21485,7 +21481,7 @@ function LobbyPage() {
   return (
     <div className="flex min-h-screen w-full relative">
       {/* Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 bg-surface-container-low border-r border-outline-variant py-gutter space-y-4 sticky top-0 h-screen">
+      <aside className="hidden md:flex flex-col w-64 bg-surface-container-low border-r border-outline-variant py-gutter sticky top-0 h-screen">
         <div className="px-6 pt-6 mb-8">
           <div className="p-4 rounded-lg bg-surface-container-highest razor-highlight border border-outline-variant">
             <h3 className="font-headline-md text-headline-md text-on-surface mb-1">StackBluff Elite</h3>
@@ -21611,82 +21607,96 @@ function LobbyPage() {
               <div className="col-span-4 text-right">Action</div>
             </div>
 
-            {sortedTables.map((table, i) => (
-              <motion.div
-                layout
-                key={table.table_id}
-                className="flex flex-col lg:grid lg:grid-cols-12 items-start lg:items-center px-4 lg:px-8 py-4 lg:py-5 bg-surface-container-lowest/80 backdrop-blur-xl border border-white/10 rounded-xl razor-highlight group hover:border-tertiary/40 transition-colors duration-200 gap-3 lg:gap-0"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  delay: i * 0.05,
-                  layout: { duration: 0.3, ease: "easeInOut" }
-                }}
-              >
-                <div className="w-full lg:col-span-4 flex items-start lg:items-center gap-3 lg:gap-4">
+            {sortedTables.map((table, i) => {
+              const imageUrl = `/images/tables/${toKebabCase(table.name)}.png`;
+
+              return (
+                <motion.div
+                  layout
+                  key={table.table_id}
+                  className="flex flex-col lg:grid lg:grid-cols-12 items-start lg:items-center px-4 lg:px-8 py-4 lg:py-5 border border-white/10 rounded-xl razor-highlight group hover:border-tertiary/40 transition-all duration-300 gap-3 lg:gap-0 overflow-hidden relative"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    delay: i * 0.05,
+                    layout: { duration: 0.3, ease: "easeInOut" }
+                  }}
+                >
+                  {/* Background Image Layer - Blurs by default, unblurs on hover */}
                   <div
-                    className={`mt-1.5 lg:mt-0 w-1.5 h-1.5 rounded-full shrink-0 ${table.status === 'active'
-                      ? 'bg-tertiary status-led animate-pulse'
-                      : 'bg-outline-variant'
-                      }`}
+                    className="absolute inset-0 w-full h-full bg-cover bg-center blur-md scale-105 group-hover:blur-none group-hover:scale-100 transition-all duration-500 ease-in-out z-0"
+                    style={{ backgroundImage: `url(${imageUrl})` }}
                   />
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-headline-md text-base text-on-surface truncate">{table.name}</h4>
-                    <p className="text-[10px] text-outline font-label-caps mt-0.5">NO LIMIT HOLD'EM</p>
-                    <div className="flex items-center gap-3 mt-2.5 lg:hidden">
-                      <span className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-md px-2 py-0.5 text-[10px] font-data-mono text-tertiary tracking-wide">
-                        {STAKE_CONFIG[table.stake_level]?.text || table.stake_level}
-                      </span>
-                      <span className="text-[10px] text-on-surface-variant font-data-mono">
-                        {table.current_players}/{table.max_players} seated
-                      </span>
+                  {/* Gradient Overlay Layer - Less dark, smooth transition */}
+                  <div
+                    className="absolute inset-0 w-full h-full z-0 transition-all duration-500 bg-gradient-to-r from-[#0a0a0c]/85 via-[#0a0a0c]/50 to-[#0a0a0c]/85 group-hover:from-[#0a0a0c]/75 group-hover:via-[#0a0a0c]/35 group-hover:to-[#0a0a0c]/75"
+                  />
+
+                  <div className="w-full lg:col-span-4 flex items-start lg:items-center gap-3 lg:gap-4 relative z-10">
+                    <div
+                      className={`mt-1.5 lg:mt-0 w-1.5 h-1.5 rounded-full shrink-0 ${table.status === 'active'
+                        ? 'bg-tertiary status-led animate-pulse'
+                        : 'bg-outline-variant'
+                        }`}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-headline-md text-base text-on-surface truncate">{table.name}</h4>
+                      <p className="text-[10px] text-outline font-label-caps mt-0.5">NO LIMIT HOLD'EM</p>
+                      <div className="flex items-center gap-3 mt-2.5 lg:hidden">
+                        <span className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-md px-2 py-0.5 text-[10px] font-data-mono text-tertiary tracking-wide">
+                          {STAKE_CONFIG[table.stake_level]?.text || table.stake_level}
+                        </span>
+                        <span className="text-[10px] text-on-surface-variant font-data-mono">
+                          {table.current_players}/{table.max_players} seated
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="hidden lg:block lg:col-span-2 text-center font-data-mono text-on-surface">
-                  {STAKE_CONFIG[table.stake_level]?.text || table.stake_level}
-                </div>
-
-                <div className="hidden lg:flex lg:col-span-2 text-center flex-col items-center">
-                  <div className="flex gap-1">
-                    {Array.from({ length: table.max_players }).map((_, idx) => (
-                      <span
-                        key={idx}
-                        className={`w-1.5 h-1.5 rounded-full transition-colors ${idx < table.current_players ? 'bg-tertiary/70' : 'bg-outline-variant/30'
-                          }`}
-                      />
-                    ))}
+                  <div className="hidden lg:block lg:col-span-2 text-center font-data-mono text-on-surface relative z-10">
+                    {STAKE_CONFIG[table.stake_level]?.text || table.stake_level}
                   </div>
-                  <span className="text-[10px] text-outline mt-1 font-data-mono">
-                    {table.current_players}/{table.max_players}
-                  </span>
-                </div>
 
-                <div className="w-full lg:col-span-4 flex lg:justify-end gap-2 mt-1 lg:mt-0">
-                  {/* Updated Observe Button */}
-                  <Button
-                    variant="outline"
-                    onClick={() =>
-                      navigate({
-                        to: '/table/$tableId',
-                        params: { tableId: table.table_id },
-                        search: { observe: 'true' } // Pass observe flag
-                      })
-                    }
-                    className="flex-1 lg:flex-initial px-3 lg:px-4 py-2 border-outline-variant text-on-surface hover:border-tertiary hover:text-tertiary hover:bg-tertiary/10 font-label-caps text-[10px] uppercase tracking-wider rounded-lg"
-                  >
-                    Observe
-                  </Button>
-                  <Button
-                    onClick={() => setBuyInModal({ open: true, table })}
-                    className="flex-1 lg:flex-initial px-3 lg:px-4 py-2 bg-tertiary text-on-tertiary font-label-caps text-[10px] hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg shadow-emerald-500/10 rounded-lg"
-                  >
-                    <Wallet className="w-3.5 h-3.5 mr-1.5" /> Buy In
-                  </Button>
-                </div>
-              </motion.div>
-            ))}
+                  <div className="hidden lg:flex lg:col-span-2 text-center flex-col items-center relative z-10">
+                    <div className="flex gap-1">
+                      {Array.from({ length: table.max_players }).map((_, idx) => (
+                        <span
+                          key={idx}
+                          className={`w-1.5 h-1.5 rounded-full transition-colors ${idx < table.current_players ? 'bg-tertiary/70' : 'bg-outline-variant/30'
+                            }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-[10px] text-outline mt-1 font-data-mono">
+                      {table.current_players}/{table.max_players}
+                    </span>
+                  </div>
+
+                  <div className="w-full lg:col-span-4 flex lg:justify-end gap-2 mt-1 lg:mt-0 relative z-10">
+                    {/* Updated Observe Button */}
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        navigate({
+                          to: '/table/$tableId',
+                          params: { tableId: table.table_id },
+                          search: { observe: 'true' } // Pass observe flag
+                        })
+                      }
+                      className="flex-1 lg:flex-initial px-3 lg:px-4 py-2 border-outline-variant text-on-surface hover:border-tertiary hover:text-tertiary hover:bg-tertiary/10 font-label-caps text-[10px] uppercase tracking-wider rounded-lg"
+                    >
+                      Observe
+                    </Button>
+                    <Button
+                      onClick={() => setBuyInModal({ open: true, table })}
+                      className="flex-1 lg:flex-initial px-3 lg:px-4 py-2 bg-tertiary text-on-tertiary font-label-caps text-[10px] hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg shadow-emerald-500/10 rounded-lg"
+                    >
+                      <Wallet className="w-3.5 h-3.5 mr-1.5" /> Buy In
+                    </Button>
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
 

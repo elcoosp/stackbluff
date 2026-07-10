@@ -12,10 +12,10 @@ use sb_contracts::tournament_api::{
 };
 use sb_shared_types::{AppError, ChipAmount, PlayerId, TableConfig, TableId, TournamentId, UserId};
 use sb_table_registry::actor::InternalCommand as TableCommand;
+use sb_table_registry::actor::InternalCommand;
 use sb_table_registry::connection_broker::ConnectionBroker;
 use sb_table_registry::events::{HandCompletedEvent, TableEvent};
 use sb_table_registry::registry::Registry;
-use sb_table_registry::actor::InternalCommand;
 
 use crate::blind_scheduler::BlindScheduler;
 use crate::payout_calculator::calculate_payouts;
@@ -361,13 +361,13 @@ impl MttDirector {
 
             let (tx, rx) = oneshot::channel();
             let cmd = InternalCommand::TransferPlayerIn {
-                        user_id: player.user_id,
-                        player_id: player.player_id,
-                        stack: player.buy_in,
-                        seat: Some(seat),
-                        display_name: format!("Player_{}", player.user_id),
-                        respond_to: tx,
-                    };
+                user_id: player.user_id,
+                player_id: player.player_id,
+                stack: player.buy_in,
+                seat: Some(seat),
+                display_name: format!("Player_{}", player.user_id),
+                respond_to: tx,
+            };
             table
                 .cmd_tx
                 .send(cmd)
@@ -385,7 +385,7 @@ impl MttDirector {
 
             let msg = sb_table_registry::game_room::RoomMessage::TournamentTableChanged {
                 tournament_id: self.tournament_id,
-                new_room_id: TableId::new(self.tournament_id.as_uuid()),
+                new_room_id: table.table_id, // FIXED: Use actual table.table_id
                 new_seat: assigned_seat,
             };
             self.broker.send_to_user(player.user_id, msg);
@@ -412,6 +412,11 @@ impl MttDirector {
                 })
                 .await;
             let _ = rx.await;
+        }
+
+        // FIXED: Send StartHand command after ResumeHand to actually deal the hand
+        for table in &self.tables {
+            let _ = table.cmd_tx.send(TableCommand::StartHand).await;
         }
 
         self.broadcast_state();
@@ -493,6 +498,11 @@ impl MttDirector {
             let _ = rx.await;
         }
 
+        // FIXED: Send StartHand to deal the next hand
+        for table in &self.tables {
+            let _ = table.cmd_tx.send(TableCommand::StartHand).await;
+        }
+
         self.broadcast_state();
     }
 
@@ -550,7 +560,7 @@ impl MttDirector {
                         let msg =
                             sb_table_registry::game_room::RoomMessage::TournamentTableChanged {
                                 tournament_id: self.tournament_id,
-                                new_room_id: TableId::new(self.tournament_id.as_uuid()),
+                                new_room_id: to_table.table_id, // FIXED: Use actual to_table.table_id
                                 new_seat: seat,
                             };
                         self.broker.send_to_user(m.user_id, msg);
@@ -628,7 +638,7 @@ impl MttDirector {
                         let msg =
                             sb_table_registry::game_room::RoomMessage::TournamentTableChanged {
                                 tournament_id: self.tournament_id,
-                                new_room_id: TableId::new(self.tournament_id.as_uuid()),
+                                new_room_id: to_table.table_id, // FIXED: Use actual to_table.table_id
                                 new_seat: seat,
                             };
                         self.broker.send_to_user(m.user_id, msg);

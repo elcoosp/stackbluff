@@ -56,16 +56,16 @@ const parseMessage = (data: any) => {
         seat: p.seat,
         user_id: p.user_id,
         display_name: p.display_name || 'Player',
-        stack: p.stack,
+        stack: p.stack ?? p.chips ?? p.bankroll ?? 0, // FIX: Stack undefined fallback
         current_bet: p.current_bet,
         is_all_in: p.is_all_in,
         is_folded: p.is_folded,
         is_leaving: p.is_leaving || false,
-        is_active: !p.is_folded && !p.is_all_in,
+        is_active: p.is_active ?? (!p.is_folded && !p.is_all_in), // FIX: Improved is_active logic
         avatar_url: p.avatar_url || undefined,
         position_badge: p.position_badge || undefined,
         action: p.last_action || undefined,
-        stats: p.stats || undefined,
+        stats: p.stats || null, // FIX: Use null instead of undefined for React stability
       }));
       const communityCards = (data.community_cards || []).map(convertCard);
       return {
@@ -103,7 +103,7 @@ const parseMessage = (data: any) => {
         player_id: data.player_id,
         action: data.action ? data.action.toUpperCase() : data.action,
         amount: data.amount ?? undefined,
-        new_stack: data.new_stack,
+        new_stack: typeof data.new_stack === 'number' ? data.new_stack : undefined, // FIX: Prevent stack overwrite
         new_pot: data.new_pot,
       };
     }
@@ -274,12 +274,9 @@ export function useGameWebSocket(tableId: string) {
     const url = token ? `${baseWs}/ws/game?token=${encodeURIComponent(token)}` : `${baseWs}/ws/game`;
 
     const ws = new WebSocket(url);
-    
-
     wsRef.current = ws;
 
     ws.onopen = () => {
-      // Submit fingerprint on reconnect
       const token = getToken();
       if (token) {
         generateAndSubmitFingerprint(token).catch((err) => {
@@ -308,7 +305,7 @@ export function useGameWebSocket(tableId: string) {
       if (!mountedRef.current) return;
       try {
         const data = JSON.parse(event.data);
-        // Handle payment-driven entitlement updates
+
         if (data.type === 'user.updated') {
           const parsed = UserUpdatedPayloadSchema.safeParse(data);
           if (!parsed.success) {
@@ -318,7 +315,6 @@ export function useGameWebSocket(tableId: string) {
             const payload = msg.payload ?? msg.data ?? {};
             if (typeof payload.balance === 'number') {
               useAuthStore.getState().setBalance(payload.balance);
-              console.info('[WS] Balance updated:', payload.balance);
             }
             if (payload.season_pass_expires_at !== undefined) {
               useEntitlementsStore.getState().setSeasonPassExpiresAt(payload.season_pass_expires_at);
@@ -332,8 +328,6 @@ export function useGameWebSocket(tableId: string) {
           }
           return;
         }
-
-        console.debug('[WS Hook] Message received:', data);
 
         if (data.type === 'Error') {
           if (data.message.includes("Not seated")) {
@@ -558,7 +552,6 @@ export function useGameWebSocket(tableId: string) {
     }
   }, []);
 
-  // Auto-subscribe to tournament if tournamentId in URL
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tournamentId = urlParams.get('tournamentId');
