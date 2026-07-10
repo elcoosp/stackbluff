@@ -98,13 +98,12 @@ export default function ShopPage() {
 
         {/* Luxury Hero Header with contained background */}
         <div className="relative w-full rounded-2xl overflow-hidden border border-white/10 mb-10 md:mb-12 group razor-highlight">
-          <img
-            src="/images/shop_bg.png"
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover opacity-60 blur-sm scale-105 group-hover:scale-100 group-hover:blur-0 transition-all duration-700 ease-in-out z-0 pointer-events-none"
+          <div
+            className="absolute inset-0 w-full h-full bg-cover bg-center opacity-80 blur-sm scale-105 group-hover:scale-100 group-hover:blur-0 transition-all duration-700 ease-in-out z-0 pointer-events-none"
+            style={{ backgroundImage: `url(/images/shop_bg.png)` }}
           />
           <div
-            className="absolute inset-0 bg-gradient-to-r from-[#131315]/95 via-[#131315]/70 to-transparent z-0 pointer-events-none"
+            className="absolute inset-0 bg-gradient-to-r from-[#131315]/90 via-[#131315]/50 to-transparent z-0 pointer-events-none"
           ></div>
 
           <div className="relative z-10 p-6 md:p-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
