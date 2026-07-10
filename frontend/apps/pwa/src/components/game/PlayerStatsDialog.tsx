@@ -4,7 +4,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { usePlayerStats } from '@/hooks/usePlayerStats';
 import { cn } from '@/lib/utils';
 import { Dialog } from '@stackbluff/shared/components/Dialog';
-import { X, Trophy, Coins, Target, TrendingUp, BarChart3, Users, Zap, Award } from 'lucide-react';
+import { Coins, Target, TrendingUp, BarChart3, Award } from 'lucide-react';
 
 interface PlayerStatsDialogProps {
   userId: string | null;
@@ -16,7 +16,6 @@ const formatCurrency = (amount: number) =>
 
 const formatPercent = (value: number) => `${(value * 100).toFixed(1)}%`;
 
-// Animation variants for staggered reveal
 const containerVariants = {
   hidden: { opacity: 0 },
   show: {
@@ -43,24 +42,18 @@ export function PlayerStatsDialog({ userId, onOpenChange }: PlayerStatsDialogPro
 
   return (
     <Dialog open={open} onClose={() => onOpenChange(false)} className="max-w-sm">
-      {/* Header */}
+      {/* Header – no X button; only title and optional player name */}
       <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/5 shrink-0">
         <div>
           <h2 className="text-sm font-semibold text-on-surface flex items-center gap-2">
             <BarChart3 className="w-4 h-4 text-tertiary" />
             Player Statistics
           </h2>
-          <p className="text-[11px] text-on-surface-variant mt-0.5">
-            {stats?.display_name || (isLoading ? 'Loading...' : 'Player Profile')}
-          </p>
+          {stats?.display_name && (
+            <p className="text-[11px] text-on-surface-variant mt-0.5">{stats.display_name}</p>
+          )}
         </div>
-        <button
-          type="button"
-          onClick={() => onOpenChange(false)}
-          className="p-1.5 rounded-lg hover:bg-white/5 text-on-surface-variant hover:text-on-surface transition-colors"
-        >
-          <X className="w-4 h-4" />
-        </button>
+        {/* No close button here – handled by footer */}
       </div>
 
       {/* Animated Content Container */}
@@ -184,7 +177,7 @@ export function PlayerStatsDialog({ userId, onOpenChange }: PlayerStatsDialogPro
         )}
       </motion.div>
 
-      {/* Footer */}
+      {/* Footer – single close button */}
       <div className="px-5 py-4 border-t border-white/5 flex gap-3 shrink-0">
         <motion.button
           type="button"

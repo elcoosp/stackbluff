@@ -229,7 +229,6 @@ export function TablePage() {
   const isObserving = (search as any)?.observe === 'true' || (search as any)?.observe === true;
   const tournamentId = (search as any).tournamentId as string | undefined;
   const urlBuyInRaw = (search as any)?.buyIn;
-  // FIX: Ensure URL buy-in is correctly parsed as a number
   const urlBuyIn = urlBuyInRaw ? Number(urlBuyInRaw) : undefined;
 
   const { sendJoin, sendAction, sendRebuy, connectionStatus, myUserId, notSeated, sendLeave } = useGameWebSocket(tableId);
@@ -422,7 +421,6 @@ export function TablePage() {
           hand_description: player.hand_description,
           is_winner: player.is_winner,
           win_amount: player.win_amount,
-          // FIX: Changed to snake_case `winning_cards` to match PlayerSpot destructuring
           winning_cards: player.winning_cards,
           is_showdown_revealed: true,
         };
@@ -489,17 +487,42 @@ export function TablePage() {
     }
   }, [connectionStatus, isHeroSeated, isObserving, hasJoined, urlBuyIn, sendJoin, showRebuyDialog, isAddingTable]);
 
+  // ─── FIXED REBUY DIALOG LOGIC ──────────────────────────────────────────
   useEffect(() => {
+    // Reset joining flag when stack is positive
     if (isJoining && heroStack > 0) {
       setIsJoining(false);
     }
 
-    if (hasJoined && heroStack === 0 && !isJoining && connectionStatus === 'connected' && !game.handInProgress && !isObserving) {
+    // Check if hero is currently involved in an active hand (has hole cards)
+    const isHeroInActiveHand = game.current_hand_in_progress && heroHoleCards.length > 0;
+
+    const shouldShow =
+      hasJoined &&
+      heroStack === 0 &&
+      !isJoining &&
+      connectionStatus === 'connected' &&
+      !isObserving &&
+      !isTournament &&
+      !isHeroInActiveHand; // <-- Replaced !game.current_hand_in_progress
+
+    if (shouldShow) {
       setShowRebuyDialog(true);
     } else if (heroStack > 0 && !isAddingTable) {
+      // Close dialog when stack becomes > 0 (e.g., after rebuy)
       setShowRebuyDialog(false);
     }
-  }, [heroStack, connectionStatus, hasJoined, isJoining, game.handInProgress, isObserving, isAddingTable, isTournament]);
+  }, [
+    heroStack,
+    connectionStatus,
+    hasJoined,
+    isJoining,
+    game.current_hand_in_progress,
+    heroHoleCards, // <-- Added heroHoleCards to dependency array
+    isObserving,
+    isAddingTable,
+    isTournament,
+  ]);
 
   const [showDisconnect, setShowDisconnect] = useState(false);
   useEffect(() => {
@@ -538,7 +561,6 @@ export function TablePage() {
 
     const updateRemaining = () => {
       const now = Date.now();
-      // FIX: Normalize seconds to milliseconds if backend sends a unix timestamp in seconds
       const expiresAtMs = heroTimerExpiresAt > 1e12 ? heroTimerExpiresAt : heroTimerExpiresAt * 1000;
       const remaining = Math.max(0, expiresAtMs - now);
       setHeroTimerRemainingMs(remaining);
@@ -577,7 +599,6 @@ export function TablePage() {
 
     const updateRemaining = () => {
       const now = Date.now();
-      // FIX: Normalize seconds to milliseconds if backend sends a unix timestamp in seconds
       const expiresAtMs = opponentTimerExpiresAt > 1e12 ? opponentTimerExpiresAt : opponentTimerExpiresAt * 1000;
       const remaining = Math.max(0, expiresAtMs - now);
       setOpponentTimerRemainingMs(remaining);
@@ -598,7 +619,6 @@ export function TablePage() {
     };
   }, [opponentTimerExpiresAt]);
 
-  // FIX: Pass null instead of 0 when timer is missing to prevent false urgent triggers
   useGameFeedback(
     game,
     activeRoomId,
