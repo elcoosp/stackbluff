@@ -56,8 +56,9 @@ const parseMessage = (data: any) => {
         seat: p.seat,
         user_id: p.user_id,
         display_name: p.display_name || 'Player',
-        stack: p.stack ?? p.chips ?? p.bankroll ?? 0, // FIX: Stack undefined fallback
-        current_bet: p.current_bet,
+        // Merge: type safety + fallback chain
+        stack: typeof p.stack === 'number' ? p.stack : (p.chips ?? p.bankroll ?? 0),
+        current_bet: typeof p.current_bet === 'number' ? p.current_bet : Number(p.current_bet) || 0,
         is_all_in: p.is_all_in,
         is_folded: p.is_folded,
         is_leaving: p.is_leaving || false,

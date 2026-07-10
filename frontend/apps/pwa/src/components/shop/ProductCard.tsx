@@ -92,12 +92,11 @@ export function ProductCard({ product, onPurchase, className }: ProductCardProps
         {/* Bottom panel: price, description, button - rounded top corners, anchored at bottom */}
         <div
           className={cn(
-            'mt-auto rounded-t-xl p-4 transition-all duration-500',
+            'mt-auto rounded-xl p-4 transition-all duration-500',
             isHovered
               ? 'bg-black/40 backdrop-blur-sm border-t border-white/10'
               : 'bg-black/60 backdrop-blur-md border-t border-white/5'
           )}
-          style={{ borderRadius: '12px 12px 0 0' }}
         >
           <div className="flex flex-col gap-2 items-center">
             <div className="flex items-center gap-4 text-sm">
