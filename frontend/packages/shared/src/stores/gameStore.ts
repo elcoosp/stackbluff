@@ -226,11 +226,12 @@ export const useGameStore = create<GameState>((set, get) => ({
     const seat = { ...newSeats[Number(seatNum)] }; // Create a copy to mutate
 
     if (seat) {
-      // FIX 1: Only overwrite stack if the backend actually sent a new stack number
-      if (typeof new_stack === 'number') {
-        seat.stack = new_stack;
+      // FIX: Safely parse stack in case backend sends a string like "1500"
+      const parsedStack = Number(new_stack);
+      if (!isNaN(parsedStack)) {
+        seat.stack = parsedStack;
       }
-      // FIX 2: Update the seat's action so the PlayerSpot badge updates correctly
+      // Update the seat's action so the PlayerSpot badge updates correctly
       seat.action = { text: action.toUpperCase(), amount };
     }
 
