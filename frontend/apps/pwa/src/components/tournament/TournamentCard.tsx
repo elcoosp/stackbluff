@@ -116,11 +116,10 @@ export function TournamentCard({
       transition={{ duration: 0.3 }}
       className="relative flex flex-col lg:grid lg:grid-cols-12 items-start lg:items-center px-4 lg:px-8 py-4 lg:py-5 border border-white/10 rounded-xl overflow-hidden razor-highlight group hover:border-tertiary/40 transition-colors duration-200 gap-3 lg:gap-0"
     >
-      <img
-        src={bgImage}
-        alt=""
-        className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none"
-      />
+      <div
+        className="absolute inset-0 z-0 pointer-events-none bg-cover bg-center"
+        style={{ backgroundImage: `url(${bgImage})` }}
+      ></div>
       <div
         className="absolute inset-0 backdrop-blur-xl bg-surface-container-lowest/80 z-10 pointer-events-none"
       ></div>
