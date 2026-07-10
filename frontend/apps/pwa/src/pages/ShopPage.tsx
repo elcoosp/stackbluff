@@ -6,6 +6,7 @@ import { ProductCard } from '../components/shop/ProductCard';
 import { PurchaseDialog } from '../components/shop/PurchaseDialog';
 import { PurchaseToast } from '../components/shop/PurchaseToast';
 import { cn } from '@/lib/utils';
+import { ShieldCheck, Zap, Loader2, ShoppingBag } from 'lucide-react';
 
 type Category = 'all' | 'chips' | 'season_pass' | 'club_pro';
 
@@ -24,7 +25,6 @@ export default function ShopPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
-  // Compute transformed products
   const transformedProducts = useMemo(() => {
     if (!productsData) return [];
     return productsData.map((p) => ({
@@ -44,7 +44,6 @@ export default function ShopPage() {
     }));
   }, [productsData]);
 
-  // Sync local products with store (only once)
   useEffect(() => {
     if (transformedProducts.length === 0) return;
     const currentIds = shop.products.map(p => p.id).sort().join(',');
@@ -84,28 +83,53 @@ export default function ShopPage() {
 
   if (isLoading && products.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <div className="animate-pulse text-lg text-slate-400">Loading shop...</div>
+      <div className="flex h-full min-h-screen items-center justify-center bg-[#131315]">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 text-tertiary animate-spin" />
+          <div className="animate-pulse text-lg text-on-surface-variant font-label-caps tracking-widest uppercase">Loading Shop...</div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] p-4 md:p-8">
-      <div className="mx-auto max-w-6xl">
-        <h1 className="mb-8 text-3xl font-bold text-white md:text-4xl">Shop</h1>
+    <div className="relative min-h-screen w-full overflow-hidden bg-[#131315] group">
+      <div
+        className="absolute inset-0 w-full h-full bg-cover bg-center blur-md scale-105 group-hover:blur-none group-hover:scale-100 transition-all duration-500 ease-in-out z-0 pointer-events-none"
+        style={{ backgroundImage: `url(/images/shop_bg.png)` }}
+      />
+      <div
+        className="absolute inset-0 w-full h-full z-0 transition-all duration-500 pointer-events-none bg-gradient-to-t from-[#131315]/95 via-[#131315]/85 to-[#131315]/95"
+      ></div>
 
-        {/* Category Tabs */}
-        <div className="flex flex-wrap gap-2 mb-8 border-b border-white/10 pb-4">
+      <div className="relative z-10 mx-auto max-w-7xl px-4 md:px-8 py-8 md:py-12">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 md:mb-12">
+          <div>
+            <h1 className="font-display-lg text-4xl md:text-5xl text-on-surface mb-2">Shop</h1>
+            <p className="text-on-surface-variant max-w-md text-sm md:text-base">
+              Power up your game with premium chips, passes, and exclusive features.
+            </p>
+          </div>
+          <div className="hidden md:flex items-center gap-6 text-[10px] font-label-caps uppercase tracking-widest text-outline">
+            <span className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-tertiary" /> Secure Payments
+            </span>
+            <span className="flex items-center gap-2">
+              <Zap className="w-4 h-4 text-tertiary" /> Instant Delivery
+            </span>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2 mb-10 border-b border-white/10 pb-4">
           {(['all', 'chips', 'season_pass', 'club_pro'] as Category[]).map((cat) => (
             <button
               key={cat}
               onClick={() => setCategory(cat)}
               className={cn(
-                'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                'px-5 py-2 rounded-lg text-sm font-label-caps uppercase tracking-wider transition-all duration-200',
                 category === cat
-                  ? 'bg-tertiary text-on-tertiary'
-                  : 'text-on-surface-variant hover:text-on-surface hover:bg-white/5'
+                  ? 'bg-tertiary text-on-tertiary shadow-lg shadow-emerald-500/20'
+                  : 'text-outline hover:text-on-surface hover:bg-white/5 border border-transparent hover:border-white/10'
               )}
             >
               {CATEGORY_LABELS[cat]}
@@ -113,10 +137,11 @@ export default function ShopPage() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredProducts.length === 0 ? (
-            <div className="col-span-full text-center py-12 text-on-surface-variant">
-              No products available in this category.
+            <div className="col-span-full flex flex-col items-center justify-center py-24 text-on-surface-variant border border-dashed border-white/10 rounded-xl">
+              <ShoppingBag className="w-12 h-12 mb-4 text-outline" />
+              <p className="font-label-caps uppercase tracking-widest">No products available in this category.</p>
             </div>
           ) : (
             filteredProducts.map((product) => (
