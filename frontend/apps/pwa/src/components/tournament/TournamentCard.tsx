@@ -114,20 +114,22 @@ export function TournamentCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="relative flex flex-col lg:grid lg:grid-cols-12 items-start lg:items-center px-4 lg:px-8 py-4 lg:py-5 border border-white/10 rounded-xl overflow-hidden razor-highlight group hover:border-tertiary/40 transition-colors duration-200 gap-3 lg:gap-0"
+      className="flex flex-col lg:grid lg:grid-cols-12 items-start lg:items-center px-4 lg:px-8 py-4 lg:py-5 border border-white/10 rounded-xl razor-highlight group hover:border-tertiary/40 transition-all duration-300 gap-3 lg:gap-0 overflow-hidden relative"
     >
+      {/* Background Image Layer - Blurs by default, unblurs on hover */}
       <div
-        className="absolute inset-0 z-0 pointer-events-none bg-cover bg-center"
+        className="absolute inset-0 w-full h-full bg-cover bg-center blur-md scale-105 group-hover:blur-none group-hover:scale-100 transition-all duration-500 ease-in-out z-0 pointer-events-none"
         style={{ backgroundImage: `url(${bgImage})` }}
-      ></div>
+      />
+      {/* Gradient Overlay Layer - Less dark, smooth transition */}
       <div
-        className="absolute inset-0 backdrop-blur-md bg-gradient-to-t from-[#131315] via-[#131315]/85 to-[#131315]/60 z-10 pointer-events-none border border-[#c6c6cf]/10"
+        className="absolute inset-0 w-full h-full z-0 transition-all duration-500 pointer-events-none bg-gradient-to-r from-[#0a0a0c]/85 via-[#0a0a0c]/50 to-[#0a0a0c]/85 group-hover:from-[#0a0a0c]/75 group-hover:via-[#0a0a0c]/35 group-hover:to-[#0a0a0c]/75"
       ></div>
 
-      <div className="relative z-20 w-full lg:col-span-5 flex items-start lg:items-center gap-3 lg:gap-4">
-        <div className="flex-shrink-0">
-          <div className={`w-2 h-2 rounded-full ${getStatusColor(status)} border`} />
-        </div>
+      <div className="w-full lg:col-span-5 flex items-start lg:items-center gap-3 lg:gap-4 relative z-10">
+        <div
+          className={`mt-1.5 lg:mt-0 w-1.5 h-1.5 rounded-full shrink-0 ${status === 'Running' ? 'bg-tertiary status-led animate-pulse' : 'bg-outline-variant'}`}
+        />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h4 className="font-headline-md text-base text-on-surface truncate">{name}</h4>
@@ -161,14 +163,14 @@ export function TournamentCard({
         </div>
       </div>
 
-      <div className="relative z-20 lg:col-span-2 text-center font-data-mono">
+      <div className="lg:col-span-2 text-center font-data-mono relative z-10">
         <div className="flex items-center justify-center gap-1">
           <Users className="w-3.5 h-3.5 text-outline" />
           <span className="text-on-surface">{registered}/{max_players}</span>
         </div>
       </div>
 
-      <div className="relative z-20 lg:col-span-2 w-full">
+      <div className="lg:col-span-2 w-full relative z-10">
         {showCountdown && (
           <div className="flex items-center gap-2 text-[10px] text-on-surface-variant">
             <Clock className="w-3 h-3" />
@@ -186,7 +188,7 @@ export function TournamentCard({
         )}
       </div>
 
-      <div className="relative z-20 w-full lg:col-span-3 flex lg:justify-end gap-2 mt-1 lg:mt-0">
+      <div className="w-full lg:col-span-3 flex lg:justify-end gap-2 mt-1 lg:mt-0 relative z-10">
         {canRegister && (
           <Button
             data-testid="register"
