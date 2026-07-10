@@ -23,6 +23,7 @@ impl TournamentRepoImpl {
         let config: TournamentConfig = serde_json::from_value(m.config_json).ok()?;
         Some(TournamentRecord {
             id: TournamentId::new(m.id),
+            name: m.name,
             config,
             status: match m.status.as_str() {
                 "Registering" => TournamentStatus::Registering,

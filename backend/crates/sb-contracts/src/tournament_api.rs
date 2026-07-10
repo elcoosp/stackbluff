@@ -65,6 +65,7 @@ pub struct TournamentConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TournamentSummary {
     pub id: TournamentId,
+    pub name: String,
     pub tournament_type: TournamentType,
     pub status: TournamentStatus,
     pub registered: u32,
@@ -89,6 +90,7 @@ pub struct TournamentResult {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TournamentRecord {
     pub id: TournamentId,
+    pub name: String,
     pub config: TournamentConfig,
     pub status: TournamentStatus,
     pub prize_pool: ChipAmount,

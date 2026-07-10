@@ -54,6 +54,7 @@ struct RegisteredPlayer {
 
 pub struct SitGoTournament {
     tournament_id: TournamentId,
+    name: String,
     config: TournamentConfig,
     status: TournamentStatus,
     players: Vec<RegisteredPlayer>,
@@ -91,6 +92,7 @@ impl SitGoTournament {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         tournament_id: TournamentId,
+        name: String,
         config: TournamentConfig,
         registry: Arc<Registry>,
         broker: Arc<ConnectionBroker>,
@@ -102,6 +104,7 @@ impl SitGoTournament {
     ) -> Self {
         Self {
             tournament_id,
+            name,
             config,
             status: TournamentStatus::Registering,
             players: Vec::new(),
@@ -570,6 +573,7 @@ impl SitGoTournament {
     fn build_summary(&self) -> sb_contracts::tournament_api::TournamentSummary {
         sb_contracts::tournament_api::TournamentSummary {
             id: self.tournament_id,
+            name: self.name.clone(),
             tournament_type: TournamentType::SitAndGo,
             status: self.status,
             registered: self.players.len() as u32,

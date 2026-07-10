@@ -107,6 +107,7 @@ async fn test_sit_go_registration_messages_flow() {
 
     let mut actor = crate::SitGoTournament::new(
         tournament_id,
+        "Test Sit & Go".to_string(),
         config,
         registry.clone(),
         broker.clone(),
@@ -167,6 +168,7 @@ async fn test_registration_full_rejects_overflow() {
 
     let mut actor = crate::SitGoTournament::new(
         tournament_id,
+        "Test Sit & Go".to_string(),
         config,
         registry.clone(),
         broker.clone(),

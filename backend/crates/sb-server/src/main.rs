@@ -578,6 +578,7 @@ async fn load_existing_tournaments(
                 let event_rx = state.registry.event_sender().subscribe();
                 let actor = SitGoTournament::new(
                     tournament_id,
+                    record.name.clone(),
                     config,
                     state.registry.clone(),
                     state.broker.clone(),
@@ -604,6 +605,7 @@ async fn load_existing_tournaments(
                 let event_rx = state.registry.event_sender().subscribe();
                 let actor = MttDirector::new(
                     tournament_id,
+                    record.name.clone(),
                     config,
                     state.registry.clone(),
                     state.broker.clone(),

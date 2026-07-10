@@ -223,6 +223,8 @@ impl TournamentService for TournamentServiceImpl {
         config: TournamentConfig,
     ) -> Result<TournamentId, AppError> {
         let id = self.repo.insert_tournament(&config).await?;
+        let record = self.repo.get_tournament(id).await?.ok_or_else(|| AppError::NotFound("Tournament not found".into()))?;
+        let name = record.name.clone();
         if let Some(start) = config.scheduled_start
             && start > Utc::now()
         {
@@ -250,6 +252,7 @@ impl TournamentService for TournamentServiceImpl {
                 let (tx, rx) = mpsc::channel(32);
                 let actor = SitGoTournament::new(
                     id,
+                    name.clone(),
                     config.clone(),
                     self.registry.clone(),
                     self.broker.clone(),
@@ -275,6 +278,7 @@ impl TournamentService for TournamentServiceImpl {
                 let (tx, rx) = mpsc::channel(32);
                 let actor = MttDirector::new(
                     id,
+                    name.clone(),
                     config.clone(),
                     self.registry.clone(),
                     self.broker.clone(),
@@ -438,6 +442,7 @@ impl TournamentService for TournamentServiceImpl {
         for r in records {
             summaries.push(TournamentSummary {
                 id: r.id,
+                name: r.name.clone(),
                 tournament_type: r.config.tournament_type,
                 status: r.status,
                 registered: 0,

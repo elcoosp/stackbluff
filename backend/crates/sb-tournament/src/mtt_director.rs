@@ -75,6 +75,7 @@ enum DirectorState {
 
 pub struct MttDirector {
     tournament_id: TournamentId,
+    name: String,
     config: TournamentConfig,
     state: DirectorState,
     players: Vec<RegisteredPlayer>,
@@ -113,6 +114,7 @@ impl MttDirector {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         tournament_id: TournamentId,
+        name: String,
         config: TournamentConfig,
         registry: Arc<Registry>,
         broker: Arc<ConnectionBroker>,
@@ -124,6 +126,7 @@ impl MttDirector {
     ) -> Self {
         Self {
             tournament_id,
+            name,
             config,
             state: DirectorState::Registering,
             players: Vec::new(),
@@ -774,6 +777,7 @@ impl MttDirector {
     fn build_summary(&self) -> sb_contracts::tournament_api::TournamentSummary {
         sb_contracts::tournament_api::TournamentSummary {
             id: self.tournament_id,
+            name: self.name.clone(),
             tournament_type: TournamentType::Mtt,
             status: match self.state {
                 DirectorState::Registering => TournamentStatus::Registering,
