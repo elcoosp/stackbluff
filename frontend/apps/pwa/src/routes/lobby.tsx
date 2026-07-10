@@ -83,7 +83,7 @@ function LobbyPage() {
     setSortConfig((current) => {
       if (current.key === key) {
         if (current.direction === 'asc') return { key, direction: 'desc' };
-        if (current.direction === 'desc') return { key, direction: 'none', direction: 'asc' };
+        if (current.direction === 'desc') return { key: 'none', direction: 'asc' };
       }
       return { key, direction: 'asc' };
     });
