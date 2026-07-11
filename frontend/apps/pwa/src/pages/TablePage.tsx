@@ -43,6 +43,7 @@ import { FinalTableBanner } from '../components/tournament/FinalTableBanner';
 import { useTournamentStore } from '@stackbluff/shared/stores/tournamentStore';
 import type { TournamentResultEntry } from '@stackbluff/shared/types/tournament.types';
 import { tournamentApi } from '@stackbluff/shared/api/tournamentApi';
+import { KickVoteDialog } from '../components/game/KickVoteDialog';
 
 function Fallback({ error, resetErrorBoundary }: any) {
   
@@ -262,6 +263,7 @@ export function TablePage() {
   const [isJoining, setIsJoining] = useState(false);
   const [isAddingTable, setIsAddingTable] = useState(false);
   const [statsUserId, setStatsUserId] = useState<string | null>(null);
+const [kickVoteDialog, setKickVoteDialog] = useState<{ roomId: string; kickVoteId: string; targetId: string; targetName: string; durationSecs: number; requiredVotes: number; initiatorId: string } | null>(null);
 const [feltColor, setFeltColor] = useState<string | null>(null);
   const isTournament = !!tournamentId;
   const [resultsModalOpen, setResultsModalOpen] = useState(false);
@@ -339,6 +341,46 @@ const [feltColor, setFeltColor] = useState<string | null>(null);
       window.removeEventListener('tournament:elimination', handleElimination as EventListener);
       window.removeEventListener('tournament:tableChanged', handleTableChanged as EventListener);
     };
+
+  // Listen for kick vote events
+  useEffect(() => {
+    const handleKickVoteStarted = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setKickVoteDialog({
+        roomId: detail.room_id,
+        kickVoteId: detail.kick_vote_id,
+        targetId: detail.target_id,
+        targetName: 'Player', // We need to resolve name from seats
+        durationSecs: detail.duration_secs,
+        requiredVotes: detail.required_votes,
+        initiatorId: detail.initiator_id,
+      });
+    };
+    const handleKickVoteUpdate = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      // Update vote counts in dialog
+      if (kickVoteDialog && kickVoteDialog.kickVoteId === detail.kick_vote_id) {
+        setKickVoteDialog((prev) => prev ? { ...prev, yesVotes: detail.yes_votes, passed: detail.passed } : null);
+      }
+    };
+    const handlePlayerRemoved = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (kickVoteDialog && kickVoteDialog.targetId === detail.player_id) {
+        setKickVoteDialog(null);
+      }
+    };
+
+    window.addEventListener('kickVoteStarted', handleKickVoteStarted as EventListener);
+    window.addEventListener('kickVoteUpdate', handleKickVoteUpdate as EventListener);
+    window.addEventListener('playerRemoved', handlePlayerRemoved as EventListener);
+
+    return () => {
+      window.removeEventListener('kickVoteStarted', handleKickVoteStarted as EventListener);
+      window.removeEventListener('kickVoteUpdate', handleKickVoteUpdate as EventListener);
+      window.removeEventListener('playerRemoved', handlePlayerRemoved as EventListener);
+    };
+  }, [kickVoteDialog]);
+
   }, [tournamentId, navigate]);
 
   useEffect(() => {
@@ -990,6 +1032,28 @@ const handleLeaveTable = useCallback(() => {
           </div>
         )}
       </div>
+
+      <KickVoteDialog
+        open={!!kickVoteDialog}
+        onClose={() => setKickVoteDialog(null)}
+        initiatorId={kickVoteDialog?.initiatorId || ''}
+        targetId={kickVoteDialog?.targetId || ''}
+        targetName={kickVoteDialog?.targetName || 'Player'}
+        kickVoteId={kickVoteDialog?.kickVoteId || ''}
+        durationSecs={kickVoteDialog?.durationSecs || 0}
+        requiredVotes={kickVoteDialog?.requiredVotes || 0}
+        onVoteYes={(kickVoteId) => {
+          // Send vote yes message
+          if (activeRoomId) {
+            sendWsMessage('kick_vote_yes', {
+              room_id: activeRoomId,
+              kick_vote_id: kickVoteId,
+            });
+          }
+        }}
+        onTimeout={() => setKickVoteDialog(null)}
+      />
+
     </ErrorBoundary>
   );
 }

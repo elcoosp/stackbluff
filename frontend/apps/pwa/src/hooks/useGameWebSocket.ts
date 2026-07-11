@@ -106,7 +106,34 @@ const parseMessage = (data: any) => {
         amount: data.amount ?? undefined,
         new_stack: typeof data.new_stack === 'number' ? data.new_stack : undefined, // FIX: Prevent stack overwrite
         new_pot: data.new_pot,
-      };
+      }
+            case 'KickVoteStarted':
+                return {
+                    type: 'KickVoteStarted',
+                    room_id: data.room_id,
+                    initiator_id: data.initiator_id,
+                    target_id: data.target_id,
+                    kick_vote_id: data.kick_vote_id,
+                    duration_secs: data.duration_secs,
+                    required_votes: data.required_votes,
+                };
+            case 'KickVoteUpdate':
+                return {
+                    type: 'KickVoteUpdate',
+                    room_id: data.room_id,
+                    kick_vote_id: data.kick_vote_id,
+                    yes_votes: data.yes_votes,
+                    required_votes: data.required_votes,
+                    passed: data.passed,
+                };
+            case 'PlayerRemoved':
+                return {
+                    type: 'PlayerRemoved',
+                    room_id: data.room_id,
+                    player_id: data.player_id,
+                    reason: data.reason,
+                };
+;
     }
 
     case 'ShowdownReveal': {
