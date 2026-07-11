@@ -46,9 +46,9 @@ import { tournamentApi } from '@stackbluff/shared/api/tournamentApi';
 import { KickVoteDialog } from '../components/game/KickVoteDialog';
 
 function Fallback({ error, resetErrorBoundary }: any) {
-  
+
   // Listen to club theme updates
-const [feltColor, setFeltColor] = useState<string | null>(null);
+  const [feltColor, setFeltColor] = useState<string | null>(null);
   useEffect(() => {
     const handler = (event: Event) => {
       const detail = (event as CustomEvent).detail;
@@ -59,7 +59,7 @@ const [feltColor, setFeltColor] = useState<string | null>(null);
     window.addEventListener('club:theme', handler as EventListener);
     return () => window.removeEventListener('club:theme', handler as EventListener);
   }, []);
-return (
+  return (
     <div className="p-4 text-error">
       <p>Game UI error: {error.message}</p>
       <button onClick={resetErrorBoundary}>Retry</button>
@@ -265,7 +265,7 @@ export function TablePage() {
   const [isJoining, setIsJoining] = useState(false);
   const [isAddingTable, setIsAddingTable] = useState(false);
   const [statsUserId, setStatsUserId] = useState<string | null>(null);
-const [kickVoteDialog, setKickVoteDialog] = useState<{ roomId: string; kickVoteId: string; targetId: string; targetName: string; durationSecs: number; requiredVotes: number; initiatorId: string } | null>(null);
+  const [kickVoteDialog, setKickVoteDialog] = useState<{ roomId: string; kickVoteId: string; targetId: string; targetName: string; durationSecs: number; requiredVotes: number; initiatorId: string } | null>(null);
   const isTournament = !!tournamentId;
   const [resultsModalOpen, setResultsModalOpen] = useState(false);
   const [resultsData, setResultsData] = useState<TournamentResultEntry[]>([]);
@@ -343,7 +343,7 @@ const [kickVoteDialog, setKickVoteDialog] = useState<{ roomId: string; kickVoteI
       window.removeEventListener('tournament:tableChanged', handleTableChanged as EventListener);
     };
 
-  
+
 
   }, [tournamentId, navigate]);
 
@@ -700,7 +700,7 @@ const [kickVoteDialog, setKickVoteDialog] = useState<{ roomId: string; kickVoteI
     heroTimerTotalMs,
   );
 
-  
+
   const sendActionWithFeedback = useCallback(
     (action: string, amount?: number) => {
       if (activeRoomId) {
@@ -717,7 +717,7 @@ const [kickVoteDialog, setKickVoteDialog] = useState<{ roomId: string; kickVoteI
   );
 
 
-  
+
   const handleKick = useCallback((targetUserId: string) => {
     if (!activeRoomId) return;
     const room = useGameStore.getState().rooms[activeRoomId];
@@ -738,7 +738,7 @@ const [kickVoteDialog, setKickVoteDialog] = useState<{ roomId: string; kickVoteI
     });
   }, [activeRoomId, sendWsMessage]);
 
-const handleLeaveTable = useCallback(() => {
+  const handleLeaveTable = useCallback(() => {
     const roomIdToLeave = activeRoomId || roomIds[0];
     if (roomIdToLeave) {
       sendLeave(roomIdToLeave);
@@ -947,11 +947,11 @@ const handleLeaveTable = useCallback(() => {
             </div>
 
             <div className={cn(
-          "absolute left-1/2 -translate-x-1/2 z-30 transition-[top] duration-700 ease-in-out pointer-events-none",
-          showdownReveal
-            ? isShortHeight ? "top-[30px]" : "top-[50px]"
-            : isShortHeight ? "top-[50px]" : "top-[70px]"
-        )}>
+              "absolute left-1/2 -translate-x-1/2 z-30 transition-[top] duration-700 ease-in-out pointer-events-none",
+              showdownReveal
+                ? isShortHeight ? "top-[25px]" : "top-[50px]"
+                : isShortHeight ? "top-[45px]" : "top-[70px]"
+            )}>
               <div className="pointer-events-auto">
                 <PotBadge
                   amount={pot}
@@ -1050,9 +1050,9 @@ const handleLeaveTable = useCallback(() => {
         )}
       </div>
 
-      
 
-    
+
+
       <KickVoteDialog
         open={!!kickVoteDialog}
         onClose={() => setKickVoteDialog(null)}
@@ -1072,5 +1072,5 @@ const handleLeaveTable = useCallback(() => {
         }}
         onTimeout={() => setKickVoteDialog(null)}
       />
-</ErrorBoundary>);
+    </ErrorBoundary>);
 }
