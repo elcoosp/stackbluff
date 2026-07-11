@@ -1,4 +1,5 @@
 use crate::commands::DbCommand;
+use sea_orm::prelude::Expr;
 use sb_contracts::repo_api::{
     HandCursor, HandHistoryRepository, HandSummary, HandSummaryPage, PersistenceError,
     PersistenceResult, WinnerSummary,
@@ -189,7 +190,7 @@ impl HandHistoryRepository for HandHistoryRepoImpl {
         let pattern = format!(",{},", user_id.as_uuid());
         let count = hand_history::Entity::find()
             .filter(Column::TableId.eq(table_id.as_uuid()))
-            .filter(Column::Participants.like(&pattern))
+            .filter(Expr::cust_with_values("INSTR(participants, ?) > 0", vec![pattern.clone()]))
             .count(&self.db)
             .await
             .map_err(|e| PersistenceError::Database(e.to_string()))?;
@@ -211,8 +212,9 @@ impl HandHistoryRepository for HandHistoryRepoImpl {
         use sb_db_entities::hand_history_json::{HandPlayers, HandResult};
 
         let pattern = format!(",{},", user_id);
+        tracing::info!("Querying hand history with pattern: {}", pattern);
         let mut query = hand_history::Entity::find()
-            .filter(Column::Participants.like(&pattern))
+            .filter(Expr::cust_with_values("INSTR(participants, ?) > 0", vec![pattern.clone()]))
             .order_by_desc(Column::PlayedAt)
             .order_by_desc(Column::Id);
 
@@ -307,8 +309,9 @@ impl HandHistoryRepository for HandHistoryRepoImpl {
         // We'll use a subquery or join; but for simplicity, we fetch all hands where user participated,
         // then filter those where user is in winners.
         let pattern = format!(",{},", user_id);
+        tracing::info!("Querying hand history with pattern: {}", pattern);
         let models = hand_history::Entity::find()
-            .filter(Column::Participants.like(&pattern))
+            .filter(Expr::cust_with_values("INSTR(participants, ?) > 0", vec![pattern.clone()]))
             .order_by_desc(Column::PlayedAt)
             .limit(100) // limit to last 100 for performance
             .all(&self.db)
