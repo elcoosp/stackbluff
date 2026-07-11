@@ -5365,6 +5365,7 @@ dependencies = [
  "sb-db-entities",
  "sb-db-repos",
  "sb-shared-types",
+ "sb-table-registry",
  "sea-orm",
  "sea-orm-migration",
  "serde",

@@ -19,12 +19,15 @@
 //! - Owner cache: 5 minute TTL, 10,000 max entries
 //! - Automatically reduces database load for repeated authorization checks
 
+use moka::future::Cache;
+use prometheus::{Histogram, HistogramOpts, IntCounter, register_histogram, register_int_counter};
+use sb_contracts::service_api::{ClubProSettings, UpdateClubSettingsRequest};
 use sb_contracts::{ClubError, ClubRepo, ClubService, LeaderboardPage};
 use sb_shared_types::{ClubId, RequestContext, UserId};
+use sb_table_registry::connection_broker::ConnectionBroker;
+#[allow(unused_imports)]
+use sb_table_registry::game_room::RoomMessage;
 use std::sync::Arc;
-use sb_contracts::service_api::{ClubProSettings, UpdateClubSettingsRequest};
-use moka::future::Cache;
-use prometheus::{IntCounter, Histogram, HistogramOpts, register_int_counter, register_histogram};
 use std::sync::OnceLock;
 
 // Metrics
@@ -38,18 +41,18 @@ fn get_leaderboard_queries() -> &'static IntCounter {
         register_int_counter!(
             "club_leaderboard_queries_total",
             "Total number of leaderboard queries"
-        ).unwrap()
+        )
+        .unwrap()
     })
 }
 
 fn get_leaderboard_query_duration() -> &'static Histogram {
     LEADERBOARD_QUERY_DURATION.get_or_init(|| {
-        register_histogram!(
-            HistogramOpts::new(
-                "club_leaderboard_query_duration_seconds",
-                "Duration of leaderboard queries in seconds"
-            )
-        ).unwrap()
+        register_histogram!(HistogramOpts::new(
+            "club_leaderboard_query_duration_seconds",
+            "Duration of leaderboard queries in seconds"
+        ))
+        .unwrap()
     })
 }
 
@@ -58,34 +61,37 @@ fn get_rebalance_operations() -> &'static IntCounter {
         register_int_counter!(
             "club_rebalance_operations_total",
             "Total number of rebalance operations"
-        ).unwrap()
+        )
+        .unwrap()
     })
 }
 
 fn get_rebalance_duration() -> &'static Histogram {
     REBALANCE_DURATION.get_or_init(|| {
-        register_histogram!(
-            HistogramOpts::new(
-                "club_rebalance_duration_seconds",
-                "Duration of rebalance operations in seconds"
-            )
-        ).unwrap()
+        register_histogram!(HistogramOpts::new(
+            "club_rebalance_duration_seconds",
+            "Duration of rebalance operations in seconds"
+        ))
+        .unwrap()
     })
 }
 
 pub struct ClubServiceImpl {
     repo: Arc<dyn ClubRepo>,
     owner_cache: Cache<(ClubId, UserId), bool>,
+    broker: Arc<ConnectionBroker>,
 }
 
 impl ClubServiceImpl {
-    pub fn new(repo: Arc<dyn ClubRepo>) -> Self {
-        let owner_cache = moka::future::Cache::builder()
-            .max_capacity(10_000)
-            .time_to_live(std::time::Duration::from_secs(300)) // 5 minutes
-            .build();
-
-        Self { repo, owner_cache }
+    pub fn new(repo: Arc<dyn ClubRepo>, broker: Arc<ConnectionBroker>) -> Self {
+        Self {
+            repo,
+            owner_cache: moka::future::Cache::builder()
+                .max_capacity(10_000)
+                .time_to_live(std::time::Duration::from_secs(300))
+                .build(),
+            broker,
+        }
     }
 }
 
@@ -169,7 +175,10 @@ impl ClubService for ClubServiceImpl {
         club_id: ClubId,
         settings: UpdateClubSettingsRequest,
     ) -> Result<ClubProSettings, ClubError> {
-        let existing = self.repo.get_club_pro_settings(club_id).await
+        let existing = self
+            .repo
+            .get_club_pro_settings(club_id)
+            .await
             .map_err(|e| ClubError::Internal(e.to_string()))?
             .and_then(|v| serde_json::from_value::<ClubProSettings>(v).ok())
             .unwrap_or(ClubProSettings {
@@ -185,8 +194,26 @@ impl ClubService for ClubServiceImpl {
         };
 
         let json = serde_json::to_value(&merged).map_err(|e| ClubError::Internal(e.to_string()))?;
-        self.repo.update_club_pro_settings(club_id, json).await
+        self.repo
+            .update_club_pro_settings(club_id, json)
+            .await
             .map_err(|e| ClubError::Internal(e.to_string()))?;
+
+        // Broadcast theme update to all tables of this club
+        let tables = self
+            .repo
+            .get_tables_by_club_id(club_id)
+            .await
+            .map_err(|e| ClubError::Internal(e.to_string()))?;
+        let theme_msg = sb_table_registry::game_room::RoomMessage::ClubThemeUpdated {
+            club_id,
+            banner_url: merged.banner_url.clone(),
+            chip_preset_id: merged.chip_preset_id.map(|id| id as i32),
+            felt_color: merged.felt_color.clone(),
+        };
+        for table_id in tables {
+            self.broker.broadcast_to_room(table_id, theme_msg.clone());
+        }
 
         Ok(merged)
     }
@@ -195,7 +222,10 @@ impl ClubService for ClubServiceImpl {
         &self,
         club_id: ClubId,
     ) -> Result<Option<ClubProSettings>, ClubError> {
-        let settings = self.repo.get_club_pro_settings(club_id).await
+        let settings = self
+            .repo
+            .get_club_pro_settings(club_id)
+            .await
             .map_err(|e| ClubError::Internal(e.to_string()))?;
 
         match settings {
@@ -209,10 +239,7 @@ impl ClubService for ClubServiceImpl {
         Ok(club.map(|c| c.created_by))
     }
 
-    async fn is_club_pro_active(
-        &self,
-        _user_id: UserId,
-    ) -> Result<bool, ClubError> {
+    async fn is_club_pro_active(&self, _user_id: UserId) -> Result<bool, ClubError> {
         Ok(true)
     }
 

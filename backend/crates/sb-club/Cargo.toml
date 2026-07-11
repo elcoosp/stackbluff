@@ -18,7 +18,7 @@ async-trait = { workspace = true }
 tokio = { workspace = true }
 chrono = { workspace = true }
 uuid = { workspace = true }
-
+sb-table-registry = { path = "../sb-table-registry" }
 [dev-dependencies]
 tower = { workspace = true }
 parking_lot = { workspace = true }

@@ -287,9 +287,10 @@ async fn main() {
     // ── Club service ─────────────────────────────────────────────────
     let club_repo: Arc<dyn sb_contracts::repo_api::ClubRepo + Send + Sync> =
         Arc::new(ClubRepoImpl::new(db.clone()));
+    let broker = Arc::new(ConnectionBroker::new());
     let club_service: Arc<dyn sb_contracts::service_api::ClubService + Send + Sync> =
-        Arc::new(sb_club::ClubServiceImpl::new(club_repo.clone()));
-    let _broker = Arc::new(ConnectionBroker::new());
+        Arc::new(sb_club::ClubServiceImpl::new(club_repo.clone(), broker.clone()));
+    let broker = Arc::new(ConnectionBroker::new());
 
     // ── GDPR repository ──────────────────────────────────────────────
     let gdpr_repo: Arc<dyn GdprRepo + Send + Sync> = Arc::new(PgGdprRepo { db: db.clone() });
@@ -353,7 +354,7 @@ async fn main() {
     // ── Create AppState ──────────────────────────────────────────────
     // ── Tournament system ────────────────────────────────────────────
     let tournament_repo = Arc::new(TournamentRepoImpl::new(db.clone()));
-    let broker = Arc::new(sb_table_registry::connection_broker::ConnectionBroker::new());
+    let tournament_broker = Arc::new(sb_table_registry::connection_broker::ConnectionBroker::new());
 
     let app_base_url =
         std::env::var("APP_BASE_URL").unwrap_or_else(|_| "https://app.stackbluff.com".to_string());
