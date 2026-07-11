@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AlertTriangle, Download, Trash2, Shield, Loader2, CheckCircle, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
+import { requireAuth } from '@/lib/authGuard';
 
 export const Route = createFileRoute('/settings/privacy')({
   component: PrivacySettingsPage,
@@ -23,7 +24,7 @@ interface DeletionStatus {
 function PrivacySettingsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { isAuthenticated } = useAuthStore();
+  const {} = useAuthStore();
   const [isDeletionDialogOpen, setIsDeletionDialogOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
@@ -31,7 +32,7 @@ function PrivacySettingsPage() {
   const { data: deletionStatus, isLoading: statusLoading } = useQuery<DeletionStatus>({
     queryKey: ['gdpr', 'status'],
     queryFn: () => apiClient<DeletionStatus>('/gdpr/status'),
-    enabled: isAuthenticated,
+    enabled: true,
     staleTime: 60_000,
   });
 
@@ -79,17 +80,6 @@ function PrivacySettingsPage() {
     },
   });
 
-  if (!isAuthenticated) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] p-6">
-        <Card className="max-w-md w-full p-6 text-center">
-          <h2 className="text-xl font-semibold text-on-surface mb-2">Sign In Required</h2>
-          <p className="text-on-surface-variant text-sm">Please sign in to manage your privacy settings.</p>
-          <Button onClick={() => navigate({ to: '/login' })} className="mt-4">Sign In</Button>
-        </Card>
-      </div>
-    );
-  }
 
   if (statusLoading) {
     return <PrivacySkeleton />;

@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { requireAuth } from '@/lib/authGuard';
 
 export const Route = createFileRoute('/history')({
   component: HistoryPage,
@@ -127,7 +128,7 @@ const formatCard = (cardStr: string) => {
 };
 
 function HistoryPage() {
-  const { isAuthenticated } = useAuthStore();
+  const {} = useAuthStore();
   const [limit] = useState(20);
   const [filter, setFilter] = useState<FilterType>('all');
 
@@ -140,7 +141,7 @@ function HistoryPage() {
       },
       getNextPageParam: (lastPage) => lastPage.next_cursor,
       initialPageParam: undefined as string | undefined,
-      enabled: isAuthenticated,
+      enabled: true,
       staleTime: 60_000,
     });
 
@@ -156,7 +157,7 @@ function HistoryPage() {
         return [];
       }
     },
-    enabled: isAuthenticated,
+    enabled: true,
     staleTime: 60_000,
   });
 
@@ -170,32 +171,6 @@ function HistoryPage() {
     return map;
   }, [tablesData]);
 
-  if (!isAuthenticated) {
-    return (
-      <div className="relative min-h-[80vh] flex items-center justify-center p-6">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        >
-          <Card className="max-w-md w-full p-8 text-center bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl">
-            <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto mb-4">
-              <History className="w-7 h-7 text-blue-400" />
-            </div>
-            <h2 className="font-display-lg text-xl text-on-surface mb-2">Sign In Required</h2>
-            <p className="text-on-surface-variant text-sm">
-              Please sign in to view your hand history and track your sessions.
-            </p>
-            <Link to="/login" className="mt-5 inline-block">
-              <Button className="bg-tertiary text-black hover:bg-tertiary/90">Sign In</Button>
-            </Link>
-          </Card>
-        </motion.div>
-      </div>
-    );
-  }
 
   if (isLoading) {
     return <HistorySkeleton />;

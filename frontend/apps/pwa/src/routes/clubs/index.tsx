@@ -10,6 +10,7 @@ import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { CreateClubModal } from '@/components/club/CreateClubModal';
 
 import { ErrorState } from '@/components/ui/ErrorState';
+import { requireAuth } from '@/lib/authGuard';
 
 interface Club {
   id: string;

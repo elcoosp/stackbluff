@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { requireAuth } from '@/lib/authGuard';
 import {
   Trophy,
   Target,
@@ -74,12 +75,12 @@ const itemVariants = {
 function MissionsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { isAuthenticated } = useAuthStore();
+  const {} = useAuthStore();
 
   const { data: missions, isLoading, error, refetch } = useQuery<Mission[]>({
     queryKey: ['missions', 'today'],
     queryFn: () => apiClient<Mission[]>('/missions/today'),
-    enabled: isAuthenticated,
+    enabled: true,
     staleTime: 60_000,
   });
 
@@ -117,26 +118,6 @@ function MissionsPage() {
     },
   });
 
-  if (!isAuthenticated) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] p-6">
-        <Card className="max-w-md w-full p-8 text-center bg-white/5 border-white/10 backdrop-blur-xl">
-          <div className="w-16 h-16 mx-auto rounded-full bg-yellow-500/10 flex items-center justify-center mb-4">
-            <Trophy className="w-8 h-8 text-yellow-400" />
-          </div>
-          <h2 className="font-display-lg text-2xl text-on-surface mb-2">Sign In Required</h2>
-          <p className="text-on-surface-variant text-sm mb-6">
-            Please sign in to view your daily missions and earn rewards.
-          </p>
-          <Link to="/login" className="inline-block">
-            <Button className="bg-tertiary text-on-tertiary hover:bg-tertiary-fixed px-8 py-2 rounded-xl font-medium">
-              Sign In
-            </Button>
-          </Link>
-        </Card>
-      </div>
-    );
-  }
 
   if (isLoading) {
     return <MissionsSkeleton />;

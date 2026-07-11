@@ -29,6 +29,7 @@ import { Leaderboard } from "../components/Leaderboard";
 
 import { LobbyTabs } from '@/components/lobby/LobbyTabs';
 import { removeToken } from '@stackbluff/shared/auth/token';
+import { requireAuth } from '@/lib/authGuard';
 
 const STAKE_CONFIG = {
   Micro: { text: "$0.02/$0.05", bb: 5 },

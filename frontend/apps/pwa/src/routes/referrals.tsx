@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { requireAuth } from '@/lib/authGuard';
 import {
   Users,
   Gift,
@@ -71,19 +72,19 @@ const itemVariants = {
 function ReferralsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user, isAuthenticated } = useAuthStore();
+  const {user} = useAuthStore();
 
   const { data: stats, isLoading: statsLoading, error: statsError } = useQuery<ReferralStats>({
     queryKey: ['referrals', 'stats'],
     queryFn: () => apiClient<ReferralStats>('/referrals/stats'),
-    enabled: isAuthenticated,
+    enabled: true,
     staleTime: 60_000,
   });
 
   const { data: referrals, isLoading: referralsLoading, error: referralsError } = useQuery<ReferralRecord[]>({
     queryKey: ['referrals', 'list'],
     queryFn: () => apiClient<ReferralRecord[]>('/referrals/list'),
-    enabled: isAuthenticated,
+    enabled: true,
     staleTime: 60_000,
   });
 
@@ -128,26 +129,6 @@ function ReferralsPage() {
     window.open(shareUrl, '_blank');
   };
 
-  if (!isAuthenticated) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] p-6">
-        <Card className="max-w-md w-full p-8 text-center bg-white/5 border-white/10 backdrop-blur-xl">
-          <div className="w-16 h-16 mx-auto rounded-full bg-purple-500/10 flex items-center justify-center mb-4">
-            <Users className="w-8 h-8 text-purple-400" />
-          </div>
-          <h2 className="font-display-lg text-2xl text-on-surface mb-2">Sign In Required</h2>
-          <p className="text-on-surface-variant text-sm mb-6">
-            Please sign in to view your referral dashboard and earn rewards.
-          </p>
-          <Link to="/login" className="inline-block">
-            <Button className="bg-tertiary text-on-tertiary hover:bg-tertiary-fixed px-8 py-2 rounded-xl font-medium">
-              Sign In
-            </Button>
-          </Link>
-        </Card>
-      </div>
-    );
-  }
 
   const isLoading = statsLoading || referralsLoading;
 

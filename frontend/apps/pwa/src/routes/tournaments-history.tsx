@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Trophy, ArrowLeft, Calendar, Users, Coins } from 'lucide-react';
 import type { TournamentResultEntry, TournamentSummary } from '@stackbluff/shared/types/tournament.types';
+import { requireAuth } from '@/lib/authGuard';
 
 export const Route = createFileRoute('/tournaments-history')({
   component: TournamentHistoryPage,

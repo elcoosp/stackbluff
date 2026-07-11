@@ -6,13 +6,14 @@ import { Slider } from '@/components/ui/slider';
 import { ArrowLeft, Volume2, VolumeX, Music, Play } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { requireAuth } from '@/lib/authGuard';
 
 export const Route = createFileRoute('/settings/audio')({
   component: AudioSettingsPage,
 });
 
 function AudioSettingsPage() {
-  const { isAuthenticated } = useAuthStore();
+  const {} = useAuthStore();
   const [masterVolume, setMasterVolume] = useState([70]);
   const [sfxVolume, setSfxVolume] = useState([80]);
   const [musicVolume, setMusicVolume] = useState([50]);
@@ -22,19 +23,6 @@ function AudioSettingsPage() {
     toast.info('🔊 Test sound played');
   };
 
-  if (!isAuthenticated) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] p-6">
-        <Card className="max-w-md w-full p-6 text-center">
-          <h2 className="text-xl font-semibold text-on-surface mb-2">Sign In Required</h2>
-          <p className="text-on-surface-variant text-sm">Please sign in to manage audio settings.</p>
-          <Link to="/login" className="mt-4 inline-block">
-            <Button>Sign In</Button>
-          </Link>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-2xl mx-auto p-6">

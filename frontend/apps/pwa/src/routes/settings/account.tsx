@@ -10,13 +10,14 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { useState } from 'react';
+import { requireAuth } from '@/lib/authGuard';
 
 export const Route = createFileRoute('/settings/account')({
   component: AccountSettingsPage,
 });
 
 function AccountSettingsPage() {
-  const { user, isAuthenticated } = useAuthStore();
+  const {user} = useAuthStore();
   const [displayName, setDisplayName] = useState(user?.username || '');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -68,19 +69,6 @@ function AccountSettingsPage() {
     updateProfileMutation.mutate(data);
   };
 
-  if (!isAuthenticated) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] p-6">
-        <Card className="max-w-md w-full p-6 text-center">
-          <h2 className="text-xl font-semibold text-on-surface mb-2">Sign In Required</h2>
-          <p className="text-on-surface-variant text-sm">Please sign in to manage your account.</p>
-          <Link to="/login" className="mt-4 inline-block">
-            <Button>Sign In</Button>
-          </Link>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-2xl mx-auto p-6">

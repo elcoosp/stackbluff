@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { requireAuth } from '@/lib/authGuard';
 import {
   User,
   Bell,
@@ -196,5 +197,6 @@ function SettingsPage() {
 }
 
 export const Route = createFileRoute('/settings')({
+  beforeLoad: () => { requireAuth(); },
   component: SettingsPage,
 });

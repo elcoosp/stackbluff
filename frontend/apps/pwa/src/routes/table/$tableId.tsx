@@ -3,6 +3,7 @@ import { TablePage } from '../../pages/TablePage';
 import { useEffect } from 'react';
 import { generateAndSubmitFingerprint } from '@/services/fingerprint';
 import { getToken } from '@stackbluff/shared/auth/token';
+import { requireAuth } from '@/lib/authGuard';
 
 export const Route = createFileRoute('/table/$tableId')({
   component: TablePageWithFingerprint,

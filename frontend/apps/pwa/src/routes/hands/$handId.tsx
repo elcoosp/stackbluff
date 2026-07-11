@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { requireAuth } from '@/lib/authGuard';
 
 export const Route = createFileRoute('/hands/$handId')({
   component: HandDetailPage,
@@ -163,7 +164,7 @@ const CardBack = () => (
 function HandDetailPage() {
   const params = useParams({ from: '/hands/$handId' });
   const handId = params.handId;
-  const { isAuthenticated, user } = useAuthStore();
+  const {user} = useAuthStore();
   const [currentStreet, setCurrentStreet] = useState<Street>('preflop');
   const [isPlaying, setIsPlaying] = useState(false);
 
@@ -171,7 +172,7 @@ function HandDetailPage() {
   const { data: hand, isLoading, error, refetch } = useQuery<HandDetail>({
     queryKey: ['hand', handId],
     queryFn: () => apiClient<HandDetail>(`/hands/${handId}`),
-    enabled: isAuthenticated && !!handId,
+    enabled: true && !!handId,
     staleTime: 60_000,
   });
 
@@ -187,7 +188,7 @@ function HandDetailPage() {
         return [];
       }
     },
-    enabled: isAuthenticated,
+    enabled: true,
     staleTime: 60_000,
   });
 
@@ -252,20 +253,6 @@ function HandDetailPage() {
     return () => clearInterval(timer);
   }, [isPlaying, streets]);
 
-  if (!isAuthenticated) {
-    return (
-      <div className="relative min-h-[80vh] flex items-center justify-center p-6">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-        <Card className="max-w-md w-full p-8 text-center bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl">
-          <h2 className="font-display-lg text-xl text-on-surface mb-2">Sign In Required</h2>
-          <p className="text-on-surface-variant text-sm">Please sign in to view hand details.</p>
-          <Link to="/login" className="mt-5 inline-block">
-            <Button className="bg-tertiary text-black hover:bg-tertiary/90">Sign In</Button>
-          </Link>
-        </Card>
-      </div>
-    );
-  }
 
   if (isLoading) {
     return <HandDetailSkeleton />;

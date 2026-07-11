@@ -31,6 +31,7 @@ import {
   Gem,
 } from 'lucide-react';
 import type { PlayerStats } from '@/types/player-stats';
+import { requireAuth } from '@/lib/authGuard';
 
 export const Route = createFileRoute('/profile')({
   component: ProfilePage,
@@ -59,7 +60,7 @@ const itemVariants = {
 
 function ProfilePage() {
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuthStore();
+  const {user} = useAuthStore();
   const { data: badges, isLoading: badgesLoading } = useBadges();
 
   const { data: stats, isLoading: statsLoading } = useQuery<PlayerStats>({
@@ -72,24 +73,6 @@ function ProfilePage() {
   const isLoading = badgesLoading || statsLoading;
   const balance = useAuthStore((s) => s.balance);
 
-  if (!isAuthenticated) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] p-6">
-        <Card className="max-w-md w-full p-8 text-center bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl">
-          <div className="w-16 h-16 mx-auto rounded-full bg-blue-500/10 flex items-center justify-center mb-4">
-            <Users className="w-8 h-8 text-blue-400" />
-          </div>
-          <h2 className="font-display-lg text-2xl text-on-surface mb-2">Sign In Required</h2>
-          <p className="text-on-surface-variant text-sm mb-6">
-            Please sign in to view your profile and track your progress.
-          </p>
-          <Button onClick={() => navigate({ to: '/login' })} className="bg-tertiary text-on-tertiary hover:bg-tertiary-fixed px-8 py-2 rounded-xl font-medium">
-            Sign In
-          </Button>
-        </Card>
-      </div>
-    );
-  }
 
   if (isLoading) {
     return <ProfileSkeleton />;

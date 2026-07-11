@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Users, Crown, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
+import { requireAuth } from '@/lib/authGuard';
 
 interface ClubPreview {
   id: string;
