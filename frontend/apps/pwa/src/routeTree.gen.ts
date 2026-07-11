@@ -13,12 +13,13 @@ import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as TournamentsHistoryRouteImport } from './routes/tournaments-history'
 import { Route as TournamentsRouteImport } from './routes/tournaments'
 import { Route as ShopRouteImport } from './routes/shop'
-import { Route as SettingsRouteImport } from './routes/settings/index'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ResponsibleGamingRouteImport } from './routes/responsible-gaming'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ReplaysRouteImport } from './routes/replays'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ReferralsRouteImport } from './routes/referrals'
+import { Route as PuzzleRouteImport } from './routes/puzzle'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as MissionsRouteImport } from './routes/missions'
 import { Route as LoginRouteImport } from './routes/login'
@@ -29,6 +30,7 @@ import { Route as HelpRouteImport } from './routes/help'
 import { Route as GuideRouteImport } from './routes/guide'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as ClubsIndexRouteImport } from './routes/clubs/index'
 import { Route as TournamentsTournamentIdRouteImport } from './routes/tournaments/$tournamentId'
 import { Route as TableTableIdRouteImport } from './routes/table/$tableId'
@@ -96,6 +98,11 @@ const ReferralsRoute = ReferralsRouteImport.update({
   path: '/referrals',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PuzzleRoute = PuzzleRouteImport.update({
+  id: '/puzzle',
+  path: '/puzzle',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -145,6 +152,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsIndexRoute = SettingsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SettingsRoute,
 } as any)
 const ClubsIndexRoute = ClubsIndexRouteImport.update({
   id: '/clubs/',
@@ -238,6 +250,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/missions': typeof MissionsRoute
   '/profile': typeof ProfileRoute
+  '/puzzle': typeof PuzzleRoute
   '/referrals': typeof ReferralsRoute
   '/register': typeof RegisterRoute
   '/replays': typeof ReplaysRoute
@@ -264,6 +277,7 @@ export interface FileRoutesByFullPath {
   '/table/$tableId': typeof TableTableIdRoute
   '/tournaments/$tournamentId': typeof TournamentsTournamentIdRoute
   '/clubs/': typeof ClubsIndexRoute
+  '/settings/': typeof SettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -276,12 +290,12 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/missions': typeof MissionsRoute
   '/profile': typeof ProfileRoute
+  '/puzzle': typeof PuzzleRoute
   '/referrals': typeof ReferralsRoute
   '/register': typeof RegisterRoute
   '/replays': typeof ReplaysRoute
   '/reset-password': typeof ResetPasswordRoute
   '/responsible-gaming': typeof ResponsibleGamingRoute
-  '/settings': typeof SettingsRouteWithChildren
   '/shop': typeof ShopRoute
   '/tournaments': typeof TournamentsRouteWithChildren
   '/tournaments-history': typeof TournamentsHistoryRoute
@@ -302,6 +316,7 @@ export interface FileRoutesByTo {
   '/table/$tableId': typeof TableTableIdRoute
   '/tournaments/$tournamentId': typeof TournamentsTournamentIdRoute
   '/clubs': typeof ClubsIndexRoute
+  '/settings': typeof SettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -315,6 +330,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/missions': typeof MissionsRoute
   '/profile': typeof ProfileRoute
+  '/puzzle': typeof PuzzleRoute
   '/referrals': typeof ReferralsRoute
   '/register': typeof RegisterRoute
   '/replays': typeof ReplaysRoute
@@ -341,122 +357,128 @@ export interface FileRoutesById {
   '/table/$tableId': typeof TableTableIdRoute
   '/tournaments/$tournamentId': typeof TournamentsTournamentIdRoute
   '/clubs/': typeof ClubsIndexRoute
+  '/settings/': typeof SettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-  | '/'
-  | '/forgot-password'
-  | '/guide'
-  | '/help'
-  | '/history'
-  | '/leaderboard'
-  | '/lobby'
-  | '/login'
-  | '/missions'
-  | '/profile'
-  | '/referrals'
-  | '/register'
-  | '/replays'
-  | '/reset-password'
-  | '/responsible-gaming'
-  | '/settings'
-  | '/shop'
-  | '/tournaments'
-  | '/tournaments-history'
-  | '/verify-email'
-  | '/clubs/$clubId'
-  | '/clubs/join'
-  | '/hands/$handId'
-  | '/legal/privacy'
-  | '/legal/terms'
-  | '/players/$userId'
-  | '/settings/account'
-  | '/settings/appearance'
-  | '/settings/audio'
-  | '/settings/notifications'
-  | '/settings/payments'
-  | '/settings/privacy'
-  | '/settings/telegram'
-  | '/table/$tableId'
-  | '/tournaments/$tournamentId'
-  | '/clubs/'
+    | '/'
+    | '/forgot-password'
+    | '/guide'
+    | '/help'
+    | '/history'
+    | '/leaderboard'
+    | '/lobby'
+    | '/login'
+    | '/missions'
+    | '/profile'
+    | '/puzzle'
+    | '/referrals'
+    | '/register'
+    | '/replays'
+    | '/reset-password'
+    | '/responsible-gaming'
+    | '/settings'
+    | '/shop'
+    | '/tournaments'
+    | '/tournaments-history'
+    | '/verify-email'
+    | '/clubs/$clubId'
+    | '/clubs/join'
+    | '/hands/$handId'
+    | '/legal/privacy'
+    | '/legal/terms'
+    | '/players/$userId'
+    | '/settings/account'
+    | '/settings/appearance'
+    | '/settings/audio'
+    | '/settings/notifications'
+    | '/settings/payments'
+    | '/settings/privacy'
+    | '/settings/telegram'
+    | '/table/$tableId'
+    | '/tournaments/$tournamentId'
+    | '/clubs/'
+    | '/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
-  | '/'
-  | '/forgot-password'
-  | '/guide'
-  | '/help'
-  | '/history'
-  | '/leaderboard'
-  | '/lobby'
-  | '/login'
-  | '/missions'
-  | '/profile'
-  | '/referrals'
-  | '/register'
-  | '/replays'
-  | '/reset-password'
-  | '/responsible-gaming'
-  | '/settings'
-  | '/shop'
-  | '/tournaments'
-  | '/tournaments-history'
-  | '/verify-email'
-  | '/clubs/$clubId'
-  | '/clubs/join'
-  | '/hands/$handId'
-  | '/legal/privacy'
-  | '/legal/terms'
-  | '/players/$userId'
-  | '/settings/account'
-  | '/settings/appearance'
-  | '/settings/audio'
-  | '/settings/notifications'
-  | '/settings/payments'
-  | '/settings/privacy'
-  | '/settings/telegram'
-  | '/table/$tableId'
-  | '/tournaments/$tournamentId'
-  | '/clubs'
+    | '/'
+    | '/forgot-password'
+    | '/guide'
+    | '/help'
+    | '/history'
+    | '/leaderboard'
+    | '/lobby'
+    | '/login'
+    | '/missions'
+    | '/profile'
+    | '/puzzle'
+    | '/referrals'
+    | '/register'
+    | '/replays'
+    | '/reset-password'
+    | '/responsible-gaming'
+    | '/shop'
+    | '/tournaments'
+    | '/tournaments-history'
+    | '/verify-email'
+    | '/clubs/$clubId'
+    | '/clubs/join'
+    | '/hands/$handId'
+    | '/legal/privacy'
+    | '/legal/terms'
+    | '/players/$userId'
+    | '/settings/account'
+    | '/settings/appearance'
+    | '/settings/audio'
+    | '/settings/notifications'
+    | '/settings/payments'
+    | '/settings/privacy'
+    | '/settings/telegram'
+    | '/table/$tableId'
+    | '/tournaments/$tournamentId'
+    | '/clubs'
+    | '/settings'
   id:
-  | '__root__'
-  | '/'
-  | '/forgot-password'
-  | '/guide'
-  | '/help'
-  | '/history'
-  | '/leaderboard'
-  | '/lobby'
-  | '/login'
-  | '/missions'
-  | '/profile'
-  | '/referrals'
-  | '/register'
-  | '/replays'
-  | '/reset-password'
-  | '/responsible-gaming'
-  | '/settings'
-  | '/shop'
-  | '/tournaments'
-  | '/tournaments-history'
-  | '/verify-email'
-  | '/clubs/$clubId'
-  | '/clubs/join'
-  | '/hands/$handId'
-  | '/legal/privacy'
-  | '/legal/terms'
-  | '/players/$userId'
-  | '/settings/account'
-  | '/settings/appearance'
-  | '/settings/audio'
-  | '/settings/notifications'
-  | '/settings/payments'
-  | '/settings/privacy'
-  | '/settings/telegram'
-  | '/table/$tableId'
-  | '/tournaments/$tournamentId'
-  | '/clubs/'
+    | '__root__'
+    | '/'
+    | '/forgot-password'
+    | '/guide'
+    | '/help'
+    | '/history'
+    | '/leaderboard'
+    | '/lobby'
+    | '/login'
+    | '/missions'
+    | '/profile'
+    | '/puzzle'
+    | '/referrals'
+    | '/register'
+    | '/replays'
+    | '/reset-password'
+    | '/responsible-gaming'
+    | '/settings'
+    | '/shop'
+    | '/tournaments'
+    | '/tournaments-history'
+    | '/verify-email'
+    | '/clubs/$clubId'
+    | '/clubs/join'
+    | '/hands/$handId'
+    | '/legal/privacy'
+    | '/legal/terms'
+    | '/players/$userId'
+    | '/settings/account'
+    | '/settings/appearance'
+    | '/settings/audio'
+    | '/settings/notifications'
+    | '/settings/payments'
+    | '/settings/privacy'
+    | '/settings/telegram'
+    | '/table/$tableId'
+    | '/tournaments/$tournamentId'
+    | '/clubs/'
+    | '/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -470,6 +492,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   MissionsRoute: typeof MissionsRoute
   ProfileRoute: typeof ProfileRoute
+  PuzzleRoute: typeof PuzzleRoute
   ReferralsRoute: typeof ReferralsRoute
   RegisterRoute: typeof RegisterRoute
   ReplaysRoute: typeof ReplaysRoute
@@ -562,6 +585,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReferralsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/puzzle': {
+      id: '/puzzle'
+      path: '/puzzle'
+      fullPath: '/puzzle'
+      preLoaderRoute: typeof PuzzleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/profile': {
       id: '/profile'
       path: '/profile'
@@ -631,6 +661,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/settings/': {
+      id: '/settings/'
+      path: '/'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof SettingsIndexRouteImport
+      parentRoute: typeof SettingsRoute
     }
     '/clubs/': {
       id: '/clubs/'
@@ -755,6 +792,7 @@ interface SettingsRouteChildren {
   SettingsPaymentsRoute: typeof SettingsPaymentsRoute
   SettingsPrivacyRoute: typeof SettingsPrivacyRoute
   SettingsTelegramRoute: typeof SettingsTelegramRoute
+  SettingsIndexRoute: typeof SettingsIndexRoute
 }
 
 const SettingsRouteChildren: SettingsRouteChildren = {
@@ -765,6 +803,7 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsPaymentsRoute: SettingsPaymentsRoute,
   SettingsPrivacyRoute: SettingsPrivacyRoute,
   SettingsTelegramRoute: SettingsTelegramRoute,
+  SettingsIndexRoute: SettingsIndexRoute,
 }
 
 const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
@@ -794,6 +833,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   MissionsRoute: MissionsRoute,
   ProfileRoute: ProfileRoute,
+  PuzzleRoute: PuzzleRoute,
   ReferralsRoute: ReferralsRoute,
   RegisterRoute: RegisterRoute,
   ReplaysRoute: ReplaysRoute,

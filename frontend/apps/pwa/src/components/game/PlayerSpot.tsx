@@ -170,7 +170,7 @@ const containerVariants = {
   fan: { gap: 4, transition: { duration: 0.25, ease: 'easeOut' as const } },
 };
 
-// ─── CardGroup (Memoized to prevent 60fps stat re-renders) ──────────────────
+// ─── CardGroup (Memoized) ──────────────────────────────────────────────────
 const CardGroup = memo(({
   showCardsFaceUp, hole_cards, cardSize, sizeProp, isMobile, winningCards, isWinner, isShowdown, isHero, isDealing,
 }: {
@@ -309,19 +309,40 @@ const CardGroup = memo(({
 });
 CardGroup.displayName = 'CardGroup';
 
-// ─── Main PlayerSpot (Memoized) ─────────────────────────────────────────────
-export const PlayerSpot = memo(({ onKick, 
-  seat, isHero = false, isMobile = false, isDealer = false, seatPosition, timerRemainingMs, timerTotalMs, isDealing = false, onShowStats,
+// ─── Main PlayerSpot ──────────────────────────────────────────────────────
+export const PlayerSpot = memo(({
+  onKick,
+  seat,
+  isHero = false,
+  isMobile = false,
+  isDealer = false,
+  seatPosition,
+  timerRemainingMs,
+  timerTotalMs,
+  isDealing = false,
+  onShowStats,
 }: any) => {
   const {
     display_name = seat.user_id?.slice(0, 8) || 'Player',
-    stack, current_bet, is_all_in, is_folded, is_active, avatar_url, position_badge, action, hole_cards, winning_cards, is_winner, is_showdown_revealed, stats, rank_tier,
+    stack,
+    current_bet,
+    is_all_in,
+    is_folded,
+    is_active,
+    avatar_url,
+    position_badge,
+    action,
+    hole_cards,
+    winning_cards,
+    is_winner,
+    is_showdown_revealed,
+    stats,
+    rank_tier,
   } = seat;
 
   const isActive = is_active && !is_folded && !is_all_in;
   const isFolded = is_folded;
 
-  // FIX: Ensure showCardsFaceUp works when parent correctly passes hole_cards to hero
   const showCardsFaceUp = isHero || (is_showdown_revealed && (hole_cards?.length ?? 0) > 0);
   const isLargeCards = isHero || showCardsFaceUp;
 
@@ -431,7 +452,6 @@ export const PlayerSpot = memo(({ onKick,
     </motion.div>
   );
 
-  // FIX: Safe stack fallback to prevent "$undefined"
   const safeStack = typeof stack === 'number' ? stack : 0;
   const formattedStack = safeStack >= 1000 ? `$${(safeStack / 1000).toFixed(safeStack % 1000 === 0 ? 0 : 1)}k` : `$${safeStack}`;
 
@@ -482,7 +502,6 @@ export const PlayerSpot = memo(({ onKick,
   }, [rawVpip, rawPfr, rawAf]);
 
   const statsElement = useMemo(() => {
-    // FIX: Removed the early return for 0 values so stats always show
     if (!stats) return null;
 
     const vpipDisplay = Math.round(animatedVpip);
@@ -663,12 +682,6 @@ export const PlayerSpot = memo(({ onKick,
           </svg>
         </button>
       )}
-
-          className="absolute -bottom-1 right-0 z-[60] p-1 rounded-full bg-red-500/20 hover:bg-red-500/40 text-red-300 text-[10px] transition-colors"
-
-
-          className="absolute -bottom-1 right-0 z-[60] p-1 rounded-full bg-red-500/20 hover:bg-red-500/40 text-red-300 text-[10px] transition-colors"
-
 
       <div
         className="absolute z-[100] pointer-events-none"
