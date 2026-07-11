@@ -947,11 +947,11 @@ const handleLeaveTable = useCallback(() => {
             </div>
 
             <div className={cn(
-              "absolute left-1/2 -translate-x-1/2 z-30 transition-[top] duration-700 ease-in-out pointer-events-none",
-              showdownReveal
-                ? "top-[50px] md:top-[40px]"
-                : "top-[70px] md:top-[60px]"
-            )}>
+          "absolute left-1/2 -translate-x-1/2 z-30 transition-[top] duration-700 ease-in-out pointer-events-none",
+          showdownReveal
+            ? isShortHeight ? "top-[30px]" : "top-[50px]"
+            : isShortHeight ? "top-[50px]" : "top-[70px]"
+        )}>
               <div className="pointer-events-auto">
                 <PotBadge
                   amount={pot}
