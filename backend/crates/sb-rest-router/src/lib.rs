@@ -1,18 +1,18 @@
-pub mod hand_history_routes;
 pub mod anti_cheat_routes;
 pub mod club_routes;
 pub mod gdpr_routes;
+pub mod hand_history_routes;
 pub mod handlers;
 pub mod leaderboard;
 pub mod oracle_routes;
 pub mod player_stats;
 pub mod rate_limit;
+pub mod referral_routes;
+pub mod replay_routes;
 pub mod routes;
 pub mod season_card;
-pub mod referral_routes;
-pub mod tournament_routes;
 pub mod shop_routes;
-
+pub mod tournament_routes;
 use axum::{
     Router,
     extract::{Extension, Path, Query, State},
@@ -24,16 +24,16 @@ use base64::prelude::*;
 use chrono::{DateTime, Utc};
 use sb_auth::middleware::{AuthUser, auth_middleware_with_context};
 use sb_contracts::lobby_api::{TableInfo, TableRepo, TableService};
+use sb_contracts::notification_api::NotificationService;
 use sb_contracts::repo_api::{BadgeRepo, GdprRepo, HandHistoryRepository, HandSummary};
+use sb_contracts::service_api::{MissionApi, ViralService};
+use sb_contracts::tournament_api::TournamentService;
 use sb_shared_types::{RequestContext, StakeLevel, TableId, UserId};
 use sb_table_registry::registry::Registry;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::error;
 use uuid::Uuid;
-use sb_contracts::notification_api::NotificationService;
-use sb_contracts::tournament_api::TournamentService;
-use sb_contracts::service_api::{MissionApi, ViralService};
 
 pub use gdpr_routes::gdpr_routes;
 pub use oracle_routes::oracle_routes;
@@ -45,7 +45,6 @@ pub struct AppState {
     pub tournament_service: Arc<dyn TournamentService + Send + Sync>,
     pub mission_service: Arc<dyn MissionApi + Send + Sync>,
     pub viral_service: Arc<dyn ViralService + Send + Sync>,
-
 
     pub table_service: Arc<dyn TableService + Send + Sync>,
     pub table_repo: Arc<dyn TableRepo + Send + Sync>,
@@ -59,8 +58,6 @@ pub struct AppState {
     pub gdpr_repo: Arc<dyn GdprRepo + Send + Sync>,
     pub product_repo: Arc<dyn sb_contracts::product_api::ProductRepo + Send + Sync>,
     pub payment_service: Arc<dyn sb_contracts::service_api::PaymentService + Send + Sync>,
-
-
 }
 
 pub fn create_router(state: Arc<AppState>) -> Router {
@@ -83,8 +80,9 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .merge(protected_routes)
         .merge(gdpr_routes())
         .merge(hand_history_routes::hand_history_routes())
-                .merge(shop_routes::shop_routes())
+        .merge(shop_routes::shop_routes())
         .merge(referral_routes::referral_routes())
+        .merge(replay_routes::replay_routes())
         .with_state(state)
 }
 
