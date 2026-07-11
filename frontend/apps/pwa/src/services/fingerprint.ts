@@ -41,7 +41,7 @@ export async function hashFingerprint(components: string): Promise<string> {
 }
 
 export async function submitFingerprint(hash: string, token: string): Promise<void> {
-  const response = await fetch('/anti-cheat/fingerprint', {
+  const response = await fetch('/api/anti-cheat/fingerprint', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
