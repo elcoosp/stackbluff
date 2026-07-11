@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card } from '@/components/ui/card';
-import { Trophy, Medal, Users, Calendar, TrendingUp, Crown } from 'lucide-react';
+import { Trophy, Medal, Calendar, TrendingUp, Crown, Sparkles, ChevronRight, User } from 'lucide-react';
 import { useState } from 'react';
 
 export const Route = createFileRoute('/leaderboard')({
@@ -13,6 +13,27 @@ export const Route = createFileRoute('/leaderboard')({
 });
 
 type Period = 'global' | 'weekly' | 'monthly';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.98 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] as const },
+  },
+};
 
 function LeaderboardPage() {
   const navigate = useNavigate();
@@ -26,7 +47,7 @@ function LeaderboardPage() {
 
   if (error) {
     return (
-      <div className="flex justify-center items-center h-full text-red-400">
+      <div className="flex justify-center items-center min-h-[60vh] text-red-400">
         Failed to load leaderboard: {(error as Error).message}
       </div>
     );
@@ -34,18 +55,17 @@ function LeaderboardPage() {
 
   if (!entries || entries.length === 0) {
     return (
-      <div className="flex justify-center items-center h-full text-on-surface-variant">
+      <div className="flex justify-center items-center min-h-[60vh] text-on-surface-variant">
         No leaderboard data available yet.
       </div>
     );
   }
 
-  // For demo, we use the same entries for all periods
-  // In production, we'd fetch different endpoints
   const displayEntries = entries;
   const topThree = displayEntries.slice(0, 3);
   const rest = displayEntries.slice(3);
   const userRank = displayEntries.findIndex((e) => e.user_id === currentUser?.id) + 1;
+  const currentUserEntry = displayEntries.find((e) => e.user_id === currentUser?.id);
 
   const periodLabels: Record<Period, { label: string; icon: React.ReactNode }> = {
     global: { label: 'All Time', icon: <Trophy className="w-4 h-4" /> },
@@ -53,139 +73,218 @@ function LeaderboardPage() {
     monthly: { label: 'This Month', icon: <TrendingUp className="w-4 h-4" /> },
   };
 
+  // Podium logic: 2nd, 1st, 3rd
+  const podiumOrder = topThree.length === 3 ? [topThree[1], topThree[0], topThree[2]] : topThree;
+  const podiumStyles = [
+    {
+      height: 'h-36',
+      color: 'text-slate-300',
+      bg: 'bg-slate-400/10',
+      border: 'border-slate-400/30',
+      icon: <Medal className="w-6 h-6" />
+    },
+    {
+      height: 'h-48',
+      color: 'text-yellow-400',
+      bg: 'bg-yellow-500/10',
+      border: 'border-yellow-500/40',
+      icon: <Crown className="w-7 h-7" />
+    },
+    {
+      height: 'h-28',
+      color: 'text-orange-400',
+      bg: 'bg-orange-500/10',
+      border: 'border-orange-500/30',
+      icon: <Medal className="w-6 h-6" />
+    },
+  ];
+
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <h1 className="font-display-lg text-3xl md:text-display-lg text-on-surface mb-2">
-        Leaderboard
-      </h1>
-      <p className="text-on-surface-variant text-sm mb-6">Top players by total chips won.</p>
+    <div className="relative max-w-5xl mx-auto p-4 md:p-8 pb-32 space-y-8">
+      {/* Ambient Background Lighting */}
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-yellow-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <div className="flex items-center gap-2 mb-1">
+          <Sparkles className="w-4 h-4 text-yellow-400" />
+          <span className="text-xs font-data-mono uppercase tracking-widest text-yellow-400">
+            Top Players
+          </span>
+        </div>
+        <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface">
+          Leaderboard
+        </h1>
+        <p className="text-on-surface-variant text-sm mt-1 max-w-md">
+          Compete globally and climb the ranks to earn exclusive rewards.
+        </p>
+      </motion.div>
 
       {/* Period Tabs */}
-      <div className="flex gap-1 bg-white/5 rounded-lg p-1 mb-8 w-fit">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.1 }}
+        className="flex gap-1.5 p-1.5 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-xl w-fit"
+      >
         {(Object.keys(periodLabels) as Period[]).map((p) => (
           <button
             key={p}
             onClick={() => setPeriod(p)}
             className={cn(
-              'flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors',
+              'flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-300',
               period === p
-                ? 'bg-tertiary text-on-tertiary'
-                : 'text-on-surface-variant hover:text-on-surface hover:bg-white/10'
+                ? 'bg-gradient-to-r from-tertiary to-emerald-400 text-on-tertiary shadow-lg shadow-tertiary/20'
+                : 'text-on-surface-variant hover:text-on-surface hover:bg-white/5'
             )}
           >
             {periodLabels[p].icon}
             {periodLabels[p].label}
           </button>
         ))}
-      </div>
+      </motion.div>
 
       {/* Podium */}
-      <div className="flex justify-center items-end gap-4 mb-10">
-        {topThree.map((entry, idx) => {
-          const rank = idx + 1;
-          const heights = ['h-48', 'h-32', 'h-24'];
-          const colors = ['text-yellow-400', 'text-gray-300', 'text-amber-600'];
-          const medals = ['🥇', '🥈', '🥉'];
+      <div className="flex justify-center items-end gap-3 md:gap-6 py-8">
+        {podiumOrder.map((entry, idx) => {
+          const actualRank = topThree.indexOf(entry) + 1;
+          const style = podiumStyles[idx];
           const isCurrentUser = entry.user_id === currentUser?.id;
+
           return (
             <motion.div
               key={entry.user_id}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.1 }}
-              className="flex flex-col items-center"
+              transition={{ delay: 0.2 + idx * 0.15, type: "spring", stiffness: 200, damping: 20 }}
+              className="flex flex-col items-center w-24 md:w-32"
+              onClick={() => navigate({ to: '/players/$userId', params: { userId: entry.user_id } })}
             >
-              <div
-                className={cn(
-                  'w-20 rounded-t-xl flex flex-col items-center justify-end p-3 bg-white/5 border border-white/10 cursor-pointer hover:border-tertiary/40 transition-colors',
-                  heights[idx],
-                  isCurrentUser ? 'ring-2 ring-tertiary' : ''
-                )}
-                onClick={() => navigate({ to: '/players/$userId', params: { userId: entry.user_id } })}
-              >
-                <span className={cn('text-3xl', colors[idx])}>{medals[idx]}</span>
-                <span className="text-xs font-mono text-on-surface-variant mt-1">#{rank}</span>
+              {/* Avatar */}
+              <div className="relative mb-3">
+                <div className={cn(
+                  "w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-2xl font-bold border-2 transition-transform hover:scale-105 cursor-pointer",
+                  style.bg, style.color, style.border
+                )}>
+                  {entry.display_name.charAt(0).toUpperCase()}
+                </div>
+                <div className={cn(
+                  "absolute -top-3 -right-3 w-8 h-8 rounded-full flex items-center justify-center bg-surface border-2",
+                  style.border, style.color
+                )}>
+                  {style.icon}
+                </div>
               </div>
-              <span className="text-sm font-medium text-on-surface mt-1 truncate max-w-[80px]">
+
+              {/* Info */}
+              <span className="text-sm font-medium text-on-surface mb-1 truncate max-w-full text-center">
                 {entry.display_name}
               </span>
-              <span className="text-xs font-mono text-tertiary">
-                ${entry.total_chips_won.toLocaleString()}
+              <span className="text-xs font-data-mono text-on-surface-variant mb-3">
+                ${(entry.total_chips_won || 0).toLocaleString()}
               </span>
+
+              {/* Podium Block */}
+              <div className={cn(
+                "w-full rounded-t-xl border-t-2 backdrop-blur-xl flex items-start justify-center pt-3 transition-colors cursor-pointer",
+                style.height, style.bg, style.border,
+                "bg-white/5 hover:bg-white/10",
+                isCurrentUser && "ring-2 ring-tertiary ring-offset-2 ring-offset-surface"
+              )}>
+                <span className={cn("text-2xl font-bold font-data-mono", style.color)}>
+                  {actualRank}
+                </span>
+              </div>
             </motion.div>
           );
         })}
       </div>
 
       {/* Full list */}
-      <div className="bg-surface-container-lowest/80 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden razor-highlight">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="border-b border-white/10">
-              <tr>
-                <th className="text-left py-3 px-4 font-label-caps text-[10px] text-on-surface-variant tracking-wider">Rank</th>
-                <th className="text-left py-3 px-4 font-label-caps text-[10px] text-on-surface-variant tracking-wider">Player</th>
-                <th className="text-right py-3 px-4 font-label-caps text-[10px] text-on-surface-variant tracking-wider">Chips Won</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rest.map((entry, index) => {
-                const rank = index + 4;
-                const isCurrentUser = entry.user_id === currentUser?.id;
-                return (
-                  <motion.tr
-                    key={entry.user_id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.03, duration: 0.3 }}
-                    className={cn(
-                      'border-b border-white/5 last:border-none hover:bg-white/5 transition-colors cursor-pointer',
-                      isCurrentUser && 'bg-tertiary/5'
-                    )}
-                    onClick={() => navigate({ to: '/players/$userId', params: { userId: entry.user_id } })}
-                  >
-                    <td className="py-3 px-4 font-data-mono text-sm text-on-surface">
-                      #{rank}
-                    </td>
-                    <td className="py-3 px-4 flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-on-surface-variant font-mono text-xs">
-                        {entry.display_name.charAt(0).toUpperCase()}
-                      </div>
-                      <span className="font-medium text-on-surface">
-                        {entry.display_name}
-                        {isCurrentUser && (
-                          <span className="ml-2 text-[10px] font-label-caps text-tertiary bg-tertiary/10 px-2 py-0.5 rounded-full">
-                            You
-                          </span>
-                        )}
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="bg-white/5 border border-white/10 backdrop-blur-xl rounded-2xl shadow-xl p-2"
+      >
+        {rest.map((entry, index) => {
+          const rank = index + 4;
+          const isCurrentUser = entry.user_id === currentUser?.id;
+
+          return (
+            <motion.div
+              key={entry.user_id}
+              variants={itemVariants}
+              onClick={() => navigate({ to: '/players/$userId', params: { userId: entry.user_id } })}
+              className={cn(
+                "flex items-center justify-between p-4 rounded-xl transition-colors cursor-pointer group",
+                isCurrentUser ? "bg-tertiary/10 hover:bg-tertiary/15" : "hover:bg-white/[0.07]"
+              )}
+            >
+              <div className="flex items-center gap-4 min-w-0">
+                <div className="w-8 text-center font-data-mono text-sm text-on-surface-variant font-bold">
+                  {rank}
+                </div>
+                <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-sm font-bold text-on-surface-variant flex-shrink-0">
+                  {entry.display_name.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <span className="text-sm font-medium text-on-surface flex items-center gap-2">
+                    {entry.display_name}
+                    {isCurrentUser && (
+                      <span className="text-[10px] font-data-mono uppercase tracking-wider text-tertiary bg-tertiary/10 px-2 py-0.5 rounded-full border border-tertiary/20">
+                        You
                       </span>
-                    </td>
-                    <td className="py-3 px-4 text-right font-data-mono text-sm text-tertiary">
-                      ${entry.total_chips_won.toLocaleString()}
-                    </td>
-                  </motion.tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 flex-shrink-0">
+                <span className="text-sm font-data-mono font-bold text-tertiary">
+                  ${(entry.total_chips_won || 0).toLocaleString()}
+                </span>
+                <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <ChevronRight className="w-4 h-4 text-on-surface-variant" />
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
+      </motion.div>
 
       {/* Your rank sticky bar */}
-      {userRank > 0 && userRank > 3 && (
+      {userRank > 0 && userRank > 3 && currentUserEntry && (
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 100 }}
           animate={{ opacity: 1, y: 0 }}
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-surface-container/90 backdrop-blur-xl border border-white/10 rounded-full px-6 py-3 shadow-xl flex items-center gap-4"
+          transition={{ delay: 0.5, type: "spring", stiffness: 200, damping: 25 }}
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-md"
         >
-          <span className="text-sm text-on-surface-variant">Your Rank</span>
-          <span className="text-2xl font-bold text-tertiary">#{userRank}</span>
-          <span className="text-sm text-on-surface-variant">|</span>
-          <Link to="/profile" className="text-sm text-on-surface font-medium hover:text-tertiary transition-colors">
-            {displayEntries.find((e) => e.user_id === currentUser?.id)?.display_name}
-          </Link>
-          <Link to="/profile" className="text-sm text-tertiary font-mono hover:text-tertiary/80 transition-colors">
-            ${displayEntries.find((e) => e.user_id === currentUser?.id)?.total_chips_won.toLocaleString()}
+          <Link
+            to="/profile"
+            className="bg-surface/90 backdrop-blur-xl border border-tertiary/30 rounded-2xl px-6 py-4 shadow-2xl shadow-black/50 flex items-center justify-between gap-4 hover:border-tertiary/50 transition-colors group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-tertiary/10 border border-tertiary/30 flex items-center justify-center text-tertiary font-bold text-sm">
+                {userRank}
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-on-surface-variant font-medium">Your Rank</p>
+                <p className="text-sm font-medium text-on-surface truncate">{currentUserEntry.display_name}</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] uppercase tracking-wider text-on-surface-variant font-medium">Chips Won</p>
+              <p className="text-sm font-data-mono font-bold text-tertiary">
+                ${(currentUserEntry.total_chips_won || 0).toLocaleString()}
+              </p>
+            </div>
           </Link>
         </motion.div>
       )}
@@ -195,25 +294,31 @@ function LeaderboardPage() {
 
 function LeaderboardSkeleton() {
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <Skeleton className="h-8 w-48 bg-white/5 mb-4" />
-      <Skeleton className="h-4 w-64 bg-white/5 mb-8" />
-      <div className="flex gap-1 bg-white/5 rounded-lg p-1 w-fit mb-8">
+    <div className="relative max-w-5xl mx-auto p-4 md:p-8 pb-32 space-y-8 animate-pulse">
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-yellow-500/5 rounded-full blur-[120px] pointer-events-none -z-10" />
+
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-32 bg-white/5" />
+        <Skeleton className="h-8 w-48 bg-white/5" />
+        <Skeleton className="h-4 w-64 bg-white/5" />
+      </div>
+
+      <div className="flex gap-1.5 p-1.5 bg-white/5 rounded-2xl w-fit">
         {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-10 w-24 bg-white/5" />
+          <Skeleton key={i} className="h-10 w-28 bg-white/5 rounded-xl" />
         ))}
       </div>
-      <div className="flex justify-center gap-4 mb-10">
-        {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="w-20 h-24 bg-white/5 rounded-t-xl" />
-        ))}
+
+      <div className="flex justify-center items-end gap-6 py-8">
+        <Skeleton className="w-32 h-36 bg-white/5 rounded-t-xl" />
+        <Skeleton className="w-32 h-48 bg-white/5 rounded-t-xl" />
+        <Skeleton className="w-32 h-28 bg-white/5 rounded-t-xl" />
       </div>
-      <div className="bg-surface-container-lowest/80 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden">
-        <div className="p-4 space-y-3">
-          {Array.from({ length: 10 }).map((_, i) => (
-            <Skeleton key={i} className="h-12 w-full bg-white/5" />
-          ))}
-        </div>
+
+      <div className="bg-white/5 border border-white/10 rounded-2xl p-2 space-y-2">
+        {Array.from({ length: 7 }).map((_, i) => (
+          <Skeleton key={i} className="h-14 w-full bg-white/5 rounded-xl" />
+        ))}
       </div>
     </div>
   );
