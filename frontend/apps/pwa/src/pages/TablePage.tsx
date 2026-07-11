@@ -231,7 +231,7 @@ export function TablePage() {
   const urlBuyInRaw = (search as any)?.buyIn;
   const urlBuyIn = urlBuyInRaw ? Number(urlBuyInRaw) : undefined;
 
-  const { sendJoin, sendAction, sendRebuy, connectionStatus, myUserId, notSeated, sendLeave } = useGameWebSocket(tableId);
+  const { sendJoin, sendAction, sendRebuy, sendWsMessage, connectionStatus, myUserId, notSeated, sendLeave } = useGameWebSocket(tableId);
   const isDesktop = useResponsiveLayout();
   const showAnalytics = useMediaQuery('(min-width: 980px)');
 
