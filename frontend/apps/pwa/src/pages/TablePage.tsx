@@ -342,15 +342,32 @@ const [kickVoteDialog, setKickVoteDialog] = useState<{ roomId: string; kickVoteI
       window.removeEventListener('tournament:tableChanged', handleTableChanged as EventListener);
     };
 
+  
+
+  }, [tournamentId, navigate]);
+
   // Listen for kick vote events
   useEffect(() => {
     const handleKickVoteStarted = (e: Event) => {
       const detail = (e as CustomEvent).detail;
+      // Try to resolve target name from seats
+      let targetName = 'Player';
+      if (activeRoomId) {
+        const room = useGameStore.getState().rooms[activeRoomId];
+        if (room) {
+          for (const seat of Object.values(room.seats)) {
+            if (seat.user_id === detail.target_id) {
+              targetName = seat.display_name || 'Player';
+              break;
+            }
+          }
+        }
+      }
       setKickVoteDialog({
         roomId: detail.room_id,
         kickVoteId: detail.kick_vote_id,
         targetId: detail.target_id,
-        targetName: 'Player', // We need to resolve name from seats
+        targetName,
         durationSecs: detail.duration_secs,
         requiredVotes: detail.required_votes,
         initiatorId: detail.initiator_id,
@@ -358,10 +375,10 @@ const [kickVoteDialog, setKickVoteDialog] = useState<{ roomId: string; kickVoteI
     };
     const handleKickVoteUpdate = (e: Event) => {
       const detail = (e as CustomEvent).detail;
-      // Update vote counts in dialog
-      if (kickVoteDialog && kickVoteDialog.kickVoteId === detail.kick_vote_id) {
-        setKickVoteDialog((prev) => prev ? { ...prev, yesVotes: detail.yes_votes, passed: detail.passed } : null);
-      }
+      setKickVoteDialog((prev) => {
+        if (!prev || prev.kickVoteId !== detail.kick_vote_id) return prev;
+        return { ...prev, yesVotes: detail.yes_votes, passed: detail.passed };
+      });
     };
     const handlePlayerRemoved = (e: Event) => {
       const detail = (e as CustomEvent).detail;
@@ -379,9 +396,8 @@ const [kickVoteDialog, setKickVoteDialog] = useState<{ roomId: string; kickVoteI
       window.removeEventListener('kickVoteUpdate', handleKickVoteUpdate as EventListener);
       window.removeEventListener('playerRemoved', handlePlayerRemoved as EventListener);
     };
-  }, [kickVoteDialog]);
+  }, [activeRoomId, kickVoteDialog]);
 
-  }, [tournamentId, navigate]);
 
   useEffect(() => {
     if (!tournamentId) return;
@@ -1033,6 +1049,9 @@ const handleLeaveTable = useCallback(() => {
         )}
       </div>
 
+      
+
+    
       <KickVoteDialog
         open={!!kickVoteDialog}
         onClose={() => setKickVoteDialog(null)}
@@ -1043,7 +1062,6 @@ const handleLeaveTable = useCallback(() => {
         durationSecs={kickVoteDialog?.durationSecs || 0}
         requiredVotes={kickVoteDialog?.requiredVotes || 0}
         onVoteYes={(kickVoteId) => {
-          // Send vote yes message
           if (activeRoomId) {
             sendWsMessage('kick_vote_yes', {
               room_id: activeRoomId,
@@ -1053,7 +1071,5 @@ const handleLeaveTable = useCallback(() => {
         }}
         onTimeout={() => setKickVoteDialog(null)}
       />
-
-    </ErrorBoundary>
-  );
+</ErrorBoundary>);
 }
