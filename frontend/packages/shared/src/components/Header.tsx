@@ -6,6 +6,7 @@ import { useState, useRef, useEffect } from 'react';
 import {
   LogOut,
   Settings,
+  Brain,
   Coins,
   ChevronDown,
   LayoutGrid,
