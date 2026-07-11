@@ -750,7 +750,7 @@ impl TableActor {
                 player_id,
                 stack,
                 seat,
-                display_name: _,
+                display_name,
                 respond_to,
             } => {
                 let seat = match seat {
@@ -782,7 +782,7 @@ impl TableActor {
                         }
                     }
                 };
-                let player = Player::new(user_id, format!("Player_{}", user_id), seat, stack);
+                let player = Player::new(user_id, display_name, seat, stack);
                 self.players.insert(
                     user_id,
                     Player {
@@ -1240,6 +1240,7 @@ impl TableActor {
         struct PlayerInfo {
             player_id: PlayerId,
             user_id: UserId,
+            display_name: String,
             seat: u8,
             stack_before: ChipAmount,
         }
@@ -1251,6 +1252,7 @@ impl TableActor {
             .map(|p| PlayerInfo {
                 player_id: p.player_id,
                 user_id: p.user_id,
+                display_name: p.display_name.clone(),
                 seat: p.seat,
                 stack_before: p.stack,
             })
@@ -1313,6 +1315,7 @@ impl TableActor {
                 self.hand_players.push(HandPlayer {
                     player_id: p.player_id,
                     user_id: Some(p.user_id),
+                    display_name: Some(p.display_name.clone()),
                     seat: p.seat,
                     hole_cards: Some(hole_strs),
                     stack_before: p.stack_before.as_i64(),

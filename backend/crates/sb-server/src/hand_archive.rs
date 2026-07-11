@@ -112,6 +112,7 @@ pub async fn run_archival_with_r2(
     for hand in hands {
         let json = serde_json::json!({
             "id": hand.id,
+            "table_id": hand.table_id,
             "played_at": hand.played_at,
             "players": hand.players_json.seats,
             "actions": hand.actions_json.actions,
@@ -151,6 +152,7 @@ pub async fn get_hand(
     {
         let json = serde_json::json!({
             "id": hand.id,
+            "table_id": hand.table_id,
             "played_at": hand.played_at,
             "players": hand.players_json.seats,
             "actions": hand.actions_json.actions,

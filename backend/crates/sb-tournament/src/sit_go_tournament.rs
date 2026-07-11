@@ -10,7 +10,7 @@ use tracing::{error, info};
 use sb_contracts::tournament_api::{
     TournamentConfig, TournamentResult, TournamentStatus, TournamentType,
 };
-use sb_shared_types::{AppError, ChipAmount, PlayerId, TableConfig, TableId, TournamentId, UserId};
+use sb_shared_types::{AppError, ChipAmount, PlayerId, RequestContext, TableConfig, TableId, TournamentId, UserId};
 use sb_table_registry::actor::InternalCommand as TableCommand;
 use sb_table_registry::actor::InternalCommand;
 use sb_table_registry::connection_broker::ConnectionBroker;
@@ -325,13 +325,22 @@ impl SitGoTournament {
 
         for (seat, player) in shuffled.iter().enumerate() {
             let (tx, rx) = oneshot::channel();
+            let display_name = if let Some(user_repo) = &self.user_repo {
+                let ctx = RequestContext::new(uuid::Uuid::new_v4(), Some(player.user_id));
+                match user_repo.get_user_profile(ctx, player.user_id).await {
+                    Ok(profile) => profile.display_name,
+                    Err(_) => format!("Player_{}", player.user_id),
+                }
+            } else {
+                format!("Player_{}", player.user_id)
+            };
             let cmd = InternalCommand::TransferPlayerIn {
                 user_id: player.user_id,
                 player_id: player.player_id,
                 stack: player.buy_in,
                 seat: Some(seat as u8),
                 respond_to: tx,
-                display_name: format!("Player_{}", player.user_id),
+                display_name,
             };
             cmd_tx
                 .send(cmd)

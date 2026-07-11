@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { apiClient } from '@stackbluff/shared/api/client';
@@ -23,7 +23,7 @@ import {
   Layers,
   ArrowRight,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ErrorState } from '@/components/ui/ErrorState';
 
 export const Route = createFileRoute('/history')({
@@ -48,6 +48,15 @@ interface HistoryResponse {
   histories: HandSummary[];
   total: number;
   next_cursor?: string;
+}
+
+interface TableInfo {
+  table_id: string;
+  name: string;
+  stake_level: string;
+  max_players: number;
+  current_players: number;
+  status: string;
 }
 
 type FilterType = 'all' | 'wins' | 'losses';
@@ -134,6 +143,32 @@ function HistoryPage() {
       enabled: isAuthenticated,
       staleTime: 60_000,
     });
+
+  // Fetch lobby tables to map table_id to table_name
+  // Using try/catch inside queryFn to gracefully handle failures without crashing the page
+  const { data: tablesData } = useQuery<TableInfo[]>({
+    queryKey: ['lobby-tables'],
+    queryFn: async () => {
+      try {
+        return await apiClient<TableInfo[]>('/lobby');
+      } catch (err) {
+        // If the endpoint fails, return an empty array to avoid unhandled errors
+        return [];
+      }
+    },
+    enabled: isAuthenticated,
+    staleTime: 60_000,
+  });
+
+  const tableMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (tablesData) {
+      tablesData.forEach((t) => {
+        map.set(t.table_id, t.name);
+      });
+    }
+    return map;
+  }, [tablesData]);
 
   if (!isAuthenticated) {
     return (
@@ -344,7 +379,7 @@ function HistoryPage() {
             >
               {filtered.map((hand, idx) => (
                 <motion.div key={hand.id} variants={itemVariants}>
-                  <HandHistoryCard hand={hand} index={idx} />
+                  <HandHistoryCard hand={hand} index={idx} tableMap={tableMap} />
                 </motion.div>
               ))}
             </motion.div>
@@ -429,7 +464,15 @@ function StatCard({
   );
 }
 
-function HandHistoryCard({ hand, index }: { hand: HandSummary; index: number }) {
+function HandHistoryCard({
+  hand,
+  index,
+  tableMap
+}: {
+  hand: HandSummary;
+  index: number;
+  tableMap: Map<string, string>;
+}) {
   const userId = useAuthStore.getState().user?.id;
   const navigate = useNavigate();
   const winner = hand.winners[0];
@@ -442,6 +485,9 @@ function HandHistoryCard({ hand, index }: { hand: HandSummary; index: number }) 
   };
 
   const handRank = winner?.hand_rank || 'Hand';
+
+  // Fallback to ID slice if the table name isn't fetched or found
+  const tableName = tableMap.get(hand.table_id) || `Table ${hand.table_id.slice(0, 6)}`;
 
   return (
     <Card
@@ -515,9 +561,8 @@ function HandHistoryCard({ hand, index }: { hand: HandSummary; index: number }) 
             </span>
             <span className="flex items-center gap-1">
               <Table className="w-3 h-3" />
-              Table{' '}
               <span className="font-data-mono text-on-surface-variant/80">
-                {hand.table_id.slice(0, 6)}
+                {tableName}
               </span>
             </span>
             <span className="flex items-center gap-1">

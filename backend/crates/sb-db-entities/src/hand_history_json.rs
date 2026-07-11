@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 pub struct HandPlayer {
     pub player_id: PlayerId,
     pub user_id: Option<UserId>,
+    pub display_name: Option<String>,
     pub seat: u8,
     pub hole_cards: Option<[String; 2]>,
     pub stack_before: i64,

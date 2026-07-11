@@ -1,3 +1,4 @@
+mod anti_cheat_routes;
 mod leaderboard_refresh;
 #[cfg(feature = "test-stubs")]
 mod test_utils;
@@ -426,6 +427,14 @@ async fn main() {
         viral_service: viral_service_arc.clone(),
     });
 
+    // ── Anti-Cheat Fingerprint Route ──────────────────────────────────
+    let fingerprint_repo: Arc<dyn sb_anti_cheat::FingerprintRepository> = Arc::new(
+        sb_anti_cheat::SeaFingerprintRepository { db: db.clone() }
+    );
+    let anti_cheat_state = Arc::new(anti_cheat_routes::AntiCheatState {
+        fingerprint_repo,
+    });
+
     let rest_router = create_router(app_state.clone())
         .merge(player_stats_routes(stats_repo.clone(), user_repo.clone()));
 
@@ -495,6 +504,7 @@ async fn main() {
         .merge(sb_bot_handler::attach(bot_state))
         .merge(sb_rest_router::oracle_routes(oracle_service))
         .merge(hand_archive::router(archive_state.clone()))
+        .merge(anti_cheat_routes::router(anti_cheat_state.clone()))
         .merge(tournament_router)
         .merge(season_card::router(db.clone()))
         .merge(club_tournament_router)

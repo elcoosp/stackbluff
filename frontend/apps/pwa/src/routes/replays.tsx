@@ -27,7 +27,7 @@ import {
   MoreHorizontal
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ErrorState } from '@/components/ui/ErrorState';
 
 export const Route = createFileRoute('/replays')({
@@ -45,6 +45,15 @@ interface ReplayCard {
   community_cards?: string[];
   winner_cards?: string[];
   share_url: string;
+}
+
+interface TableInfo {
+  table_id: string;
+  name: string;
+  stake_level: string;
+  max_players: number;
+  current_players: number;
+  status: string;
 }
 
 const containerVariants = {
@@ -140,6 +149,32 @@ function ReplaysPage() {
     enabled: isAuthenticated,
     staleTime: 60_000,
   });
+
+  // Fetch lobby tables to map table_id to table_name
+  // Using try/catch inside queryFn to gracefully handle failures without crashing the page
+  const { data: tablesData } = useQuery<TableInfo[]>({
+    queryKey: ['lobby-tables'],
+    queryFn: async () => {
+      try {
+        return await apiClient<TableInfo[]>('/lobby');
+      } catch (err) {
+        // If the endpoint fails, return an empty array to avoid unhandled errors
+        return [];
+      }
+    },
+    enabled: isAuthenticated,
+    staleTime: 60_000,
+  });
+
+  const tableMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (tablesData) {
+      tablesData.forEach((t) => {
+        map.set(t.table_id, t.name);
+      });
+    }
+    return map;
+  }, [tablesData]);
 
   if (!isAuthenticated) {
     return (
@@ -263,7 +298,7 @@ function ReplaysPage() {
         >
           {replays.map((replay, idx) => (
             <motion.div key={replay.id} variants={itemVariants}>
-              <ReplayCardItem replay={replay} index={idx} />
+              <ReplayCardItem replay={replay} index={idx} tableMap={tableMap} />
             </motion.div>
           ))}
         </motion.div>
@@ -305,7 +340,15 @@ function StatCard({
   );
 }
 
-function ReplayCardItem({ replay, index }: { replay: ReplayCard; index: number }) {
+function ReplayCardItem({
+  replay,
+  index,
+  tableMap
+}: {
+  replay: ReplayCard;
+  index: number;
+  tableMap: Map<string, string>;
+}) {
   const navigate = useNavigate();
   const userId = useAuthStore.getState().user?.id;
   const isMe = replay.winner_id === userId;
@@ -350,6 +393,9 @@ function ReplayCardItem({ replay, index }: { replay: ReplayCard; index: number }
     }
   };
 
+  // Fallback to ID slice if the table name isn't fetched or found
+  const tableName = tableMap.get(replay.table_id) || `Table ${replay.table_id.slice(0, 6)}`;
+
   return (
     <>
       <Card className="p-5 bg-gradient-to-br from-yellow-500/5 to-transparent border-white/10 backdrop-blur-xl rounded-2xl transition-all duration-300 hover:bg-white/[0.07] group relative overflow-hidden h-full flex flex-col">
@@ -391,7 +437,7 @@ function ReplayCardItem({ replay, index }: { replay: ReplayCard; index: number }
             <span className="flex items-center gap-1">
               <Table className="w-3 h-3" />
               <span className="font-data-mono text-on-surface-variant/80">
-                {replay.table_id.slice(0, 6)}
+                {tableName}
               </span>
             </span>
           </div>
@@ -441,9 +487,8 @@ function ReplayCardItem({ replay, index }: { replay: ReplayCard; index: number }
               size="sm"
               onClick={() =>
                 navigate({
-                  to: '/table/$tableId',
-                  params: { tableId: replay.table_id },
-                  search: { handId: replay.id },
+                  to: '/hands/$handId',
+                  params: { handId: replay.id },
                 })
               }
               className="flex-1 bg-white/5 border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-white/10 rounded-xl group/btn"
