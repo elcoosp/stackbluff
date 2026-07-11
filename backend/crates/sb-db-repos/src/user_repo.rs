@@ -330,4 +330,44 @@ impl UserRepo for UserRepoImpl {
             .map(|exp| exp > chrono::Utc::now())
             .unwrap_or(false))
     }
+
+    async fn extend_season_pass(
+        &self,
+        ctx: RequestContext,
+        user_id: UserId,
+        duration_days: i64,
+    ) -> PersistenceResult<()> {
+        let (tx, rx) = oneshot::channel();
+        let cmd = DbCommand::ExtendSeasonPass {
+            ctx,
+            user_id,
+            duration_days,
+            respond: tx,
+        };
+        self.sender
+            .send(cmd)
+            .map_err(|e| PersistenceError::Database(e.to_string()))?;
+        rx.await
+            .map_err(|e| PersistenceError::Database(e.to_string()))?
+    }
+
+    async fn extend_club_pro(
+        &self,
+        ctx: RequestContext,
+        user_id: UserId,
+        duration_days: i64,
+    ) -> PersistenceResult<()> {
+        let (tx, rx) = oneshot::channel();
+        let cmd = DbCommand::ExtendClubPro {
+            ctx,
+            user_id,
+            duration_days,
+            respond: tx,
+        };
+        self.sender
+            .send(cmd)
+            .map_err(|e| PersistenceError::Database(e.to_string()))?;
+        rx.await
+            .map_err(|e| PersistenceError::Database(e.to_string()))?
+    }
 }

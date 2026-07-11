@@ -24,7 +24,7 @@ const CHIP_TO_CENT_MULTIPLIER: i64 = 100;
 pub struct RealPaymentService {
     pub db: DatabaseConnection,
     stripe_client: Client,
-    user_service: Arc<dyn UserService>,
+    pub user_service: Arc<dyn UserService>,
     config: PaymentConfig,
 }
 
@@ -42,7 +42,7 @@ impl RealPaymentService {
             config,
         }
     }
-}
+    }
 
 fn currency_from_str(s: &str) -> Result<Currency, AppError> {
     s.parse::<Currency>()

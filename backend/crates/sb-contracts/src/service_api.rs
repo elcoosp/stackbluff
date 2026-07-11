@@ -54,6 +54,18 @@ pub trait UserService: Send + Sync {
         &self,
         user_id: UserId,
     ) -> Result<crate::repo_api::UserProfile, AppError>;
+
+    async fn extend_season_pass(
+        &self,
+        user_id: UserId,
+        duration_days: i64,
+    ) -> Result<(), AppError>;
+
+    async fn extend_club_pro(
+        &self,
+        user_id: UserId,
+        duration_days: i64,
+    ) -> Result<(), AppError>;
 }
 
 #[async_trait]

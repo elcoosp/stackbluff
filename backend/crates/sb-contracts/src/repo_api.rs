@@ -136,6 +136,20 @@ pub trait UserRepo: Send + Sync {
         ctx: RequestContext,
         user_id: UserId,
     ) -> PersistenceResult<bool>;
+
+    async fn extend_season_pass(
+        &self,
+        ctx: RequestContext,
+        user_id: UserId,
+        duration_days: i64,
+    ) -> PersistenceResult<()>;
+
+    async fn extend_club_pro(
+        &self,
+        ctx: RequestContext,
+        user_id: UserId,
+        duration_days: i64,
+    ) -> PersistenceResult<()>;
 }
 
 #[async_trait]

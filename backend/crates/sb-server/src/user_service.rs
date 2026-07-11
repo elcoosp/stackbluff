@@ -65,4 +65,22 @@ impl UserService for UserServiceImpl {
             .map_err(|e| AppError::Database(e.to_string()))?;
         Ok(profile)
     }
+
+    async fn extend_season_pass(&self, user_id: UserId, duration_days: i64) -> Result<(), AppError> {
+        let ctx = RequestContext::new(Uuid::new_v4(), Some(user_id));
+        self.user_repo
+            .extend_season_pass(ctx, user_id, duration_days)
+            .await
+            .map_err(|e| AppError::Database(e.to_string()))?;
+        Ok(())
+    }
+
+    async fn extend_club_pro(&self, user_id: UserId, duration_days: i64) -> Result<(), AppError> {
+        let ctx = RequestContext::new(Uuid::new_v4(), Some(user_id));
+        self.user_repo
+            .extend_club_pro(ctx, user_id, duration_days)
+            .await
+            .map_err(|e| AppError::Database(e.to_string()))?;
+        Ok(())
+    }
 }

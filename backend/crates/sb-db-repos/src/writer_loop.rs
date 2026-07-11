@@ -138,6 +138,9 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
             // We'll handle it separately.
             unimplemented!("CheckClubPro is handled in its own branch");
         }
+
+        DbCommand::ExtendSeasonPass { ctx, .. } => ctx,
+        DbCommand::ExtendClubPro { ctx, .. } => ctx,
     };
 
     let request_id = ctx.request_id;
@@ -454,6 +457,40 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                     .unwrap_or(false);
                 Ok(Some(is_active.to_string()))
             }
+            DbCommand::ExtendSeasonPass { user_id, duration_days, .. } => {
+                use sb_db_entities::user;
+                use sea_orm::Set;
+                let uid = user_id.as_uuid();
+                let model = user::Entity::find_by_id(uid)
+                    .one(conn)
+                    .await
+                    .map_err(map_db_error)?
+                    .ok_or(PersistenceError::NotFound)?;
+                let new_expiry = chrono::Utc::now() + chrono::Duration::days(*duration_days);
+                let mut active: user::ActiveModel = model.into();
+                active.season_pass_expires_at = Set(Some(new_expiry));
+                sea_orm::ActiveModelTrait::update(active, conn)
+                    .await
+                    .map_err(map_db_error)?;
+                Ok(None)
+            }
+            DbCommand::ExtendClubPro { user_id, duration_days, .. } => {
+                use sb_db_entities::user;
+                use sea_orm::Set;
+                let uid = user_id.as_uuid();
+                let model = user::Entity::find_by_id(uid)
+                    .one(conn)
+                    .await
+                    .map_err(map_db_error)?
+                    .ok_or(PersistenceError::NotFound)?;
+                let new_expiry = chrono::Utc::now() + chrono::Duration::days(*duration_days);
+                let mut active: user::ActiveModel = model.into();
+                active.club_pro_expires_at = Set(Some(new_expiry));
+                sea_orm::ActiveModelTrait::update(active, conn)
+                    .await
+                    .map_err(map_db_error)?;
+                Ok(None)
+            }
         };
 
         let rollback_sql = format!("ROLLBACK TO {}", sp_name);
@@ -572,6 +609,9 @@ fn respond_ok(cmd: DbCommand, value: Option<String>) {
                 .unwrap_or(false);
             let _ = respond.send(Ok(is_active));
         }
+        DbCommand::ExtendSeasonPass { respond, .. } | DbCommand::ExtendClubPro { respond, .. } => {
+            let _ = respond.send(Ok(()));
+        }
     }
 }
 
@@ -620,6 +660,9 @@ fn respond_err(cmd: DbCommand, err: PersistenceError) {
             let _ = respond.send(Err(err));
         }
         DbCommand::CheckClubPro { respond, .. } => {
+            let _ = respond.send(Err(err));
+        }
+        DbCommand::ExtendSeasonPass { respond, .. } | DbCommand::ExtendClubPro { respond, .. } => {
             let _ = respond.send(Err(err));
         }
     }
