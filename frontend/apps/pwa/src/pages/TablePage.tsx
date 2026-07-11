@@ -45,7 +45,19 @@ import type { TournamentResultEntry } from '@stackbluff/shared/types/tournament.
 import { tournamentApi } from '@stackbluff/shared/api/tournamentApi';
 
 function Fallback({ error, resetErrorBoundary }: any) {
-  return (
+  
+  // Listen to club theme updates
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (detail?.felt_color) {
+        setFeltColor(detail.felt_color);
+      }
+    };
+    window.addEventListener('club:theme', handler as EventListener);
+    return () => window.removeEventListener('club:theme', handler as EventListener);
+  }, []);
+return (
     <div className="p-4 text-error">
       <p>Game UI error: {error.message}</p>
       <button onClick={resetErrorBoundary}>Retry</button>
@@ -250,6 +262,7 @@ export function TablePage() {
   const [isJoining, setIsJoining] = useState(false);
   const [isAddingTable, setIsAddingTable] = useState(false);
   const [statsUserId, setStatsUserId] = useState<string | null>(null);
+const [feltColor, setFeltColor] = useState<string | null>(null);
   const isTournament = !!tournamentId;
   const [resultsModalOpen, setResultsModalOpen] = useState(false);
   const [resultsData, setResultsData] = useState<TournamentResultEntry[]>([]);
