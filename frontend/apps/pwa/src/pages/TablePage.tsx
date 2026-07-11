@@ -632,7 +632,28 @@ export function TablePage() {
     (action: string, amount?: number) => {
       if (activeRoomId) {
         sendAction(activeRoomId, action, amount);
-        const actionToEvent: Record<string, FeedbackEvent> = {
+        
+
+  const handleKick = useCallback((targetUserId: string) => {
+    if (!activeRoomId) return;
+    const room = useGameStore.getState().rooms[activeRoomId];
+    if (!room) return;
+    // Find the seat of the target user
+    let targetSeat = null;
+    for (const [seat, player] of Object.entries(room.seats)) {
+      if ((player as any).user_id === targetUserId) {
+        targetSeat = seat;
+        break;
+      }
+    }
+    if (targetSeat === null) return;
+    // Send kick vote start
+    sendWsMessage('kick_vote_start', {
+      room_id: activeRoomId,
+      target_player_id: targetUserId,
+    });
+  }, [activeRoomId, sendWsMessage]);
+const actionToEvent: Record<string, FeedbackEvent> = {
           fold: 'fold', check: 'check', call: 'call',
           bet: 'bet', raise: 'raise', 'all-in': 'allIn',
         };

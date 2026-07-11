@@ -651,6 +651,20 @@ export const PlayerSpot = memo(({
 
       {dealerButton}
 
+      {/* Kick vote button - only visible if player is sitting out and not self */}
+      {!isHero && seat.sitting_out && onKick && (
+        <button
+          onClick={() => onKick(seat.user_id)}
+          className="absolute -bottom-1 right-0 z-[60] p-1 rounded-full bg-red-500/20 hover:bg-red-500/40 text-red-300 text-[10px] transition-colors"
+          title="Kick player"
+        >
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      )}
+
+
       <div
         className="absolute z-[100] pointer-events-none"
         style={{
