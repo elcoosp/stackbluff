@@ -247,6 +247,7 @@ export function TablePage() {
 
   const { sendJoin, sendAction, sendRebuy, sendWsMessage, connectionStatus, myUserId, notSeated, sendLeave } = useGameWebSocket(tableId);
   const isDesktop = useResponsiveLayout();
+  const isShortHeight = useMediaQuery('(max-height: 720px)');
   const showAnalytics = useMediaQuery('(min-width: 980px)');
 
   const game = useActiveRoom();
