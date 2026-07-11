@@ -50,6 +50,7 @@ use sb_db_repos::user_repo::UserRepoImpl;
 use sb_mission::service::MissionServiceImpl;
 use sb_payment::RealPaymentService;
 use sb_rest_router::player_stats::player_stats_routes;
+use sb_rest_router::notification_routes::notification_routes;
 use sb_rest_router::season_card;
 use sb_rest_router::tournament_routes::{self, TournamentState};
 use sb_rest_router::{AppState, create_router};
@@ -510,6 +511,7 @@ async fn main() {
         .merge(season_card::router(db.clone()))
         .merge(club_tournament_router)
         .merge(mission_router)
+        .merge(notification_routes(Arc::new(db.clone())))
         .layer(axum::extract::DefaultBodyLimit::max(1024 * 1024 * 10))
         .layer(middleware::from_fn(request_context_middleware))
         .layer(Extension(auth_service.clone()))
