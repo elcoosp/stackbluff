@@ -106,28 +106,18 @@ const parseMessage = (data: any) => {
         amount: data.amount ?? undefined,
         new_stack: typeof data.new_stack === 'number' ? data.new_stack : undefined, // FIX: Prevent stack overwrite
         new_pot: data.new_pot,
-      }
-                        case 'KickVoteStarted':
-                window.dispatchEvent(new CustomEvent('kickVoteStarted', { detail: data }));
-                return null;
-            case 'KickVoteUpdate':
-                return {
-                    type: 'KickVoteUpdate',
-                    room_id: data.room_id,
-                    kick_vote_id: data.kick_vote_id,
-                    yes_votes: data.yes_votes,
-                    required_votes: data.required_votes,
-                    passed: data.passed,
-                };
-            case 'PlayerRemoved':
-                return {
-                    type: 'PlayerRemoved',
-                    room_id: data.room_id,
-                    player_id: data.player_id,
-                    reason: data.reason,
-                };
-;
+      };
     }
+    case 'KickVoteStarted':
+      window.dispatchEvent(new CustomEvent('kickVoteStarted', { detail: data }));
+      return null;
+    case 'KickVoteUpdate':
+      window.dispatchEvent(new CustomEvent('kickVoteUpdate', { detail: data }));
+      return null;
+    case 'PlayerRemoved':
+      window.dispatchEvent(new CustomEvent('playerRemoved', { detail: data }));
+      return null;
+
 
     case 'ShowdownReveal': {
       const players = (data.players || []).map((p: any) => ({
@@ -153,17 +143,7 @@ const parseMessage = (data: any) => {
     case 'HandResult': {
       const winners = (data.winners || []).map((w: any) => {
         if (typeof w === 'string') {
-          return { user_id: '', display_name: w, amount: 0, hand_rank: '' }
-            case 'KickVoteStarted':
-                window.dispatchEvent(new CustomEvent('kickVoteStarted', { detail: data }));
-                return null;
-            case 'KickVoteUpdate':
-                window.dispatchEvent(new CustomEvent('kickVoteUpdate', { detail: data }));
-                return null;
-            case 'PlayerRemoved':
-                window.dispatchEvent(new CustomEvent('playerRemoved', { detail: data }));
-                return null;
-;
+          return { user_id: '', display_name: w, amount: 0, hand_rank: '' };
         }
         return {
           user_id: w.user_id || '',

@@ -48,6 +48,7 @@ import { KickVoteDialog } from '../components/game/KickVoteDialog';
 function Fallback({ error, resetErrorBoundary }: any) {
   
   // Listen to club theme updates
+const [feltColor, setFeltColor] = useState<string | null>(null);
   useEffect(() => {
     const handler = (event: Event) => {
       const detail = (event as CustomEvent).detail;
@@ -264,7 +265,6 @@ export function TablePage() {
   const [isAddingTable, setIsAddingTable] = useState(false);
   const [statsUserId, setStatsUserId] = useState<string | null>(null);
 const [kickVoteDialog, setKickVoteDialog] = useState<{ roomId: string; kickVoteId: string; targetId: string; targetName: string; durationSecs: number; requiredVotes: number; initiatorId: string } | null>(null);
-const [feltColor, setFeltColor] = useState<string | null>(null);
   const isTournament = !!tournamentId;
   const [resultsModalOpen, setResultsModalOpen] = useState(false);
   const [resultsData, setResultsData] = useState<TournamentResultEntry[]>([]);
@@ -550,7 +550,7 @@ const [feltColor, setFeltColor] = useState<string | null>(null);
     }
 
     // Check if hero is currently involved in an active hand (has hole cards)
-    const isHeroInActiveHand = game.current_hand_in_progress && heroHoleCards.length > 0;
+    const isHeroInActiveHand = game.handInProgress && (heroHoleCards?.length ?? 0) > 0;
 
     const shouldShow =
       hasJoined &&
@@ -559,7 +559,7 @@ const [feltColor, setFeltColor] = useState<string | null>(null);
       connectionStatus === 'connected' &&
       !isObserving &&
       !isTournament &&
-      !isHeroInActiveHand; // <-- Replaced !game.current_hand_in_progress
+      !isHeroInActiveHand; // <-- Replaced !game.handInProgress
 
     if (shouldShow) {
       setShowRebuyDialog(true);
@@ -572,7 +572,7 @@ const [feltColor, setFeltColor] = useState<string | null>(null);
     connectionStatus,
     hasJoined,
     isJoining,
-    game.current_hand_in_progress,
+    game.handInProgress,
     heroHoleCards, // <-- Added heroHoleCards to dependency array
     isObserving,
     isAddingTable,

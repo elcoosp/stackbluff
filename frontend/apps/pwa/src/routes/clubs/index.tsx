@@ -212,7 +212,7 @@ function ClubsListPage() {
       )}
 
       {/* Modals */}
-      <CreateClubModal open={isCreateOpen} onClose={() => setIsCreateOpen(false)} onClubCreated={() => refetch()} />
+      <CreateClubModal open={isCreateOpen} onClose={() => { setIsCreateOpen(false); refetch(); }} />
     </div>
   );
 }
