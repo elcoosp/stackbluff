@@ -9,32 +9,32 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(DeviceFingerprint::Table)
+                    .table(DeviceFingerprints::Table)
                     .if_not_exists()
                     .col(
-                        ColumnDef::new(DeviceFingerprint::UserId)
+                        ColumnDef::new(DeviceFingerprints::UserId)
                             .uuid()
                             .not_null(),
                     )
                     .col(
-                        ColumnDef::new(DeviceFingerprint::FingerprintHash)
+                        ColumnDef::new(DeviceFingerprints::FingerprintHash)
                             .string()
                             .not_null(),
                     )
                     .col(
-                        ColumnDef::new(DeviceFingerprint::Ip)
+                        ColumnDef::new(DeviceFingerprints::Ip)
                             .string()
                             .not_null(),
                     )
                     .col(
-                        ColumnDef::new(DeviceFingerprint::CreatedAt)
+                        ColumnDef::new(DeviceFingerprints::CreatedAt)
                             .date_time()
                             .not_null(),
                     )
                     .primary_key(
                         Index::create()
-                            .col(DeviceFingerprint::UserId)
-                            .col(DeviceFingerprint::FingerprintHash),
+                            .col(DeviceFingerprints::UserId)
+                            .col(DeviceFingerprints::FingerprintHash),
                     )
                     .to_owned(),
             )
@@ -43,13 +43,13 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .drop_table(Table::drop().table(DeviceFingerprint::Table).to_owned())
+            .drop_table(Table::drop().table(DeviceFingerprints::Table).to_owned())
             .await
     }
 }
 
 #[derive(DeriveIden)]
-enum DeviceFingerprint {
+enum DeviceFingerprints {
     Table,
     UserId,
     FingerprintHash,
