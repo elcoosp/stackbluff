@@ -628,76 +628,15 @@ export function TablePage() {
     heroTimerTotalMs,
   );
 
+  
   const sendActionWithFeedback = useCallback(
     (action: string, amount?: number) => {
       if (activeRoomId) {
         sendAction(activeRoomId, action, amount);
-        
-
-  
-
-  const handleKick = useCallback((targetUserId: string) => {
-    if (!activeRoomId) return;
-    const room = useGameStore.getState().rooms[activeRoomId];
-    if (!room) return;
-    // Find the seat of the target user
-    let targetSeat = null;
-    for (const [seat, player] of Object.entries(room.seats)) {
-      if ((player as any).user_id === targetUserId) {
-        targetSeat = seat;
-        break;
-      }
-    }
-    if (targetSeat === null) return;
-    // Send kick vote start
-    sendWsMessage('kick_vote_start', {
-      room_id: activeRoomId,
-      target_player_id: targetUserId,
-    });
-  }, [activeRoomId, sendWsMessage]);
-const handleKick = useCallback((targetUserId: string) => {
-    if (!activeRoomId) return;
-    const room = useGameStore.getState().rooms[activeRoomId];
-    if (!room) return;
-    // Find the seat of the target user
-    let targetSeat = null;
-    for (const [seat, player] of Object.entries(room.seats)) {
-      if ((player as any).user_id === targetUserId) {
-        targetSeat = seat;
-        break;
-      }
-    }
-    if (targetSeat === null) return;
-    // Send kick vote start
-    sendWsMessage('kick_vote_start', {
-      room_id: activeRoomId,
-      target_player_id: targetUserId,
-    });
-  }, [activeRoomId, sendWsMessage]);
-const actionToEvent: Record<string, FeedbackEvent> = {
+        const actionToEvent: Record<string, FeedbackEvent> = {
           fold: 'fold', check: 'check', call: 'call',
           bet: 'bet', raise: 'raise', 'all-in': 'allIn',
         };
-  const handleKick = useCallback((targetUserId: string) => {
-    if (!activeRoomId) return;
-    const room = useGameStore.getState().rooms[activeRoomId];
-    if (!room) return;
-    // Find the seat of the target user
-    let targetSeat = null;
-    for (const [seat, player] of Object.entries(room.seats)) {
-      if ((player as any).user_id === targetUserId) {
-        targetSeat = seat;
-        break;
-      }
-    }
-    if (targetSeat === null) return;
-    // Send kick vote start
-    sendWsMessage('kick_vote_start', {
-      room_id: activeRoomId,
-      target_player_id: targetUserId,
-    });
-  }, [activeRoomId, sendWsMessage]);
-
         const eventType = actionToEvent[action];
         if (eventType) trigger(eventType, { seatIndex: resolvedHeroSeat });
       }
@@ -705,7 +644,29 @@ const actionToEvent: Record<string, FeedbackEvent> = {
     [sendAction, trigger, resolvedHeroSeat, activeRoomId],
   );
 
-  const handleLeaveTable = useCallback(() => {
+
+  
+  const handleKick = useCallback((targetUserId: string) => {
+    if (!activeRoomId) return;
+    const room = useGameStore.getState().rooms[activeRoomId];
+    if (!room) return;
+    // Find the seat of the target user
+    let targetSeat = null;
+    for (const [seat, player] of Object.entries(room.seats)) {
+      if ((player as any).user_id === targetUserId) {
+        targetSeat = seat;
+        break;
+      }
+    }
+    if (targetSeat === null) return;
+    // Send kick vote start
+    sendWsMessage('kick_vote_start', {
+      room_id: activeRoomId,
+      target_player_id: targetUserId,
+    });
+  }, [activeRoomId, sendWsMessage]);
+
+const handleLeaveTable = useCallback(() => {
     const roomIdToLeave = activeRoomId || roomIds[0];
     if (roomIdToLeave) {
       sendLeave(roomIdToLeave);
