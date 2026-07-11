@@ -19,7 +19,8 @@ import {
   Target,
   Share2,
   BookOpen,
-  Settings, FileText
+  Settings, FileText,
+  Sparkles
 } from 'lucide-react';
 import { CreateTableModal } from '../components/CreateTableModal';
 import { BuyInDialog } from '../components/game/BuyInDialog';
@@ -56,6 +57,27 @@ interface Table {
   max_players: number;
   status: string;
 }
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.06,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.98 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] as const },
+  },
+};
 
 export const Route = createFileRoute('/lobby')({
   component: LobbyPage,
@@ -127,102 +149,127 @@ function LobbyPage() {
             <span className="font-label-caps text-label-caps">Lobby</span>
           </Link>
           <button onClick={() => navigate({ to: "/tournaments" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
-            <Trophy className="w-5 h-5" />
+            <Trophy className="w-5 h-5 text-yellow-400" />
             <span className="font-label-caps text-label-caps">Tournaments</span>
           </button>
           <button onClick={() => navigate({ to: "/clubs" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
-            <Users className="w-5 h-5" />
+            <Users className="w-5 h-5 text-purple-400" />
             <span className="font-label-caps text-label-caps">Clubs</span>
           </button>
           <button onClick={() => navigate({ to: "/leaderboard" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
-            <TrendingUp className="w-5 h-5" />
+            <TrendingUp className="w-5 h-5 text-cyan-400" />
             <span className="font-label-caps text-label-caps">Leaderboard</span>
           </button>
           <button onClick={() => navigate({ to: "/shop" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
-            <ShoppingBag className="w-5 h-5" />
+            <ShoppingBag className="w-5 h-5 text-pink-400" />
             <span className="font-label-caps text-label-caps">Shop</span>
           </button>
           <div className="border-t border-outline-variant/50 my-2"></div>
           <button onClick={() => navigate({ to: "/missions" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
-            <Target className="w-5 h-5" />
+            <Target className="w-5 h-5 text-orange-400" />
             <span className="font-label-caps text-label-caps">Missions</span>
           </button>
           <button onClick={() => navigate({ to: "/referrals" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
-            <Share2 className="w-5 h-5" />
+            <Share2 className="w-5 h-5 text-blue-400" />
             <span className="font-label-caps text-label-caps">Referrals</span>
           </button>
           <button onClick={() => navigate({ to: "/replays" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
-            <History className="w-5 h-5" />
+            <History className="w-5 h-5 text-indigo-400" />
             <span className="font-label-caps text-label-caps">Replays</span>
           </button>
           <button onClick={() => navigate({ to: "/history" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
-            <FileText className="w-5 h-5" />
+            <FileText className="w-5 h-5 text-sky-400" />
             <span className="font-label-caps text-label-caps">Hand History</span>
           </button>
           <div className="border-t border-outline-variant/50 my-2"></div>
           <button onClick={() => navigate({ to: "/guide" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
-            <BookOpen className="w-5 h-5" />
+            <BookOpen className="w-5 h-5 text-emerald-400" />
             <span className="font-label-caps text-label-caps">Guide</span>
           </button>
           <button onClick={() => navigate({ to: "/help" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
-            <HelpCircle className="w-5 h-5" />
+            <HelpCircle className="w-5 h-5 text-red-400" />
             <span className="font-label-caps text-label-caps">Help & Support</span>
           </button>
           <button onClick={() => navigate({ to: "/settings" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
-            <Settings className="w-5 h-5" />
+            <Settings className="w-5 h-5 text-slate-400" />
             <span className="font-label-caps text-label-caps">Settings</span>
           </button>
         </nav>
 
         <div className="px-4 pt-6 border-t border-outline-variant">
-          <Button onClick={() => setModalOpen(true)} className="w-full mb-4 py-3 rounded-lg liquid-metal font-label-caps text-label-caps active:scale-95 transition-transform uppercase">
+          <Button
+            onClick={() => setModalOpen(true)}
+            className="w-full mb-4 py-3 rounded-lg bg-tertiary text-on-tertiary hover:bg-tertiary-fixed font-label-caps text-label-caps active:scale-95 transition-transform uppercase shadow-lg shadow-emerald-500/10"
+          >
             <Plus className="w-4 h-4 mr-2" /> New Table
           </Button>
-          <button onClick={() => {
-            removeToken();
-            logout();
-            navigate({ to: '/login' });
-          }} className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:bg-red-500/10 w-full transition-colors font-label-caps text-label-caps">
+          <button
+            onClick={() => {
+              removeToken();
+              logout();
+              navigate({ to: '/login' });
+            }}
+            className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:bg-red-500/10 w-full transition-colors font-label-caps text-label-caps"
+          >
             <LogOut className="w-5 h-5" />
             <span className="font-label-caps text-label-caps">Logout</span>
           </button>
         </div>
       </aside>
 
-
       {/* Main content */}
       <section className="flex-1 relative min-w-0">
         <div className="absolute inset-0 carbon-bg pointer-events-none" />
 
-        <div className="max-w-6xl mx-auto p-4 md:p-6 lg:p-8 pb-28 md:pb-8 relative z-10">
+        <div className="relative max-w-6xl mx-auto p-4 md:p-6 lg:p-8 pb-28 md:pb-8 z-10 space-y-8">
+          {/* Background Ambient Effects */}
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+
           {/* Header and filters */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 mb-8 md:mb-12">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6"
+          >
             <div>
-              <h1 className="font-display-lg text-3xl md:text-display-lg text-on-surface mb-2">Game Lobby</h1>
-              <p className="text-on-surface-variant max-w-md text-sm md:text-base">Join high-stakes rooms or competitive tournaments. Precision poker for the sophisticated player.</p>
+              <div className="flex items-center gap-2 mb-1">
+                <Sparkles className="w-4 h-4 text-emerald-400" />
+                <span className="text-xs font-data-mono uppercase tracking-widest text-emerald-400">
+                  Play & Profit
+                </span>
+              </div>
+              <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface flex items-center gap-3">
+                Game Lobby
+              </h1>
+              <p className="text-on-surface-variant text-sm mt-1 max-w-md">
+                Join high-stakes rooms or competitive tournaments. Precision poker for the sophisticated player.
+              </p>
             </div>
             <LobbyTabs />
-          </div>
+          </motion.div>
 
-          {/* Sorting buttons (mobile) */}
-          <div className="flex lg:hidden justify-end mb-2 gap-2">
-            <button
-              className={`flex items-center gap-1.5 text-[10px] ${sortConfig.key === 'stakes' ? 'text-tertiary border-tertiary/50' : 'text-outline'} font-label-caps uppercase border border-outline-variant px-3 py-1.5 rounded-lg hover:text-on-surface transition-colors`}
-              onClick={() => toggleSort('stakes')}
-            >
-              Stakes {renderSortIcon('stakes')}
-            </button>
-            <button
-              className={`flex items-center gap-1.5 text-[10px] ${sortConfig.key === 'players' ? 'text-tertiary border-tertiary/50' : 'text-outline'} font-label-caps uppercase border border-outline-variant px-3 py-1.5 rounded-lg hover:text-on-surface transition-colors`}
-              onClick={() => toggleSort('players')}
-            >
-              Players {renderSortIcon('players')}
-            </button>
-          </div>
+          {/* Sorting controls */}
+          <div className="space-y-2">
+            <div className="flex lg:hidden justify-end">
+              <div className="flex flex-wrap gap-1 bg-white/5 border border-white/10 backdrop-blur-xl rounded-xl p-1.5">
+                <button
+                  className={`flex items-center gap-1.5 text-[10px] px-3 py-1.5 rounded-lg ${sortConfig.key === 'stakes' ? 'bg-white/10 text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface hover:bg-white/5'} font-label-caps uppercase tracking-wider transition-all`}
+                  onClick={() => toggleSort('stakes')}
+                >
+                  Stakes {renderSortIcon('stakes')}
+                </button>
+                <button
+                  className={`flex items-center gap-1.5 text-[10px] px-3 py-1.5 rounded-lg ${sortConfig.key === 'players' ? 'bg-white/10 text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface hover:bg-white/5'} font-label-caps uppercase tracking-wider transition-all`}
+                  onClick={() => toggleSort('players')}
+                >
+                  Players {renderSortIcon('players')}
+                </button>
+              </div>
+            </div>
 
-          {/* Table list wrapper */}
-          <div className="flex flex-col gap-3">
-            <div className="hidden lg:grid grid-cols-12 px-6 py-2 text-outline font-label-caps text-[10px] uppercase">
+            <div className="hidden lg:grid grid-cols-12 w-full px-6 py-2 text-outline font-label-caps text-[10px] uppercase tracking-wider">
               <div className="col-span-4">Room Name</div>
               <div
                 className="col-span-2 text-center flex items-center justify-center gap-1 cursor-pointer hover:text-on-surface transition-colors"
@@ -238,21 +285,24 @@ function LobbyPage() {
               </div>
               <div className="col-span-4 text-right">Action</div>
             </div>
+          </div>
 
-            {sortedTables.map((table, i) => {
+          {/* Table list wrapper */}
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="flex flex-col gap-3"
+          >
+            {sortedTables.map((table) => {
               const imageUrl = `/images/tables/${toKebabCase(table.name)}.png`;
 
               return (
                 <motion.div
                   layout
                   key={table.table_id}
-                  className="flex flex-col lg:grid lg:grid-cols-12 items-start lg:items-center px-4 lg:px-8 py-4 lg:py-5 border border-white/10 rounded-xl razor-highlight group hover:border-tertiary/40 transition-all duration-300 gap-3 lg:gap-0 overflow-hidden relative"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{
-                    delay: i * 0.05,
-                    layout: { duration: 0.3, ease: "easeInOut" }
-                  }}
+                  variants={itemVariants}
+                  className="flex flex-col lg:grid lg:grid-cols-12 items-start lg:items-center px-4 lg:px-8 py-4 lg:py-5 border border-white/10 rounded-2xl razor-highlight group hover:border-tertiary/40 transition-all duration-300 gap-3 lg:gap-0 overflow-hidden relative bg-white/5 backdrop-blur-xl"
                 >
                   {/* Background Image Layer - Blurs by default, unblurs on hover */}
                   <div
@@ -305,7 +355,6 @@ function LobbyPage() {
                   </div>
 
                   <div className="w-full lg:col-span-4 flex lg:justify-end gap-2 mt-1 lg:mt-0 relative z-10">
-                    {/* Updated Observe Button */}
                     <Button
                       variant="outline"
                       onClick={() =>
@@ -329,16 +378,16 @@ function LobbyPage() {
                 </motion.div>
               );
             })}
-          </div>
-        </div>
+          </motion.div>
 
-        {/* Legal Links Footer */}
-        <div className="flex flex-wrap gap-4 justify-center text-sm text-on-surface-variant border-t border-white/10 pt-4 mt-8">
-          <Link to="/legal/terms" className="hover:text-tertiary transition-colors">Terms of Service</Link>
-          <span className="text-white/20">|</span>
-          <Link to="/legal/privacy" className="hover:text-tertiary transition-colors">Privacy Policy</Link>
-          <span className="text-white/20">|</span>
-          <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors">Responsible Gaming</Link>
+          {/* Legal Links Footer */}
+          <div className="flex flex-wrap gap-4 justify-center text-sm text-on-surface-variant border-t border-white/10 pt-6 mt-8">
+            <Link to="/legal/terms" className="hover:text-tertiary transition-colors">Terms of Service</Link>
+            <span className="text-white/20">|</span>
+            <Link to="/legal/privacy" className="hover:text-tertiary transition-colors">Privacy Policy</Link>
+            <span className="text-white/20">|</span>
+            <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors">Responsible Gaming</Link>
+          </div>
         </div>
       </section>
 

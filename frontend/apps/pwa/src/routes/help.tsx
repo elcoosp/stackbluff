@@ -6,7 +6,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeft,
   HelpCircle,
   MessageCircle,
   Send,
@@ -14,7 +13,6 @@ import {
   Bug,
   BookOpen,
   Users,
-  LifeBuoy,
   Sparkles,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -140,27 +138,19 @@ function HelpPage() {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        className="flex flex-col md:flex-row md:items-center justify-between gap-4"
       >
-        <div className="flex items-center gap-4">
-          <Link
-            to="/"
-            className="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 text-on-surface-variant" />
-          </Link>
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <Sparkles className="w-4 h-4 text-cyan-400" />
-              <span className="text-xs font-data-mono uppercase tracking-widest text-cyan-400">
-                Assistance
-              </span>
-            </div>
-            <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface">
-              Help & Support
-            </h1>
-          </div>
+        <div className="flex items-center gap-2 mb-1">
+          <Sparkles className="w-4 h-4 text-cyan-400" />
+          <span className="text-xs font-data-mono uppercase tracking-widest text-cyan-400">
+            Assistance
+          </span>
         </div>
+        <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface">
+          Help & Support
+        </h1>
+        <p className="text-on-surface-variant text-sm mt-1 max-w-md">
+          Find answers to common questions or reach out to our support team.
+        </p>
       </motion.div>
 
       <motion.div
@@ -340,7 +330,7 @@ function HelpPage() {
                   <Button
                     type="submit"
                     disabled={isSubmitting}
-                    className="bg-gradient-to-r from-tertiary to-emerald-400 text-on-tertiary hover:shadow-lg hover:shadow-tertiary/30 transition-all w-full md:w-auto px-12 py-3 rounded-xl"
+                    className="flex items-center gap-2 px-4 py-2 bg-tertiary text-on-tertiary font-label-caps text-xs hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg shadow-emerald-500/10 rounded-lg w-full md:w-auto justify-center"
                   >
                     {isSubmitting ? (
                       <>
