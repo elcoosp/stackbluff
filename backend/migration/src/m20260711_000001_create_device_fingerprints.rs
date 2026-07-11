@@ -12,6 +12,13 @@ impl MigrationTrait for Migration {
                     .table(DeviceFingerprints::Table)
                     .if_not_exists()
                     .col(
+                        ColumnDef::new(DeviceFingerprints::Id)
+                            .integer()
+                            .not_null()
+                            .auto_increment()
+                            .primary_key(),
+                    )
+                    .col(
                         ColumnDef::new(DeviceFingerprints::UserId)
                             .uuid()
                             .not_null(),
@@ -31,11 +38,6 @@ impl MigrationTrait for Migration {
                             .date_time()
                             .not_null(),
                     )
-                    .primary_key(
-                        Index::create()
-                            .col(DeviceFingerprints::UserId)
-                            .col(DeviceFingerprints::FingerprintHash),
-                    )
                     .to_owned(),
             )
             .await
@@ -51,6 +53,7 @@ impl MigrationTrait for Migration {
 #[derive(DeriveIden)]
 enum DeviceFingerprints {
     Table,
+    Id,
     UserId,
     FingerprintHash,
     Ip,
