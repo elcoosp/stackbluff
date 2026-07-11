@@ -153,7 +153,17 @@ const parseMessage = (data: any) => {
     case 'HandResult': {
       const winners = (data.winners || []).map((w: any) => {
         if (typeof w === 'string') {
-          return { user_id: '', display_name: w, amount: 0, hand_rank: '' };
+          return { user_id: '', display_name: w, amount: 0, hand_rank: '' }
+            case 'KickVoteStarted':
+                window.dispatchEvent(new CustomEvent('kickVoteStarted', { detail: data }));
+                return null;
+            case 'KickVoteUpdate':
+                window.dispatchEvent(new CustomEvent('kickVoteUpdate', { detail: data }));
+                return null;
+            case 'PlayerRemoved':
+                window.dispatchEvent(new CustomEvent('playerRemoved', { detail: data }));
+                return null;
+;
         }
         return {
           user_id: w.user_id || '',
