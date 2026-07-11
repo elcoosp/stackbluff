@@ -155,6 +155,7 @@ export function Header() {
                       <div className="px-2 py-1">
                         <MenuItem icon={<Users className="w-4 h-4" />} label="Profile" onClick={() => { setDropdownOpen(false); navigate({ to: '/profile' }); }} />
                         <MenuItem icon={<Settings className="w-4 h-4" />} label="Settings" onClick={() => { setDropdownOpen(false); navigate({ to: '/settings' }); }} />
+                        <MenuItem icon={<Brain className="w-4 h-4" />} label="Puzzle" onClick={() => { setDropdownOpen(false); navigate({ to: "/puzzle" }); }} />
                         <MenuItem icon={<HelpCircle className="w-4 h-4" />} label="Help & Support" onClick={() => { setDropdownOpen(false); navigate({ to: '/help' }); }} />
                       </div>
 
