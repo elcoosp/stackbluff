@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Plus } from 'lucide-react';
 import { apiClient } from '@stackbluff/shared/api/client';
+import { motion } from 'framer-motion';
 
 interface CreateClubModalProps {
   open: boolean;
@@ -51,20 +52,34 @@ export function CreateClubModal({ open, onClose }: CreateClubModalProps) {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} className="max-w-md">
-      <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-        <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/5 shrink-0">
-          <div>
-            <h2 className="text-lg font-semibold text-on-surface">Create New Club</h2>
-            <p className="text-[11px] text-on-surface-variant mt-0.5">
-              Start your own community
-            </p>
-          </div>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      className="max-w-lg p-6 md:p-8 bg-surface-container border border-white/10 backdrop-blur-2xl rounded-3xl"
+    >
+      <motion.form
+        onSubmit={handleSubmit}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        className="space-y-6"
+      >
+        {/* Header */}
+        <div>
+          <h2 className="font-display-lg text-2xl md:text-3xl text-on-surface">
+            Create New Club
+          </h2>
+          <p className="text-on-surface-variant text-sm mt-1">
+            Start your own community and invite players.
+          </p>
         </div>
 
-        <div className="px-5 py-4 space-y-4 overflow-y-auto flex-1">
+        <div className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="club-name" className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+            <Label
+              htmlFor="club-name"
+              className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant"
+            >
               Club Name *
             </Label>
             <Input
@@ -72,14 +87,17 @@ export function CreateClubModal({ open, onClose }: CreateClubModalProps) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Poker Legends"
-              className="bg-surface-container-high border-outline-variant/50 text-on-surface"
+              className="h-12 bg-white/5 border-white/10 rounded-xl px-4 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-tertiary/50 transition-all"
               autoFocus
               required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="telegram-group" className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+            <Label
+              htmlFor="telegram-group"
+              className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant"
+            >
               Telegram Group ID (optional)
             </Label>
             <Input
@@ -87,40 +105,44 @@ export function CreateClubModal({ open, onClose }: CreateClubModalProps) {
               value={telegramGroupId}
               onChange={(e) => setTelegramGroupId(e.target.value)}
               placeholder="e.g., -1001234567890"
-              className="bg-surface-container-high border-outline-variant/50 text-on-surface"
+              className="h-12 bg-white/5 border-white/10 rounded-xl px-4 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-tertiary/50 transition-all"
             />
-            <p className="text-[10px] text-on-surface-variant/50">
+            <p className="text-xs text-on-surface-variant/60">
               Link your club to a Telegram group for notifications.
             </p>
           </div>
         </div>
 
-        <div className="px-5 py-4 border-t border-white/5 flex gap-3 justify-end shrink-0">
+        {/* Footer Actions */}
+        <div className="flex flex-col sm:flex-row gap-3 pt-2">
           <Button
             type="button"
             variant="outline"
             onClick={onClose}
             disabled={mutation.isPending}
-            className="border-white/10 text-on-surface-variant hover:bg-white/5 hover:text-on-surface"
+            className="flex items-center gap-2 px-4 py-3 border-outline-variant text-on-surface hover:border-tertiary hover:text-tertiary hover:bg-tertiary/10 font-label-caps text-xs uppercase tracking-wider rounded-xl w-full sm:w-auto justify-center"
           >
             Cancel
           </Button>
           <Button
             type="submit"
             disabled={mutation.isPending || !name.trim()}
-            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-medium"
+            className="flex items-center gap-2 px-4 py-3 bg-tertiary text-on-tertiary font-label-caps text-xs hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg shadow-emerald-500/10 rounded-xl w-full sm:flex-1 justify-center disabled:opacity-40"
           >
             {mutation.isPending ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
                 Creating...
               </>
             ) : (
-              'Create Club'
+              <>
+                <Plus className="w-4 h-4" />
+                Create Club
+              </>
             )}
           </Button>
         </div>
-      </form>
+      </motion.form>
     </Dialog>
   );
 }

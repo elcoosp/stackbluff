@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute, Link, Outlet, useMatchRoute } from '@tanstack/react-router';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { requireAuth } from '@/lib/authGuard';
@@ -13,6 +13,7 @@ import {
   Send,
   ChevronRight,
   Sparkles,
+  type LucideIcon,
 } from 'lucide-react';
 
 const containerVariants = {
@@ -27,21 +28,34 @@ const containerVariants = {
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 60, scale: 0.8 }, // Pronounced starting state
+  hidden: { opacity: 0, y: 60, scale: 0.8 },
   visible: {
     opacity: 1,
     y: 0,
     scale: 1,
     transition: {
-      type: "spring" as const, // Explicit spring physics
+      type: "spring" as const,
       stiffness: 260,
       damping: 18
     },
   },
 };
 
+interface SettingsSection {
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  to: string;
+  color: string;
+  bg: string;
+  gradient: string;
+}
+
 function SettingsPage() {
-  const settingsSections = [
+  const matchRoute = useMatchRoute();
+  const isIndex = matchRoute({ to: '/settings' });
+
+  const settingsSections: SettingsSection[] = [
     {
       title: 'Account',
       description: 'Profile, password, and email',
@@ -143,55 +157,59 @@ function SettingsPage() {
         </Link>
       </motion.div>
 
-      {/* Settings Grid */}
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
-      >
-        {settingsSections.map((section) => {
-          const Icon = section.icon;
-          return (
-            <motion.div key={section.to} variants={itemVariants}>
-              {/* Removed hover:-translate-y-1 to prevent CSS transform conflicts with Framer Motion */}
-              <Link
-                to={section.to}
-                className="block relative overflow-hidden h-full p-6 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl transition-colors duration-300 hover:border-white/20 group"
-              >
-                {/* Hover Gradient Background */}
-                <div className={cn(
-                  "absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none",
-                  section.gradient
-                )} />
+      {/* Render Grid only on index, otherwise render Outlet for child routes */}
+      {isIndex ? (
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+        >
+          {settingsSections.map((section) => {
+            const Icon = section.icon;
+            return (
+              <motion.div key={section.to} variants={itemVariants}>
+                <Link
+                  to={section.to as never}
+                  className="block relative overflow-hidden h-full p-6 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl transition-colors duration-300 hover:border-white/20 group"
+                >
+                  {/* Hover Gradient Background */}
+                  <div className={cn(
+                    "absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none",
+                    section.gradient
+                  )} />
 
-                <div className="relative z-10 flex flex-col h-full">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className={cn(
-                      "p-3 rounded-xl border border-white/10 transition-transform duration-300 group-hover:scale-110",
-                      section.bg, section.color
-                    )}>
-                      <Icon className="w-6 h-6" />
+                  <div className="relative z-10 flex flex-col h-full">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className={cn(
+                        "p-3 rounded-xl border border-white/10 transition-transform duration-300 group-hover:scale-110",
+                        section.bg, section.color
+                      )}>
+                        <Icon className="w-6 h-6" />
+                      </div>
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-white/5 border border-white/5 group-hover:bg-white/10 transition-colors">
+                        {/* Removed the translate-x movement */}
+                        <ChevronRight className="w-4 h-4 text-on-surface-variant group-hover:text-on-surface transition-colors duration-300" />
+                      </div>
                     </div>
-                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-white/5 border border-white/5 group-hover:bg-white/10 transition-colors">
-                      <ChevronRight className="w-4 h-4 text-on-surface-variant group-hover:text-on-surface transition-colors group-hover:translate-x-0.5 duration-300" />
+
+                    <div className="mt-auto">
+                      <h3 className="font-headline-md text-lg text-on-surface leading-tight">
+                        {section.title}
+                      </h3>
+                      <p className="text-sm text-on-surface-variant mt-1">
+                        {section.description}
+                      </p>
                     </div>
                   </div>
-
-                  <div className="mt-auto">
-                    <h3 className="font-headline-md text-lg text-on-surface leading-tight">
-                      {section.title}
-                    </h3>
-                    <p className="text-sm text-on-surface-variant mt-1">
-                      {section.description}
-                    </p>
-                  </div>
-                </div>
-              </Link>
-            </motion.div>
-          );
-        })}
-      </motion.div>
+                </Link>
+              </motion.div>
+            );
+          })}
+        </motion.div>
+      ) : (
+        <Outlet />
+      )}
     </div>
   );
 }
