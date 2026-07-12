@@ -407,6 +407,7 @@ async fn main() {
         tournament_service: tournament_service.clone(),
         mission_service: mission_service.clone(),
         viral_service: viral_service_arc.clone(),
+        db: db.clone(),
     });
 
     let fingerprint_repo: Arc<dyn sb_anti_cheat::FingerprintRepository> =
@@ -486,6 +487,9 @@ async fn main() {
         .merge(mission_router)
         .merge(notification_routes(Arc::new(db.clone())))
         .merge(club_router)
+        
+        .layer(axum::Extension(app_state.clone()))
+        .merge(sb_rest_router::analytics_routes::analytics_routes())
         .layer(axum::extract::DefaultBodyLimit::max(1024 * 1024 * 10))
         .layer(middleware::from_fn(request_context_middleware))
         .layer(Extension(auth_service.clone()))

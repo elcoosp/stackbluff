@@ -11,6 +11,7 @@ use sb_shared_types::{AppError, RequestContext, StakeLevel, TableId, UserId};
 use uuid::Uuid;
 use sb_table_registry::Registry;
 use std::sync::Arc;
+use sea_orm::Database;
 
 // Dummy implementations for repos and services.
 
@@ -396,7 +397,8 @@ async fn test_unauthenticated_returns_401() {
     let mission_service = Arc::new(DummyMissionService);
     let viral_service = Arc::new(DummyViralService);
 
-    let state = Arc::new(sb_rest_router::AppState {
+        let db = sea_orm::Database::connect("sqlite::memory:").await.unwrap();
+let state = Arc::new(sb_rest_router::AppState {
         notification_service: notification_service,
         tournament_service: tournament_service,
         mission_service: mission_service,
@@ -413,6 +415,7 @@ async fn test_unauthenticated_returns_401() {
         gdpr_repo: gdpr_repo,
         product_repo: Arc::new(DummyProductRepo),
         payment_service: Arc::new(DummyPaymentService),
+        db: db,
     });
 
     // Create a dummy auth service for the middleware
