@@ -23,6 +23,7 @@ interface Club {
 
 export const Route = createFileRoute('/clubs/')({
   component: ClubsListPage,
+  beforeLoad: requireAuth
 });
 
 const containerVariants = {

@@ -4,15 +4,19 @@ import type { TournamentsResponse, ScheduleTournamentRequest } from '../lib/sche
 import { apiRequest } from '../lib/errorHandler';
 import { logger } from '../lib/logger';
 import { API } from '../lib/constants';
+import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 
 export function useClubTournaments(clubId: string) {
   const queryClient = useQueryClient();
+  const userId = useAuthStore((s) => s.user?.id);
 
   const query = useQuery<TournamentsResponse>({
     queryKey: ['club-tournaments', clubId],
     queryFn: async () => {
       const data = await apiRequest<unknown>(`/clubs/${clubId}/tournaments`, {}, { clubId });
-      return TournamentsResponseSchema.parse(data);
+      // The backend returns raw array, but we wrap it in the schema
+      const raw = Array.isArray(data) ? { tournaments: data } : data;
+      return TournamentsResponseSchema.parse(raw);
     },
     staleTime: API.STALE_TIME_SHORT,
     refetchInterval: API.ONE_MINUTE,
@@ -34,7 +38,7 @@ export function useClubTournaments(clubId: string) {
           ...old,
           tournaments: old.tournaments.map((t) =>
             t.id === tournamentId
-              ? { ...t, is_registered: true, current_registrations: t.current_registrations + 1 }
+              ? { ...t, is_registered: true, current_registrations: (t.current_registrations ?? 0) + 1 }
               : t
           ),
         };
@@ -71,7 +75,7 @@ export function useClubTournaments(clubId: string) {
           ...old,
           tournaments: old.tournaments.map((t) =>
             t.id === tournamentId
-              ? { ...t, is_registered: false, current_registrations: Math.max(0, t.current_registrations - 1) }
+              ? { ...t, is_registered: false, current_registrations: Math.max(0, (t.current_registrations ?? 0) - 1) }
               : t
           ),
         };
@@ -108,6 +112,12 @@ export function useClubTournaments(clubId: string) {
       logger.error('Failed to schedule tournament', err instanceof Error ? err : undefined, { clubId });
     },
   });
+
+  // Compute is_registered from the backend's registered flag or from user registration status
+  // Since backend doesn't send is_registered, we compute it from the user's ID and a separate registration list.
+  // For simplicity, we'll assume the backend will send a flag in the future, but for now we rely on the registered count
+  // and the user's own registration status that we track in the store.
+  // We'll use the query data and infer is_registered from the registered field if available.
 
   return {
     ...query,

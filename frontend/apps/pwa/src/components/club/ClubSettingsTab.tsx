@@ -6,7 +6,8 @@ import { apiClient } from '@stackbluff/shared/api/client';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Loader2, Upload, Image, Palette, Hash, Crown } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Loader2, Upload, Image as ImageIcon, Palette, Crown, Save, Info, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFile } from '@/lib/uploadFile';
 import type { ClubDetails } from '@/types/club';
@@ -23,6 +24,27 @@ const CHIP_PRESETS = [
   { id: 'royal', name: 'Royal Purple' },
   { id: 'neon', name: 'Neon Blue' },
 ];
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.06,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.98 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] as const },
+  },
+};
 
 interface ClubSettingsTabProps {
   club: ClubDetails;
@@ -147,15 +169,27 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <motion.form
+      onSubmit={handleSubmit}
+      className="space-y-8"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
       {/* Basic Information */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-on-surface border-b border-white/10 pb-2">
-          Basic Information
-        </h3>
+      <motion.div variants={itemVariants} className="space-y-5">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-10 h-10 rounded-full bg-tertiary/10 flex items-center justify-center border border-tertiary/20">
+            <Settings className="w-5 h-5 text-tertiary" />
+          </div>
+          <div>
+            <span className="text-xs font-data-mono uppercase tracking-widest text-tertiary">Configuration</span>
+            <h3 className="font-headline-md text-base text-on-surface">Basic Information</h3>
+          </div>
+        </div>
 
         <div className="space-y-2">
-          <Label htmlFor="club-name" className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+          <Label htmlFor="club-name" className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant">
             Club Name *
           </Label>
           <Input
@@ -163,12 +197,12 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
             value={formData.name}
             onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
             placeholder="Enter club name"
-            className="bg-surface-container-high border-outline-variant/50 text-on-surface"
+            className="h-12 bg-white/5 border-white/10 rounded-xl px-4 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-tertiary/50 transition-all"
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="telegram-group" className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+          <Label htmlFor="telegram-group" className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant">
             Telegram Group ID
           </Label>
           <Input
@@ -176,33 +210,39 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
             value={formData.telegram_group_id}
             onChange={(e) => setFormData((prev) => ({ ...prev, telegram_group_id: e.target.value }))}
             placeholder="e.g., -1001234567890"
-            className="bg-surface-container-high border-outline-variant/50 text-on-surface"
+            className="h-12 bg-white/5 border-white/10 rounded-xl px-4 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-tertiary/50 transition-all"
           />
-          <p className="text-[10px] text-on-surface-variant/50">
-            Link your club to a Telegram group for notifications.
+          <p className="text-xs text-on-surface-variant/60 flex items-center gap-1.5 mt-1">
+            <Info className="w-3 h-3" /> Link your club to a Telegram group for notifications.
           </p>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Logo Upload */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-on-surface border-b border-white/10 pb-2">
-          Branding
-        </h3>
+      {/* Branding */}
+      <motion.div variants={itemVariants} className="space-y-5">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+            <ImageIcon className="w-5 h-5 text-blue-400" />
+          </div>
+          <div>
+            <span className="text-xs font-data-mono uppercase tracking-widest text-blue-400">Assets</span>
+            <h3 className="font-headline-md text-base text-on-surface">Branding</h3>
+          </div>
+        </div>
 
-        <div className="flex items-start gap-4">
+        <div className="flex items-start gap-4 p-4 bg-white/5 border border-white/10 rounded-xl">
           {logoPreview ? (
             <img
               src={logoPreview}
               alt="Logo preview"
-              className="w-20 h-20 rounded-lg object-cover border border-white/10"
+              className="w-20 h-20 rounded-xl object-cover border border-white/10"
             />
           ) : (
-            <div className="w-20 h-20 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/40 text-2xl">
-              <Image />
+            <div className="w-20 h-20 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-on-surface-variant/50">
+              <ImageIcon className="w-6 h-6" />
             </div>
           )}
-          <div>
+          <div className="flex-1">
             <input
               ref={logoInputRef}
               type="file"
@@ -215,7 +255,7 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
               onClick={() => logoInputRef.current?.click()}
               disabled={isUploadingLogo}
               variant="outline"
-              className="border-white/10 text-on-surface-variant hover:bg-white/5"
+              className="border-outline-variant text-on-surface hover:border-tertiary hover:text-tertiary hover:bg-tertiary/10 font-label-caps text-xs uppercase tracking-wider rounded-xl"
             >
               {isUploadingLogo ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -224,36 +264,41 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
               )}
               Upload Logo
             </Button>
-            <p className="text-[10px] text-on-surface-variant/50 mt-1">
+            <p className="text-xs text-on-surface-variant/60 mt-2">
               Recommended: 200x200px, max 5MB
             </p>
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Pro Features (gated) */}
+      {/* Pro Features */}
       {hasClubPro && (
-        <div className="space-y-4 border border-white/10 rounded-lg p-4 bg-white/5">
-          <div className="flex items-center gap-2">
-            <Crown className="w-4 h-4 text-yellow-400" />
-            <h3 className="text-lg font-semibold text-on-surface">Club Pro Customization</h3>
+        <motion.div variants={itemVariants} className="space-y-5 p-6 border border-yellow-500/20 rounded-2xl bg-gradient-to-br from-yellow-500/10 to-orange-500/5">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center border border-yellow-500/30">
+              <Crown className="w-5 h-5 text-yellow-400" />
+            </div>
+            <div>
+              <span className="text-xs font-data-mono uppercase tracking-widest text-yellow-400">Premium</span>
+              <h3 className="font-headline-md text-base text-on-surface">Club Pro Customization</h3>
+            </div>
           </div>
 
           {/* Banner Upload */}
           <div className="space-y-2">
-            <Label className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+            <Label className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant">
               Banner Image
             </Label>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {bannerPreview ? (
                 <img
                   src={bannerPreview}
                   alt="Banner preview"
-                  className="w-full h-32 rounded-lg object-cover border border-white/10"
+                  className="w-full h-32 rounded-xl object-cover border border-white/10"
                 />
               ) : (
-                <div className="w-full h-32 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/40">
-                  No banner
+                <div className="w-full h-32 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-on-surface-variant/50">
+                  No banner uploaded
                 </div>
               )}
               <input
@@ -268,7 +313,7 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
                 onClick={() => bannerInputRef.current?.click()}
                 disabled={isUploadingBanner}
                 variant="outline"
-                className="border-white/10 text-on-surface-variant hover:bg-white/5"
+                className="border-outline-variant text-on-surface hover:border-tertiary hover:text-tertiary hover:bg-tertiary/10 font-label-caps text-xs uppercase tracking-wider rounded-xl"
               >
                 {isUploadingBanner ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -277,7 +322,7 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
                 )}
                 Upload Banner
               </Button>
-              <p className="text-[10px] text-on-surface-variant/50">
+              <p className="text-xs text-on-surface-variant/60">
                 Recommended: 1200x300px, max 10MB
               </p>
             </div>
@@ -285,13 +330,13 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
 
           {/* Chip Preset */}
           <div className="space-y-2">
-            <Label className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+            <Label className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant">
               Chip Design Preset
             </Label>
             <select
               value={formData.chip_preset}
               onChange={(e) => setFormData((prev) => ({ ...prev, chip_preset: e.target.value }))}
-              className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-tertiary"
+              className="w-full h-12 px-4 bg-white/5 border border-white/10 rounded-xl text-on-surface focus:outline-none focus:ring-2 focus:ring-tertiary/50 transition-all"
             >
               {CHIP_PRESETS.map((preset) => (
                 <option key={preset.id} value={preset.id} className="bg-surface">
@@ -303,7 +348,7 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
 
           {/* Felt Color */}
           <div className="space-y-2">
-            <Label className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+            <Label className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant">
               Felt Color
             </Label>
             <div className="flex flex-wrap gap-2">
@@ -313,9 +358,9 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
                   type="button"
                   onClick={() => setFormData((prev) => ({ ...prev, felt_colour: color }))}
                   className={cn(
-                    "w-8 h-8 rounded-lg border-2 transition-all",
+                    "w-10 h-10 rounded-xl border-2 transition-all",
                     formData.felt_colour === color
-                      ? "border-tertiary ring-2 ring-tertiary/50"
+                      ? "border-tertiary ring-2 ring-tertiary/50 scale-105"
                       : "border-white/10 hover:border-white/30"
                   )}
                   style={{ backgroundColor: color }}
@@ -323,37 +368,40 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
                 />
               ))}
             </div>
-            <div className="flex items-center gap-2 mt-2">
+            <div className="flex items-center gap-2 mt-3">
               <Palette className="w-4 h-4 text-on-surface-variant/50" />
               <Input
                 type="text"
                 value={formData.felt_colour}
                 onChange={(e) => setFormData((prev) => ({ ...prev, felt_colour: e.target.value }))}
-                className="w-32 bg-surface-container-high border-outline-variant/50 text-on-surface font-mono text-sm"
+                className="h-10 w-40 bg-white/5 border-white/10 rounded-xl px-4 text-on-surface font-data-mono text-sm focus:outline-none focus:ring-2 focus:ring-tertiary/50 transition-all"
                 placeholder="#1a6b42"
               />
             </div>
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* Save Button */}
-      <div className="flex justify-end pt-4 border-t border-white/10">
+      <motion.div variants={itemVariants} className="flex justify-end pt-4 border-t border-white/10">
         <Button
           type="submit"
           disabled={updateMutation.isPending}
-          className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-medium"
+          className="flex items-center gap-2 px-6 py-3 bg-tertiary text-on-tertiary font-label-caps text-xs hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg shadow-emerald-500/10 rounded-xl disabled:opacity-40"
         >
           {updateMutation.isPending ? (
             <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Saving...
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Saving Changes...
             </>
           ) : (
-            'Save Changes'
+            <>
+              <Save className="w-4 h-4" />
+              Save Changes
+            </>
           )}
         </Button>
-      </div>
-    </form>
+      </motion.div>
+    </motion.form>
   );
 }

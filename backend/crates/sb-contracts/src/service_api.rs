@@ -7,8 +7,6 @@ use serde::{Deserialize, Serialize};
 use crate::ClubError;
 use crate::repo_api::{LeaderboardPage, UserProfile};
 
-// ── Removed CreateTableInput and TableService ──────────────────────────
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReplayCard {
     pub card_id: String,
@@ -40,8 +38,10 @@ pub trait ViralService: Send + Sync {
     ) -> Result<(), AppError>;
     async fn on_hand_completed(&self, user_id: UserId) -> Result<(), AppError>;
     async fn get_referral_stats(&self, user_id: UserId) -> Result<ReferralStats, AppError>;
-
-    async fn get_referral_list(&self, user_id: UserId) -> Result<Vec<crate::repo_api::ReferralRecord>, AppError>;
+    async fn get_referral_list(
+        &self,
+        user_id: UserId,
+    ) -> Result<Vec<crate::repo_api::ReferralRecord>, AppError>;
 }
 
 #[async_trait]
@@ -54,18 +54,9 @@ pub trait UserService: Send + Sync {
         &self,
         user_id: UserId,
     ) -> Result<crate::repo_api::UserProfile, AppError>;
-
-    async fn extend_season_pass(
-        &self,
-        user_id: UserId,
-        duration_days: i64,
-    ) -> Result<(), AppError>;
-
-    async fn extend_club_pro(
-        &self,
-        user_id: UserId,
-        duration_days: i64,
-    ) -> Result<(), AppError>;
+    async fn extend_season_pass(&self, user_id: UserId, duration_days: i64)
+    -> Result<(), AppError>;
+    async fn extend_club_pro(&self, user_id: UserId, duration_days: i64) -> Result<(), AppError>;
 }
 
 #[async_trait]
@@ -104,7 +95,6 @@ pub enum AntiCheatError {
 
 #[async_trait::async_trait]
 pub trait PaymentService: Send + Sync {
-
     async fn create_product_purchase(
         &self,
         user_id: sb_shared_types::UserId,
@@ -120,7 +110,6 @@ pub trait PaymentService: Send + Sync {
         provider: String,
         metadata: serde_json::Value,
     ) -> Result<String, sb_shared_types::AppError>;
-
     async fn confirm_payment(
         &self,
         payment_id: &str,
@@ -128,7 +117,6 @@ pub trait PaymentService: Send + Sync {
         status: &str,
         completed_at: Option<chrono::DateTime<chrono::Utc>>,
     ) -> Result<(), sb_shared_types::AppError>;
-
     async fn award_chips_on_success(
         &self,
         user_id: sb_shared_types::UserId,
@@ -141,13 +129,11 @@ pub trait OracleService: Send + Sync {
     type Params: Send + Sync;
     type Output: Send + Sync;
     type Error: std::error::Error + Send + Sync;
-
     async fn analyze(
         &self,
         ctx: &RequestContext,
         params: Self::Params,
     ) -> Result<Self::Output, Self::Error>;
-
     async fn answer_callback_query(
         &self,
         callback_id: String,
@@ -220,9 +206,25 @@ pub trait ClubService: Send + Sync {
         club_id: sb_shared_types::ClubId,
         requested_by: sb_shared_types::UserId,
     ) -> Result<(), ClubError>;
-}
 
-// ========== Authentication contracts ==========
+    async fn get_club(
+        &self,
+        ctx: &sb_shared_types::RequestContext,
+        club_id: sb_shared_types::ClubId,
+    ) -> Result<crate::repo_api::Club, ClubError>;
+
+    async fn get_member_count(
+        &self,
+        ctx: &sb_shared_types::RequestContext,
+        club_id: sb_shared_types::ClubId,
+    ) -> Result<u64, ClubError>;
+
+    async fn get_user_clubs(
+        &self,
+        ctx: &sb_shared_types::RequestContext,
+        user_id: sb_shared_types::UserId,
+    ) -> Result<Vec<sb_shared_types::ClubId>, ClubError>;
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuthResult {
@@ -262,12 +264,10 @@ pub trait AuthService: Send + Sync {
         password: &str,
     ) -> Result<AuthResult, sb_shared_types::AppError>;
     async fn verify_token(&self, token: &str) -> Result<TokenClaims, sb_shared_types::AppError>;
-
     async fn validate_token(
         &self,
         token: &str,
     ) -> Result<sb_shared_types::UserId, sb_shared_types::AppError>;
-
     async fn get_user_profile(
         &self,
         ctx: &sb_shared_types::RequestContext,
@@ -278,15 +278,11 @@ pub trait AuthService: Send + Sync {
         ctx: &RequestContext,
         user_id: UserId,
     ) -> Result<(), AppError>;
-
     async fn verify_email(&self, token: &str) -> Result<(), AppError>;
-
     async fn forgot_password(&self, ctx: &RequestContext, email: &str) -> Result<(), AppError>;
-
     async fn reset_password(&self, token: &str, new_password: &str) -> Result<(), AppError>;
 }
 
-// ── Missions ──────────────────────────────────────────────────────────────
 use sb_shared_types::missions::{Mission, MissionId};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -298,9 +294,10 @@ pub struct ClubProSettings {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UpdateClubSettingsRequest {
-    pub banner_url: Option<String>,
-    pub chip_preset_id: Option<i32>,
-    pub felt_color: Option<String>,
+    pub name: Option<String>,
+    pub telegram_group_id: Option<String>,
+    pub logo_url: Option<String>,
+    pub pro_settings: Option<ClubProSettings>,
 }
 
 #[derive(Debug, serde::Serialize)]

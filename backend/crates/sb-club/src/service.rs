@@ -1,36 +1,14 @@
-//! Club service implementation with division sharding support.
-//!
-//! # Division Sharding
-//! Clubs with more than 500 members are automatically split into divisions.
-//! Each division maintains its own leaderboard ranked by weekly XP.
-//!
-//! # Performance Optimizations
-//! - Owner authorization checks are cached (5 minute TTL)
-//! - Leaderboard queries are instrumented with Prometheus metrics
-//! - Rebalance operations use single UPDATE with CTE for O(1) DB operations
-//!
-//! # Metrics
-//! - `club_leaderboard_queries_total`: Total leaderboard queries
-//! - `club_leaderboard_query_duration_seconds`: Leaderboard query latency
-//! - `club_rebalance_operations_total`: Total rebalance operations
-//! - `club_rebalance_duration_seconds`: Rebalance operation latency
-//!
-//! # Caching
-//! - Owner cache: 5 minute TTL, 10,000 max entries
-//! - Automatically reduces database load for repeated authorization checks
-
 use moka::future::Cache;
 use prometheus::{Histogram, HistogramOpts, IntCounter, register_histogram, register_int_counter};
+use sb_contracts::repo_api::Club;
 use sb_contracts::service_api::{ClubProSettings, UpdateClubSettingsRequest};
 use sb_contracts::{ClubError, ClubRepo, ClubService, LeaderboardPage};
 use sb_shared_types::{ClubId, RequestContext, UserId};
 use sb_table_registry::connection_broker::ConnectionBroker;
-#[allow(unused_imports)]
 use sb_table_registry::game_room::RoomMessage;
 use std::sync::Arc;
 use std::sync::OnceLock;
 
-// Metrics
 static LEADERBOARD_QUERIES: OnceLock<IntCounter> = OnceLock::new();
 static LEADERBOARD_QUERY_DURATION: OnceLock<Histogram> = OnceLock::new();
 static REBALANCE_OPERATIONS: OnceLock<IntCounter> = OnceLock::new();
@@ -113,7 +91,10 @@ impl ClubService for ClubServiceImpl {
             "create_club: name={}",
             name
         );
-        self.repo.create_club(name, logo_url, created_by).await
+        let club_id = self.repo.create_club(name, logo_url, created_by).await?;
+        // Automatically add the creator as a member
+        self.repo.join_club(club_id, created_by).await?;
+        Ok(club_id)
     }
 
     async fn join_club(
@@ -138,17 +119,14 @@ impl ClubService for ClubServiceImpl {
         division: u32,
     ) -> Result<LeaderboardPage, ClubError> {
         let start = std::time::Instant::now();
-
         let club = self.repo.find_club_by_id(club_id).await?;
         if club.is_none() {
             return Err(ClubError::not_found(club_id));
         }
         let result = self.repo.get_leaderboard_page(club_id, division).await;
-
         let duration = start.elapsed().as_secs_f64();
         get_leaderboard_queries().inc();
         get_leaderboard_query_duration().observe(duration);
-
         result
     }
 
@@ -188,9 +166,21 @@ impl ClubService for ClubServiceImpl {
             });
 
         let merged = ClubProSettings {
-            banner_url: settings.banner_url.or(existing.banner_url),
-            chip_preset_id: settings.chip_preset_id.or(existing.chip_preset_id),
-            felt_color: settings.felt_color.or(existing.felt_color),
+            banner_url: settings
+                .pro_settings
+                .as_ref()
+                .and_then(|p| p.banner_url.clone())
+                .or(existing.banner_url),
+            chip_preset_id: settings
+                .pro_settings
+                .as_ref()
+                .and_then(|p| p.chip_preset_id)
+                .or(existing.chip_preset_id),
+            felt_color: settings
+                .pro_settings
+                .as_ref()
+                .and_then(|p| p.felt_color.clone())
+                .or(existing.felt_color),
         };
 
         let json = serde_json::to_value(&merged).map_err(|e| ClubError::Internal(e.to_string()))?;
@@ -199,13 +189,12 @@ impl ClubService for ClubServiceImpl {
             .await
             .map_err(|e| ClubError::Internal(e.to_string()))?;
 
-        // Broadcast theme update to all tables of this club
         let tables = self
             .repo
             .get_tables_by_club_id(club_id)
             .await
             .map_err(|e| ClubError::Internal(e.to_string()))?;
-        let theme_msg = sb_table_registry::game_room::RoomMessage::ClubThemeUpdated {
+        let theme_msg = RoomMessage::ClubThemeUpdated {
             club_id,
             banner_url: merged.banner_url.clone(),
             chip_preset_id: merged.chip_preset_id.map(|id| id as i32),
@@ -213,6 +202,20 @@ impl ClubService for ClubServiceImpl {
         };
         for table_id in tables {
             self.broker.broadcast_to_room(table_id, theme_msg.clone());
+        }
+
+        if settings.name.is_some()
+            || settings.logo_url.is_some()
+            || settings.telegram_group_id.is_some()
+        {
+            let telegram_chat_id = settings
+                .telegram_group_id
+                .as_ref()
+                .and_then(|s| s.parse::<i64>().ok());
+            self.repo
+                .update_club_details(club_id, settings.name, telegram_chat_id, settings.logo_url)
+                .await
+                .map_err(|e| ClubError::Internal(e.to_string()))?;
         }
 
         Ok(merged)
@@ -227,7 +230,6 @@ impl ClubService for ClubServiceImpl {
             .get_club_pro_settings(club_id)
             .await
             .map_err(|e| ClubError::Internal(e.to_string()))?;
-
         match settings {
             Some(v) => serde_json::from_value(v).map_err(|e| ClubError::Internal(e.to_string())),
             None => Ok(None),
@@ -270,8 +272,6 @@ impl ClubService for ClubServiceImpl {
             user_id = %requested_by,
             "rebalance_divisions"
         );
-
-        // Check if user is the club owner using cache
         let cache_key = (club_id, requested_by);
         let is_owner = match self.owner_cache.get(&cache_key).await {
             Some(cached) => cached,
@@ -281,23 +281,41 @@ impl ClubService for ClubServiceImpl {
                 is_owner
             }
         };
-
         if !is_owner {
-            // Check if club exists to return appropriate error
             let club_exists = self.repo.find_club_by_id(club_id).await?.is_some();
             if !club_exists {
                 return Err(ClubError::not_found(club_id));
             }
             return Err(ClubError::PermissionDenied);
         }
-
         let start = std::time::Instant::now();
         let result = self.repo.rebalance_divisions(club_id).await;
-
         let duration = start.elapsed().as_secs_f64();
         get_rebalance_operations().inc();
         get_rebalance_duration().observe(duration);
-
         result
+    }
+
+    async fn get_club(&self, _ctx: &RequestContext, club_id: ClubId) -> Result<Club, ClubError> {
+        self.repo
+            .find_club_by_id(club_id)
+            .await?
+            .ok_or(ClubError::NotFound)
+    }
+
+    async fn get_member_count(
+        &self,
+        _ctx: &RequestContext,
+        club_id: ClubId,
+    ) -> Result<u64, ClubError> {
+        self.repo.get_member_count(club_id).await
+    }
+
+    async fn get_user_clubs(
+        &self,
+        _ctx: &RequestContext,
+        user_id: UserId,
+    ) -> Result<Vec<ClubId>, ClubError> {
+        self.repo.get_user_clubs(user_id).await
     }
 }

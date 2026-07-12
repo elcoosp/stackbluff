@@ -1,5 +1,4 @@
 pub mod anti_cheat_routes;
-pub mod club_routes;
 pub mod gdpr_routes;
 pub mod hand_history_routes;
 pub mod handlers;
@@ -13,6 +12,7 @@ pub mod routes;
 pub mod season_card;
 pub mod shop_routes;
 pub mod tournament_routes;
+
 use axum::{
     Router,
     extract::{Extension, Path, Query, State},
@@ -45,7 +45,6 @@ pub struct AppState {
     pub tournament_service: Arc<dyn TournamentService + Send + Sync>,
     pub mission_service: Arc<dyn MissionApi + Send + Sync>,
     pub viral_service: Arc<dyn ViralService + Send + Sync>,
-
     pub table_service: Arc<dyn TableService + Send + Sync>,
     pub table_repo: Arc<dyn TableRepo + Send + Sync>,
     pub registry: Arc<Registry>,
@@ -66,7 +65,6 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/lobby", get(lobby_handler))
         .route("/tables", post(create_table_handler))
         .route("/tables/{table_id}/history", get(table_history_handler))
-        .merge(club_routes::club_routes())
         .route("/users/me/badges", get(handlers::badges::get_my_badges))
         .route(
             "/users/{user_id}/badges",
@@ -132,8 +130,6 @@ pub struct ErrorDetail {
     pub message: String,
 }
 
-// === Public (no auth) table listing types ===
-
 #[derive(Debug, Serialize)]
 pub struct PublicTableInfo {
     pub table_id: TableId,
@@ -145,8 +141,6 @@ pub struct PublicTableInfo {
 pub struct PublicTableList {
     pub tables: Vec<PublicTableInfo>,
 }
-
-// === History Request/Response Types ===
 
 #[derive(Debug, Deserialize)]
 pub struct HistoryParams {
@@ -185,7 +179,6 @@ async fn lobby_handler(
         .list_tables()
         .await
         .map_err(internal_error)?;
-
     let mut merged: Vec<LobbyTableInfo> = Vec::new();
     for t in persistent {
         let active_players = state.registry.get_total_active_players(t.table_id).await;
@@ -198,7 +191,6 @@ async fn lobby_handler(
             status: t.status,
         });
     }
-
     Ok(Json(merged))
 }
 
@@ -237,7 +229,6 @@ async fn table_history_handler(
             .map_err(|_| bad_request("INVALID_USER", "Invalid user ID"))?,
     );
     let ctx = RequestContext::new(Uuid::new_v4(), Some(user_id));
-
     let is_at_table = state.registry.is_user_at_table(table_id, user_id).await;
     let user_hand_count = state
         .hand_history_repo
@@ -249,7 +240,6 @@ async fn table_history_handler(
             "You are not authorized to view this table's history",
         ));
     }
-
     let cursor = match params.cursor {
         Some(encoded) => {
             let decoded = BASE64_STANDARD
@@ -273,7 +263,6 @@ async fn table_history_handler(
         }
         None => None,
     };
-
     let limit = params.limit.unwrap_or(20).min(100);
     let (summaries, next_cursor) = state
         .hand_history_repo
@@ -285,12 +274,10 @@ async fn table_history_handler(
         .count_hand_histories(ctx, table_id)
         .await
         .map_err(internal_error)?;
-
     let next_cursor_b64 = next_cursor.map(|(dt, id)| {
         let s = format!("{},{}", dt.to_rfc3339(), id);
         BASE64_STANDARD.encode(s.as_bytes())
     });
-
     Ok(Json(HistoryResponse {
         histories: summaries,
         total,

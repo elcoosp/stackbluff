@@ -24,11 +24,13 @@ use tower_cookies::CookieManagerLayer;
 use tower_http::cors::CorsLayer;
 use uuid::Uuid;
 
+use sb_auth::middleware::auth_middleware_with_context;
 use sb_auth::{
     AuthServiceImpl, Authenticator, SharedAuthService, config::AuthConfig, email::EmailService,
     email_queue::EmailQueue, routes::auth_router,
 };
 use sb_club::handlers::{ClubTournamentState, club_tournament_routes};
+use sb_club::{club_router, handlers::ClubState};
 use sb_contracts::async_hooks::{HandCountObserver, ReplayCardObserver};
 use sb_contracts::lobby_api::{TableRepo, TableService};
 use sb_contracts::repo_api::{GdprRepo, HandHistoryRepository, UserRepo};
@@ -78,8 +80,6 @@ mod hand_archive;
 mod r2_storage;
 mod season_card_generator;
 
-// ─── Middleware that provides RequestContext ──────────────────────
-
 async fn request_context_middleware(mut req: Request, next: Next) -> Response {
     let request_id = req
         .headers()
@@ -97,7 +97,6 @@ async fn request_context_middleware(mut req: Request, next: Next) -> Response {
 
     let mut user_id = None;
 
-    // Try to get token from Authorization header or cookie
     let token = req
         .headers()
         .get("Authorization")
@@ -141,15 +140,12 @@ async fn request_context_middleware(mut req: Request, next: Next) -> Response {
     next.run(req).await
 }
 
-// ─── Rest of your code ─────────────────────────────────────────────
-
 async fn reschedule_tournament_reminders(
     _repo: std::sync::Arc<dyn sb_contracts::tournament_api::TournamentRepo>,
     _notification_service: std::sync::Arc<dyn sb_contracts::notification_api::NotificationService>,
     _bot_handler: Option<std::sync::Arc<dyn sb_contracts::notification_api::ClubNotifier>>,
     _app_base_url: String,
 ) {
-    // (unchanged – keep your implementation)
 }
 
 #[tokio::main]
@@ -176,7 +172,6 @@ async fn main() {
     let user_repo: Arc<dyn UserRepo> = Arc::new(UserRepoImpl::new(writer_handle.sender.clone()));
 
     let user_svc = Arc::new(UserServiceImpl::new(user_repo.clone()));
-    // ── Crash recovery ────────────────────────────────────────────────
     {
         let tournament_repo = TournamentRepoImpl::new(db.clone());
         if let Err(e) = sb_tournament::crash_recovery::settle_crashed_tournaments(
@@ -192,7 +187,6 @@ async fn main() {
         }
     }
 
-    // ── Auth ──────────────────────────────────────────────────────────
     let auth_config = AuthConfig::from_env();
 
     let email_service = Arc::new(EmailService::new(&auth_config));
@@ -206,7 +200,6 @@ async fn main() {
     let auth_service: SharedAuthService = auth_impl.clone();
     let auth_authenticator: Arc<dyn Authenticator + Send + Sync> = auth_impl;
 
-    // ── Oracle ────────────────────────────────────────────────────────
     let session_manager = sb_oracle::SessionManager::new();
     let oracle_service = Arc::new(sb_oracle::OracleServiceImpl::new(
         session_manager,
@@ -214,7 +207,6 @@ async fn main() {
         None,
     ));
 
-    // ── Table infrastructure ─────────────────────────────────────────
     let table_repo: Arc<dyn TableRepo + Send + Sync> =
         Arc::new(sb_db_repos::table_repo::TableRepoImpl::new(db.clone()));
 
@@ -258,7 +250,6 @@ async fn main() {
         tracing::info!(%default_table_id, "Default table created (DB was empty)");
     }
 
-    // ── Hand history and stats ───────────────────────────────────────
     let leaderboard_repo = Arc::new(sb_db_repos::LeaderboardRepo::new(db.clone()));
 
     let hand_history_repo: Arc<dyn HandHistoryRepository + Send + Sync> = Arc::new(
@@ -284,21 +275,17 @@ async fn main() {
     let stats_event_rx = registry.event_sender().subscribe();
     spawn_stats_aggregator(stats_event_rx, stats_repo.clone());
 
-    // ── Club service ─────────────────────────────────────────────────
     let club_repo: Arc<dyn sb_contracts::repo_api::ClubRepo + Send + Sync> =
         Arc::new(ClubRepoImpl::new(db.clone()));
-    let broker = Arc::new(ConnectionBroker::new()); // Single broker instance
+    let broker = Arc::new(ConnectionBroker::new());
     let club_service: Arc<dyn sb_contracts::service_api::ClubService + Send + Sync> = Arc::new(
         sb_club::ClubServiceImpl::new(club_repo.clone(), broker.clone()),
     );
 
-    // ── GDPR repository ──────────────────────────────────────────────
     let gdpr_repo: Arc<dyn GdprRepo + Send + Sync> = Arc::new(PgGdprRepo { db: db.clone() });
 
-    // ── Badge repository ─────────────────────────────────────────────
     let badge_repo = Arc::new(BadgeRepoImpl::new(db.clone()));
 
-    // ── Notification service and bot_handler (unified) ────────────────
     #[cfg(feature = "test-stubs")]
     let (notification_service, bot_handler) = {
         let notif = Arc::new(InMemoryNotificationService::new());
@@ -324,7 +311,6 @@ async fn main() {
         (notification_service, bot_handler)
     };
 
-    // ── Bot state ─────────────────────────────────────────────────────
     #[cfg(feature = "test-stubs")]
     let bot_state = {
         use sb_bot_handler::BotState;
@@ -351,8 +337,6 @@ async fn main() {
         ))
     };
 
-    // ── Create AppState ──────────────────────────────────────────────
-    // ── Tournament system ────────────────────────────────────────────
     let tournament_repo = Arc::new(TournamentRepoImpl::new(db.clone()));
 
     let app_base_url =
@@ -362,7 +346,7 @@ async fn main() {
         tournament_repo.clone(),
         user_repo.clone(),
         registry.clone(),
-        broker.clone(), // Use the same broker
+        broker.clone(),
         notification_service.clone(),
         bot_handler.clone(),
         app_base_url.clone(),
@@ -371,17 +355,17 @@ async fn main() {
     tournament_service_impl.set_club_service(club_service.clone());
     let tournament_service = Arc::new(tournament_service_impl);
 
-    // ── Club tournament routes ──────────────────────────────────────
     let club_tournament_state = ClubTournamentState {
         club_service: club_service.clone(),
         club_repo: club_repo.clone(),
         tournament_service: tournament_service.clone(),
+        tournament_repo: tournament_repo.clone(),
     };
     let club_tournament_router = club_tournament_routes(club_tournament_state);
 
     let tournament_state = Arc::new(TournamentState {
         registry: registry.clone(),
-        broker: broker.clone(), // Use the same broker
+        broker: broker.clone(),
         tournament_repo: tournament_repo.clone(),
         tournament_service: tournament_service.clone(),
         user_repo: user_repo.clone(),
@@ -393,7 +377,6 @@ async fn main() {
 
     let tournament_router = tournament_routes::tournament_routes(tournament_state);
 
-    // ── Viral service (referrals, badges, replay cards) ────────────────
     let referral_repo = ReferralRepositoryImpl::new(db.clone());
     let base_url =
         std::env::var("APP_BASE_URL").unwrap_or_else(|_| "https://app.stackbluff.com".to_string());
@@ -420,14 +403,12 @@ async fn main() {
         gdpr_repo: gdpr_repo.clone(),
         product_repo: product_repo.clone(),
         payment_service: payment_service.clone(),
-
         notification_service: notification_service.clone(),
         tournament_service: tournament_service.clone(),
         mission_service: mission_service.clone(),
         viral_service: viral_service_arc.clone(),
     });
 
-    // ── Anti-Cheat Fingerprint Route ──────────────────────────────────
     let fingerprint_repo: Arc<dyn sb_anti_cheat::FingerprintRepository> =
         Arc::new(sb_anti_cheat::SeaFingerprintRepository { db: db.clone() });
     let anti_cheat_state = Arc::new(anti_cheat_routes::AntiCheatState { fingerprint_repo });
@@ -446,14 +427,12 @@ async fn main() {
         mission_service,
     );
 
-    // ── WebSocket handler ────────────────────────────────────────────
     let ws_router = ws_route(
         auth_authenticator.clone(),
         registry.clone(),
         user_repo.clone(),
     );
 
-    // ── CORS ──────────────────────────────────────────────────────────
     let cors_origins_env = std::env::var("CORS_ORIGINS")
         .unwrap_or_else(|_| "http://localhost:5173,http://localhost:5174".to_string());
     let allowed_origins: Vec<axum::http::HeaderValue> = cors_origins_env
@@ -467,7 +446,6 @@ async fn main() {
         .allow_headers([header::CONTENT_TYPE, header::COOKIE, header::AUTHORIZATION])
         .max_age(Duration::from_secs(86400));
 
-    // ── R2 storage ───────────────────────────────────────────────────
     let r2_config = aws_config::defaults(aws_config::BehaviorVersion::latest())
         .endpoint_url(std::env::var("R2_ENDPOINT").expect("R2_ENDPOINT not set"))
         .load()
@@ -483,15 +461,15 @@ async fn main() {
         r2: r2.clone(),
     });
 
-    // ── Build main router ────────────────────────────────────────────
     let metrics_route = axum::Router::new().route("/metrics", axum::routing::get(metrics_handler));
 
-    // ═══════════════════════════════════════════════════════════════════
-    //  FIX: Add SharedAuthService as an Extension so auth middleware can find it.
-    //  Also keep the RequestContext middleware.
-    // ═══════════════════════════════════════════════════════════════════
-
     let mission_router = sb_mission::mission_routes(Arc::new(db.clone()), user_svc.clone());
+
+    let club_state = ClubState {
+        service: app_state.club_service.clone(),
+    };
+    let club_router =
+        club_router(club_state).layer(axum::middleware::from_fn(auth_middleware_with_context));
 
     let app = Router::new()
         .merge(metrics_route)
@@ -507,6 +485,7 @@ async fn main() {
         .merge(club_tournament_router)
         .merge(mission_router)
         .merge(notification_routes(Arc::new(db.clone())))
+        .merge(club_router)
         .layer(axum::extract::DefaultBodyLimit::max(1024 * 1024 * 10))
         .layer(middleware::from_fn(request_context_middleware))
         .layer(Extension(auth_service.clone()))
@@ -545,7 +524,6 @@ async fn main() {
         season_proc_clone.run_scheduler().await;
     });
 
-    // ── GDPR scheduler ──────────────────────────────────────────────────
     spawn_gdpr_scheduler(app_state);
 
     axum::serve(listener, app).await.expect("server error");
@@ -555,7 +533,6 @@ async fn load_existing_tournaments(
     state: Arc<TournamentState>,
     db: sea_orm::DatabaseConnection,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    // ... (your existing implementation; unchanged)
     let records = TournamentEntity::find()
         .filter(TournamentColumn::Status.ne("Completed"))
         .all(&db)
@@ -678,7 +655,6 @@ pub fn spawn_gdpr_scheduler(state: std::sync::Arc<AppState>) {
     tokio::spawn(start_gdpr_job(state));
 }
 
-// Metrics endpoint
 use prometheus::{Encoder, TextEncoder};
 async fn metrics_handler() -> String {
     let encoder = TextEncoder::new();

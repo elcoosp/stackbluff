@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { cn } from '@/lib/utils';
 
 type TabKey = 'leaderboard' | 'tournaments' | 'settings';
 
@@ -21,21 +22,19 @@ export function ClubTabs({ tabs, activeTab, onTabChange, children }: ClubTabsPro
   return (
     <>
       {/* Tab Navigation */}
-      <div className="flex gap-2 mb-6 border-b border-white/10">
+      <div className="flex w-full gap-1 bg-white/5 border border-white/10 rounded-2xl p-1.5 backdrop-blur-xl h-auto mb-6">
         {visibleTabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => onTabChange(tab.key)}
-            className={`px-4 py-2 font-medium transition-colors relative ${
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all",
               activeTab === tab.key
-                ? 'text-white'
-                : 'text-white/60 hover:text-white/80'
-            }`}
+                ? "bg-white/10 text-on-surface shadow-sm"
+                : "text-on-surface-variant hover:text-on-surface"
+            )}
           >
             {tab.label}
-            {activeTab === tab.key && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-500 to-pink-500" />
-            )}
           </button>
         ))}
       </div>
