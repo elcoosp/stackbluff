@@ -1,3 +1,4 @@
+mod anti_cheat_routes;
 mod leaderboard_refresh;
 #[cfg(feature = "test-stubs")]
 mod test_utils;
@@ -5,8 +6,7 @@ mod user_service;
 mod viral_observer;
 
 use axum::{
-    Extension, // <-- added
-    Router,
+    Extension, Router,
     extract::Request,
     http::Method,
     http::header,
@@ -24,11 +24,13 @@ use tower_cookies::CookieManagerLayer;
 use tower_http::cors::CorsLayer;
 use uuid::Uuid;
 
+use sb_auth::middleware::auth_middleware_with_context;
 use sb_auth::{
     AuthServiceImpl, Authenticator, SharedAuthService, config::AuthConfig, email::EmailService,
     email_queue::EmailQueue, routes::auth_router,
 };
 use sb_club::handlers::{ClubTournamentState, club_tournament_routes};
+use sb_club::{club_router, handlers::ClubState};
 use sb_contracts::async_hooks::{HandCountObserver, ReplayCardObserver};
 use sb_contracts::lobby_api::{TableRepo, TableService};
 use sb_contracts::repo_api::{GdprRepo, HandHistoryRepository, UserRepo};
@@ -42,10 +44,13 @@ use sb_db_repos::gdpr_repo::PgGdprRepo;
 use sb_db_repos::hand_history_repo::{HandHistoryRepoImpl, spawn_hand_history_cleanup};
 use sb_db_repos::init_writer_loop;
 use sb_db_repos::player_stats_repo::PlayerStatsRepoImpl;
+use sb_db_repos::product_repo::ProductRepoImpl;
 use sb_db_repos::referral_repo::ReferralRepositoryImpl;
 use sb_db_repos::tournament_repo::TournamentRepoImpl;
 use sb_db_repos::user_repo::UserRepoImpl;
 use sb_mission::service::MissionServiceImpl;
+use sb_payment::RealPaymentService;
+use sb_rest_router::notification_routes::notification_routes;
 use sb_rest_router::player_stats::player_stats_routes;
 use sb_rest_router::season_card;
 use sb_rest_router::tournament_routes::{self, TournamentState};
@@ -75,10 +80,7 @@ mod hand_archive;
 mod r2_storage;
 mod season_card_generator;
 
-// ─── Middleware that provides RequestContext ──────────────────────
-
 async fn request_context_middleware(mut req: Request, next: Next) -> Response {
-    // Generate a request ID (Uuid) from header or new one
     let request_id = req
         .headers()
         .get("x-correlation-id")
@@ -86,7 +88,6 @@ async fn request_context_middleware(mut req: Request, next: Next) -> Response {
         .and_then(|s| Uuid::parse_str(s).ok())
         .unwrap_or_else(Uuid::new_v4);
 
-    // Get client IP from forwarded header, fallback to "0.0.0.0"
     let ip = req
         .headers()
         .get("x-forwarded-for")
@@ -94,17 +95,50 @@ async fn request_context_middleware(mut req: Request, next: Next) -> Response {
         .map(|s| s.to_string())
         .unwrap_or_else(|| "0.0.0.0".to_string());
 
+    let mut user_id = None;
+
+    let token = req
+        .headers()
+        .get("Authorization")
+        .and_then(|h| h.to_str().ok())
+        .and_then(|h| h.strip_prefix("Bearer "))
+        .map(|t| t.to_string())
+        .or_else(|| {
+            req.extensions()
+                .get::<tower_cookies::Cookies>()
+                .and_then(|cookies| cookies.get("token").map(|c| c.value().to_string()))
+        });
+
+    if let Some(token) = token {
+        if let Some(auth_service) = req.extensions().get::<SharedAuthService>() {
+            match auth_service.verify_token(&token).await {
+                Ok(claims) => {
+                    user_id = Some(claims.user_id);
+                    req.extensions_mut().insert(sb_auth::middleware::AuthUser {
+                        user_id: claims.user_id.0.to_string(),
+                    });
+                    tracing::debug!(user_id = %user_id.unwrap(), "Token verified, user ID set in context");
+                }
+                Err(e) => {
+                    tracing::warn!(error = %e, "Token verification failed");
+                }
+            }
+        } else {
+            tracing::warn!("SharedAuthService not found in request extensions");
+        }
+    } else {
+        tracing::debug!("No token found in request");
+    }
+
     let ctx = RequestContext {
         request_id,
         ip,
-        user_id: None,
+        user_id,
     };
 
     req.extensions_mut().insert(ctx);
     next.run(req).await
 }
-
-// ─── Rest of your code ─────────────────────────────────────────────
 
 async fn reschedule_tournament_reminders(
     _repo: std::sync::Arc<dyn sb_contracts::tournament_api::TournamentRepo>,
@@ -112,7 +146,6 @@ async fn reschedule_tournament_reminders(
     _bot_handler: Option<std::sync::Arc<dyn sb_contracts::notification_api::ClubNotifier>>,
     _app_base_url: String,
 ) {
-    // (unchanged – keep your implementation)
 }
 
 #[tokio::main]
@@ -138,7 +171,7 @@ async fn main() {
     let writer_handle = init_writer_loop(db.clone(), None);
     let user_repo: Arc<dyn UserRepo> = Arc::new(UserRepoImpl::new(writer_handle.sender.clone()));
 
-    // ── Crash recovery ────────────────────────────────────────────────
+    let user_svc = Arc::new(UserServiceImpl::new(user_repo.clone()));
     {
         let tournament_repo = TournamentRepoImpl::new(db.clone());
         if let Err(e) = sb_tournament::crash_recovery::settle_crashed_tournaments(
@@ -154,7 +187,6 @@ async fn main() {
         }
     }
 
-    // ── Auth ──────────────────────────────────────────────────────────
     let auth_config = AuthConfig::from_env();
 
     let email_service = Arc::new(EmailService::new(&auth_config));
@@ -168,7 +200,6 @@ async fn main() {
     let auth_service: SharedAuthService = auth_impl.clone();
     let auth_authenticator: Arc<dyn Authenticator + Send + Sync> = auth_impl;
 
-    // ── Oracle ────────────────────────────────────────────────────────
     let session_manager = sb_oracle::SessionManager::new();
     let oracle_service = Arc::new(sb_oracle::OracleServiceImpl::new(
         session_manager,
@@ -176,7 +207,6 @@ async fn main() {
         None,
     ));
 
-    // ── Table infrastructure ─────────────────────────────────────────
     let table_repo: Arc<dyn TableRepo + Send + Sync> =
         Arc::new(sb_db_repos::table_repo::TableRepoImpl::new(db.clone()));
 
@@ -220,13 +250,23 @@ async fn main() {
         tracing::info!(%default_table_id, "Default table created (DB was empty)");
     }
 
-    // ── Hand history and stats ───────────────────────────────────────
     let leaderboard_repo = Arc::new(sb_db_repos::LeaderboardRepo::new(db.clone()));
 
     let hand_history_repo: Arc<dyn HandHistoryRepository + Send + Sync> = Arc::new(
         HandHistoryRepoImpl::new(writer_handle.sender.clone(), db.clone()),
     );
 
+    let product_repo: Arc<dyn sb_contracts::product_api::ProductRepo + Send + Sync> =
+        Arc::new(ProductRepoImpl::new(db.clone()));
+    let payment_config = sb_payment::PaymentConfig::from_env().expect("Payment config");
+    let stripe_secret_key =
+        std::env::var("STRIPE_SECRET_KEY").expect("STRIPE_SECRET_KEY must be set");
+    let payment_service = Arc::new(RealPaymentService::new(
+        db.clone(),
+        stripe_secret_key,
+        user_svc.clone(),
+        payment_config,
+    ));
     let event_rx = registry.event_sender().subscribe();
     spawn_history_recorder(event_rx, hand_history_repo.clone());
 
@@ -235,20 +275,17 @@ async fn main() {
     let stats_event_rx = registry.event_sender().subscribe();
     spawn_stats_aggregator(stats_event_rx, stats_repo.clone());
 
-    // ── Club service ─────────────────────────────────────────────────
     let club_repo: Arc<dyn sb_contracts::repo_api::ClubRepo + Send + Sync> =
         Arc::new(ClubRepoImpl::new(db.clone()));
-    let club_service: Arc<dyn sb_contracts::service_api::ClubService + Send + Sync> =
-        Arc::new(sb_club::ClubServiceImpl::new(club_repo.clone()));
-    let _broker = Arc::new(ConnectionBroker::new());
+    let broker = Arc::new(ConnectionBroker::new());
+    let club_service: Arc<dyn sb_contracts::service_api::ClubService + Send + Sync> = Arc::new(
+        sb_club::ClubServiceImpl::new(club_repo.clone(), broker.clone()),
+    );
 
-    // ── GDPR repository ──────────────────────────────────────────────
     let gdpr_repo: Arc<dyn GdprRepo + Send + Sync> = Arc::new(PgGdprRepo { db: db.clone() });
 
-    // ── Badge repository ─────────────────────────────────────────────
     let badge_repo = Arc::new(BadgeRepoImpl::new(db.clone()));
 
-    // ── Notification service and bot_handler (unified) ────────────────
     #[cfg(feature = "test-stubs")]
     let (notification_service, bot_handler) = {
         let notif = Arc::new(InMemoryNotificationService::new());
@@ -274,7 +311,6 @@ async fn main() {
         (notification_service, bot_handler)
     };
 
-    // ── Bot state ─────────────────────────────────────────────────────
     #[cfg(feature = "test-stubs")]
     let bot_state = {
         use sb_bot_handler::BotState;
@@ -301,10 +337,7 @@ async fn main() {
         ))
     };
 
-    // ── Create AppState ──────────────────────────────────────────────
-    // ── Tournament system ────────────────────────────────────────────
     let tournament_repo = Arc::new(TournamentRepoImpl::new(db.clone()));
-    let broker = Arc::new(sb_table_registry::connection_broker::ConnectionBroker::new());
 
     let app_base_url =
         std::env::var("APP_BASE_URL").unwrap_or_else(|_| "https://app.stackbluff.com".to_string());
@@ -322,11 +355,11 @@ async fn main() {
     tournament_service_impl.set_club_service(club_service.clone());
     let tournament_service = Arc::new(tournament_service_impl);
 
-    // ── Club tournament routes ──────────────────────────────────────
     let club_tournament_state = ClubTournamentState {
         club_service: club_service.clone(),
         club_repo: club_repo.clone(),
         tournament_service: tournament_service.clone(),
+        tournament_repo: tournament_repo.clone(),
     };
     let club_tournament_router = club_tournament_routes(club_tournament_state);
 
@@ -344,20 +377,19 @@ async fn main() {
 
     let tournament_router = tournament_routes::tournament_routes(tournament_state);
 
-    // ── Viral service (referrals, badges, replay cards) ────────────────
     let referral_repo = ReferralRepositoryImpl::new(db.clone());
-    let user_service = Arc::new(UserServiceImpl::new(user_repo.clone()));
     let base_url =
         std::env::var("APP_BASE_URL").unwrap_or_else(|_| "https://app.stackbluff.com".to_string());
 
-    let viral_service_impl = ViralServiceImpl::new(referral_repo, user_service.clone(), base_url)
+    let viral_service_impl = ViralServiceImpl::new(referral_repo, user_svc.clone(), base_url)
         .with_badge_repo(badge_repo.clone());
 
     let viral_service_arc = Arc::new(viral_service_impl);
 
-    let mission_service: Arc<dyn MissionApi + Send + Sync> =
-        Arc::new(MissionServiceImpl::new(Arc::new(db.clone()), user_service));
-
+    let mission_service: Arc<dyn MissionApi + Send + Sync> = Arc::new(MissionServiceImpl::new(
+        Arc::new(db.clone()),
+        user_svc.clone(),
+    ));
     let app_state = Arc::new(AppState {
         table_service: table_service.clone(),
         table_repo: table_repo.clone(),
@@ -365,14 +397,21 @@ async fn main() {
         hand_history_repo: hand_history_repo.clone(),
         leaderboard_query: leaderboard_repo.clone(),
         club_service: club_service.clone(),
+        club_repo: club_repo.clone(),
         broker: broker.clone(),
         badge_repo: badge_repo.clone(),
         gdpr_repo: gdpr_repo.clone(),
+        product_repo: product_repo.clone(),
+        payment_service: payment_service.clone(),
         notification_service: notification_service.clone(),
         tournament_service: tournament_service.clone(),
         mission_service: mission_service.clone(),
         viral_service: viral_service_arc.clone(),
     });
+
+    let fingerprint_repo: Arc<dyn sb_anti_cheat::FingerprintRepository> =
+        Arc::new(sb_anti_cheat::SeaFingerprintRepository { db: db.clone() });
+    let anti_cheat_state = Arc::new(anti_cheat_routes::AntiCheatState { fingerprint_repo });
 
     let rest_router = create_router(app_state.clone())
         .merge(player_stats_routes(stats_repo.clone(), user_repo.clone()));
@@ -388,14 +427,12 @@ async fn main() {
         mission_service,
     );
 
-    // ── WebSocket handler ────────────────────────────────────────────
     let ws_router = ws_route(
         auth_authenticator.clone(),
         registry.clone(),
         user_repo.clone(),
     );
 
-    // ── CORS ──────────────────────────────────────────────────────────
     let cors_origins_env = std::env::var("CORS_ORIGINS")
         .unwrap_or_else(|_| "http://localhost:5173,http://localhost:5174".to_string());
     let allowed_origins: Vec<axum::http::HeaderValue> = cors_origins_env
@@ -409,7 +446,6 @@ async fn main() {
         .allow_headers([header::CONTENT_TYPE, header::COOKIE, header::AUTHORIZATION])
         .max_age(Duration::from_secs(86400));
 
-    // ── R2 storage ───────────────────────────────────────────────────
     let r2_config = aws_config::defaults(aws_config::BehaviorVersion::latest())
         .endpoint_url(std::env::var("R2_ENDPOINT").expect("R2_ENDPOINT not set"))
         .load()
@@ -425,13 +461,16 @@ async fn main() {
         r2: r2.clone(),
     });
 
-    // ── Build main router ────────────────────────────────────────────
     let metrics_route = axum::Router::new().route("/metrics", axum::routing::get(metrics_handler));
 
-    // ═══════════════════════════════════════════════════════════════════
-    //  FIX: Add SharedAuthService as an Extension so auth middleware can find it.
-    //  Also keep the RequestContext middleware.
-    // ═══════════════════════════════════════════════════════════════════
+    let mission_router = sb_mission::mission_routes(Arc::new(db.clone()), user_svc.clone());
+
+    let club_state = ClubState {
+        service: app_state.club_service.clone(),
+    };
+    let club_router =
+        club_router(club_state).layer(axum::middleware::from_fn(auth_middleware_with_context));
+
     let app = Router::new()
         .merge(metrics_route)
         .merge(rest_router)
@@ -440,14 +479,16 @@ async fn main() {
         .merge(sb_bot_handler::attach(bot_state))
         .merge(sb_rest_router::oracle_routes(oracle_service))
         .merge(hand_archive::router(archive_state.clone()))
+        .merge(anti_cheat_routes::router(anti_cheat_state.clone()))
         .merge(tournament_router)
         .merge(season_card::router(db.clone()))
         .merge(club_tournament_router)
-        // RequestContext middleware
-        .layer(middleware::from_fn(request_context_middleware))
-        // Provide SharedAuthService to all handlers (this fixes the 500)
-        .layer(Extension(auth_service.clone()))
+        .merge(mission_router)
+        .merge(notification_routes(Arc::new(db.clone())))
+        .merge(club_router)
         .layer(axum::extract::DefaultBodyLimit::max(1024 * 1024 * 10))
+        .layer(middleware::from_fn(request_context_middleware))
+        .layer(Extension(auth_service.clone()))
         .layer(cors)
         .layer(CookieManagerLayer::new());
 
@@ -483,7 +524,6 @@ async fn main() {
         season_proc_clone.run_scheduler().await;
     });
 
-    // ── GDPR scheduler ──────────────────────────────────────────────────
     spawn_gdpr_scheduler(app_state);
 
     axum::serve(listener, app).await.expect("server error");
@@ -493,7 +533,6 @@ async fn load_existing_tournaments(
     state: Arc<TournamentState>,
     db: sea_orm::DatabaseConnection,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    // ... (your existing implementation; unchanged)
     let records = TournamentEntity::find()
         .filter(TournamentColumn::Status.ne("Completed"))
         .all(&db)
@@ -523,6 +562,7 @@ async fn load_existing_tournaments(
                 let event_rx = state.registry.event_sender().subscribe();
                 let actor = SitGoTournament::new(
                     tournament_id,
+                    record.name.clone(),
                     config,
                     state.registry.clone(),
                     state.broker.clone(),
@@ -549,6 +589,7 @@ async fn load_existing_tournaments(
                 let event_rx = state.registry.event_sender().subscribe();
                 let actor = MttDirector::new(
                     tournament_id,
+                    record.name.clone(),
                     config,
                     state.registry.clone(),
                     state.broker.clone(),
@@ -614,7 +655,6 @@ pub fn spawn_gdpr_scheduler(state: std::sync::Arc<AppState>) {
     tokio::spawn(start_gdpr_job(state));
 }
 
-// Metrics endpoint
 use prometheus::{Encoder, TextEncoder};
 async fn metrics_handler() -> String {
     let encoder = TextEncoder::new();

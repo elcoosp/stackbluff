@@ -70,7 +70,7 @@ export const TacticalOracle = ({
       transition={{ delay: 0.2, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       className="fixed bottom-5 left-5 z-[460] pointer-events-auto"
     >
-        {hasActiveSeasonPass() && (
+        {useHasActiveSeasonPass() && (
           <span className="ml-2 inline-flex items-center rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-medium text-amber-400">
             Unlimited
           </span>

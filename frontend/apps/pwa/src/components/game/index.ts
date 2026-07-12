@@ -1,3 +1,4 @@
+export * from './KickVoteDialog';
 export * from './Card';
 export * from './ChipStack';
 export * from './PlayerAvatar';

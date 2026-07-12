@@ -98,6 +98,29 @@ pub async fn stripe_webhook(
         } else {
             info!(request_id = %request_id, payment_id = %payment_id, user_id = %user_id.as_uuid(), cents = amount_cents, chips = chips, "Chips awarded successfully");
         }
+
+        // Handle entitlements (season_pass / club_pro)
+        let product_type = metadata.get("product_type").map(|s| s.as_str());
+        let duration_days = metadata.get("duration_days").and_then(|s| s.parse::<i64>().ok()).unwrap_or(0);
+        if let Some(ptype) = product_type {
+            match ptype {
+                "season_pass" => {
+                    if let Err(e) = state.user_service.extend_season_pass(user_id, duration_days).await {
+                        error!(request_id = %request_id, user_id = %user_id.as_uuid(), error = %e, "Failed to extend season pass");
+                    } else {
+                        info!(request_id = %request_id, user_id = %user_id.as_uuid(), duration_days, "Season pass extended");
+                    }
+                }
+                "club_pro" => {
+                    if let Err(e) = state.user_service.extend_club_pro(user_id, duration_days).await {
+                        error!(request_id = %request_id, user_id = %user_id.as_uuid(), error = %e, "Failed to extend club pro");
+                    } else {
+                        info!(request_id = %request_id, user_id = %user_id.as_uuid(), duration_days, "Club pro extended");
+                    }
+                }
+                _ => {}
+            }
+        }
         metrics::record_webhook_success();
     }
     (StatusCode::OK, Json(json!({ "status": "ok" }))).into_response()
@@ -186,6 +209,30 @@ pub async fn telegram_stars_webhook(
             error!(request_id = %request_id, payment_id = %payment_id, user_id = %user_id.as_uuid(), error = %e, "Failed to award chips from Telegram");
         } else {
             info!(request_id = %request_id, payment_id = %payment_id, user_id = %user_id.as_uuid(), stars = stars, chips = chips, "Telegram chips awarded");
+        }
+
+        // Handle entitlements (season_pass / club_pro)
+        let metadata_obj = pre_checkout.get("metadata").and_then(|m| m.as_object());
+        let product_type = metadata_obj.and_then(|m| m.get("product_type")).and_then(|v| v.as_str());
+        let duration_days = metadata_obj.and_then(|m| m.get("duration_days")).and_then(|v| v.as_i64()).unwrap_or(0);
+        if let Some(ptype) = product_type {
+            match ptype {
+                "season_pass" => {
+                    if let Err(e) = state.user_service.extend_season_pass(user_id, duration_days).await {
+                        error!(request_id = %request_id, user_id = %user_id.as_uuid(), error = %e, "Failed to extend season pass (Telegram)");
+                    } else {
+                        info!(request_id = %request_id, user_id = %user_id.as_uuid(), duration_days, "Season pass extended (Telegram)");
+                    }
+                }
+                "club_pro" => {
+                    if let Err(e) = state.user_service.extend_club_pro(user_id, duration_days).await {
+                        error!(request_id = %request_id, user_id = %user_id.as_uuid(), error = %e, "Failed to extend club pro (Telegram)");
+                    } else {
+                        info!(request_id = %request_id, user_id = %user_id.as_uuid(), duration_days, "Club pro extended (Telegram)");
+                    }
+                }
+                _ => {}
+            }
         }
         metrics::record_webhook_success();
     }

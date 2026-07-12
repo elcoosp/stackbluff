@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useGameStore, TableState, ActionRequired } from '@stackbluff/shared/stores/gameStore';
 import { toast } from 'sonner';
 import { useTournamentStore } from '@stackbluff/shared/stores/tournamentStore';
+import { generateAndSubmitFingerprint } from '@/services/fingerprint';
 
 function getToken(): string | null {
   return localStorage.getItem('auth_token');
@@ -55,16 +56,17 @@ const parseMessage = (data: any) => {
         seat: p.seat,
         user_id: p.user_id,
         display_name: p.display_name || 'Player',
-        stack: p.stack,
-        current_bet: p.current_bet,
+        // Merge: type safety + fallback chain
+        stack: typeof p.stack === 'number' ? p.stack : (p.chips ?? p.bankroll ?? 0),
+        current_bet: typeof p.current_bet === 'number' ? p.current_bet : Number(p.current_bet) || 0,
         is_all_in: p.is_all_in,
         is_folded: p.is_folded,
         is_leaving: p.is_leaving || false,
-        is_active: !p.is_folded && !p.is_all_in,
+        is_active: p.is_active ?? (!p.is_folded && !p.is_all_in), // FIX: Improved is_active logic
         avatar_url: p.avatar_url || undefined,
         position_badge: p.position_badge || undefined,
         action: p.last_action || undefined,
-        stats: p.stats || undefined,
+        stats: p.stats || null, // FIX: Use null instead of undefined for React stability
       }));
       const communityCards = (data.community_cards || []).map(convertCard);
       return {
@@ -102,10 +104,20 @@ const parseMessage = (data: any) => {
         player_id: data.player_id,
         action: data.action ? data.action.toUpperCase() : data.action,
         amount: data.amount ?? undefined,
-        new_stack: data.new_stack,
+        new_stack: typeof data.new_stack === 'number' ? data.new_stack : undefined, // FIX: Prevent stack overwrite
         new_pot: data.new_pot,
       };
     }
+    case 'KickVoteStarted':
+      window.dispatchEvent(new CustomEvent('kickVoteStarted', { detail: data }));
+      return null;
+    case 'KickVoteUpdate':
+      window.dispatchEvent(new CustomEvent('kickVoteUpdate', { detail: data }));
+      return null;
+    case 'PlayerRemoved':
+      window.dispatchEvent(new CustomEvent('playerRemoved', { detail: data }));
+      return null;
+
 
     case 'ShowdownReveal': {
       const players = (data.players || []).map((p: any) => ({
@@ -273,11 +285,15 @@ export function useGameWebSocket(tableId: string) {
     const url = token ? `${baseWs}/ws/game?token=${encodeURIComponent(token)}` : `${baseWs}/ws/game`;
 
     const ws = new WebSocket(url);
-    
-
     wsRef.current = ws;
 
     ws.onopen = () => {
+      const token = getToken();
+      if (token) {
+        generateAndSubmitFingerprint(token).catch((err) => {
+          console.warn('Fingerprint submission on reconnect failed:', err);
+        });
+      }
       if (!mountedRef.current) return;
       setConnectionStatus('connected');
       reconnectAttempts.current = 0;
@@ -300,7 +316,7 @@ export function useGameWebSocket(tableId: string) {
       if (!mountedRef.current) return;
       try {
         const data = JSON.parse(event.data);
-        // Handle payment-driven entitlement updates
+
         if (data.type === 'user.updated') {
           const parsed = UserUpdatedPayloadSchema.safeParse(data);
           if (!parsed.success) {
@@ -310,7 +326,6 @@ export function useGameWebSocket(tableId: string) {
             const payload = msg.payload ?? msg.data ?? {};
             if (typeof payload.balance === 'number') {
               useAuthStore.getState().setBalance(payload.balance);
-              console.info('[WS] Balance updated:', payload.balance);
             }
             if (payload.season_pass_expires_at !== undefined) {
               useEntitlementsStore.getState().setSeasonPassExpiresAt(payload.season_pass_expires_at);
@@ -324,8 +339,6 @@ export function useGameWebSocket(tableId: string) {
           }
           return;
         }
-
-        console.debug('[WS Hook] Message received:', data);
 
         if (data.type === 'Error') {
           if (data.message.includes("Not seated")) {
@@ -550,7 +563,6 @@ export function useGameWebSocket(tableId: string) {
     }
   }, []);
 
-  // Auto-subscribe to tournament if tournamentId in URL
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tournamentId = urlParams.get('tournamentId');

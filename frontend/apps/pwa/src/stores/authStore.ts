@@ -5,6 +5,7 @@ interface AuthState {
   userId: string | null;
   balance: number;
   setBalance: (balance: number) => void;
+  updateBalance: (amount: number) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -13,6 +14,7 @@ export const useAuthStore = create<AuthState>()(
       userId: null,
       balance: 0,
       setBalance: (balance) => set({ balance }),
+      updateBalance: (amount) => set((state) => ({ balance: state.balance + amount })),
     }),
     { name: 'auth-store' }
   )

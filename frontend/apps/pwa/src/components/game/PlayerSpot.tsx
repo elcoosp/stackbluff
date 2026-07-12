@@ -7,6 +7,7 @@ import { CardBack, Card } from './Card';
 import { TimerBar } from './TimerBar';
 import { cn } from '@/lib/utils';
 import { LogOut, DollarSign, TrendingUp, Swords, Check } from 'lucide-react';
+import { RankTierBadge } from '@/components/game/RankTierBadge';
 
 // ─── Animated Counter Hook ──────────────────────────────────────────────────
 function useAnimatedCounter(target: number, duration = 600) {
@@ -25,7 +26,7 @@ function useAnimatedCounter(target: number, duration = 600) {
     const step = (now: number) => {
       const elapsed = now - start;
       const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
       const current = from + (to - from) * eased;
 
       setValue(current);
@@ -169,7 +170,7 @@ const containerVariants = {
   fan: { gap: 4, transition: { duration: 0.25, ease: 'easeOut' as const } },
 };
 
-// ─── CardGroup (Memoized to prevent 60fps stat re-renders) ──────────────────
+// ─── CardGroup (Memoized) ──────────────────────────────────────────────────
 const CardGroup = memo(({
   showCardsFaceUp, hole_cards, cardSize, sizeProp, isMobile, winningCards, isWinner, isShowdown, isHero, isDealing,
 }: {
@@ -308,19 +309,41 @@ const CardGroup = memo(({
 });
 CardGroup.displayName = 'CardGroup';
 
-// ─── Main PlayerSpot (Memoized) ─────────────────────────────────────────────
+// ─── Main PlayerSpot ──────────────────────────────────────────────────────
 export const PlayerSpot = memo(({
-  seat, isHero = false, isMobile = false, isDealer = false, seatPosition, timerRemainingMs, timerTotalMs, isDealing = false, onShowStats,
+  onKick,
+  seat,
+  isHero = false,
+  isMobile = false,
+  isDealer = false,
+  seatPosition,
+  timerRemainingMs,
+  timerTotalMs,
+  isDealing = false,
+  onShowStats,
 }: any) => {
   const {
     display_name = seat.user_id?.slice(0, 8) || 'Player',
-    stack, current_bet, is_all_in, is_folded, is_active, avatar_url, position_badge, action, hole_cards, winning_cards, is_winner, is_showdown_revealed, stats,
+    stack,
+    current_bet,
+    is_all_in,
+    is_folded,
+    is_active,
+    avatar_url,
+    position_badge,
+    action,
+    hole_cards,
+    winning_cards,
+    is_winner,
+    is_showdown_revealed,
+    stats,
+    rank_tier,
   } = seat;
 
   const isActive = is_active && !is_folded && !is_all_in;
   const isFolded = is_folded;
 
-  const showCardsFaceUp = isHero || (seat.is_showdown_revealed && (hole_cards?.length ?? 0) > 0);
+  const showCardsFaceUp = isHero || (is_showdown_revealed && (hole_cards?.length ?? 0) > 0);
   const isLargeCards = isHero || showCardsFaceUp;
 
   const isLosingPlayer = is_showdown_revealed && !is_winner;
@@ -334,8 +357,6 @@ export const PlayerSpot = memo(({
 
   const badgePlacement = getBadgePlacement();
 
-  // --- Sizes adjusted for readability ---
-  // ONLY reduced mobile opponent width. Everything else remains untouched.
   const oppHubWidth = isMobile ? 'w-[26vw] max-w-[100px]' : 'w-[120px]';
   const oppHubPadding = isMobile ? 'p-[4px]' : 'p-1.5';
   const oppCardSize = isMobile ? 'w-[16px] h-[22px]' : 'w-[28px] h-[40px]';
@@ -431,7 +452,8 @@ export const PlayerSpot = memo(({
     </motion.div>
   );
 
-  const formattedStack = stack >= 1000 ? `$${(stack / 1000).toFixed(stack % 1000 === 0 ? 0 : 1)}k` : `$${stack}`;
+  const safeStack = typeof stack === 'number' ? stack : 0;
+  const formattedStack = safeStack >= 1000 ? `$${(safeStack / 1000).toFixed(safeStack % 1000 === 0 ? 0 : 1)}k` : `$${safeStack}`;
 
   const bankrollElement = (
     <span className={cn(
@@ -481,7 +503,6 @@ export const PlayerSpot = memo(({
 
   const statsElement = useMemo(() => {
     if (!stats) return null;
-    if (rawVpip === 0 && rawPfr === 0 && rawAf === 0) return null;
 
     const vpipDisplay = Math.round(animatedVpip);
     const pfrDisplay = Math.round(animatedPfr);
@@ -589,6 +610,9 @@ export const PlayerSpot = memo(({
                 )}>
                   {display_name}
                 </span>
+                {rank_tier && (
+                  <RankTierBadge tier={rank_tier} size="sm" showLabel={false} className="ml-0.5" />
+                )}
                 <PlayerSpotBadge userId={seat.user_id} badges={seat.badges} showBadges={true} />
                 {positionTag}
               </div>
@@ -645,6 +669,19 @@ export const PlayerSpot = memo(({
       </AnimatePresence>
 
       {dealerButton}
+
+      {/* Kick vote button - only visible if player is sitting out and not self */}
+      {!isHero && seat.sitting_out && onKick && (
+        <button
+          onClick={() => onKick(seat.user_id)}
+          className="absolute -bottom-1 right-0 z-[60] p-1 rounded-full bg-red-500/20 hover:bg-red-500/40 text-red-300 text-[10px] transition-colors"
+          title="Kick player"
+        >
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      )}
 
       <div
         className="absolute z-[100] pointer-events-none"

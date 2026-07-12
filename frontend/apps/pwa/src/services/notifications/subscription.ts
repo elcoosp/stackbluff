@@ -99,7 +99,7 @@ export async function getPushSubscription(): Promise<PushSubscription | null> {
     notificationLogger.info('Creating new push subscription');
     subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: vapidKeyBytes, // Uint8Array, not string
+      applicationServerKey: vapidKeyBytes as BufferSource, // Uint8Array, not string
     });
 
     notificationLogger.info('Push subscription created', {

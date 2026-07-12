@@ -8,7 +8,7 @@ use sb_rest_router::create_router;
 use sb_auth::{AuthServiceImpl, SharedAuthService};
 use sb_auth::config::AuthConfig;
 use sb_shared_types::{AppError, RequestContext, StakeLevel, TableId, UserId};
-use sb_db_repos::user_repo::UserRepoImpl;
+use uuid::Uuid;
 use sb_table_registry::Registry;
 use std::sync::Arc;
 
@@ -60,7 +60,7 @@ impl TournamentService for DummyTournamentService {
     async fn register(&self, _ctx: &RequestContext, _tournament_id: sb_shared_types::TournamentId, _user_id: UserId) -> Result<(), AppError> { unimplemented!() }
     async fn unregister(&self, _ctx: &RequestContext, _tournament_id: sb_shared_types::TournamentId, _user_id: UserId) -> Result<(), AppError> { unimplemented!() }
     async fn get_tournament(&self, _ctx: &RequestContext, _tournament_id: sb_shared_types::TournamentId) -> Result<sb_contracts::tournament_api::TournamentSummary, AppError> { unimplemented!() }
-    async fn list_tournaments(&self, _ctx: &RequestContext, _type_filter: Option<sb_contracts::tournament_api::TournamentType>) -> Result<Vec<sb_contracts::tournament_api::TournamentSummary>, AppError> { unimplemented!() }
+    async fn list_tournaments(&self, _ctx: &RequestContext, _type_filter: Option<sb_contracts::tournament_api::TournamentType>, _status_filter: Option<sb_contracts::tournament_api::TournamentStatus>) -> Result<Vec<sb_contracts::tournament_api::TournamentSummary>, AppError> { unimplemented!() }
     async fn get_results(&self, _ctx: &RequestContext, _tournament_id: sb_shared_types::TournamentId) -> Result<Vec<sb_contracts::tournament_api::TournamentResult>, AppError> { unimplemented!() }
     async fn get_my_table(&self, _ctx: &RequestContext, _tournament_id: sb_shared_types::TournamentId, _user_id: UserId) -> Result<Option<TableId>, AppError> { unimplemented!() }
 }
@@ -78,10 +78,21 @@ impl MissionApi for DummyMissionService {
 struct DummyViralService;
 #[async_trait::async_trait]
 impl ViralService for DummyViralService {
-    async fn generate_replay_card(&self, _hand_result: &sb_shared_types::game_types::HandResult, _winner_id: UserId, _table_id: TableId) -> Result<sb_contracts::service_api::ReplayCard, AppError> { unimplemented!() }
-    async fn record_referral(&self, _referrer_id: UserId, _referred_id: UserId) -> Result<(), AppError> { unimplemented!() }
-    async fn on_hand_completed(&self, _user_id: UserId) -> Result<(), AppError> { unimplemented!() }
-    async fn get_referral_stats(&self, _user_id: UserId) -> Result<sb_contracts::service_api::ReferralStats, AppError> { unimplemented!() }
+    async fn generate_replay_card(&self, _hand_result: &sb_shared_types::game_types::HandResult, _winner_id: UserId, _table_id: TableId) -> Result<sb_contracts::service_api::ReplayCard, AppError> {
+        unimplemented!()
+    }
+    async fn record_referral(&self, _referrer_id: UserId, _referred_id: UserId) -> Result<(), AppError> {
+        unimplemented!()
+    }
+    async fn on_hand_completed(&self, _user_id: UserId) -> Result<(), AppError> {
+        unimplemented!()
+    }
+    async fn get_referral_stats(&self, _user_id: UserId) -> Result<sb_contracts::service_api::ReferralStats, AppError> {
+        unimplemented!()
+    }
+    async fn get_referral_list(&self, _user_id: UserId) -> Result<Vec<sb_contracts::repo_api::ReferralRecord>, AppError> {
+        unimplemented!()
+    }
 }
 
 // Mock TableRepo
@@ -132,6 +143,12 @@ mockall::mock! {
         async fn count_user_hands(&self, _ctx: RequestContext, _table_id: TableId, _user_id: UserId) -> Result<u64, sb_contracts::repo_api::PersistenceError> {
             Ok(0)
         }
+        async fn list_user_hands(&self, _ctx: RequestContext, _user_id: Uuid, _limit: u64, _cursor: Option<sb_contracts::repo_api::HandCursor>) -> Result<sb_contracts::repo_api::HandSummaryPage, sb_contracts::repo_api::PersistenceError> {
+            Ok((vec![], None))
+        }
+        async fn list_user_replays(&self, _ctx: RequestContext, _user_id: Uuid) -> Result<Vec<sb_contracts::repo_api::ReplayCard>, sb_contracts::repo_api::PersistenceError> {
+            Ok(vec![])
+        }
     }
 }
 
@@ -176,6 +193,171 @@ impl sb_contracts::repo_api::GdprRepo for DummyGdprRepo {
     }
 }
 
+// Dummy ClubRepo for tests
+
+struct DummyProductRepo;
+#[async_trait::async_trait]
+impl sb_contracts::product_api::ProductRepo for DummyProductRepo {
+    async fn list_products(&self) -> Result<Vec<sb_contracts::product_api::Product>, sb_contracts::repo_api::PersistenceError> {
+        Ok(vec![])
+    }
+}
+
+struct DummyPaymentService;
+#[async_trait::async_trait]
+impl sb_contracts::service_api::PaymentService for DummyPaymentService {
+    async fn create_product_purchase(
+        &self,
+        _user_id: sb_shared_types::UserId,
+        _product_id: uuid::Uuid,
+        _provider: String,
+        _metadata: serde_json::Value,
+    ) -> Result<String, sb_shared_types::AppError> {
+        Ok("dummy".to_string())
+    }
+    async fn create_intent(
+        &self,
+        _user_id: sb_shared_types::UserId,
+        _amount: sb_shared_types::ChipAmount,
+        _currency: String,
+        _provider: String,
+        _metadata: serde_json::Value,
+    ) -> Result<String, sb_shared_types::AppError> {
+        Ok("dummy".to_string())
+    }
+    async fn confirm_payment(
+        &self,
+        _payment_id: &str,
+        _provider: &str,
+        _status: &str,
+        _completed_at: Option<chrono::DateTime<chrono::Utc>>,
+    ) -> Result<(), sb_shared_types::AppError> {
+        Ok(())
+    }
+    async fn award_chips_on_success(
+        &self,
+        _user_id: sb_shared_types::UserId,
+        _amount: sb_shared_types::ChipAmount,
+    ) -> Result<(), sb_shared_types::AppError> {
+        Ok(())
+    }
+}
+
+struct DummyClubRepo;
+
+#[async_trait::async_trait]
+impl sb_contracts::repo_api::ClubRepo for DummyClubRepo {
+    async fn create_club(
+        &self,
+        _name: &str,
+        _logo_url: Option<&str>,
+        _created_by: sb_shared_types::UserId,
+    ) -> Result<sb_shared_types::ClubId, sb_contracts::ClubError> {
+        unimplemented!()
+    }
+    async fn find_club_by_id(
+        &self,
+        _club_id: sb_shared_types::ClubId,
+    ) -> Result<Option<sb_contracts::repo_api::Club>, sb_contracts::ClubError> {
+        Ok(None)
+    }
+    async fn join_club(
+        &self,
+        _club_id: sb_shared_types::ClubId,
+        _user_id: sb_shared_types::UserId,
+    ) -> Result<(), sb_contracts::ClubError> {
+        Ok(())
+    }
+    async fn is_member(
+        &self,
+        _club_id: sb_shared_types::ClubId,
+        _user_id: sb_shared_types::UserId,
+    ) -> Result<bool, sb_contracts::ClubError> {
+        Ok(false)
+    }
+    async fn get_member_count(
+        &self,
+        _club_id: sb_shared_types::ClubId,
+    ) -> Result<u64, sb_contracts::ClubError> {
+        Ok(0)
+    }
+    async fn get_telegram_chat_id(
+        &self,
+        _club_id: sb_shared_types::ClubId,
+    ) -> Result<Option<i64>, sb_contracts::ClubError> {
+        Ok(None)
+    }
+    async fn get_leaderboard_page(
+        &self,
+        _club_id: sb_shared_types::ClubId,
+        _division: u32,
+    ) -> Result<sb_contracts::repo_api::LeaderboardPage, sb_contracts::ClubError> {
+        unimplemented!()
+    }
+    async fn increment_weekly_xp(
+        &self,
+        _club_id: sb_shared_types::ClubId,
+        _user_id: sb_shared_types::UserId,
+        _xp: i64,
+    ) -> Result<(), sb_contracts::ClubError> {
+        Ok(())
+    }
+    async fn refresh_leaderboard(
+        &self,
+        _club_id: sb_shared_types::ClubId,
+    ) -> Result<(), sb_contracts::ClubError> {
+        Ok(())
+    }
+    async fn get_all_club_ids(&self) -> Result<Vec<sb_shared_types::ClubId>, sb_contracts::ClubError> {
+        Ok(vec![])
+    }
+    async fn update_club_pro_settings(
+        &self,
+        _club_id: sb_shared_types::ClubId,
+        _settings: serde_json::Value,
+    ) -> Result<(), sb_contracts::repo_api::PersistenceError> {
+        Ok(())
+    }
+    async fn get_club_pro_settings(
+        &self,
+        _club_id: sb_shared_types::ClubId,
+    ) -> Result<Option<serde_json::Value>, sb_contracts::repo_api::PersistenceError> {
+        Ok(None)
+    }
+    async fn get_tables_by_club_id(
+        &self,
+        _club_id: sb_shared_types::ClubId,
+    ) -> Result<Vec<sb_shared_types::TableId>, sb_contracts::repo_api::PersistenceError> {
+        Ok(vec![])
+    }
+    async fn get_user_division(
+        &self,
+        _club_id: sb_shared_types::ClubId,
+        _user_id: sb_shared_types::UserId,
+    ) -> Result<Option<u32>, sb_contracts::ClubError> {
+        Ok(None)
+    }
+    async fn rebalance_divisions(
+        &self,
+        _club_id: sb_shared_types::ClubId,
+    ) -> Result<(), sb_contracts::ClubError> {
+        Ok(())
+    }
+    async fn is_club_owner(
+        &self,
+        _club_id: sb_shared_types::ClubId,
+        _user_id: sb_shared_types::UserId,
+    ) -> Result<bool, sb_contracts::ClubError> {
+        Ok(false)
+    }
+    async fn get_user_clubs(
+        &self,
+        _user_id: sb_shared_types::UserId,
+    ) -> Result<Vec<sb_shared_types::ClubId>, sb_contracts::ClubError> {
+        Ok(vec![])
+    }
+}
+
 #[tokio::test]
 async fn test_unauthenticated_returns_401() {
     let mock_service = MockTableService::new();
@@ -214,12 +396,14 @@ async fn test_unauthenticated_returns_401() {
         hand_history_repo: hand_history_repo,
         leaderboard_query: leaderboard_query,
         club_service: club_service,
+        club_repo: Arc::new(DummyClubRepo),
         broker: broker,
         badge_repo: badge_repo,
         gdpr_repo: gdpr_repo,
+        product_repo: Arc::new(DummyProductRepo),
+        payment_service: Arc::new(DummyPaymentService),
     });
 
-    
     // Create a dummy auth service for the middleware
     let auth_config = AuthConfig::from_env();
     let user_repo = Arc::new(sb_db_repos::user_repo::UserRepoImpl::new(tokio::sync::mpsc::unbounded_channel().0));
@@ -230,7 +414,6 @@ async fn test_unauthenticated_returns_401() {
             req.extensions_mut().insert(auth_service.clone());
             next.run(req)
         }));
-
 
     let server = TestServer::new(app);
     let resp = server.get("/lobby").await;

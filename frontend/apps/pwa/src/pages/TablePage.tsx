@@ -43,8 +43,22 @@ import { FinalTableBanner } from '../components/tournament/FinalTableBanner';
 import { useTournamentStore } from '@stackbluff/shared/stores/tournamentStore';
 import type { TournamentResultEntry } from '@stackbluff/shared/types/tournament.types';
 import { tournamentApi } from '@stackbluff/shared/api/tournamentApi';
+import { KickVoteDialog } from '../components/game/KickVoteDialog';
 
 function Fallback({ error, resetErrorBoundary }: any) {
+
+  // Listen to club theme updates
+  const [feltColor, setFeltColor] = useState<string | null>(null);
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (detail?.felt_color) {
+        setFeltColor(detail.felt_color);
+      }
+    };
+    window.addEventListener('club:theme', handler as EventListener);
+    return () => window.removeEventListener('club:theme', handler as EventListener);
+  }, []);
   return (
     <div className="p-4 text-error">
       <p>Game UI error: {error.message}</p>
@@ -86,7 +100,6 @@ function useGameFeedback(
   const prevActionRequired = useRef(!!game.actionRequired);
   const prevRoomId = useRef(activeRoomId);
 
-  // Reset all refs when active room changes to prevent false triggers
   if (prevRoomId.current !== activeRoomId) {
     prevCommunityLen.current = game.communityCards?.length ?? 0;
     prevShowdown.current = game.showdownReveal;
@@ -178,9 +191,6 @@ function useGameFeedback(
     if (delta > 0 && prevPot.current > 0 && Math.abs(delta) > prevPot.current * 0.5) {
       trigger('roundStart');
     }
-    if (delta < 0 && prevPot.current > 0 && Math.abs(delta) >= prevPot.current * 0.5) {
-      // Pot collected – we'll trigger per winner instead
-    }
     prevPot.current = game.pot;
   }, [game.pot, trigger]);
 
@@ -230,13 +240,14 @@ export function TablePage() {
   const search = useSearch({ from: '/table/$tableId' });
   const navigate = useNavigate();
 
-  // FIX: urlBuyIn and isObserving declared early to be available to all hooks
   const isObserving = (search as any)?.observe === 'true' || (search as any)?.observe === true;
   const tournamentId = (search as any).tournamentId as string | undefined;
-  const urlBuyIn = (search as any)?.buyIn as number | undefined;
+  const urlBuyInRaw = (search as any)?.buyIn;
+  const urlBuyIn = urlBuyInRaw ? Number(urlBuyInRaw) : undefined;
 
-  const { sendJoin, sendAction, sendRebuy, connectionStatus, myUserId, notSeated, sendLeave } = useGameWebSocket(tableId);
+  const { sendJoin, sendAction, sendRebuy, sendWsMessage, connectionStatus, myUserId, notSeated, sendLeave } = useGameWebSocket(tableId);
   const isDesktop = useResponsiveLayout();
+  const isShortHeight = useMediaQuery('(max-height: 720px)');
   const showAnalytics = useMediaQuery('(min-width: 980px)');
 
   const game = useActiveRoom();
@@ -254,20 +265,20 @@ export function TablePage() {
   const [isJoining, setIsJoining] = useState(false);
   const [isAddingTable, setIsAddingTable] = useState(false);
   const [statsUserId, setStatsUserId] = useState<string | null>(null);
+  const [kickVoteDialog, setKickVoteDialog] = useState<{ roomId: string; kickVoteId: string; targetId: string; targetName: string; durationSecs: number; requiredVotes: number; initiatorId: string } | null>(null);
+  const isTournament = !!tournamentId;
   const [resultsModalOpen, setResultsModalOpen] = useState(false);
   const [resultsData, setResultsData] = useState<TournamentResultEntry[]>([]);
   const [finalTableVisible, setFinalTableVisible] = useState(false);
   const { isDealing } = useDealStore();
   const balance = useAuthStore((s) => s.balance);
 
-  // Clear stale rooms only when urlBuyIn actually changes
   useEffect(() => {
     if (urlBuyIn && urlBuyIn > 0) {
       useGameStore.setState({ rooms: {}, activeRoomId: null });
     }
   }, [urlBuyIn]);
 
-  // Sync activeRoomId with the tableId from the URL
   useEffect(() => {
     if (!tableId) return;
     const matchingEntry = Object.entries(rooms).find(([, r]: [string, any]) => r.tableId === tableId);
@@ -279,7 +290,6 @@ export function TablePage() {
     }
   }, [rooms, tableId, activeRoomId]);
 
-  // ── Tournament event listeners (UPDATED with tableChanged) ──
   useEffect(() => {
     const handleResult = (e: Event) => {
       const detail = (e as CustomEvent).detail;
@@ -307,14 +317,11 @@ export function TablePage() {
         setFinalTableVisible(true);
       }
     };
-    // ─── NEW: Handle table change event ───────────────────────────────
     const handleTableChanged = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (tournamentId && detail.tournamentId === tournamentId) {
         const newTableId = detail.newRoomId;
         if (newTableId) {
-          // Update store with the table ID (if the store supports it, otherwise just navigate)
-          // We use a local state or ignore store update.
           navigate({
             to: '/table/$tableId',
             params: { tableId: newTableId },
@@ -335,13 +342,67 @@ export function TablePage() {
       window.removeEventListener('tournament:elimination', handleElimination as EventListener);
       window.removeEventListener('tournament:tableChanged', handleTableChanged as EventListener);
     };
+
+
+
   }, [tournamentId, navigate]);
 
-  // ─── Polling fallback for table assignment ────────────────────
+  // Listen for kick vote events
+  useEffect(() => {
+    const handleKickVoteStarted = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      // Try to resolve target name from seats
+      let targetName = 'Player';
+      if (activeRoomId) {
+        const room = useGameStore.getState().rooms[activeRoomId];
+        if (room) {
+          for (const seat of Object.values(room.seats)) {
+            if (seat.user_id === detail.target_id) {
+              targetName = seat.display_name || 'Player';
+              break;
+            }
+          }
+        }
+      }
+      setKickVoteDialog({
+        roomId: detail.room_id,
+        kickVoteId: detail.kick_vote_id,
+        targetId: detail.target_id,
+        targetName,
+        durationSecs: detail.duration_secs,
+        requiredVotes: detail.required_votes,
+        initiatorId: detail.initiator_id,
+      });
+    };
+    const handleKickVoteUpdate = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setKickVoteDialog((prev) => {
+        if (!prev || prev.kickVoteId !== detail.kick_vote_id) return prev;
+        return { ...prev, yesVotes: detail.yes_votes, passed: detail.passed };
+      });
+    };
+    const handlePlayerRemoved = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (kickVoteDialog && kickVoteDialog.targetId === detail.player_id) {
+        setKickVoteDialog(null);
+      }
+    };
+
+    window.addEventListener('kickVoteStarted', handleKickVoteStarted as EventListener);
+    window.addEventListener('kickVoteUpdate', handleKickVoteUpdate as EventListener);
+    window.addEventListener('playerRemoved', handlePlayerRemoved as EventListener);
+
+    return () => {
+      window.removeEventListener('kickVoteStarted', handleKickVoteStarted as EventListener);
+      window.removeEventListener('kickVoteUpdate', handleKickVoteUpdate as EventListener);
+      window.removeEventListener('playerRemoved', handlePlayerRemoved as EventListener);
+    };
+  }, [activeRoomId, kickVoteDialog]);
+
+
   useEffect(() => {
     if (!tournamentId) return;
     const tournamentState = useTournamentStore.getState().tournaments[tournamentId];
-    // Only poll if the tournament is running and we are not already on a table
     if (tournamentState?.status !== 'Running') return;
 
     const interval = setInterval(async () => {
@@ -363,7 +424,6 @@ export function TablePage() {
     return () => clearInterval(interval);
   }, [tournamentId, navigate]);
 
-  // Reset dealing state when switching tables to prevent replaying the deal animation
   useEffect(() => {
     useDealStore.setState({ isDealing: false });
   }, [activeRoomId]);
@@ -433,7 +493,7 @@ export function TablePage() {
           hand_description: player.hand_description,
           is_winner: player.is_winner,
           win_amount: player.win_amount,
-          winningCards: player.winning_cards,
+          winning_cards: player.winning_cards,
           is_showdown_revealed: true,
         };
       }
@@ -460,7 +520,6 @@ export function TablePage() {
 
   const isHeroSeated = Object.values(seatsWithShowdown).some((s: any) => s.user_id === myUserId);
 
-  // Hard reset state if backend says we are not seated anywhere
   useEffect(() => {
     if (notSeated && !isJoining) {
       setHasJoined(false);
@@ -472,7 +531,6 @@ export function TablePage() {
     }
   }, [notSeated, isJoining, isObserving]);
 
-  // Join / Rejoin Logic
   useEffect(() => {
     if (connectionStatus !== 'connected') return;
 
@@ -501,20 +559,43 @@ export function TablePage() {
     }
   }, [connectionStatus, isHeroSeated, isObserving, hasJoined, urlBuyIn, sendJoin, showRebuyDialog, isAddingTable]);
 
-  // Show Rebuy Dialog if hero runs out of chips
+  // ─── FIXED REBUY DIALOG LOGIC ──────────────────────────────────────────
   useEffect(() => {
+    // Reset joining flag when stack is positive
     if (isJoining && heroStack > 0) {
       setIsJoining(false);
     }
 
-    if (hasJoined && heroStack === 0 && !isJoining && connectionStatus === 'connected' && !game.handInProgress && !isObserving) {
+    // Check if hero is currently involved in an active hand (has hole cards)
+    const isHeroInActiveHand = game.handInProgress && (heroHoleCards?.length ?? 0) > 0;
+
+    const shouldShow =
+      hasJoined &&
+      heroStack === 0 &&
+      !isJoining &&
+      connectionStatus === 'connected' &&
+      !isObserving &&
+      !isTournament &&
+      !isHeroInActiveHand; // <-- Replaced !game.handInProgress
+
+    if (shouldShow) {
       setShowRebuyDialog(true);
     } else if (heroStack > 0 && !isAddingTable) {
+      // Close dialog when stack becomes > 0 (e.g., after rebuy)
       setShowRebuyDialog(false);
     }
-  }, [heroStack, connectionStatus, hasJoined, isJoining, game.handInProgress, isObserving, isAddingTable]);
+  }, [
+    heroStack,
+    connectionStatus,
+    hasJoined,
+    isJoining,
+    game.handInProgress,
+    heroHoleCards, // <-- Added heroHoleCards to dependency array
+    isObserving,
+    isAddingTable,
+    isTournament,
+  ]);
 
-  // Prevent "Disconnected" flash on initial mount
   const [showDisconnect, setShowDisconnect] = useState(false);
   useEffect(() => {
     if (connectionStatus !== 'connected') {
@@ -552,7 +633,8 @@ export function TablePage() {
 
     const updateRemaining = () => {
       const now = Date.now();
-      const remaining = Math.max(0, heroTimerExpiresAt - now);
+      const expiresAtMs = heroTimerExpiresAt > 1e12 ? heroTimerExpiresAt : heroTimerExpiresAt * 1000;
+      const remaining = Math.max(0, expiresAtMs - now);
       setHeroTimerRemainingMs(remaining);
       if (remaining <= 0 && heroIntervalRef.current) {
         clearInterval(heroIntervalRef.current);
@@ -589,7 +671,8 @@ export function TablePage() {
 
     const updateRemaining = () => {
       const now = Date.now();
-      const remaining = Math.max(0, opponentTimerExpiresAt - now);
+      const expiresAtMs = opponentTimerExpiresAt > 1e12 ? opponentTimerExpiresAt : opponentTimerExpiresAt * 1000;
+      const remaining = Math.max(0, expiresAtMs - now);
       setOpponentTimerRemainingMs(remaining);
       if (remaining <= 0 && opponentIntervalRef.current) {
         clearInterval(opponentIntervalRef.current);
@@ -613,9 +696,10 @@ export function TablePage() {
     activeRoomId,
     resolvedHeroSeat,
     isMyTurn,
-    heroTimerRemainingMs ?? 0,
+    heroTimerRemainingMs,
     heroTimerTotalMs,
   );
+
 
   const sendActionWithFeedback = useCallback(
     (action: string, amount?: number) => {
@@ -631,6 +715,28 @@ export function TablePage() {
     },
     [sendAction, trigger, resolvedHeroSeat, activeRoomId],
   );
+
+
+
+  const handleKick = useCallback((targetUserId: string) => {
+    if (!activeRoomId) return;
+    const room = useGameStore.getState().rooms[activeRoomId];
+    if (!room) return;
+    // Find the seat of the target user
+    let targetSeat = null;
+    for (const [seat, player] of Object.entries(room.seats)) {
+      if ((player as any).user_id === targetUserId) {
+        targetSeat = seat;
+        break;
+      }
+    }
+    if (targetSeat === null) return;
+    // Send kick vote start
+    sendWsMessage('kick_vote_start', {
+      room_id: activeRoomId,
+      target_player_id: targetUserId,
+    });
+  }, [activeRoomId, sendWsMessage]);
 
   const handleLeaveTable = useCallback(() => {
     const roomIdToLeave = activeRoomId || roomIds[0];
@@ -843,8 +949,8 @@ export function TablePage() {
             <div className={cn(
               "absolute left-1/2 -translate-x-1/2 z-30 transition-[top] duration-700 ease-in-out pointer-events-none",
               showdownReveal
-                ? "top-[50px] md:top-[40px]"
-                : "top-[70px] md:top-[60px]"
+                ? isShortHeight ? "top-[25px]" : "top-[50px]"
+                : isShortHeight ? "top-[45px]" : "top-[70px]"
             )}>
               <div className="pointer-events-auto">
                 <PotBadge
@@ -872,7 +978,6 @@ export function TablePage() {
               onShowStats={setStatsUserId}
             />
 
-            {/* FIX: Added keys to force remount on table switch to prevent animation replay */}
             <DealAnimationLayer
               key={`deal-${activeRoomId}`}
               isDesktop={isDesktop}
@@ -944,6 +1049,28 @@ export function TablePage() {
           </div>
         )}
       </div>
-    </ErrorBoundary>
-  );
+
+
+
+
+      <KickVoteDialog
+        open={!!kickVoteDialog}
+        onClose={() => setKickVoteDialog(null)}
+        initiatorId={kickVoteDialog?.initiatorId || ''}
+        targetId={kickVoteDialog?.targetId || ''}
+        targetName={kickVoteDialog?.targetName || 'Player'}
+        kickVoteId={kickVoteDialog?.kickVoteId || ''}
+        durationSecs={kickVoteDialog?.durationSecs || 0}
+        requiredVotes={kickVoteDialog?.requiredVotes || 0}
+        onVoteYes={(kickVoteId) => {
+          if (activeRoomId) {
+            sendWsMessage('kick_vote_yes', {
+              room_id: activeRoomId,
+              kick_vote_id: kickVoteId,
+            });
+          }
+        }}
+        onTimeout={() => setKickVoteDialog(null)}
+      />
+    </ErrorBoundary>);
 }

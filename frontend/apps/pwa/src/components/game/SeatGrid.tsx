@@ -21,7 +21,7 @@ export const SeatGrid = ({
   opponentTimerRemainingMs,
   opponentTimerTotalMs,
   isDealing,
-  onShowStats,
+  onShowStats, onKick,
 }: any) => {
   const [vw, setVw] = useState(typeof window !== 'undefined' ? window.innerWidth : 500);
 

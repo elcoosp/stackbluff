@@ -1,13 +1,16 @@
 pub mod anti_cheat_routes;
-pub mod club_routes;
 pub mod gdpr_routes;
+pub mod hand_history_routes;
 pub mod handlers;
 pub mod leaderboard;
 pub mod oracle_routes;
 pub mod player_stats;
 pub mod rate_limit;
+pub mod referral_routes;
+pub mod replay_routes;
 pub mod routes;
 pub mod season_card;
+pub mod shop_routes;
 pub mod tournament_routes;
 
 use axum::{
@@ -21,16 +24,16 @@ use base64::prelude::*;
 use chrono::{DateTime, Utc};
 use sb_auth::middleware::{AuthUser, auth_middleware_with_context};
 use sb_contracts::lobby_api::{TableInfo, TableRepo, TableService};
+use sb_contracts::notification_api::NotificationService;
 use sb_contracts::repo_api::{BadgeRepo, GdprRepo, HandHistoryRepository, HandSummary};
+use sb_contracts::service_api::{MissionApi, ViralService};
+use sb_contracts::tournament_api::TournamentService;
 use sb_shared_types::{RequestContext, StakeLevel, TableId, UserId};
 use sb_table_registry::registry::Registry;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::error;
 use uuid::Uuid;
-use sb_contracts::notification_api::NotificationService;
-use sb_contracts::tournament_api::TournamentService;
-use sb_contracts::service_api::{MissionApi, ViralService};
 
 pub use gdpr_routes::gdpr_routes;
 pub use oracle_routes::oracle_routes;
@@ -42,19 +45,18 @@ pub struct AppState {
     pub tournament_service: Arc<dyn TournamentService + Send + Sync>,
     pub mission_service: Arc<dyn MissionApi + Send + Sync>,
     pub viral_service: Arc<dyn ViralService + Send + Sync>,
-
-
     pub table_service: Arc<dyn TableService + Send + Sync>,
     pub table_repo: Arc<dyn TableRepo + Send + Sync>,
     pub registry: Arc<Registry>,
     pub hand_history_repo: Arc<dyn HandHistoryRepository + Send + Sync>,
     pub leaderboard_query: Arc<dyn sb_contracts::leaderboard::LeaderboardQuery + Send + Sync>,
     pub club_service: Arc<dyn sb_contracts::service_api::ClubService + Send + Sync>,
+    pub club_repo: Arc<dyn sb_contracts::repo_api::ClubRepo + Send + Sync>,
     pub broker: Arc<sb_table_registry::connection_broker::ConnectionBroker>,
     pub badge_repo: Arc<dyn BadgeRepo + Send + Sync>,
     pub gdpr_repo: Arc<dyn GdprRepo + Send + Sync>,
-
-
+    pub product_repo: Arc<dyn sb_contracts::product_api::ProductRepo + Send + Sync>,
+    pub payment_service: Arc<dyn sb_contracts::service_api::PaymentService + Send + Sync>,
 }
 
 pub fn create_router(state: Arc<AppState>) -> Router {
@@ -63,7 +65,6 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/lobby", get(lobby_handler))
         .route("/tables", post(create_table_handler))
         .route("/tables/{table_id}/history", get(table_history_handler))
-        .merge(club_routes::club_routes())
         .route("/users/me/badges", get(handlers::badges::get_my_badges))
         .route(
             "/users/{user_id}/badges",
@@ -76,6 +77,10 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .merge(leaderboard::leaderboard_routes())
         .merge(protected_routes)
         .merge(gdpr_routes())
+        .merge(hand_history_routes::hand_history_routes())
+        .merge(shop_routes::shop_routes())
+        .merge(referral_routes::referral_routes())
+        .merge(replay_routes::replay_routes())
         .with_state(state)
 }
 
@@ -125,8 +130,6 @@ pub struct ErrorDetail {
     pub message: String,
 }
 
-// === Public (no auth) table listing types ===
-
 #[derive(Debug, Serialize)]
 pub struct PublicTableInfo {
     pub table_id: TableId,
@@ -138,8 +141,6 @@ pub struct PublicTableInfo {
 pub struct PublicTableList {
     pub tables: Vec<PublicTableInfo>,
 }
-
-// === History Request/Response Types ===
 
 #[derive(Debug, Deserialize)]
 pub struct HistoryParams {
@@ -178,7 +179,6 @@ async fn lobby_handler(
         .list_tables()
         .await
         .map_err(internal_error)?;
-
     let mut merged: Vec<LobbyTableInfo> = Vec::new();
     for t in persistent {
         let active_players = state.registry.get_total_active_players(t.table_id).await;
@@ -191,7 +191,6 @@ async fn lobby_handler(
             status: t.status,
         });
     }
-
     Ok(Json(merged))
 }
 
@@ -230,7 +229,6 @@ async fn table_history_handler(
             .map_err(|_| bad_request("INVALID_USER", "Invalid user ID"))?,
     );
     let ctx = RequestContext::new(Uuid::new_v4(), Some(user_id));
-
     let is_at_table = state.registry.is_user_at_table(table_id, user_id).await;
     let user_hand_count = state
         .hand_history_repo
@@ -242,7 +240,6 @@ async fn table_history_handler(
             "You are not authorized to view this table's history",
         ));
     }
-
     let cursor = match params.cursor {
         Some(encoded) => {
             let decoded = BASE64_STANDARD
@@ -266,7 +263,6 @@ async fn table_history_handler(
         }
         None => None,
     };
-
     let limit = params.limit.unwrap_or(20).min(100);
     let (summaries, next_cursor) = state
         .hand_history_repo
@@ -278,12 +274,10 @@ async fn table_history_handler(
         .count_hand_histories(ctx, table_id)
         .await
         .map_err(internal_error)?;
-
     let next_cursor_b64 = next_cursor.map(|(dt, id)| {
         let s = format!("{},{}", dt.to_rfc3339(), id);
         BASE64_STANDARD.encode(s.as_bytes())
     });
-
     Ok(Json(HistoryResponse {
         histories: summaries,
         total,
@@ -331,3 +325,4 @@ fn forbidden(msg: &str) -> (StatusCode, Json<ErrorResponse>) {
 pub fn register_metrics(registry: &prometheus::Registry) {
     sb_viral::puzzle::service::register_metrics(registry);
 }
+pub mod notification_routes;

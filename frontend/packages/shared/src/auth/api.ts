@@ -1,3 +1,4 @@
+import { apiClient } from "../api/client";
 import { getToken } from './token';
 
 const API_BASE = '/api';
@@ -18,4 +19,53 @@ export interface AuthResponse { token: string; user: { id: string; username: str
 export const authApi = {
   login: (creds: LoginCredentials) => request<AuthResponse>('/auth/login', { method: 'POST', body: JSON.stringify(creds) }),
   register: (data: RegisterData) => request<AuthResponse>('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
+  forgotPassword: async (email: string) => {
+    const response = await fetch('/auth/forgot-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+    if (!response.ok) {
+      throw new Error('Failed to send reset link');
+    }
+    return response.json();
+  },
+  resetPassword: async (token: string, new_password: string) => {
+    const response = await fetch('/auth/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, new_password }),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to reset password');
+    }
+    return response.json();
+  },
+  verifyEmail: async (token: string) => {
+    const response = await fetch(`/auth/verify-email?token=${encodeURIComponent(token)}`);
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: "Verification failed" }));
+      throw new Error(error.message || "Verification failed");
+    }
+    return response.json();
+  },
+  resendVerification: async () => {
+    const response = await fetch('/auth/resend-verification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: "Failed to resend verification" }));
+      throw new Error(error.message || "Failed to resend verification");
+    }
+    return response.json();
+  },
+  telegramAuth: async (initData: string) => {
+    const response = await fetch('/auth/telegram', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ init_data: initData }),
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: "Telegram authentication failed" }));
+      throw new Error(error.message || "Telegram authentication failed");
+    }
+    return response.json();
+  },
 };

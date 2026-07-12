@@ -1,4 +1,5 @@
 import { useBadges } from "../hooks/useBadges";
+import { Crown } from "lucide-react";
 
 interface BadgeDisplayProps {
   showProgress?: boolean;
@@ -19,7 +20,7 @@ export function BadgeDisplay({ showProgress = true }: BadgeDisplayProps) {
   if (hasFoundingMember) {
     return (
       <div className="flex items-center gap-2" title="Founding Member – Referred 10 friends who played 5+ hands">
-        <span className="text-2xl">👑</span>
+        <Crown className="w-5 h-5 text-yellow-400" />
         <span className="text-sm font-semibold text-yellow-600">Founding Member</span>
       </div>
     );

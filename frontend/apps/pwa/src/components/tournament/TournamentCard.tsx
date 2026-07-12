@@ -55,6 +55,16 @@ function getStakeText(buy_in: number): string {
   return '$5/$10';
 }
 
+function getTournamentBg(name: string, buy_in: number): string {
+  if (name.toLowerCase().includes('weekend') || buy_in >= 500) {
+    return '/images/tournaments/bg_weekend_mtt.png';
+  }
+  if (buy_in <= 100) {
+    return '/images/tournaments/bg_micro_sng.png';
+  }
+  return '/images/tournaments/bg_standard_sng.png';
+}
+
 export function TournamentCard({
   tournament,
   isRegistered,
@@ -95,6 +105,8 @@ export function TournamentCard({
   const showCountdown = isRegisteringStatus && starts_in_seconds !== undefined && starts_in_seconds > 0;
   const needsPlayers = isRegisteringStatus && starts_in_seconds === undefined && registered < min_players_to_start;
 
+  const bgImage = getTournamentBg(name, buy_in);
+
   return (
     <motion.div
       layout
@@ -102,16 +114,25 @@ export function TournamentCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="flex flex-col lg:grid lg:grid-cols-12 items-start lg:items-center px-4 lg:px-8 py-4 lg:py-5 bg-surface-container-lowest/80 backdrop-blur-xl border border-white/10 rounded-xl razor-highlight group hover:border-tertiary/40 transition-colors duration-200 gap-3 lg:gap-0"
+      className="flex flex-col lg:grid lg:grid-cols-12 items-start lg:items-center px-4 lg:px-8 py-4 lg:py-5 border border-white/10 rounded-xl razor-highlight group hover:border-tertiary/40 transition-all duration-300 gap-3 lg:gap-0 overflow-hidden relative"
     >
-      <div className="w-full lg:col-span-5 flex items-start lg:items-center gap-3 lg:gap-4">
-        <div className="flex-shrink-0">
-          <div className={`w-2 h-2 rounded-full ${getStatusColor(status)} border`} />
-        </div>
+      {/* Background Image Layer - Blurs by default, unblurs on hover */}
+      <div
+        className="absolute inset-0 w-full h-full bg-cover bg-center blur-md scale-105 group-hover:blur-none group-hover:scale-100 transition-all duration-500 ease-in-out z-0 pointer-events-none"
+        style={{ backgroundImage: `url(${bgImage})` }}
+      />
+      {/* Gradient Overlay Layer - Less dark, smooth transition */}
+      <div
+        className="absolute inset-0 w-full h-full z-0 transition-all duration-500 pointer-events-none bg-gradient-to-r from-[#0a0a0c]/85 via-[#0a0a0c]/50 to-[#0a0a0c]/85 group-hover:from-[#0a0a0c]/75 group-hover:via-[#0a0a0c]/35 group-hover:to-[#0a0a0c]/75"
+      ></div>
+
+      <div className="w-full lg:col-span-5 flex items-start lg:items-center gap-3 lg:gap-4 relative z-10">
+        <div
+          className={`mt-1.5 lg:mt-0 w-1.5 h-1.5 rounded-full shrink-0 ${status === 'Running' ? 'bg-tertiary status-led animate-pulse' : 'bg-outline-variant'}`}
+        />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h4 className="font-headline-md text-base text-on-surface truncate">{name}</h4>
-            {/* ✅ Added data-testid="tournament-status" and data-status */}
             <span
               data-testid="tournament-status"
               data-status={status}
@@ -142,14 +163,14 @@ export function TournamentCard({
         </div>
       </div>
 
-      <div className="lg:col-span-2 text-center font-data-mono">
+      <div className="lg:col-span-2 text-center font-data-mono relative z-10">
         <div className="flex items-center justify-center gap-1">
           <Users className="w-3.5 h-3.5 text-outline" />
           <span className="text-on-surface">{registered}/{max_players}</span>
         </div>
       </div>
 
-      <div className="lg:col-span-2 w-full">
+      <div className="lg:col-span-2 w-full relative z-10">
         {showCountdown && (
           <div className="flex items-center gap-2 text-[10px] text-on-surface-variant">
             <Clock className="w-3 h-3" />
@@ -167,7 +188,7 @@ export function TournamentCard({
         )}
       </div>
 
-      <div className="w-full lg:col-span-3 flex lg:justify-end gap-2 mt-1 lg:mt-0">
+      <div className="w-full lg:col-span-3 flex lg:justify-end gap-2 mt-1 lg:mt-0 relative z-10">
         {canRegister && (
           <Button
             data-testid="register"

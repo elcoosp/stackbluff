@@ -4,7 +4,7 @@ use dashmap::DashMap;
 use sb_contracts::repo_api::UserRepo;
 use sb_contracts::tournament_api::{
     TournamentConfig, TournamentRepo, TournamentResult, TournamentService, TournamentSummary,
-    TournamentType,
+    TournamentStatus, TournamentType,
 };
 use sb_shared_types::{AppError, RequestContext, TableId, TournamentId, UserId};
 use sb_table_registry::connection_broker::ConnectionBroker;
@@ -223,6 +223,8 @@ impl TournamentService for TournamentServiceImpl {
         config: TournamentConfig,
     ) -> Result<TournamentId, AppError> {
         let id = self.repo.insert_tournament(&config).await?;
+        let record = self.repo.get_tournament(id).await?.ok_or_else(|| AppError::NotFound("Tournament not found".into()))?;
+        let name = record.name.clone();
         if let Some(start) = config.scheduled_start
             && start > Utc::now()
         {
@@ -250,6 +252,7 @@ impl TournamentService for TournamentServiceImpl {
                 let (tx, rx) = mpsc::channel(32);
                 let actor = SitGoTournament::new(
                     id,
+                    name.clone(),
                     config.clone(),
                     self.registry.clone(),
                     self.broker.clone(),
@@ -275,6 +278,7 @@ impl TournamentService for TournamentServiceImpl {
                 let (tx, rx) = mpsc::channel(32);
                 let actor = MttDirector::new(
                     id,
+                    name.clone(),
                     config.clone(),
                     self.registry.clone(),
                     self.broker.clone(),
@@ -431,12 +435,14 @@ impl TournamentService for TournamentServiceImpl {
         &self,
         _ctx: &RequestContext,
         type_filter: Option<TournamentType>,
+        status_filter: Option<TournamentStatus>,
     ) -> Result<Vec<TournamentSummary>, AppError> {
-        let records = self.repo.list_tournaments(type_filter).await?;
+        let records = self.repo.list_tournaments(type_filter, status_filter).await?;
         let mut summaries = Vec::new();
         for r in records {
             summaries.push(TournamentSummary {
                 id: r.id,
+                name: r.name.clone(),
                 tournament_type: r.config.tournament_type,
                 status: r.status,
                 registered: 0,

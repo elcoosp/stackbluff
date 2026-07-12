@@ -65,6 +65,7 @@ pub struct TournamentConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TournamentSummary {
     pub id: TournamentId,
+    pub name: String,
     pub tournament_type: TournamentType,
     pub status: TournamentStatus,
     pub registered: u32,
@@ -89,6 +90,7 @@ pub struct TournamentResult {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TournamentRecord {
     pub id: TournamentId,
+    pub name: String,
     pub config: TournamentConfig,
     pub status: TournamentStatus,
     pub prize_pool: ChipAmount,
@@ -137,6 +139,7 @@ pub trait TournamentService: Send + Sync {
         &self,
         ctx: &RequestContext,
         type_filter: Option<TournamentType>,
+        status_filter: Option<TournamentStatus>,
     ) -> Result<Vec<TournamentSummary>, AppError>;
 
     async fn get_results(
@@ -196,6 +199,7 @@ pub trait TournamentRepo: Send + Sync {
     async fn list_tournaments(
         &self,
         type_filter: Option<TournamentType>,
+        status_filter: Option<TournamentStatus>,
     ) -> Result<Vec<TournamentRecord>, AppError>;
 
     async fn set_status(

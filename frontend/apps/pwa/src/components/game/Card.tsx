@@ -27,12 +27,16 @@ export const Card = ({
   const isRed = suit === '♥' || suit === '♦';
   const suitColor = isRed ? '#e11d48' : '#1e293b';
 
-  // Standardized filter layers so Framer Motion can interpolate smoothly
-  // Using drop-shadow instead of boxShadow ensures the shadow hides when backface-visibility is hidden
-  const baseFilter = 'grayscale(0) brightness(1) drop-shadow(0 4px 12px rgba(0,0,0,0.5)) drop-shadow(0 1px 4px rgba(0,0,0,0.2))';
-  const winningFilterLow = 'grayscale(0) brightness(1.1) drop-shadow(0 4px 12px rgba(0,0,0,0.5)) drop-shadow(0 0 12px rgba(78,222,163,0.5))';
-  const winningFilterHigh = 'grayscale(0) brightness(1.1) drop-shadow(0 4px 12px rgba(0,0,0,0.5)) drop-shadow(0 0 24px rgba(78,222,163,0.7))';
-  const losingFilter = 'grayscale(0.8) brightness(0.5) drop-shadow(0 4px 8px rgba(0,0,0,0.7))';
+  // Static filters – no animation
+  const baseFilter = 'grayscale(0) brightness(1)';
+  const losingFilter = 'grayscale(0.8) brightness(0.5)';
+  const winningFilter = 'grayscale(0) brightness(1.1)';
+
+  // Box shadows for drop-shadow and glow
+  const baseShadow = '0 4px 12px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.2)';
+  const winningShadowLow = '0 4px 12px rgba(0,0,0,0.5), 0 0 12px rgba(78,222,163,0.5)';
+  const winningShadowHigh = '0 4px 12px rgba(0,0,0,0.5), 0 0 24px rgba(78,222,163,0.7)';
+  const losingShadow = '0 4px 8px rgba(0,0,0,0.7)';
 
   const renderFront = () => (
     <div
@@ -81,30 +85,27 @@ export const Card = ({
           )`,
         }}
       />
-      {/* Sharp corner accents with radius ONLY on the intersecting corner */}
       <div className="absolute top-[10%] left-[10%] w-[10%] h-[10%] border-t border-l border-white/15 rounded-tl-sm" />
       <div className="absolute bottom-[10%] right-[10%] w-[10%] h-[10%] border-b border-r border-white/15 rounded-br-sm" />
     </div>
   );
 
   // Determine animation state
-  let animateProps: any = {
-    filter: baseFilter,
-    scale: 1,
-  };
-  let transitionProps: any = {
-    duration: 0.5,
-    ease: [0.22, 1, 0.36, 1],
-  };
+  let filter = baseFilter;
+  let boxShadow = baseShadow;
+  let animateProps: any = {};
+  let transitionProps: any = {};
 
   if (isLosing) {
-    animateProps = {
-      filter: losingFilter,
-      scale: 0.98,
-    };
+    filter = losingFilter;
+    boxShadow = losingShadow;
+    animateProps = { scale: 0.98 };
+    transitionProps = { duration: 0.5, ease: [0.22, 1, 0.36, 1] };
   } else if (isWinning) {
+    filter = winningFilter;
+    // Animate boxShadow between two glow levels
     animateProps = {
-      filter: [winningFilterLow, winningFilterHigh, winningFilterLow],
+      boxShadow: [winningShadowLow, winningShadowHigh, winningShadowLow],
       scale: 1,
     };
     transitionProps = {
@@ -112,6 +113,10 @@ export const Card = ({
       repeat: Infinity,
       ease: 'easeInOut',
     };
+  } else {
+    // Normal state – no animation
+    animateProps = {};
+    transitionProps = {};
   }
 
   return (
@@ -119,6 +124,10 @@ export const Card = ({
       {...(hoverable && !isWinning && !isLosing
         ? { whileHover: { y: -4, transition: { type: 'spring', stiffness: 300 } } }
         : {})}
+      style={{
+        filter,
+        boxShadow,
+      }}
       animate={animateProps}
       transition={transitionProps}
       className={cn(rounded)}

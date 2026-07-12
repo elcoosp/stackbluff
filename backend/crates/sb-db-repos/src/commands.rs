@@ -99,4 +99,16 @@ pub enum DbCommand {
         user_id: UserId,
         respond: oneshot::Sender<PersistenceResult<bool>>,
     },
+    ExtendSeasonPass {
+        ctx: RequestContext,
+        user_id: UserId,
+        duration_days: i64,
+        respond: ResponseSender<()>,
+    },
+    ExtendClubPro {
+        ctx: RequestContext,
+        user_id: UserId,
+        duration_days: i64,
+        respond: ResponseSender<()>,
+    },
 }

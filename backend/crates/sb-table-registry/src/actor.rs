@@ -11,8 +11,8 @@ use futures::future::join_all;
 use tokio::sync::mpsc;
 
 use sb_contracts::stats_api::PlayerStatsRepo;
+use sb_game_engine::analytics::{get_strength_score, run_monte_carlo};
 use sb_game_engine::game_state::{Action, ActionError, GameState};
-use sb_game_engine::analytics::{run_monte_carlo, get_strength_score};
 use sb_shared_types::AppError;
 use sb_shared_types::player_stats::PlayerStatsDto;
 use sb_shared_types::{ActionType, ChipAmount, PlayerId, StakeLevel, TableConfig, TableId, UserId};
@@ -465,9 +465,36 @@ fn build_analytics(hand: &ActiveHand, user_id: UserId) -> Option<AnalyticsPayloa
     })
 }
 
+// Helper functions to avoid borrow checker issues when hand is mutably borrowed
+fn broadcast_msg(
+    broker: &Option<Arc<ConnectionBroker>>,
+    tournament_room_id: Option<TableId>,
+    room_id: TableId,
+    user_senders: &HashMap<UserId, mpsc::UnboundedSender<RoomMessage>>,
+    msg: RoomMessage,
+) {
+    if let Some(broker) = broker {
+        let room = tournament_room_id.unwrap_or(room_id);
+        broker.broadcast_to_room(room, msg);
+    } else {
+        for tx in user_senders.values() {
+            let _: Result<_, _> = tx.send(msg.clone());
+        }
+    }
+}
 
-
-
+fn send_to_player_msg(
+    broker: &Option<Arc<ConnectionBroker>>,
+    user_senders: &HashMap<UserId, mpsc::UnboundedSender<RoomMessage>>,
+    user_id: &UserId,
+    msg: RoomMessage,
+) {
+    if let Some(broker) = broker {
+        broker.send_to_user(*user_id, msg);
+    } else if let Some(tx) = user_senders.get(user_id) {
+        let _: Result<_, _> = tx.send(msg);
+    }
+}
 
 pub struct TableActor {
     pub created_by: sb_shared_types::UserId,
@@ -494,6 +521,7 @@ pub struct TableActor {
     // ── Tournament extensions ───────────────────────────────────────────
     mode: TableMode,
     broker: Option<Arc<ConnectionBroker>>,
+    tournament_room_id: Option<TableId>, // ADDED: To broadcast to the correct tournament room
     current_blinds: Option<(ChipAmount, ChipAmount)>,
     paused: bool,
     timeout_handle: Option<tokio::task::JoinHandle<()>>,
@@ -540,6 +568,7 @@ impl TableActor {
             kick_refund_responder: None,
             mode: TableMode::Cash,
             broker: None,
+            tournament_room_id: None, // ADDED
             current_blinds: None,
             paused: false,
             timeout_handle: None,
@@ -568,21 +597,17 @@ impl TableActor {
     }
 
     fn broadcast(&self, msg: RoomMessage) {
-        if let Some(broker) = &self.broker {
-            broker.broadcast_to_room(self.room_id, msg);
-        } else {
-            for tx in self.user_senders.values() {
-                let _: Result<_, _> = tx.send(msg.clone());
-            }
-        }
+        broadcast_msg(
+            &self.broker,
+            self.tournament_room_id,
+            self.room_id,
+            &self.user_senders,
+            msg,
+        );
     }
 
     fn send_to_player(&self, user_id: &UserId, msg: RoomMessage) {
-        if let Some(broker) = &self.broker {
-            broker.send_to_user(*user_id, msg);
-        } else if let Some(tx) = self.user_senders.get(user_id) {
-            let _: Result<_, _> = tx.send(msg);
-        }
+        send_to_player_msg(&self.broker, &self.user_senders, user_id, msg);
     }
 
     pub async fn run(mut self, mut rx: mpsc::Receiver<InternalCommand>) {
@@ -689,6 +714,7 @@ impl TableActor {
                     no_rebuy: true,
                 };
                 self.broker = Some(broker);
+                self.tournament_room_id = Some(TableId::new(parent.as_uuid())); // ADDED: store tournament ID
             }
             InternalCommand::SetBlinds { small, big } => {
                 self.current_blinds = Some((small, big));
@@ -719,7 +745,14 @@ impl TableActor {
                 self.paused = false;
                 let _ = respond_to.send(Ok(()));
             }
-            InternalCommand::TransferPlayerIn { user_id, player_id, stack, seat, display_name: _, respond_to } => {
+            InternalCommand::TransferPlayerIn {
+                user_id,
+                player_id,
+                stack,
+                seat,
+                display_name,
+                respond_to,
+            } => {
                 let seat = match seat {
                     Some(s) => {
                         if s >= self.config.max_players
@@ -749,7 +782,7 @@ impl TableActor {
                         }
                     }
                 };
-                let player = Player::new(user_id, format!("Player_{}", user_id), seat, stack);
+                let player = Player::new(user_id, display_name, seat, stack);
                 self.players.insert(
                     user_id,
                     Player {
@@ -758,6 +791,7 @@ impl TableActor {
                         ..player
                     },
                 );
+                self.broadcast_table_state(); // ADDED: Notify clients of the new player state
                 let _ = respond_to.send(Ok(seat));
             }
             InternalCommand::TransferPlayerOut {
@@ -1167,7 +1201,7 @@ impl TableActor {
         let active_players_count = self
             .players
             .values()
-            .filter(|p| p.stack > zero() && !p.is_leaving)
+            .filter(|p| p.stack > zero() && !p.is_leaving && !p.sitting_out) // FIXED: filter sitting_out
             .count();
         if active_players_count < 2 {
             warn!("Not enough players with chips");
@@ -1206,6 +1240,7 @@ impl TableActor {
         struct PlayerInfo {
             player_id: PlayerId,
             user_id: UserId,
+            display_name: String,
             seat: u8,
             stack_before: ChipAmount,
         }
@@ -1213,10 +1248,11 @@ impl TableActor {
         let mut player_infos: Vec<PlayerInfo> = self
             .players
             .values()
-            .filter(|p| p.stack > zero() && !p.is_leaving)
+            .filter(|p| p.stack > zero() && !p.is_leaving && !p.sitting_out) // FIXED: filter sitting_out
             .map(|p| PlayerInfo {
                 player_id: p.player_id,
                 user_id: p.user_id,
+                display_name: p.display_name.clone(),
                 seat: p.seat,
                 stack_before: p.stack,
             })
@@ -1279,6 +1315,7 @@ impl TableActor {
                 self.hand_players.push(HandPlayer {
                     player_id: p.player_id,
                     user_id: Some(p.user_id),
+                    display_name: Some(p.display_name.clone()),
                     seat: p.seat,
                     hole_cards: Some(hole_strs),
                     stack_before: p.stack_before.as_i64(),
@@ -1293,7 +1330,8 @@ impl TableActor {
         }
 
         for player in self.players.values() {
-            if player.stack == zero() || player.is_leaving {
+            if player.stack == zero() || player.is_leaving || player.sitting_out {
+                // FIXED: filter sitting_out
                 continue;
             }
             if let Some(hole_cards) = active.state.player_hole_cards(player.player_id) {
@@ -1452,9 +1490,13 @@ impl TableActor {
                     },
                 );
 
-                Self::send_to_all(
+                broadcast_msg(
+                    &self.broker,
+                    self.tournament_room_id,
+                    self.room_id,
                     &self.user_senders,
                     RoomMessage::ActionBroadcast(ActionBroadcast {
+                        // FIXED: Use broadcast_msg
                         room_id: self.room_id,
                         player_id: user_id,
                         action: action_str_lower,
@@ -1471,7 +1513,7 @@ impl TableActor {
                         action_type: format!("{:?}", action_type).to_lowercase(),
                         amount: amount.map(|a| a.as_i64()),
                         timestamp_ms: elapsed_ms,
-                    street: street_name(&hand.state),
+                        street: street_name(&hand.state),
                     });
                 }
 
@@ -1505,15 +1547,23 @@ impl TableActor {
                         );
                     }
                     let action_req = build_action_required(self.room_id, hand, next);
-                    Self::send_to_all(&self.user_senders, RoomMessage::ActionRequired(action_req));
+                    broadcast_msg(
+                        &self.broker,
+                        self.tournament_room_id,
+                        self.room_id,
+                        &self.user_senders,
+                        RoomMessage::ActionRequired(action_req),
+                    ); // FIXED: Use broadcast_msg
 
                     if hand.state.community_cards().len() > prev_comm_cards_len {
                         for player in self.players.values() {
                             if let Some(analytics) = build_analytics(hand, player.user_id) {
-                                Self::send_to_user(
+                                send_to_player_msg(
+                                    &self.broker,
                                     &self.user_senders,
                                     &player.user_id,
                                     RoomMessage::PrivateMessage {
+                                        // FIXED: Use send_to_player_msg
                                         room_id: self.room_id,
                                         target_user_id: player.user_id,
                                         payload: PrivatePayload::Analytics { analytics },
@@ -1585,9 +1635,13 @@ impl TableActor {
             },
         );
 
-        Self::send_to_all(
+        broadcast_msg(
+            &self.broker,
+            self.tournament_room_id,
+            self.room_id,
             &self.user_senders,
             RoomMessage::ActionBroadcast(ActionBroadcast {
+                // FIXED: Use broadcast_msg
                 room_id: self.room_id,
                 player_id: user_id,
                 action: "fold".to_string(),
@@ -1615,7 +1669,13 @@ impl TableActor {
                 hand.schedule_timeout(next, self.cmd_tx.clone(), self.config.turn_time_limit_ms);
             }
             let action_req = build_action_required(self.room_id, hand, next);
-            self.broadcast(RoomMessage::ActionRequired(action_req));
+            broadcast_msg(
+                &self.broker,
+                self.tournament_room_id,
+                self.room_id,
+                &self.user_senders,
+                RoomMessage::ActionRequired(action_req),
+            ); // FIXED: Use broadcast_msg
             self.broadcast_table_state();
         } else {
             self.check_hand_completion().await;
@@ -1879,7 +1939,7 @@ impl TableActor {
             && self
                 .players
                 .values()
-                .filter(|p| p.stack > zero() && !p.is_leaving)
+                .filter(|p| p.stack > zero() && !p.is_leaving && !p.sitting_out) // FIXED: filter sitting_out
                 .count()
                 >= 2
         {
@@ -1985,7 +2045,8 @@ impl TableActor {
 
     fn broadcast_analytics(&self, hand: &ActiveHand) {
         for player in self.players.values() {
-            if player.stack == zero() || player.is_leaving {
+            if player.stack == zero() || player.is_leaving || player.sitting_out {
+                // FIXED: filter sitting_out
                 continue;
             }
             if let Some(analytics) = build_analytics(hand, player.user_id) {
@@ -2021,7 +2082,11 @@ impl TableActor {
             let mut active_players: Vec<&Player> = self
                 .players
                 .values()
-                .filter(|p| !hand.player_is_folded(p.user_id) && !hand.player_is_all_in(p.user_id))
+                .filter(|p| {
+                    hand.player_by_user_id.contains_key(&p.user_id)
+                        && !hand.player_is_folded(p.user_id)
+                        && !hand.player_is_all_in(p.user_id)
+                }) // FIXED: exclude non-hand players
                 .collect();
 
             if active_players.len() <= 1 {
@@ -2071,7 +2136,7 @@ impl TableActor {
                 .values()
                 .map(|player| {
                     let uid = player.user_id;
-                    let stack = hand.player_stack(uid).unwrap_or_else(zero);
+                    let stack = hand.player_stack(uid).unwrap_or(player.stack); // FIXED: fallback to player.stack
                     let bet = hand.player_current_bet(uid).unwrap_or_else(zero);
                     let all_in = hand.player_is_all_in(uid);
                     let folded = hand.player_is_folded(uid);

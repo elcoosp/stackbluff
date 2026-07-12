@@ -15,6 +15,7 @@ sha2 = { workspace = true }
 hex = { workspace = true }
 
 sb-shared-types = { path = "../sb-shared-types" }
+sb-db-entities = { path = "../sb-db-entities" }
 sb-contracts = { path = "../sb-contracts" }
 
 sea-orm = { workspace = true }

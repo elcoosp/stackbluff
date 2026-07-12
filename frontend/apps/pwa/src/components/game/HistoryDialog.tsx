@@ -1,13 +1,15 @@
-import { useAuthStore } from '../stores/authStore';
-import { useRef } from 'react';
+import { useAuthStore } from "@stackbluff/shared/stores/authStore";
+import { useRef, useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
+import { X, Eye, ChevronRight, Calendar, Users, Coins } from 'lucide-react';
 import { apiClient } from '@stackbluff/shared';
 import { Card } from './Card';
 import TimeAgo from 'react-timeago-i18n';
 import { createPortal } from 'react-dom';
+import { Link } from '@tanstack/react-router';
+import { cn } from '@/lib/utils';
 
 // ── Types ──
 interface WinnerSummary {
@@ -43,79 +45,51 @@ function shortId(id: string): string {
   return id.slice(0, 8);
 }
 
-// ── STANDARD CARD PARSER ──
-const rankFullMap: Record<string, string> = {
-  Two: '2', Three: '3', Four: '4', Five: '5',
-  Six: '6', Seven: '7', Eight: '8', Nine: '9',
-  Ten: '10', Jack: 'J', Queen: 'Q', King: 'K', Ace: 'A'
-};
-const suitFullMap: Record<string, string> = {
-  Spades: '♠', Hearts: '♥', Diamonds: '♦', Clubs: '♣'
-};
-const shortSuitMap: Record<string, string> = {
-  s: '♠', h: '♥', d: '♦', c: '♣'
-};
-const shortRankMap: Record<string, string> = {
-  '2': '2', '3': '3', '4': '4', '5': '5', '6': '6', '7': '7', '8': '8', '9': '9', '10': '10',
-  J: 'J', Q: 'Q', K: 'K', A: 'A'
-};
-
 function parseCard(cardStr: string): { rank: string; suit: string } {
-  const last = cardStr.slice(-1);
-  if (shortSuitMap[last]) {
-    const rank = cardStr.slice(0, -1);
-    const mappedRank = shortRankMap[rank];
-    if (mappedRank) {
-      return { rank: mappedRank, suit: shortSuitMap[last] };
-    }
-  }
-
-  const matches = cardStr.match(/[A-Z][a-z]+/g);
-  if (matches && matches.length >= 2) {
-    const rankFull = matches[0];
-    const suitFull = matches[1];
-    const rank = rankFullMap[rankFull] || rankFull;
-    const suit = suitFullMap[suitFull] || suitFull;
-    return { rank, suit };
-  }
-
-  return { rank: cardStr, suit: '' };
+  const rankMap: Record<string, string> = {
+    '2': '2', '3': '3', '4': '4', '5': '5', '6': '6', '7': '7', '8': '8', '9': '9', '10': '10',
+    J: 'J', Q: 'Q', K: 'K', A: 'A'
+  };
+  const suitMap: Record<string, string> = {
+    s: '♠', h: '♥', d: '♦', c: '♣'
+  };
+  const rank = cardStr.slice(0, -1);
+  const suit = cardStr.slice(-1);
+  return { rank: rankMap[rank] || rank, suit: suitMap[suit] || suit };
 }
 
+// ── Component ──
 export function HistoryDialog({ open, onClose, tableId }: HistoryDialogProps) {
+  const userId = useAuthStore((s) => s.user?.id);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [showOnlyMine, setShowOnlyMine] = useState(false);
+
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } =
     useInfiniteQuery({
-      queryKey: ['tableHistory', tableId],
+      queryKey: ['tableHistory', tableId, showOnlyMine],
       queryFn: ({ pageParam }) =>
         apiClient<HistoryResponse>(
-          `/tables/${tableId}/history?limit=20${pageParam ? `&cursor=${pageParam}` : ''}`
+          `/tables/${tableId}/history?limit=20${pageParam ? `&cursor=${pageParam}` : ''}${showOnlyMine ? `&user_id=${userId}` : ''}`
         ),
       getNextPageParam: (lastPage) => lastPage.next_cursor,
       initialPageParam: undefined as string | undefined,
-      enabled: open,
+      enabled: open && !!tableId,
       staleTime: 60_000,
     });
 
   const allHistory = data?.pages.flatMap((p) => p.histories) ?? [];
   const total = data?.pages[0]?.total ?? 0;
 
-  const containerRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
     count: hasNextPage ? allHistory.length + 1 : allHistory.length,
     getScrollElement: () => containerRef.current,
-    estimateSize: () => 120,
+    estimateSize: () => 140,
     overscan: 5,
   });
 
   const items = virtualizer.getVirtualItems();
-
   const lastItem = items[items.length - 1];
-  if (
-    lastItem &&
-    lastItem.index >= allHistory.length - 1 &&
-    hasNextPage &&
-    !isFetchingNextPage
-  ) {
+  if (lastItem && lastItem.index >= allHistory.length - 1 && hasNextPage && !isFetchingNextPage) {
     fetchNextPage();
   }
 
@@ -125,74 +99,61 @@ export function HistoryDialog({ open, onClose, tableId }: HistoryDialogProps) {
     <AnimatePresence>
       {open && (
         <>
-          {/* Backdrop */}
           <motion.div
             key="history-backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            
+            className="fixed inset-0 z-[5000] bg-black/80 backdrop-blur-sm"
             onClick={onClose}
           />
-
-          {/* Dialog */}
           <motion.div
             key="history-dialog"
             initial={{ opacity: 0, y: 40, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 40, scale: 0.95 }}
             transition={{ type: 'spring', damping: 30, stiffness: 400, duration: 0.3 }}
-            
+            className="fixed z-[5010] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-2xl max-h-[80vh] bg-[rgba(12,12,12,0.97)] border border-white/10 backdrop-blur-xl rounded-xl shadow-2xl overflow-hidden flex flex-col"
           >
-            {/* Custom Scrollbar Styles */}
-            <style>{`
-              .history-dialog-scroll::-webkit-scrollbar {
-                width: 6px;
-              }
-              .history-dialog-scroll::-webkit-scrollbar-track {
-                background: transparent;
-              }
-              .history-dialog-scroll::-webkit-scrollbar-thumb {
-                background: rgba(255, 255, 255, 0.1);
-                border-radius: 9999px;
-              }
-              .history-dialog-scroll::-webkit-scrollbar-thumb:hover {
-                background: rgba(255, 255, 255, 0.2);
-              }
-              .history-dialog-scroll {
-                scrollbar-width: thin;
-                scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
-              }
-            `}</style>
-
             {/* Header */}
-            <div >
-              <div>
-                <h2 >Hand History</h2>
-                <p >
-                  {total} hands played
-                </p>
+            <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/5 shrink-0">
+              <div className="flex items-center gap-3">
+                <h2 className="text-sm font-semibold text-on-surface">Hand History</h2>
+                <span className="text-xs text-on-surface-variant bg-white/5 px-2 py-0.5 rounded-full">
+                  {total} hands
+                </span>
               </div>
-              <button
-                type="button"
-                onClick={onClose}
-                
-              >
-                <X  />
-              </button>
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-1 text-xs text-on-surface-variant cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showOnlyMine}
+                    onChange={() => setShowOnlyMine(!showOnlyMine)}
+                    className="accent-tertiary"
+                  />
+                  My hands only
+                </label>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="p-1.5 rounded-lg hover:bg-white/5 text-on-surface-variant hover:text-on-surface transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             {/* Content */}
-            <div ref={containerRef} >
+            <div ref={containerRef} className="flex-1 overflow-y-auto px-5 py-4 dialog-scroll">
               {status === 'pending' && (
-                <div >Loading...</div>
+                <div className="flex justify-center py-8 text-on-surface-variant">Loading...</div>
               )}
               {status === 'error' && (
-                <div >Failed to load history.</div>
+                <div className="text-center py-8 text-red-400">Failed to load history.</div>
               )}
               {status === 'success' && allHistory.length === 0 && (
-                <div >No hands played yet.</div>
+                <div className="text-center py-8 text-on-surface-variant">No hands played yet.</div>
               )}
 
               <div
@@ -217,71 +178,82 @@ export function HistoryDialog({ open, onClose, tableId }: HistoryDialogProps) {
                         width: '100%',
                         transform: `translateY(${virtualItem.start}px)`,
                       }}
-                      
                     >
                       {isLoader ? (
-                        <div >
+                        <div className="py-4 text-center text-on-surface-variant text-sm">
                           Loading more...
                         </div>
                       ) : (
-                        <div >
-                          {/* Time & Pot */}
-                          <div >
-                            <span className="font-mono text-sm text-on-surface">{new Date(hand.played_at).toLocaleString()}</span>
-                            <span >
-                              ${hand.pot.toLocaleString()}
-                            </span>
-                          </div>
-
-                          {/* Community Cards */}
-                          {hand.community_cards && hand.community_cards.length > 0 && (
-                            <div >
-                              {hand.community_cards.map((c, i) => {
-                                const { rank, suit } = parseCard(c);
-                                return (
-                                  <Card
-                                    key={i}
-                                    rank={rank}
-                                    suit={suit}
-                                    size="xs"
-                                    hoverable={false}
-                                    
-                                  />
-                                );
-                              })}
-                            </div>
-                          )}
-
-                          {/* Winner Info */}
-                          <div >
-                            <div >
-                              <span>Winner: {shortId(hand.winners[0]?.user_id || '')}</span>
-                              {hand.winner_hole_cards && hand.winner_hole_cards.length > 0 && (
-                                <span >
-                                  {hand.winner_hole_cards.map((c, i) => {
-                                    const { rank, suit } = parseCard(c);
-                                    return (
-                                      <Card
-                                        key={i}
-                                        rank={rank}
-                                        suit={suit}
-                                        size="xs"
-                                        hoverable={false}
-                                        
-                                      />
-                                    );
-                                  })}
+                        <Link
+                          to="/hands/$handId"
+                          params={{ handId: hand.id }}
+                          className="block group"
+                        >
+                          <div className={cn(
+                            'p-3 rounded-lg border transition-colors hover:border-tertiary/30',
+                            hand.winners.some(w => w.user_id === userId)
+                              ? 'border-tertiary/20 bg-tertiary/5'
+                              : 'border-white/10'
+                          )}>
+                            {/* Top row: time, pot, winner count */}
+                            <div className="flex items-center justify-between text-xs">
+                              <div className="flex items-center gap-2">
+                                <Calendar className="w-3 h-3 text-on-surface-variant/50" />
+                                <span className="text-on-surface-variant">
+                                  {new Date(hand.played_at).toLocaleString()}
                                 </span>
-                              )}
-                              <span >
-                                {hand.winners[0]?.hand_rank || ''}
-                              </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Coins className="w-3 h-3 text-tertiary/70" />
+                                <span className="font-mono text-tertiary font-bold">
+                                  ${hand.pot}
+                                </span>
+                                <span className="text-on-surface-variant/50">|</span>
+                                <Users className="w-3 h-3 text-on-surface-variant/50" />
+                                <span className="text-on-surface-variant">
+                                  {hand.winners.length} winner{hand.winners.length > 1 ? 's' : ''}
+                                </span>
+                              </div>
                             </div>
-                            <span >
-                              ${hand.winners[0]?.amount.toLocaleString()}
-                            </span>
+
+                            {/* Community cards preview */}
+                            {hand.community_cards && hand.community_cards.length > 0 && (
+                              <div className="flex gap-1 mt-2">
+                                {hand.community_cards.map((card, idx) => {
+                                  const { rank, suit } = parseCard(card);
+                                  return (
+                                    <Card
+                                      key={idx}
+                                      rank={rank}
+                                      suit={suit}
+                                      size="xs"
+                                      hoverable={false}
+                                      className="w-8 h-11"
+                                    />
+                                  );
+                                })}
+                              </div>
+                            )}
+
+                            {/* Winner info */}
+                            <div className="flex items-center justify-between mt-2 text-xs">
+                              <div className="flex items-center gap-2">
+                                <span className="text-on-surface-variant">Winner:</span>
+                                <span className="text-on-surface font-medium">
+                                  {hand.winners[0]?.user_id === userId ? 'You' : shortId(hand.winners[0]?.user_id || '')}
+                                </span>
+                                <span className="text-on-surface-variant/50">
+                                  {hand.winners[0]?.hand_rank || ''}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 text-tertiary">
+                                <Eye className="w-3 h-3" />
+                                <span className="group-hover:underline">View</span>
+                                <ChevronRight className="w-3 h-3" />
+                              </div>
+                            </div>
                           </div>
-                        </div>
+                        </Link>
                       )}
                     </div>
                   );
@@ -290,16 +262,14 @@ export function HistoryDialog({ open, onClose, tableId }: HistoryDialogProps) {
             </div>
 
             {/* Footer */}
-            <div >
-              <motion.button
+            <div className="px-5 py-4 border-t border-white/5 flex justify-end shrink-0">
+              <button
                 type="button"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.97 }}
                 onClick={onClose}
-                
+                className="px-4 py-2 rounded-lg border border-white/10 text-on-surface-variant text-sm hover:bg-white/5 transition-colors"
               >
                 Close
-              </motion.button>
+              </button>
             </div>
           </motion.div>
         </>

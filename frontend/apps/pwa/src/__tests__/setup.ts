@@ -59,3 +59,4 @@ Object.defineProperty(window, 'localStorage', {
 beforeEach(() => {
   localStorageMock.clear();
 });
+jest.mock('@stackbluff/shared/api/client', () => ({ apiClient: { post: jest.fn(), get: jest.fn() } }));

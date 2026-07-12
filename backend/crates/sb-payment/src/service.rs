@@ -24,7 +24,7 @@ const CHIP_TO_CENT_MULTIPLIER: i64 = 100;
 pub struct RealPaymentService {
     pub db: DatabaseConnection,
     stripe_client: Client,
-    user_service: Arc<dyn UserService>,
+    pub user_service: Arc<dyn UserService>,
     config: PaymentConfig,
 }
 
@@ -42,7 +42,7 @@ impl RealPaymentService {
             config,
         }
     }
-}
+    }
 
 fn currency_from_str(s: &str) -> Result<Currency, AppError> {
     s.parse::<Currency>()
@@ -60,7 +60,6 @@ impl PaymentService for RealPaymentService {
         metadata: serde_json::Value,
     ) -> Result<String, AppError> {
         // Check platform first - only PWA users need email verification
-        // Telegram users are verified through Telegram's own auth system
         let profile = self.user_service.get_user_profile(user_id).await?;
         if profile.platform == "pwa" {
             let is_verified = self.user_service.is_email_verified(user_id).await?;
@@ -78,14 +77,13 @@ impl PaymentService for RealPaymentService {
                     serde_json::from_value(metadata).unwrap_or_default();
                 metadata_map.insert("user_id".to_string(), user_id.as_uuid().to_string());
 
-                // Convert chips to cents for Stripe
                 let amount_cents = amount.as_i64() * CHIP_TO_CENT_MULTIPLIER;
 
                 let product_data = ProductData::new("Chip Purchase");
                 let price_data = CreateCheckoutSessionLineItemsPriceData {
                     currency: currency_enum.clone(),
                     product_data: Some(product_data),
-                    unit_amount: Some(amount_cents), // <-- now in cents
+                    unit_amount: Some(amount_cents),
                     product: None,
                     recurring: None,
                     tax_behavior: None,
@@ -117,12 +115,13 @@ impl PaymentService for RealPaymentService {
                 let client_secret = session
                     .client_secret
                     .ok_or_else(|| AppError::Internal("No client secret".into()))?;
+                let checkout_url = session.url.clone();
 
                 PaymentRepo::insert_pending(
                     &self.db,
                     &payment_id,
                     user_id.as_uuid(),
-                    amount.as_i64(), // store chip amount, not cents
+                    amount.as_i64(),
                     &currency_enum.to_string(),
                     "stripe",
                     serde_json::to_value(&metadata_map).unwrap_or_default(),
@@ -137,7 +136,10 @@ impl PaymentService for RealPaymentService {
                     "Created Stripe Checkout Session and pending record"
                 );
 
-                Ok(client_secret)
+                Ok(serde_json::json!({
+                    "client_secret": client_secret,
+                    "checkout_url": checkout_url
+                }).to_string())
             }
             "telegram_stars" => {
                 let synthetic_id = format!(
@@ -164,6 +166,33 @@ impl PaymentService for RealPaymentService {
             }
             _ => Err(AppError::InvalidInput("Unsupported provider".into())),
         }
+    }
+
+    async fn create_product_purchase(
+        &self,
+        user_id: UserId,
+        product_id: Uuid,
+        provider: String,
+        metadata: serde_json::Value,
+    ) -> Result<String, AppError> {
+        use sb_db_entities::products;
+        use sea_orm::{EntityTrait, ColumnTrait, QueryFilter};
+
+        let product = products::Entity::find()
+            .filter(products::Column::Id.eq(product_id))
+            .one(&self.db)
+            .await
+            .map_err(|e| AppError::Database(e.to_string()))?
+            .ok_or_else(|| AppError::NotFound("Product not found".into()))?;
+
+        let amount = ChipAmount::new(product.price)
+            .ok_or_else(|| AppError::InvalidInput("Invalid product price".into()))?;
+        let currency = product.currency.clone();
+        let mut meta = metadata;
+        meta["product_id"] = serde_json::to_value(product_id).unwrap_or_default();
+        meta["product_type"] = serde_json::to_value(product.product_type).unwrap_or_default();
+
+        self.create_intent(user_id, amount, currency, provider, meta).await
     }
 
     async fn confirm_payment(

@@ -10,12 +10,12 @@ use tracing::info;
 use sb_contracts::tournament_api::{
     TournamentConfig, TournamentResult, TournamentStatus, TournamentType,
 };
-use sb_shared_types::{AppError, ChipAmount, PlayerId, TableConfig, TableId, TournamentId, UserId};
+use sb_shared_types::{AppError, ChipAmount, PlayerId, RequestContext, TableConfig, TableId, TournamentId, UserId};
 use sb_table_registry::actor::InternalCommand as TableCommand;
+use sb_table_registry::actor::InternalCommand;
 use sb_table_registry::connection_broker::ConnectionBroker;
 use sb_table_registry::events::{HandCompletedEvent, TableEvent};
 use sb_table_registry::registry::Registry;
-use sb_table_registry::actor::InternalCommand;
 
 use crate::blind_scheduler::BlindScheduler;
 use crate::payout_calculator::calculate_payouts;
@@ -75,6 +75,7 @@ enum DirectorState {
 
 pub struct MttDirector {
     tournament_id: TournamentId,
+    name: String,
     config: TournamentConfig,
     state: DirectorState,
     players: Vec<RegisteredPlayer>,
@@ -113,6 +114,7 @@ impl MttDirector {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         tournament_id: TournamentId,
+        name: String,
         config: TournamentConfig,
         registry: Arc<Registry>,
         broker: Arc<ConnectionBroker>,
@@ -124,6 +126,7 @@ impl MttDirector {
     ) -> Self {
         Self {
             tournament_id,
+            name,
             config,
             state: DirectorState::Registering,
             players: Vec::new(),
@@ -360,14 +363,23 @@ impl MttDirector {
             let seat = table.players.len() as u8;
 
             let (tx, rx) = oneshot::channel();
+            let display_name = if let Some(user_repo) = &self.user_repo {
+                let ctx = RequestContext::new(uuid::Uuid::new_v4(), Some(player.user_id));
+                match user_repo.get_user_profile(ctx, player.user_id).await {
+                    Ok(profile) => profile.display_name,
+                    Err(_) => format!("Player_{}", player.user_id),
+                }
+            } else {
+                format!("Player_{}", player.user_id)
+            };
             let cmd = InternalCommand::TransferPlayerIn {
-                        user_id: player.user_id,
-                        player_id: player.player_id,
-                        stack: player.buy_in,
-                        seat: Some(seat),
-                        display_name: format!("Player_{}", player.user_id),
-                        respond_to: tx,
-                    };
+                user_id: player.user_id,
+                player_id: player.player_id,
+                stack: player.buy_in,
+                seat: Some(seat),
+                display_name,
+                respond_to: tx,
+            };
             table
                 .cmd_tx
                 .send(cmd)
@@ -385,7 +397,7 @@ impl MttDirector {
 
             let msg = sb_table_registry::game_room::RoomMessage::TournamentTableChanged {
                 tournament_id: self.tournament_id,
-                new_room_id: TableId::new(self.tournament_id.as_uuid()),
+                new_room_id: table.table_id, // FIXED: Use actual table.table_id
                 new_seat: assigned_seat,
             };
             self.broker.send_to_user(player.user_id, msg);
@@ -412,6 +424,11 @@ impl MttDirector {
                 })
                 .await;
             let _ = rx.await;
+        }
+
+        // FIXED: Send StartHand command after ResumeHand to actually deal the hand
+        for table in &self.tables {
+            let _ = table.cmd_tx.send(TableCommand::StartHand).await;
         }
 
         self.broadcast_state();
@@ -493,6 +510,11 @@ impl MttDirector {
             let _ = rx.await;
         }
 
+        // FIXED: Send StartHand to deal the next hand
+        for table in &self.tables {
+            let _ = table.cmd_tx.send(TableCommand::StartHand).await;
+        }
+
         self.broadcast_state();
     }
 
@@ -534,6 +556,15 @@ impl MttDirector {
             let result = rx.await;
             if let Ok(transfer) = result {
                 let (tx, rx) = oneshot::channel();
+                let display_name = if let Some(user_repo) = &self.user_repo {
+                    let ctx = RequestContext::new(uuid::Uuid::new_v4(), Some(m.user_id));
+                    match user_repo.get_user_profile(ctx, m.user_id).await {
+                        Ok(profile) => profile.display_name,
+                        Err(_) => format!("Player_{}", m.user_id),
+                    }
+                } else {
+                    format!("Player_{}", m.user_id)
+                };
                 let _ = to_table
                     .cmd_tx
                     .send(InternalCommand::TransferPlayerIn {
@@ -541,7 +572,7 @@ impl MttDirector {
                         player_id: m.player_id,
                         stack: transfer.stack,
                         seat: None,
-                        display_name: format!("Player_{}", m.user_id),
+                        display_name,
                         respond_to: tx,
                     })
                     .await;
@@ -550,7 +581,7 @@ impl MttDirector {
                         let msg =
                             sb_table_registry::game_room::RoomMessage::TournamentTableChanged {
                                 tournament_id: self.tournament_id,
-                                new_room_id: TableId::new(self.tournament_id.as_uuid()),
+                                new_room_id: to_table.table_id, // FIXED: Use actual to_table.table_id
                                 new_seat: seat,
                             };
                         self.broker.send_to_user(m.user_id, msg);
@@ -612,6 +643,15 @@ impl MttDirector {
                 .await;
             if let Ok(transfer) = rx.await {
                 let (tx, rx) = oneshot::channel();
+                let display_name = if let Some(user_repo) = &self.user_repo {
+                    let ctx = RequestContext::new(uuid::Uuid::new_v4(), Some(m.user_id));
+                    match user_repo.get_user_profile(ctx, m.user_id).await {
+                        Ok(profile) => profile.display_name,
+                        Err(_) => format!("Player_{}", m.user_id),
+                    }
+                } else {
+                    format!("Player_{}", m.user_id)
+                };
                 let _ = to_table
                     .cmd_tx
                     .send(InternalCommand::TransferPlayerIn {
@@ -619,7 +659,7 @@ impl MttDirector {
                         player_id: m.player_id,
                         stack: transfer.stack,
                         seat: None,
-                        display_name: format!("Player_{}", m.user_id),
+                        display_name,
                         respond_to: tx,
                     })
                     .await;
@@ -628,7 +668,7 @@ impl MttDirector {
                         let msg =
                             sb_table_registry::game_room::RoomMessage::TournamentTableChanged {
                                 tournament_id: self.tournament_id,
-                                new_room_id: TableId::new(self.tournament_id.as_uuid()),
+                                new_room_id: to_table.table_id, // FIXED: Use actual to_table.table_id
                                 new_seat: seat,
                             };
                         self.broker.send_to_user(m.user_id, msg);
@@ -764,6 +804,7 @@ impl MttDirector {
     fn build_summary(&self) -> sb_contracts::tournament_api::TournamentSummary {
         sb_contracts::tournament_api::TournamentSummary {
             id: self.tournament_id,
+            name: self.name.clone(),
             tournament_type: TournamentType::Mtt,
             status: match self.state {
                 DirectorState::Registering => TournamentStatus::Registering,

@@ -112,10 +112,11 @@ pub async fn run_archival_with_r2(
     for hand in hands {
         let json = serde_json::json!({
             "id": hand.id,
+            "table_id": hand.table_id,
             "played_at": hand.played_at,
-            "players_json": hand.players_json,
-            "actions_json": hand.actions_json,
-            "result_json": hand.result_json,
+            "players": hand.players_json.seats,
+            "actions": hand.actions_json.actions,
+            "result": hand.result_json,
         });
 
         let key = format!(
@@ -151,10 +152,11 @@ pub async fn get_hand(
     {
         let json = serde_json::json!({
             "id": hand.id,
+            "table_id": hand.table_id,
             "played_at": hand.played_at,
-            "players_json": hand.players_json,
-            "actions_json": hand.actions_json,
-            "result_json": hand.result_json,
+            "players": hand.players_json.seats,
+            "actions": hand.actions_json.actions,
+            "result": hand.result_json,
         });
         return Ok(Json(json));
     }
@@ -178,8 +180,27 @@ pub async fn get_hand(
         .await
         .map_err(|_| StatusCode::NOT_FOUND)?;
     let json_str = String::from_utf8(data).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let json: Value =
+    let mut json: Value =
         serde_json::from_str(&json_str).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // Flatten the archived structure to match the frontend expectations
+    if let Some(players_json) = json.get("players_json").and_then(|v| v.get("seats").cloned()) {
+        json["players"] = players_json;
+    }
+    if let Some(actions_json) = json.get("actions_json").and_then(|v| v.get("actions").cloned()) {
+        json["actions"] = actions_json;
+    }
+    if let Some(result_json) = json.get("result_json").cloned() {
+        json["result"] = result_json;
+    }
+    // Remove the old nested fields to keep the response clean
+    json.as_object_mut().and_then(|obj| {
+        obj.remove("players_json");
+        obj.remove("actions_json");
+        obj.remove("result_json");
+        Some(())
+    });
+
     Ok(Json(json))
 }
 

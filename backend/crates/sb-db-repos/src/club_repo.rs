@@ -44,12 +44,10 @@ impl ClubRepo for ClubRepoImpl {
             updated_at: Set(now),
             ..Default::default()
         };
-
         active
             .insert(&self.db)
             .await
             .map_err(|e: sea_orm::DbErr| ClubError::Database(e.to_string()))?;
-
         Ok(ClubId::new(id))
     }
 
@@ -58,7 +56,6 @@ impl ClubRepo for ClubRepoImpl {
             .one(&self.db)
             .await
             .map_err(|e: sea_orm::DbErr| ClubError::Database(e.to_string()))?;
-
         Ok(model.map(|m| Club {
             id: ClubId::new(m.id),
             name: m.name,
@@ -69,22 +66,17 @@ impl ClubRepo for ClubRepoImpl {
     }
 
     async fn join_club(&self, club_id: ClubId, user_id: UserId) -> Result<(), ClubError> {
-        // Use IMMEDIATE transaction to prevent race condition on member count
         let txn = self
             .db
             .begin()
             .await
             .map_err(|e: sea_orm::DbErr| ClubError::Database(e.to_string()))?;
-
-        // Get current member count within transaction
         let member_count = club_memberships::Entity::find()
             .filter(club_memberships::Column::ClubId.eq(club_id.as_uuid()))
             .count(&txn)
             .await
             .map_err(|e: sea_orm::DbErr| ClubError::Database(e.to_string()))?;
-
         let division = ((member_count as u32) / DIVISION_SIZE) + 1;
-
         let id = Uuid::new_v4();
         let now = Utc::now();
         let active = club_memberships::ActiveModel {
@@ -96,7 +88,6 @@ impl ClubRepo for ClubRepoImpl {
             updated_at: Set(now),
             division: Set(division as i32),
         };
-
         match active.insert(&txn).await {
             Ok(_) => {
                 txn.commit()
@@ -108,7 +99,7 @@ impl ClubRepo for ClubRepoImpl {
                 txn.rollback()
                     .await
                     .map_err(|e: sea_orm::DbErr| ClubError::Database(e.to_string()))?;
-                if is_unique_violation(&e) {
+                if e.to_string().contains("unique") || e.to_string().contains("constraint") {
                     tracing::warn!(
                         club_id = %club_id,
                         user_id = %user_id,
@@ -129,7 +120,6 @@ impl ClubRepo for ClubRepoImpl {
             .count(&self.db)
             .await
             .map_err(|e: sea_orm::DbErr| ClubError::Database(e.to_string()))?;
-
         Ok(count > 0)
     }
 
@@ -139,7 +129,6 @@ impl ClubRepo for ClubRepoImpl {
             .count(&self.db)
             .await
             .map_err(|e: sea_orm::DbErr| ClubError::Database(e.to_string()))?;
-
         Ok(count)
     }
 
@@ -154,7 +143,6 @@ impl ClubRepo for ClubRepoImpl {
         } else {
             ((total_members as u32 - 1) / DIVISION_SIZE) + 1
         };
-
         let entries = club_leaderboard::Entity::find()
             .filter(club_leaderboard::Column::ClubId.eq(club_id.as_uuid()))
             .filter(club_leaderboard::Column::Division.eq(division as i32))
@@ -162,7 +150,6 @@ impl ClubRepo for ClubRepoImpl {
             .all(&self.db)
             .await
             .map_err(|e: sea_orm::DbErr| ClubError::Database(e.to_string()))?;
-
         let leaderboard_entries: Vec<LeaderboardEntry> = entries
             .into_iter()
             .map(|e| LeaderboardEntry {
@@ -171,7 +158,6 @@ impl ClubRepo for ClubRepoImpl {
                 weekly_xp: e.weekly_xp,
             })
             .collect();
-
         Ok(LeaderboardPage {
             club_id,
             division,
@@ -188,7 +174,6 @@ impl ClubRepo for ClubRepoImpl {
         xp: i64,
     ) -> Result<(), ClubError> {
         use sea_orm::sea_query::Expr;
-
         let result = club_memberships::Entity::update_many()
             .col_expr(
                 club_memberships::Column::WeeklyXp,
@@ -200,46 +185,35 @@ impl ClubRepo for ClubRepoImpl {
             .exec(&self.db)
             .await
             .map_err(|e: sea_orm::DbErr| ClubError::Database(e.to_string()))?;
-
         if result.rows_affected == 0 {
             return Err(ClubError::NotAMember);
         }
-
         Ok(())
     }
 
     async fn refresh_leaderboard(&self, club_id: ClubId) -> Result<(), ClubError> {
         let start_time = std::time::Instant::now();
         let now = Utc::now();
-
         let txn = self
             .db
             .begin()
             .await
             .map_err(|e: sea_orm::DbErr| ClubError::Database(e.to_string()))?;
-
-        // Delete existing entries
         club_leaderboard::Entity::delete_many()
             .filter(club_leaderboard::Column::ClubId.eq(club_id.as_uuid()))
             .exec(&txn)
             .await
             .map_err(|e: sea_orm::DbErr| ClubError::Database(e.to_string()))?;
-
-        // Read all members (no global sort needed)
         let members = club_memberships::Entity::find()
             .filter(club_memberships::Column::ClubId.eq(club_id.as_uuid()))
             .all(&txn)
             .await
             .map_err(|e: sea_orm::DbErr| ClubError::Database(e.to_string()))?;
-
-        // Group members by their stored division
         use std::collections::BTreeMap;
         let mut by_division: BTreeMap<i32, Vec<&club_memberships::Model>> = BTreeMap::new();
         for member in &members {
             by_division.entry(member.division).or_default().push(member);
         }
-
-        // Sort each division by weekly_xp DESC and assign ranks
         let mut active_models: Vec<club_leaderboard::ActiveModel> = Vec::new();
         for (division, mut div_members) in by_division {
             div_members.sort_by(|a, b| b.weekly_xp.cmp(&a.weekly_xp));
@@ -255,8 +229,6 @@ impl ClubRepo for ClubRepoImpl {
                 });
             }
         }
-
-        // Batch insert (chunked for SQLite)
         const INSERT_CHUNK_SIZE: usize = 150;
         for chunk in active_models.chunks(INSERT_CHUNK_SIZE) {
             club_leaderboard::Entity::insert_many(chunk.to_vec())
@@ -264,11 +236,9 @@ impl ClubRepo for ClubRepoImpl {
                 .await
                 .map_err(|e: sea_orm::DbErr| ClubError::Database(e.to_string()))?;
         }
-
         txn.commit()
             .await
             .map_err(|e: sea_orm::DbErr| ClubError::Database(e.to_string()))?;
-
         let elapsed = start_time.elapsed();
         tracing::info!(
             club_id = %club_id,
@@ -276,7 +246,6 @@ impl ClubRepo for ClubRepoImpl {
             elapsed_ms = elapsed.as_millis(),
             "leaderboard refresh completed"
         );
-
         Ok(())
     }
 
@@ -285,7 +254,6 @@ impl ClubRepo for ClubRepoImpl {
             .all(&self.db)
             .await
             .map_err(|e: sea_orm::DbErr| ClubError::Database(e.to_string()))?;
-
         Ok(all_clubs.into_iter().map(|c| ClubId::new(c.id)).collect())
     }
 
@@ -296,23 +264,19 @@ impl ClubRepo for ClubRepoImpl {
     ) -> PersistenceResult<()> {
         use sb_db_entities::clubs::{ActiveModel, Entity};
         use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
-
         let club = Entity::find()
             .filter(sb_db_entities::clubs::Column::Id.eq(club_id.as_uuid()))
             .one(&self.db)
             .await
             .map_err(|e| PersistenceError::Database(e.to_string()))?;
-
         let Some(model) = club else {
             return Err(PersistenceError::Database("club not found".to_string()));
         };
-
         let mut active: ActiveModel = model.into();
         active.pro_settings_json = sea_orm::ActiveValue::Set(Some(
             serde_json::from_value(settings)
                 .map_err(|e| PersistenceError::InvalidData(e.to_string()))?,
         ));
-
         active
             .update(&self.db)
             .await
@@ -326,13 +290,11 @@ impl ClubRepo for ClubRepoImpl {
     ) -> PersistenceResult<Option<serde_json::Value>> {
         use sb_db_entities::clubs::Entity;
         use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
-
         let club = Entity::find()
             .filter(sb_db_entities::clubs::Column::Id.eq(club_id.as_uuid()))
             .one(&self.db)
             .await
             .map_err(|e| PersistenceError::Database(e.to_string()))?;
-
         Ok(club.and_then(|c| {
             c.pro_settings_json
                 .map(|s| serde_json::to_value(s).unwrap_or_default())
@@ -342,13 +304,11 @@ impl ClubRepo for ClubRepoImpl {
     async fn get_tables_by_club_id(&self, club_id: ClubId) -> PersistenceResult<Vec<TableId>> {
         use sb_db_entities::table::{Column, Entity};
         use sea_orm::QueryFilter;
-
         let tables = Entity::find()
             .filter(Column::ClubId.eq(club_id.as_uuid()))
             .all(&self.db)
             .await
             .map_err(|e| PersistenceError::Database(e.to_string()))?;
-
         Ok(tables.into_iter().map(|t| TableId::new(t.id)).collect())
     }
 
@@ -357,7 +317,6 @@ impl ClubRepo for ClubRepoImpl {
             .one(&self.db)
             .await
             .map_err(|e| ClubError::Database(e.to_string()))?;
-
         Ok(model.and_then(|m| m.telegram_chat_id))
     }
 
@@ -372,21 +331,16 @@ impl ClubRepo for ClubRepoImpl {
             .one(&self.db)
             .await
             .map_err(|e: sea_orm::DbErr| ClubError::Database(e.to_string()))?;
-
         Ok(membership.map(|m| m.division as u32))
     }
 
     async fn rebalance_divisions(&self, club_id: ClubId) -> Result<(), ClubError> {
         let start_time = std::time::Instant::now();
-
-        // Use transaction for atomicity
         let txn = self
             .db
             .begin()
             .await
             .map_err(|e: sea_orm::DbErr| ClubError::Database(e.to_string()))?;
-
-        // Single UPDATE using CTE with ROW_NUMBER - O(1) DB operations
         txn.execute_unprepared(&format!(
             r#"
             WITH numbered AS (
@@ -418,21 +372,16 @@ impl ClubRepo for ClubRepoImpl {
         ))
         .await
         .map_err(|e: sea_orm::DbErr| ClubError::Database(e.to_string()))?;
-
         txn.commit()
             .await
             .map_err(|e: sea_orm::DbErr| ClubError::Database(e.to_string()))?;
-
-        // Refresh leaderboard after rebalancing
         self.refresh_leaderboard(club_id).await?;
-
         let elapsed = start_time.elapsed();
         tracing::info!(
             club_id = %club_id,
             elapsed_ms = elapsed.as_millis(),
             "division rebalance completed"
         );
-
         Ok(())
     }
 
@@ -441,15 +390,54 @@ impl ClubRepo for ClubRepoImpl {
             .one(&self.db)
             .await
             .map_err(|e| ClubError::Database(e.to_string()))?;
-
         Ok(club
             .map(|c| c.owner_id == user_id.as_uuid())
             .unwrap_or(false))
     }
-}
 
-/// Detect UNIQUE constraint violation from sea_orm::DbErr.
-fn is_unique_violation(db_err: &sea_orm::DbErr) -> bool {
-    let msg = db_err.to_string().to_lowercase();
-    msg.contains("unique") || msg.contains("constraint") || msg.contains("duplicate")
+    async fn get_user_clubs(&self, user_id: UserId) -> Result<Vec<ClubId>, ClubError> {
+        use club_memberships::Column;
+        let memberships = club_memberships::Entity::find()
+            .filter(Column::UserId.eq(user_id.as_uuid()))
+            .all(&self.db)
+            .await
+            .map_err(|e| ClubError::Database(e.to_string()))?;
+        Ok(memberships
+            .into_iter()
+            .map(|m| ClubId::new(m.club_id))
+            .collect())
+    }
+
+    async fn update_club_details(
+        &self,
+        club_id: ClubId,
+        name: Option<String>,
+        telegram_chat_id: Option<i64>,
+        logo_url: Option<String>,
+    ) -> Result<(), ClubError> {
+        use sb_db_entities::clubs::{ActiveModel, Column, Entity};
+        use sea_orm::{EntityTrait, QueryFilter};
+        let club = Entity::find()
+            .filter(Column::Id.eq(club_id.as_uuid()))
+            .one(&self.db)
+            .await
+            .map_err(|e: sea_orm::DbErr| ClubError::Database(e.to_string()))?
+            .ok_or(ClubError::NotFound)?;
+        let mut active: ActiveModel = club.into();
+        if let Some(name) = name {
+            active.name = sea_orm::ActiveValue::Set(name);
+        }
+        if let Some(telegram_chat_id) = telegram_chat_id {
+            active.telegram_chat_id = sea_orm::ActiveValue::Set(Some(telegram_chat_id));
+        }
+        if let Some(logo_url) = logo_url {
+            active.logo_url = sea_orm::ActiveValue::Set(Some(logo_url));
+        }
+        active.updated_at = sea_orm::ActiveValue::Set(Utc::now());
+        active
+            .update(&self.db)
+            .await
+            .map_err(|e: sea_orm::DbErr| ClubError::Database(e.to_string()))?;
+        Ok(())
+    }
 }

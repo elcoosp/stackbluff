@@ -1,10 +1,155 @@
-import { useClubTournaments, type Tournament } from '../../hooks/useClubTournaments';
-import { Card } from '@stackbluff/shared/ui/Card';
+import React, { useState } from 'react';
+import { useClubTournaments } from '../../hooks/useClubTournaments';
+import { ScheduleTournamentDialog } from './ScheduleTournamentDialog';
+import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
+import { TournamentResultsDisplay } from './TournamentResultsDisplay';
+import { motion } from 'framer-motion';
+import { Button } from '@/components/ui/button';
+import { Calendar, Coins, Users, Plus, CheckCircle, XCircle, RotateCcw } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface ClubTournamentsTabProps {
   clubId: string;
   isOwner?: boolean;
+}
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.06,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.98 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] as const },
+  },
+};
+
+function TournamentCard({
+  tournament,
+  onRegister,
+  onUnregister,
+  isRegistering,
+  isUnregistering,
+}: {
+  tournament: any;
+  onRegister: (id: string, name: string) => void;
+  onUnregister: (id: string, name: string) => void;
+  isRegistering: boolean;
+  isUnregistering: boolean;
+}) {
+  const startDate = new Date(tournament.scheduled_start);
+  const isFull = tournament.current_registrations >= tournament.max_players;
+  const spotsLeft = tournament.max_players - tournament.current_registrations;
+
+  return (
+    <Card className="p-6 bg-white/5 border border-white/10 backdrop-blur-xl rounded-2xl hover:bg-white/[0.07] transition-colors">
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
+        <div className="flex-grow space-y-4">
+          <h3 className="font-headline-md text-lg text-on-surface">
+            {tournament.name}
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
+                <Calendar className="w-4 h-4 text-tertiary" />
+              </div>
+              <div>
+                <p className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant">Date & Time</p>
+                <p className="text-on-surface font-medium text-sm mt-0.5">
+                  {startDate.toLocaleDateString()} at {startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
+                <Coins className="w-4 h-4 text-yellow-400" />
+              </div>
+              <div>
+                <p className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant">Buy-in</p>
+                <p className="text-on-surface font-medium text-sm mt-0.5">
+                  {tournament.buy_in.toLocaleString()} chips
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
+                <Users className="w-4 h-4 text-blue-400" />
+              </div>
+              <div>
+                <p className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant">Players</p>
+                <p className="text-on-surface font-medium text-sm mt-0.5">
+                  {tournament.current_registrations} / {tournament.max_players}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
+                {tournament.status === 'Registering' ? (
+                  <CheckCircle className="w-4 h-4 text-emerald-400" />
+                ) : (
+                  <RotateCcw className="w-4 h-4 text-purple-400" />
+                )}
+              </div>
+              <div>
+                <p className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant">Status</p>
+                <p className={cn(
+                  "font-medium text-sm mt-0.5",
+                  tournament.status === 'Registering' ? "text-emerald-400" : "text-purple-400"
+                )}>
+                  {tournament.status}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex-shrink-0 w-full md:w-auto">
+          {tournament.is_registered ? (
+            <Button
+              onClick={() => onUnregister(tournament.id, tournament.name)}
+              disabled={isUnregistering}
+              variant="outline"
+              className="w-full px-4 py-3 border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500/50 hover:text-red-400 font-label-caps text-xs uppercase tracking-wider rounded-xl justify-center"
+            >
+              <XCircle className="w-4 h-4 mr-2" />
+              {isUnregistering ? 'Unregistering' : 'Unregister'}
+            </Button>
+          ) : (
+            <Button
+              onClick={() => onRegister(tournament.id, tournament.name)}
+              disabled={isFull || isRegistering}
+              className="w-full px-4 py-3 bg-tertiary text-on-tertiary font-label-caps text-xs hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg shadow-emerald-500/10 rounded-xl justify-center disabled:opacity-40"
+            >
+              {isRegistering ? (
+                <>
+                  <RotateCcw className="w-4 h-4 mr-2 animate-spin" />
+                  Registering
+                </>
+              ) : isFull ? (
+                'Tournament Full'
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Register ({spotsLeft} left)
+                </>
+              )}
+            </Button>
+          )}
+        </div>
+      </div>
+    </Card>
+  );
 }
 
 export function ClubTournamentsTab({ clubId, isOwner }: ClubTournamentsTabProps) {
@@ -40,16 +185,16 @@ export function ClubTournamentsTab({ clubId, isOwner }: ClubTournamentsTabProps)
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="text-white/60">Loading tournaments...</div>
+        <div className="text-on-surface-variant">Loading tournaments...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold text-red-400 mb-2">Error</h3>
-        <p className="text-white/60">
+      <Card className="p-6 bg-red-500/5 border border-red-500/20 rounded-2xl">
+        <h3 className="font-headline-md text-lg text-red-400 mb-2">Error Loading Tournaments</h3>
+        <p className="text-on-surface-variant text-sm">
           {error instanceof Error ? error.message : 'Failed to load tournaments'}
         </p>
       </Card>
@@ -58,186 +203,97 @@ export function ClubTournamentsTab({ clubId, isOwner }: ClubTournamentsTabProps)
 
   const tournaments = data?.tournaments ?? [];
   const upcomingTournaments = tournaments.filter(
-    (t) => t.status === 'Scheduled' || t.status === 'Registering'
+    (t: any) => t.status === 'Scheduled' || t.status === 'Registering'
   );
+  const pastTournaments = tournaments.filter((t: any) => t.status === 'Completed');
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-white mb-1">Tournaments</h2>
-          <p className="text-white/60 text-sm">
-            {upcomingTournaments.length} upcoming tournament
-            {upcomingTournaments.length !== 1 ? 's' : ''}
+          <div className="flex items-center gap-2 mb-1">
+            <Calendar className="w-4 h-4 text-tertiary" />
+            <span className="text-xs font-data-mono uppercase tracking-widest text-tertiary">
+              Events
+            </span>
+          </div>
+          <h2 className="font-headline-md text-xl text-on-surface">Tournaments</h2>
+          <p className="text-on-surface-variant text-sm mt-1">
+            {upcomingTournaments.length} upcoming tournament{upcomingTournaments.length !== 1 ? 's' : ''}
           </p>
         </div>
         {isOwner && (
-          <button
-            onClick={() => {
-              // TODO: Open ScheduleTournamentDialog in next step
-              setIsDialogOpen(true);
-            }}
-            className="px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-lg text-white font-medium transition-all shadow-lg"
+          <Button
+            onClick={() => setIsDialogOpen(true)}
+            className="flex items-center gap-2 px-4 py-3 bg-tertiary text-on-tertiary font-label-caps text-xs hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg shadow-emerald-500/10 rounded-xl w-full sm:w-auto justify-center"
           >
-            + Schedule Tournament
-          </button>
+            <Plus className="w-4 h-4" />
+            Schedule Tournament
+          </Button>
         )}
       </div>
 
-      {/* Tournament list */}
       {upcomingTournaments.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-white/60">No upcoming tournaments</p>
+        <div className="text-center py-16 bg-white/5 border border-white/10 rounded-2xl">
+          <p className="text-on-surface-variant">No upcoming tournaments scheduled</p>
           {isOwner && (
-            <p className="text-white/40 text-sm mt-2">
+            <p className="text-on-surface-variant/60 text-sm mt-2">
               Click "Schedule Tournament" to create one!
             </p>
           )}
         </div>
       ) : (
-        <div className="space-y-4">
-          {upcomingTournaments.map((tournament) => (
-            <TournamentCard
-              key={tournament.id}
-              tournament={tournament}
-              onRegister={handleRegister}
-              onUnregister={handleUnregister}
-              isRegistering={isRegistering}
-              isUnregistering={isUnregistering}
-            />
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="space-y-4"
+        >
+          {upcomingTournaments.map((tournament: any) => (
+            <motion.div key={tournament.id} variants={itemVariants}>
+              <TournamentCard
+                tournament={tournament}
+                onRegister={handleRegister}
+                onUnregister={handleUnregister}
+                isRegistering={isRegistering}
+                isUnregistering={isUnregistering}
+              />
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
 
-      {/* Past tournaments section */}
-      {tournaments.filter((t) => t.status === 'Completed').length > 0 && (
-        <div className="mt-8 pt-6 border-t border-white/10">
-          <h3 className="text-lg font-semibold text-white/80 mb-4">
-            Past Tournaments
+      {pastTournaments.length > 0 && (
+        <div className="mt-10">
+          <h3 className="font-headline-md text-lg text-on-surface-variant mb-4 flex items-center gap-2">
+            <RotateCcw className="w-4 h-4" /> Past Tournaments
           </h3>
           <div className="space-y-2">
-            {tournaments
-              .filter((t) => t.status === 'Completed')
-              .slice(0, 5)
-              .map((tournament) => (
-                <div
-                  key={tournament.id}
-                  className="flex items-center justify-between p-3 bg-white/5 rounded-lg opacity-60"
-                >
-                  <div>
-                    <p className="text-white/80 font-medium">{tournament.name}</p>
-                    <p className="text-white/40 text-sm">
-                      {new Date(tournament.scheduled_start).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <span className="text-white/40 text-sm">Completed</span>
+            {pastTournaments.slice(0, 5).map((tournament: any) => (
+              <div
+                key={tournament.id}
+                className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl opacity-70 hover:opacity-100 transition-opacity"
+              >
+                <div>
+                  <p className="text-on-surface font-medium text-sm">{tournament.name}</p>
+                  <p className="text-on-surface-variant text-xs mt-1">
+                    {new Date(tournament.scheduled_start).toLocaleDateString()}
+                  </p>
                 </div>
-              ))}
+                <span className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant px-3 py-1 bg-white/5 rounded-full border border-white/10">
+                  Completed
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       )}
-      {/* Schedule Tournament Dialog */}
+
       <ScheduleTournamentDialog
         clubId={clubId}
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
       />
     </div>
-  );
-}
-
-interface TournamentCardProps {
-  tournament: Tournament;
-  onRegister: (id: string, name: string) => void;
-  onUnregister: (id: string, name: string) => void;
-  isRegistering: boolean;
-  isUnregistering: boolean;
-}
-
-function TournamentCard({
-  tournament,
-  onRegister,
-  onUnregister,
-  isRegistering,
-  isUnregistering,
-}: TournamentCardProps) {
-  const startDate = new Date(tournament.scheduled_start);
-  const isFull = tournament.current_registrations >= tournament.max_players;
-  const spotsLeft = tournament.max_players - tournament.current_registrations;
-
-  return (
-    <Card className="p-6 hover:bg-white/5 transition-colors">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-grow">
-          <h3 className="text-xl font-semibold text-white mb-2">
-            {tournament.name}
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-white/40 mb-1">Date & Time</p>
-              <p className="text-white font-medium">
-                {startDate.toLocaleDateString()} at{' '}
-                {startDate.toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </p>
-            </div>
-            <div>
-              <p className="text-white/40 mb-1">Buy-in</p>
-              <p className="text-white font-medium">
-                {tournament.buy_in.toLocaleString()} chips
-              </p>
-            </div>
-            <div>
-              <p className="text-white/40 mb-1">Players</p>
-              <p className="text-white font-medium">
-                {tournament.current_registrations} / {tournament.max_players}
-              </p>
-            </div>
-            <div>
-              <p className="text-white/40 mb-1">Status</p>
-              <p
-                className={`font-medium ${
-                  tournament.status === 'Registering'
-                    ? 'text-green-400'
-                    : 'text-blue-400'
-                }`}
-              >
-                {tournament.status}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Register/Unregister button */}
-        <div className="flex-shrink-0">
-          {tournament.is_registered ? (
-            <button
-              onClick={() =>
-                onUnregister(tournament.id, tournament.name)
-              }
-              disabled={isUnregistering}
-              className="px-6 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 rounded-lg text-red-400 font-medium transition-colors disabled:opacity-50"
-            >
-              {isUnregistering ? 'Unregistering...' : 'Unregister'}
-            </button>
-          ) : (
-            <button
-              onClick={() => onRegister(tournament.id, tournament.name)}
-              disabled={isFull || isRegistering}
-              className="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 rounded-lg text-white font-medium transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isRegistering
-                ? 'Registering...'
-                : isFull
-                ? 'Full'
-                : `Register (${spotsLeft} spots left)`}
-            </button>
-          )}
-        </div>
-      </div>
-    </Card>
   );
 }

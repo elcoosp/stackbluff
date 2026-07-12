@@ -15,6 +15,7 @@ import { BlockedHelp } from './notifications/BlockedHelp';
 import { UnsupportedMessage } from './notifications/UnsupportedMessage';
 import { MessageFeedback } from './notifications/MessageFeedback';
 import type { PermissionDisplay } from './notifications/types';
+import { Bell } from 'lucide-react';
 
 const logger = notificationLogger.child({ component: 'NotificationsSettings' });
 
@@ -117,7 +118,10 @@ export function NotificationsSettings() {
 
   return (
     <section className="p-6 rounded-xl bg-white/5 border border-white/10">
-      <h3 className="text-lg font-semibold mb-2">🔔 Notifications</h3>
+      <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+        <Bell className="w-5 h-5 text-tertiary" />
+        Notifications
+      </h3>
       <p className="text-sm text-gray-400 mb-4">
         Receive tournament reminders, streak alerts, and game updates.
       </p>

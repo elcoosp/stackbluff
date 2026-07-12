@@ -1,14 +1,8 @@
-import { apiClient } from '@stackbluff/shared/api/client';
 import { notificationLogger } from '@/lib/logger';
 import {
   NOTIFICATIONS_SUBSCRIBE_ENDPOINT,
   NOTIFICATIONS_UNSUBSCRIBE_ENDPOINT
 } from '@/lib/consent/constants';
-
-/**
- * HTTP transport for notification subscriptions.
- * Uses the shared apiClient (fetch-based) with proper authentication.
- */
 
 interface PushSubscriptionPayload {
   endpoint: string;
@@ -26,8 +20,12 @@ export async function sendSubscriptionToBackend(
   });
 
   try {
-    const response = await apiClient.post(NOTIFICATIONS_SUBSCRIBE_ENDPOINT, {
-      subscription,
+    const response = await fetch(NOTIFICATIONS_SUBSCRIBE_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ subscription }),
     });
 
     if (!response.ok) {
@@ -52,8 +50,12 @@ export async function sendUnsubscribeToBackend(endpoint: string): Promise<boolea
   notificationLogger.info('Sending unsubscribe to backend', { endpoint });
 
   try {
-    const response = await apiClient.post(NOTIFICATIONS_UNSUBSCRIBE_ENDPOINT, {
-      endpoint,
+    const response = await fetch(NOTIFICATIONS_UNSUBSCRIBE_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ endpoint }),
     });
 
     if (!response.ok) {

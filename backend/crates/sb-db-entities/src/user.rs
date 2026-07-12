@@ -28,6 +28,7 @@ pub struct Model {
     pub season_pass_expires_at: Option<DateTimeUtc>,
     pub deleted_at: Option<chrono::NaiveDateTime>,
 
+    pub push_subscription: Option<serde_json::Value>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

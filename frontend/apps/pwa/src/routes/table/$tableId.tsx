@@ -1,7 +1,23 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { TablePage } from '../../pages/TablePage';
-import { useGameHandCompletion } from './useGameHandCompletion';
+import { useEffect } from 'react';
+import { generateAndSubmitFingerprint } from '@/services/fingerprint';
+import { getToken } from '@stackbluff/shared/auth/token';
+import { requireAuth } from '@/lib/authGuard';
 
 export const Route = createFileRoute('/table/$tableId')({
-  component: TablePage,
+  component: TablePageWithFingerprint,
 });
+
+function TablePageWithFingerprint() {
+  useEffect(() => {
+    const token = getToken();
+    if (token) {
+      generateAndSubmitFingerprint(token).catch((err) => {
+        console.warn('Fingerprint submission on table mount failed:', err);
+      });
+    }
+  }, []);
+
+  return <TablePage />;
+}

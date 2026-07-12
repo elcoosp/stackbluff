@@ -14,6 +14,7 @@ interface BuyInDialogProps {
   stakeLevel?: string;
   currentBalance: number;
   isRebuy?: boolean;
+  isTournament?: boolean;
 }
 
 const STAKE_CONFIG: Record<string, string> = {
@@ -35,6 +36,7 @@ export function BuyInDialog({
   stakeLevel,
   currentBalance,
   isRebuy = false,
+  isTournament = false,
 }: BuyInDialogProps) {
   const [amount, setAmount] = useState(defaultBuyIn);
   const [customInput, setCustomInput] = useState(false);
@@ -93,6 +95,11 @@ export function BuyInDialog({
             <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/5">
               <div>
                 <h2 className="text-sm font-semibold text-on-surface">{isRebuy ? 'Rebuy' : 'Buy In'}</h2>
+                {isTournament && (
+                  <p className="text-xs text-yellow-400 mt-1">
+                    ⚠️ Tournament mode: no rebuys allowed
+                  </p>
+                )}
                 {tableName && (
                   <p className="text-[11px] text-on-surface-variant mt-0.5">
                     {tableName} • {STAKE_CONFIG[stakeLevel || ''] || stakeLevel}

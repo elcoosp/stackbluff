@@ -5,10 +5,35 @@ import { apiRequest, handleApiError } from '../../lib/errorHandler';
 import { logger } from '../../lib/logger';
 import { LeaderboardSkeleton } from './LoadingSkeletons';
 import { API } from '../../lib/constants';
+import { motion } from 'framer-motion';
+import { Button } from '@/components/ui/button';
+import { ChevronLeft, ChevronRight, RotateCcw, Trophy } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface ClubLeaderboardTabProps {
   clubId: string;
 }
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.98 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] as const },
+  },
+};
 
 export function ClubLeaderboardTab({ clubId }: ClubLeaderboardTabProps) {
   const [currentDivision, setCurrentDivision] = useState(1);
@@ -42,12 +67,12 @@ export function ClubLeaderboardTab({ clubId }: ClubLeaderboardTabProps) {
     return (
       <div className="text-center py-12">
         <p className="text-red-400 mb-4">Failed to load leaderboard</p>
-        <button
+        <Button
           onClick={() => refetch()}
-          className="px-6 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
+          className="bg-tertiary text-on-tertiary hover:bg-tertiary/80 rounded-xl"
         >
-          Retry
-        </button>
+          <RotateCcw className="w-4 h-4 mr-2" /> Retry
+        </Button>
       </div>
     );
   }
@@ -55,8 +80,8 @@ export function ClubLeaderboardTab({ clubId }: ClubLeaderboardTabProps) {
   if (!data || data.entries.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-white/60">No tournament results yet.</p>
-        <p className="text-white/40 text-sm mt-2">
+        <p className="text-on-surface-variant">No tournament results yet.</p>
+        <p className="text-on-surface-variant/60 text-sm mt-2">
           Once tournaments are completed, the leaderboard will appear here.
         </p>
       </div>
@@ -67,39 +92,59 @@ export function ClubLeaderboardTab({ clubId }: ClubLeaderboardTabProps) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-white mb-1">Club Leaderboard</h2>
-          <p className="text-white/60 text-sm">
+          <div className="flex items-center gap-2 mb-1">
+            <Trophy className="w-4 h-4 text-yellow-400" />
+            <span className="text-xs font-data-mono uppercase tracking-widest text-yellow-400">
+              Rankings
+            </span>
+          </div>
+          <h2 className="font-headline-md text-xl text-on-surface">Club Leaderboard</h2>
+          <p className="text-on-surface-variant text-sm mt-1">
             {total_members} total members • Division {currentDivision} of {total_divisions}
           </p>
         </div>
-        <button
+        <Button
           onClick={() => refetch()}
           disabled={isFetching}
-          className="px-4 py-2 bg-white/10 hover:bg-white/20 disabled:opacity-50 rounded-lg text-white text-sm transition-colors"
+          variant="outline"
+          className="border-outline-variant text-on-surface hover:border-tertiary hover:text-tertiary hover:bg-tertiary/10 font-label-caps text-xs uppercase tracking-wider rounded-xl w-full sm:w-auto justify-center"
         >
-          {isFetching ? 'Refreshing...' : 'Refresh'}
-        </button>
+          <RotateCcw className={cn("w-4 h-4 mr-2", isFetching && "animate-spin")} />
+          {isFetching ? 'Refreshing' : 'Refresh'}
+        </Button>
       </div>
 
-      <div className="space-y-2">
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="space-y-3"
+      >
         {entries.map((entry) => (
-          <div
+          <motion.div
             key={entry.user_id}
-            className="flex items-center gap-4 p-4 bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
+            variants={itemVariants}
+            className={cn(
+              "flex items-center gap-4 p-4 rounded-xl border transition-colors",
+              entry.rank === 1
+                ? "bg-yellow-500/5 border-yellow-500/20"
+                : "bg-white/5 border-white/10 hover:bg-white/[0.07]"
+            )}
           >
-            <div className="flex-shrink-0 w-12 text-center">
+            <div className="flex-shrink-0 w-10 text-center">
               <span
-                className={`text-2xl font-bold ${
+                className={cn(
+                  "text-lg font-bold",
                   entry.rank === 1
                     ? 'text-yellow-400'
                     : entry.rank === 2
-                    ? 'text-gray-300'
-                    : entry.rank === 3
-                    ? 'text-orange-400'
-                    : 'text-white/60'
-                }`}
+                      ? 'text-gray-300'
+                      : entry.rank === 3
+                        ? 'text-orange-400'
+                        : 'text-on-surface-variant'
+                )}
               >
                 #{entry.rank}
               </span>
@@ -110,46 +155,48 @@ export function ClubLeaderboardTab({ clubId }: ClubLeaderboardTabProps) {
                 <img
                   src={entry.avatar_url}
                   alt={entry.username}
-                  className="w-12 h-12 rounded-full object-cover"
+                  className="w-12 h-12 rounded-full object-cover border border-white/10"
                 />
               ) : (
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-lg">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500/80 to-pink-500/80 flex items-center justify-center text-white font-bold text-lg border border-white/10">
                   {entry.username.charAt(0).toUpperCase()}
                 </div>
               )}
             </div>
 
             <div className="flex-grow">
-              <p className="text-white font-medium">{entry.username}</p>
+              <p className="font-headline-md text-sm text-on-surface">{entry.username}</p>
             </div>
 
             <div className="flex-shrink-0 text-right">
-              <p className="text-white font-semibold">{entry.weekly_xp.toLocaleString()}</p>
-              <p className="text-white/40 text-xs">XP this week</p>
+              <p className="font-headline-md text-sm text-on-surface">{entry.weekly_xp.toLocaleString()}</p>
+              <p className="text-on-surface-variant text-xs">XP this week</p>
             </div>
-          </div>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
 
       {total_divisions > 1 && (
-        <div className="flex items-center justify-center gap-4 mt-8">
-          <button
+        <div className="flex items-center justify-center gap-3 mt-8">
+          <Button
             onClick={() => setCurrentDivision((d) => Math.max(1, d - 1))}
             disabled={currentDivision === 1}
-            className="px-6 py-2 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white transition-colors"
+            variant="outline"
+            className="border-outline-variant text-on-surface hover:border-tertiary hover:text-tertiary hover:bg-tertiary/10 font-label-caps text-xs uppercase tracking-wider rounded-xl disabled:opacity-40 px-4 py-2"
           >
-            ← Previous
-          </button>
-          <span className="text-white/60">
-            Division {currentDivision} of {total_divisions}
+            <ChevronLeft className="w-4 h-4 mr-1" /> Prev
+          </Button>
+          <span className="text-sm font-data-mono text-on-surface-variant">
+            Division {currentDivision} / {total_divisions}
           </span>
-          <button
+          <Button
             onClick={() => setCurrentDivision((d) => Math.min(total_divisions, d + 1))}
             disabled={currentDivision === total_divisions}
-            className="px-6 py-2 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white transition-colors"
+            variant="outline"
+            className="border-outline-variant text-on-surface hover:border-tertiary hover:text-tertiary hover:bg-tertiary/10 font-label-caps text-xs uppercase tracking-wider rounded-xl disabled:opacity-40 px-4 py-2"
           >
-            Next →
-          </button>
+            Next <ChevronRight className="w-4 h-4 ml-1" />
+          </Button>
         </div>
       )}
     </div>

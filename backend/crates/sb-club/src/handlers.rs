@@ -12,6 +12,7 @@ use crate::models::{
     JoinClubResponse, RebalanceResponse,
 };
 use sb_contracts::service_api::{ClubProSettings, UpdateClubSettingsRequest};
+use sb_contracts::tournament_api::{TournamentRecord, TournamentRepo};
 
 #[derive(Clone)]
 pub struct ClubState {
@@ -33,13 +34,11 @@ pub async fn create_club(
     Json(req): Json<CreateClubRequest>,
 ) -> Result<(StatusCode, Json<CreateClubResponse>), (StatusCode, String)> {
     let user_id = extract_user_id(&ctx)?;
-
     let club_id = state
         .service
         .create_club(&ctx, &req.name, req.logo_url.as_deref(), user_id)
         .await
         .map_err(map_club_error)?;
-
     Ok((StatusCode::CREATED, Json(CreateClubResponse { club_id })))
 }
 
@@ -49,13 +48,11 @@ pub async fn join_club(
     Path(club_id): Path<ClubId>,
 ) -> Result<Json<JoinClubResponse>, (StatusCode, String)> {
     let user_id = extract_user_id(&ctx)?;
-
     state
         .service
         .join_club(&ctx, club_id, user_id)
         .await
         .map_err(map_club_error)?;
-
     Ok(Json(JoinClubResponse { success: true }))
 }
 
@@ -71,8 +68,6 @@ pub async fn get_leaderboard(
     axum::extract::Query(query): axum::extract::Query<LeaderboardQuery>,
 ) -> Result<Json<GetLeaderboardResponse>, (StatusCode, String)> {
     let division = query.division.unwrap_or(1);
-
-    // Validate division parameter
     if division == 0 {
         return Err((
             StatusCode::BAD_REQUEST,
@@ -82,13 +77,11 @@ pub async fn get_leaderboard(
             ),
         ));
     }
-
     let page = state
         .service
         .get_leaderboard(&ctx, club_id, division)
         .await
         .map_err(map_club_error)?;
-
     Ok(Json(GetLeaderboardResponse::from(page)))
 }
 
@@ -98,13 +91,11 @@ pub async fn get_user_division(
     Path(club_id): Path<ClubId>,
 ) -> Result<Json<GetUserDivisionResponse>, (StatusCode, String)> {
     let user_id = extract_user_id(&ctx)?;
-
     let division = state
         .service
         .get_user_division(&ctx, club_id, user_id)
         .await
         .map_err(map_club_error)?;
-
     Ok(Json(GetUserDivisionResponse { division }))
 }
 
@@ -114,14 +105,11 @@ pub async fn rebalance_divisions(
     Path(club_id): Path<ClubId>,
 ) -> Result<Json<RebalanceResponse>, (StatusCode, String)> {
     let user_id = extract_user_id(&ctx)?;
-
-    // Add timeout for rebalance operation (30 seconds max)
     let result = tokio::time::timeout(
         std::time::Duration::from_secs(30),
         state.service.rebalance_divisions(&ctx, club_id, user_id),
     )
     .await;
-
     match result {
         Ok(Ok(())) => Ok(Json(RebalanceResponse { success: true })),
         Ok(Err(e)) => Err(map_club_error(e)),
@@ -131,6 +119,7 @@ pub async fn rebalance_divisions(
         )),
     }
 }
+
 fn map_club_error(e: ClubError) -> (StatusCode, String) {
     match e {
         ClubError::NotFound => (StatusCode::NOT_FOUND, e.to_string()),
@@ -156,7 +145,6 @@ pub async fn update_club_settings(
     Json(req): Json<UpdateClubSettingsRequest>,
 ) -> Result<Json<ClubProSettings>, (StatusCode, String)> {
     let _user_id = extract_user_id(&ctx)?;
-
     match state.service.update_pro_settings(&ctx, club_id, req).await {
         Ok(settings) => Ok(Json(settings)),
         Err(e) => {
@@ -167,6 +155,15 @@ pub async fn update_club_settings(
             ))
         }
     }
+}
+
+pub async fn update_club(
+    State(state): State<ClubState>,
+    Extension(ctx): Extension<RequestContext>,
+    Path(club_id): Path<ClubId>,
+    Json(req): Json<UpdateClubSettingsRequest>,
+) -> Result<Json<ClubProSettings>, (StatusCode, String)> {
+    update_club_settings(State(state), Extension(ctx), Path(club_id), Json(req)).await
 }
 
 pub async fn get_club_settings(
@@ -193,12 +190,10 @@ pub async fn upload_banner(
     mut multipart: Multipart,
 ) -> Result<Json<String>, (StatusCode, String)> {
     let user_id = extract_user_id(&ctx)?;
-
     match state.service.is_club_pro_active(user_id).await {
         Ok(false) | Err(_) => return Err((StatusCode::FORBIDDEN, "Club Pro required".to_string())),
         Ok(true) => {}
     }
-
     while let Ok(Some(field)) = multipart.next_field().await {
         let name: String = field.name().unwrap_or_default().to_string();
         if name == "banner" {
@@ -212,19 +207,110 @@ pub async fn upload_banner(
             )));
         }
     }
-
     Err((StatusCode::BAD_REQUEST, "no banner field".to_string()))
 }
 
-// === Issue #029: Club Tournament Scheduling ===
+pub async fn list_clubs(
+    State(state): State<ClubState>,
+    Extension(ctx): Extension<RequestContext>,
+) -> Result<Json<Vec<serde_json::Value>>, (StatusCode, String)> {
+    let user_id = extract_user_id(&ctx)?;
+    let club_ids = state
+        .service
+        .get_user_clubs(&ctx, user_id)
+        .await
+        .map_err(map_club_error)?;
+    let mut clubs = Vec::new();
+    for club_id in club_ids {
+        let club = state
+            .service
+            .get_club(&ctx, club_id)
+            .await
+            .map_err(map_club_error)?;
+        let member_count = state
+            .service
+            .get_member_count(&ctx, club_id)
+            .await
+            .map_err(map_club_error)?;
+        let is_owner = club.created_by == user_id;
+        let pro_settings = state
+            .service
+            .get_pro_settings(club_id)
+            .await
+            .map_err(map_club_error)?;
+
+        let mut response = serde_json::json!({
+            "id": club_id.as_uuid(),
+            "name": club.name,
+            "logo_url": club.logo_url,
+            "members_count": member_count,
+            "is_owner": is_owner,
+            "telegram_group_id": club.telegram_chat_id.map(|id| id.to_string()),
+        });
+        if let Some(settings) = pro_settings {
+            response["pro_settings"] = serde_json::to_value(settings).map_err(|e| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Failed to serialize pro_settings: {}", e),
+                )
+            })?;
+        }
+        clubs.push(response);
+    }
+    Ok(Json(clubs))
+}
+
+pub async fn get_club(
+    State(state): State<ClubState>,
+    Extension(ctx): Extension<RequestContext>,
+    Path(club_id): Path<ClubId>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let club = state
+        .service
+        .get_club(&ctx, club_id)
+        .await
+        .map_err(map_club_error)?;
+    let member_count = state
+        .service
+        .get_member_count(&ctx, club_id)
+        .await
+        .map_err(map_club_error)?;
+    let user_id = extract_user_id(&ctx)?;
+    let is_owner = club.created_by == user_id;
+    let pro_settings = state
+        .service
+        .get_pro_settings(club_id)
+        .await
+        .map_err(map_club_error)?;
+
+    let mut response = serde_json::json!({
+        "id": club_id.as_uuid(),
+        "name": club.name,
+        "logo_url": club.logo_url,
+        "members_count": member_count,
+        "is_owner": is_owner,
+        "telegram_group_id": club.telegram_chat_id.map(|id| id.to_string()),
+    });
+    if let Some(settings) = pro_settings {
+        response["pro_settings"] = serde_json::to_value(settings).map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to serialize pro_settings: {}", e),
+            )
+        })?;
+    }
+    Ok(Json(response))
+}
+
 use sb_contracts::ClubRepo;
-use sb_contracts::tournament_api::{TournamentConfig, TournamentService, TournamentSummary};
+use sb_contracts::tournament_api::{TournamentConfig, TournamentService};
 
 #[derive(Clone)]
 pub struct ClubTournamentState {
     pub club_service: Arc<dyn sb_contracts::ClubService>,
     pub club_repo: Arc<dyn ClubRepo>,
     pub tournament_service: Arc<dyn TournamentService>,
+    pub tournament_repo: Arc<dyn TournamentRepo>,
 }
 
 pub async fn create_club_tournament(
@@ -234,32 +320,24 @@ pub async fn create_club_tournament(
     Json(mut config): Json<TournamentConfig>,
 ) -> Result<(StatusCode, Json<serde_json::Value>), (StatusCode, String)> {
     let user_id = extract_user_id(&ctx)?;
-
-    // Validate user is club owner
     let club = state
         .club_repo
         .find_club_by_id(club_id)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
         .ok_or_else(|| (StatusCode::NOT_FOUND, "Club not found".to_string()))?;
-
     if club.created_by != user_id {
         return Err((
             StatusCode::FORBIDDEN,
             "Only club owner can create tournaments".to_string(),
         ));
     }
-
-    // Set club_id in config
     config.club_id = Some(club_id);
-
-    // Create tournament
     let tournament_id = state
         .tournament_service
         .create_tournament(&ctx, config)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
     Ok((
         StatusCode::CREATED,
         Json(serde_json::json!({ "tournament_id": tournament_id })),
@@ -268,22 +346,45 @@ pub async fn create_club_tournament(
 
 pub async fn list_club_tournaments(
     State(state): State<ClubTournamentState>,
-    Extension(ctx): Extension<RequestContext>,
-    Path(_club_id): Path<ClubId>,
-) -> Result<Json<Vec<TournamentSummary>>, (StatusCode, String)> {
-    // List all tournaments and filter by club_id
-    let all_tournaments = state
-        .tournament_service
-        .list_tournaments(&ctx, None)
+    Extension(_ctx): Extension<RequestContext>,
+    Path(club_id): Path<ClubId>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    // Fetch all tournament records (not summaries)
+    let all_records = state
+        .tournament_repo
+        .list_tournaments(None, None)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    // Filter tournaments by club_id
-    // Note: In production, TournamentSummary should include club_id field
-    // For now, we return all tournaments since we can't access the config here
-    let club_tournaments = all_tournaments;
+    // Filter by club_id
+    let club_tournaments: Vec<TournamentRecord> = all_records
+        .into_iter()
+        .filter(|record| record.config.club_id == Some(club_id))
+        .collect();
 
-    Ok(Json(club_tournaments))
+    // Convert to TournamentSummary (or just use the existing structure)
+    // Since the frontend expects fields like buy_in, max_players, etc., we map
+    let summaries: Vec<serde_json::Value> = club_tournaments
+        .into_iter()
+        .map(|record| {
+            serde_json::json!({
+                "id": record.id.as_uuid(),
+                "name": record.name,
+                "tournament_type": format!("{:?}", record.config.tournament_type),
+                "status": format!("{:?}", record.status),
+                "registered": 0,
+                "max_players": record.config.max_players,
+                "buy_in": record.config.buy_in.as_i64(),
+                "prize_pool": record.prize_pool.as_i64(),
+                "current_blind_level": None as Option<u32>,
+                "started_at": record.started_at.map(|dt| dt.to_rfc3339()),
+                "scheduled_start": record.config.scheduled_start.map(|dt| dt.to_rfc3339()),
+            })
+        })
+        .collect();
+
+    let response = serde_json::json!({ "tournaments": summaries });
+    Ok(Json(response))
 }
 
 pub fn club_tournament_routes(state: ClubTournamentState) -> axum::Router {

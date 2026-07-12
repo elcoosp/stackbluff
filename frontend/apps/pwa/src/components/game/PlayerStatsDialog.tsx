@@ -3,7 +3,8 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePlayerStats } from '@/hooks/usePlayerStats';
 import { cn } from '@/lib/utils';
-import { Dialog } from '@stackbluff/shared/components/Dialog'; // Using the new primitive
+import { Dialog } from '@stackbluff/shared/components/Dialog';
+import { Coins, Target, TrendingUp, BarChart3, Award } from 'lucide-react';
 
 interface PlayerStatsDialogProps {
   userId: string | null;
@@ -15,7 +16,6 @@ const formatCurrency = (amount: number) =>
 
 const formatPercent = (value: number) => `${(value * 100).toFixed(1)}%`;
 
-// Animation variants for staggered reveal
 const containerVariants = {
   hidden: { opacity: 0 },
   show: {
@@ -42,14 +42,18 @@ export function PlayerStatsDialog({ userId, onOpenChange }: PlayerStatsDialogPro
 
   return (
     <Dialog open={open} onClose={() => onOpenChange(false)} className="max-w-sm">
-      {/* Header */}
-      <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/5">
+      {/* Header – no X button; only title and optional player name */}
+      <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/5 shrink-0">
         <div>
-          <h2 className="text-sm font-semibold text-on-surface">Player Statistics</h2>
-          <p className="text-[11px] text-on-surface-variant mt-0.5">
-            {stats?.display_name || (isLoading ? 'Loading...' : 'Player Profile')}
-          </p>
+          <h2 className="text-sm font-semibold text-on-surface flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-tertiary" />
+            Player Statistics
+          </h2>
+          {stats?.display_name && (
+            <p className="text-[11px] text-on-surface-variant mt-0.5">{stats.display_name}</p>
+          )}
         </div>
+        {/* No close button here – handled by footer */}
       </div>
 
       {/* Animated Content Container */}
@@ -57,7 +61,7 @@ export function PlayerStatsDialog({ userId, onOpenChange }: PlayerStatsDialogPro
         variants={containerVariants}
         initial="hidden"
         animate="show"
-        className="px-5 py-4 space-y-6 max-h-[60vh] overflow-y-auto dialog-scroll"
+        className="px-5 py-4 space-y-5 max-h-[60vh] overflow-y-auto dialog-scroll"
       >
         {isLoading ? (
           <div className="space-y-4">
@@ -66,19 +70,22 @@ export function PlayerStatsDialog({ userId, onOpenChange }: PlayerStatsDialogPro
             <Skeleton className="h-6 w-full bg-white/5" />
             <Skeleton className="h-6 w-full bg-white/5" />
           </div>
-        ) : isError ? (
+        ) : isError || !stats ? (
           <motion.div variants={itemVariants} className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[11px]">
             Failed to load stats. Please try again later.
           </motion.div>
-        ) : stats && stats.hands_played === 0 ? (
+        ) : stats.hands_played === 0 ? (
           <motion.div variants={itemVariants} className="text-center py-8 text-on-surface-variant text-sm">
             Player hasn't completed any hands yet.
           </motion.div>
-        ) : stats ? (
+        ) : (
           <>
             {/* Volume Section */}
             <motion.div variants={itemVariants} className="space-y-3">
-              <h3 className="font-label-caps text-[10px] text-tertiary tracking-widest uppercase">Volume</h3>
+              <h3 className="font-label-caps text-[10px] text-tertiary tracking-widest uppercase flex items-center gap-2">
+                <Target className="w-3.5 h-3.5" />
+                Volume
+              </h3>
               <div className="flex justify-between font-mono text-sm">
                 <span className="text-on-surface-variant">Hands Played</span>
                 <span className="text-on-surface">{stats.hands_played.toLocaleString()}</span>
@@ -87,11 +94,18 @@ export function PlayerStatsDialog({ userId, onOpenChange }: PlayerStatsDialogPro
                 <span className="text-on-surface-variant">Hands Won</span>
                 <span className="text-on-surface">{stats.hands_won.toLocaleString()} ({formatPercent(stats.win_rate)})</span>
               </div>
+              <div className="flex justify-between font-mono text-sm">
+                <span className="text-on-surface-variant">All-in Count</span>
+                <span className="text-on-surface">{stats.all_in_count}</span>
+              </div>
             </motion.div>
 
             {/* Preflop Aggression */}
             <motion.div variants={itemVariants} className="space-y-3">
-              <h3 className="font-label-caps text-[10px] text-tertiary tracking-widest uppercase">Preflop</h3>
+              <h3 className="font-label-caps text-[10px] text-tertiary tracking-widest uppercase flex items-center gap-2">
+                <TrendingUp className="w-3.5 h-3.5" />
+                Preflop
+              </h3>
               <div className="space-y-1">
                 <div className="flex justify-between font-mono text-xs mb-1">
                   <span className="text-on-surface-variant">VPIP</span>
@@ -114,7 +128,10 @@ export function PlayerStatsDialog({ userId, onOpenChange }: PlayerStatsDialogPro
 
             {/* Showdown */}
             <motion.div variants={itemVariants} className="space-y-3">
-              <h3 className="font-label-caps text-[10px] text-tertiary tracking-widest uppercase">Showdown</h3>
+              <h3 className="font-label-caps text-[10px] text-tertiary tracking-widest uppercase flex items-center gap-2">
+                <Award className="w-3.5 h-3.5" />
+                Showdown
+              </h3>
               <div className="flex justify-between font-mono text-sm">
                 <span className="text-on-surface-variant">Went to Showdown</span>
                 <span className="text-on-surface">{formatPercent(stats.wtsd)}</span>
@@ -125,11 +142,18 @@ export function PlayerStatsDialog({ userId, onOpenChange }: PlayerStatsDialogPro
                   {stats.showdowns > 0 ? formatPercent(stats.showdown_wins / stats.showdowns) : '0%'}
                 </span>
               </div>
+              <div className="flex justify-between font-mono text-sm">
+                <span className="text-on-surface-variant">Total Showdowns</span>
+                <span className="text-on-surface">{stats.showdowns}</span>
+              </div>
             </motion.div>
 
             {/* Money */}
             <motion.div variants={itemVariants} className="space-y-3">
-              <h3 className="font-label-caps text-[10px] text-tertiary tracking-widest uppercase">Money</h3>
+              <h3 className="font-label-caps text-[10px] text-tertiary tracking-widest uppercase flex items-center gap-2">
+                <Coins className="w-3.5 h-3.5" />
+                Money
+              </h3>
               <div className="flex justify-between font-mono text-sm">
                 <span className="text-on-surface-variant">Net Profit</span>
                 <span className={cn(stats.net_profit >= 0 ? 'text-tertiary' : 'text-red-400')}>
@@ -141,15 +165,19 @@ export function PlayerStatsDialog({ userId, onOpenChange }: PlayerStatsDialogPro
                 <span className="text-on-surface">{formatCurrency(stats.biggest_pot_won)}</span>
               </div>
               <div className="flex justify-between font-mono text-sm">
-                <span className="text-on-surface-variant">All-ins</span>
-                <span className="text-on-surface">{stats.all_in_count}</span>
+                <span className="text-on-surface-variant">Total Wagered</span>
+                <span className="text-on-surface">{formatCurrency(stats.total_wagered)}</span>
+              </div>
+              <div className="flex justify-between font-mono text-sm">
+                <span className="text-on-surface-variant">Total Won</span>
+                <span className="text-on-surface">{formatCurrency(stats.total_won)}</span>
               </div>
             </motion.div>
           </>
-        ) : null}
+        )}
       </motion.div>
 
-      {/* Footer */}
+      {/* Footer – single close button */}
       <div className="px-5 py-4 border-t border-white/5 flex gap-3 shrink-0">
         <motion.button
           type="button"
