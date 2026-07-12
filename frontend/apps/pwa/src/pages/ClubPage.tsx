@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from '@tanstack/react-router';
 import { GlassPanel } from "@stackbluff/shared/ui/GlassPanel";
 import { Card } from "@/components/ui/card";
@@ -16,6 +16,7 @@ import { handleApiError } from '../lib/errorHandler';
 import { logger } from '../lib/logger';
 import { XCircle, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { trackClubView } from '@/lib/customAnalytics';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -43,6 +44,11 @@ export function ClubPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('leaderboard');
 
   const { data: club, isLoading, error } = useClubDetails(clubId);
+  useEffect(() => {
+    if (club) {
+      trackClubView(clubId, club.name);
+    }
+  }, [club, clubId]);
 
   // Listen for real-time club updates via WebSocket
   useClubWebSocket(clubId);
