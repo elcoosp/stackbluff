@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
+import { trackGameEvent } from '@/lib/customAnalytics';
 
 const step1Schema = z.object({ username: z.string().min(3, 'Username must be at least 3 characters') });
 const step2Schema = z.object({ email: z.string().email('Invalid email address') });
@@ -33,6 +34,7 @@ function RegisterPage() {
     onSuccess: (data) => {
       setToken(data.token);
       setAuth(data.user, data.token, data.balance || 0);
+      trackGameEvent('registration_success', { platform: 'email' });
       navigate({ to: '/' });
     },
     onError: (error) => { toast.error(error.message || 'Registration failed'); },

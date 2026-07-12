@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
 import { isAccountLocked, getLockoutRemaining, clearLockout } from '@/lib/errorHandler';
+import { trackGameEvent } from '@/lib/customAnalytics';
 
 const loginSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Invalid email address'),
@@ -57,6 +58,7 @@ function LoginPage() {
     onSuccess: (data) => {
       setToken(data.token);
       setAuth(data.user, data.token, data.balance || 0);
+      trackGameEvent('login_success', { platform: 'email' });
       navigate({ to: '/' });
     },
     onError: (error) => {
@@ -69,6 +71,7 @@ function LoginPage() {
     onSuccess: (data) => {
       setToken(data.token);
       setAuth(data.user, data.token, data.balance || 0);
+      trackGameEvent('login_success', { platform: 'email' });
       navigate({ to: '/' });
     },
     onError: (error) => {

@@ -7,6 +7,7 @@ import { PurchaseDialog } from '../components/shop/PurchaseDialog';
 import { PurchaseToast } from '../components/shop/PurchaseToast';
 import { cn } from '@/lib/utils';
 import { ShieldCheck, Zap, Loader2, ShoppingBag } from 'lucide-react';
+import { trackProductView } from '@/lib/customAnalytics';
 
 type Category = 'all' | 'chips' | 'season_pass' | 'club_pro';
 
@@ -50,6 +51,8 @@ export default function ShopPage() {
     const newIds = transformedProducts.map(p => p.id).sort().join(',');
     if (currentIds !== newIds) {
       shop.setProducts(transformedProducts);
+      // Track product views
+      transformedProducts.forEach((p) => trackProductView(p.id, p.name));
     }
   }, [transformedProducts, shop]);
 

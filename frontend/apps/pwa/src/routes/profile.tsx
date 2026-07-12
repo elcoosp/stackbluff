@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import { useEffect } from 'react';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { useBadges } from '@/hooks/useBadges';
 import { useQuery } from '@tanstack/react-query';
@@ -32,6 +33,7 @@ import {
 } from 'lucide-react';
 import type { PlayerStats } from '@/types/player-stats';
 import { requireAuth } from '@/lib/authGuard';
+import { trackGameEvent } from '@/lib/customAnalytics';
 
 export const Route = createFileRoute('/profile')({
   component: ProfilePage,
@@ -74,7 +76,19 @@ function ProfilePage() {
   const balance = useAuthStore((s) => s.balance);
 
 
-  if (isLoading) {
+
+  // Track profile view when data is loaded
+  useEffect(() => {
+    if (!isLoading && user) {
+      trackGameEvent('profile_view', {
+        user_id: user.id,
+        display_name: user.username,
+      });
+    }
+  }, [isLoading, user]);
+
+
+    if (isLoading) {
     return <ProfileSkeleton />;
   }
 

@@ -6,7 +6,8 @@ import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card } from '@/components/ui/card';
 import { Trophy, Medal, Calendar, TrendingUp, Crown, Sparkles, ChevronRight, User } from 'lucide-react';
-import { useState } from 'react';
+import {useState, useEffect} from "react";
+import { trackGameEvent } from '@/lib/customAnalytics';
 
 export const Route = createFileRoute('/leaderboard')({
   component: LeaderboardPage,
@@ -41,7 +42,19 @@ function LeaderboardPage() {
   const currentUser = useAuthStore((s) => s.user);
   const [period, setPeriod] = useState<Period>('global');
 
-  if (isLoading) {
+
+  // Track leaderboard view when data is loaded
+  useEffect(() => {
+    if (!isLoading && entries && entries.length > 0) {
+      trackGameEvent('leaderboard_view', {
+        period: period,
+        total_entries: entries.length,
+      });
+    }
+  }, [isLoading, entries, period]);
+
+
+    if (isLoading) {
     return <LeaderboardSkeleton />;
   }
 
