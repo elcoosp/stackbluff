@@ -1,6 +1,4 @@
 import * as Sentry from '@sentry/react';
-import { BrowserTracing } from '@sentry/tracing';
-import { tanstackRouterBrowserTracingIntegration } from '@sentry/react';
 
 export function initSentry() {
   const dsn = import.meta.env.VITE_SENTRY_DSN;
@@ -13,20 +11,23 @@ export function initSentry() {
     dsn,
     environment: import.meta.env.VITE_SENTRY_ENVIRONMENT || 'development',
     release: import.meta.env.VITE_SENTRY_RELEASE || 'local',
+    // BrowserTracing is now included in @sentry/react v10
     integrations: [
-      new BrowserTracing(),
-      tanstackRouterBrowserTracingIntegration(),
+      Sentry.browserTracingIntegration(),
+      Sentry.replayIntegration({
+        maskAllText: false,
+        blockAllMedia: false,
+      }),
     ],
+    // Capture 10% of transactions in development
     tracesSampleRate: 0.1,
+    // Capture 10% of sessions for replay
+    replaysSessionSampleRate: 0.1,
+    replaysOnErrorSampleRate: 1.0,
     attachStacktrace: true,
-    beforeSend(event) {
-      // Optional: respect consent store
-      // if (!canFireAnalytics()) return null;
-      return event;
-    },
   });
 
-  console.log('Sentry initialized');
+  console.log('✅ Sentry initialized');
 }
 
 export function captureException(error: Error, context?: Record<string, any>) {
