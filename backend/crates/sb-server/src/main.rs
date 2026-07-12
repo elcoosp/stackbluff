@@ -80,6 +80,35 @@ mod hand_archive;
 mod r2_storage;
 mod season_card_generator;
 
+fn main() {
+    dotenvy::dotenv().expect("Failed to load .env");
+    tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .init();
+    // Initialize Sentry
+    let _guard = {
+        let dsn = std::env::var("SENTRY_DSN").unwrap_or_default();
+        if !dsn.is_empty() {
+            Some(sentry::init((
+                dsn,
+                sentry::ClientOptions {
+                    release: sentry::release_name!(),
+                    send_default_pii: true,
+                    ..Default::default()
+                },
+            )))
+        } else {
+            None
+        }
+    };
+
+    // Start the tokio runtime
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(run_app());
+}
 async fn request_context_middleware(mut req: Request, next: Next) -> Response {
     let request_id = req
         .headers()
@@ -148,14 +177,7 @@ async fn reschedule_tournament_reminders(
 ) {
 }
 
-#[tokio::main]
-async fn main() {
-    dotenvy::dotenv().expect("Failed to load .env");
-    tracing_subscriber::fmt()
-        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
-        .json()
-        .init();
-
+async fn run_app() {
     let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
 
     let db = Database::connect(&db_url)
@@ -487,9 +509,13 @@ async fn main() {
         .merge(mission_router)
         .merge(notification_routes(Arc::new(db.clone())))
         .merge(club_router)
-        
         .layer(axum::Extension(app_state.clone()))
         .merge(sb_rest_router::analytics_routes::analytics_routes())
+        .layer(
+            tower::ServiceBuilder::new()
+                .layer(NewSentryLayer::<axum::http::Request<axum::body::Body>>::new_from_top())
+                .layer(SentryHttpLayer::new().enable_transaction()),
+        )
         .layer(axum::extract::DefaultBodyLimit::max(1024 * 1024 * 10))
         .layer(middleware::from_fn(request_context_middleware))
         .layer(Extension(auth_service.clone()))
@@ -660,6 +686,9 @@ pub fn spawn_gdpr_scheduler(state: std::sync::Arc<AppState>) {
 }
 
 use prometheus::{Encoder, TextEncoder};
+use sentry;
+use sentry::integrations::tower::{NewSentryLayer, SentryHttpLayer};
+
 async fn metrics_handler() -> String {
     let encoder = TextEncoder::new();
     let metric_families = prometheus::gather();

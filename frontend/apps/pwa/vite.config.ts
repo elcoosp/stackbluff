@@ -35,3 +35,19 @@ export default defineConfig({
     setupFiles: ['./src/__tests__/setup.ts'],
   },
 });
+
+import { sentryVitePlugin } from '@sentry/vite-plugin';
+
+// Add to plugins array (after react())
+// plugins: [
+//   react(),
+//   sentryVitePlugin({
+//     org: process.env.SENTRY_ORG,
+//     project: process.env.SENTRY_PROJECT,
+//     authToken: process.env.SENTRY_AUTH_TOKEN,
+//   }),
+// ],
+//
+// build: {
+//   sourcemap: true,
+// },

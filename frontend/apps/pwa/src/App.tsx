@@ -1,3 +1,4 @@
+import { ErrorBoundary } from "@/lib/sentry";
 import { clubWebSocket } from '@stackbluff/shared/lib/websocket';
 import { getPlatform, useUserStore } from '@stackbluff/shared';
 import { useEffect } from 'react';
@@ -34,6 +35,7 @@ function App() {
   }, []);
 
   return (
+    <ErrorBoundary fallback={<div className="p-8 text-center text-red-400">Something went wrong</div>}>
     <div className="font-sans">
       <div className="p-8">
         <h1 className="text-3xl font-bold mb-4">StackBluff PWA</h1>
@@ -64,9 +66,9 @@ function App() {
         onDecision={(decision) => {
           appLogger.info('Notification prompt decision', { decision });
         }}
-      />
-    </div>
-  );
+      />    </div>
+  </ErrorBoundary>
+);
 }
 
 export default App;
