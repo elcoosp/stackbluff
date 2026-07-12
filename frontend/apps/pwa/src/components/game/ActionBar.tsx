@@ -14,6 +14,7 @@ import {
   Check,
 } from 'lucide-react';
 import type { PreAction } from '../../hooks/usePreAction';
+import { trackPlayerAction } from '@/lib/customAnalytics';
 
 // ── Helper: format currency with "k" shorthand ──
 function formatCurrency(amount: number): string {
@@ -523,6 +524,7 @@ const DesktopActionBar = ({
 
   const handleAction = useCallback((action: string, amount?: number) => {
     onAction(action, amount);
+  trackPlayerAction(action, amount, pot);
     setActionSent(true);
     if (actionSentTimerRef.current) clearTimeout(actionSentTimerRef.current);
     actionSentTimerRef.current = setTimeout(() => setActionSent(false), 2500);
@@ -694,6 +696,7 @@ const MobileActionBar = ({
 
   const handleAction = useCallback((action: string, amount?: number) => {
     onAction(action, amount);
+  trackPlayerAction(action, amount, pot);
     setActionSent(true);
     if (actionSentTimerRef.current) clearTimeout(actionSentTimerRef.current);
     actionSentTimerRef.current = setTimeout(() => setActionSent(false), 2500);
