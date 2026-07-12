@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: plausible_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: plausible_db
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  events_db:
+    image: clickhouse/clickhouse-server:23-alpine
+    container_name: plausible_events_db
+    restart: unless-stopped
+    volumes:
+      - ch_data:/var/lib/clickhouse
+      - ch_logs:/var/log/clickhouse-server
+    healthcheck:
+      test: ["CMD", "clickhouse", "client", "--query", "SELECT 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  plausible:
+    image: plausible/analytics:v2.0
+    container_name: plausible
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+      BASE_URL: http://localhost:8000
+      DATABASE_URL: postgres://postgres:postgres@db:5432/plausible_db
+      CLICKHOUSE_DATABASE_URL: http://events_db:8123/plausible_events_db
+    depends_on:
+      db:
+        condition: service_healthy
+      events_db:
+        condition: service_healthy
+
+volumes:
+  pg_data:
+  ch_data:
+  ch_logs:
