@@ -149,6 +149,8 @@ export function Header() {
                         <MenuItem icon={<History className="w-4 h-4" />} label="Replays" onClick={() => { setDropdownOpen(false); navigate({ to: '/replays' }); }} />
                         <MenuItem icon={<FileText className="w-4 h-4" />} label="Hand History" onClick={() => { setDropdownOpen(false); navigate({ to: '/history' }); }} />
                         <MenuItem icon={<BookOpen className="w-4 h-4" />} label="Guide" onClick={() => { setDropdownOpen(false); navigate({ to: '/guide' }); }} />
+                        {/* Puzzle moved here – alongside Guide and Missions */}
+                        <MenuItem icon={<Brain className="w-4 h-4" />} label="Puzzle" onClick={() => { setDropdownOpen(false); navigate({ to: "/puzzle" }); }} />
                       </div>
 
                       <div className="border-t border-outline-variant/50 my-1"></div>
@@ -156,7 +158,6 @@ export function Header() {
                       <div className="px-2 py-1">
                         <MenuItem icon={<Users className="w-4 h-4" />} label="Profile" onClick={() => { setDropdownOpen(false); navigate({ to: '/profile' }); }} />
                         <MenuItem icon={<Settings className="w-4 h-4" />} label="Settings" onClick={() => { setDropdownOpen(false); navigate({ to: '/settings' }); }} />
-                        <MenuItem icon={<Brain className="w-4 h-4" />} label="Puzzle" onClick={() => { setDropdownOpen(false); navigate({ to: "/puzzle" }); }} />
                         <MenuItem icon={<HelpCircle className="w-4 h-4" />} label="Help & Support" onClick={() => { setDropdownOpen(false); navigate({ to: '/help' }); }} />
                       </div>
 

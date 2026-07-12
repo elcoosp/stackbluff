@@ -6,8 +6,7 @@ mod user_service;
 mod viral_observer;
 
 use axum::{
-    Extension, // <-- added
-    Router,
+    Extension, Router,
     extract::Request,
     http::Method,
     http::header,
@@ -49,8 +48,8 @@ use sb_db_repos::tournament_repo::TournamentRepoImpl;
 use sb_db_repos::user_repo::UserRepoImpl;
 use sb_mission::service::MissionServiceImpl;
 use sb_payment::RealPaymentService;
-use sb_rest_router::player_stats::player_stats_routes;
 use sb_rest_router::notification_routes::notification_routes;
+use sb_rest_router::player_stats::player_stats_routes;
 use sb_rest_router::season_card;
 use sb_rest_router::tournament_routes::{self, TournamentState};
 use sb_rest_router::{AppState, create_router};
@@ -288,10 +287,10 @@ async fn main() {
     // ── Club service ─────────────────────────────────────────────────
     let club_repo: Arc<dyn sb_contracts::repo_api::ClubRepo + Send + Sync> =
         Arc::new(ClubRepoImpl::new(db.clone()));
-    let broker = Arc::new(ConnectionBroker::new());
-    let club_service: Arc<dyn sb_contracts::service_api::ClubService + Send + Sync> =
-        Arc::new(sb_club::ClubServiceImpl::new(club_repo.clone(), broker.clone()));
-    let broker = Arc::new(ConnectionBroker::new());
+    let broker = Arc::new(ConnectionBroker::new()); // Single broker instance
+    let club_service: Arc<dyn sb_contracts::service_api::ClubService + Send + Sync> = Arc::new(
+        sb_club::ClubServiceImpl::new(club_repo.clone(), broker.clone()),
+    );
 
     // ── GDPR repository ──────────────────────────────────────────────
     let gdpr_repo: Arc<dyn GdprRepo + Send + Sync> = Arc::new(PgGdprRepo { db: db.clone() });
@@ -355,7 +354,6 @@ async fn main() {
     // ── Create AppState ──────────────────────────────────────────────
     // ── Tournament system ────────────────────────────────────────────
     let tournament_repo = Arc::new(TournamentRepoImpl::new(db.clone()));
-    let tournament_broker = Arc::new(sb_table_registry::connection_broker::ConnectionBroker::new());
 
     let app_base_url =
         std::env::var("APP_BASE_URL").unwrap_or_else(|_| "https://app.stackbluff.com".to_string());
@@ -364,7 +362,7 @@ async fn main() {
         tournament_repo.clone(),
         user_repo.clone(),
         registry.clone(),
-        broker.clone(),
+        broker.clone(), // Use the same broker
         notification_service.clone(),
         bot_handler.clone(),
         app_base_url.clone(),
@@ -383,7 +381,7 @@ async fn main() {
 
     let tournament_state = Arc::new(TournamentState {
         registry: registry.clone(),
-        broker: broker.clone(),
+        broker: broker.clone(), // Use the same broker
         tournament_repo: tournament_repo.clone(),
         tournament_service: tournament_service.clone(),
         user_repo: user_repo.clone(),
@@ -430,12 +428,9 @@ async fn main() {
     });
 
     // ── Anti-Cheat Fingerprint Route ──────────────────────────────────
-    let fingerprint_repo: Arc<dyn sb_anti_cheat::FingerprintRepository> = Arc::new(
-        sb_anti_cheat::SeaFingerprintRepository { db: db.clone() }
-    );
-    let anti_cheat_state = Arc::new(anti_cheat_routes::AntiCheatState {
-        fingerprint_repo,
-    });
+    let fingerprint_repo: Arc<dyn sb_anti_cheat::FingerprintRepository> =
+        Arc::new(sb_anti_cheat::SeaFingerprintRepository { db: db.clone() });
+    let anti_cheat_state = Arc::new(anti_cheat_routes::AntiCheatState { fingerprint_repo });
 
     let rest_router = create_router(app_state.clone())
         .merge(player_stats_routes(stats_repo.clone(), user_repo.clone()));
