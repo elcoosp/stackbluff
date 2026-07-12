@@ -14,6 +14,7 @@ import { History, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 import { LobbyTabs } from '@/components/lobby/LobbyTabs';
+import { trackTournamentRegistration } from '@/lib/customAnalytics';
 
 // @ts-ignore – route will be added to route tree on dev server restart
 export const Route = createFileRoute('/tournaments')({
@@ -146,6 +147,11 @@ function TournamentsPage() {
       setBuyInDialog({ open: false, tournament: null });
       return;
     }
+    trackTournamentRegistration(
+      buyInDialog.tournament.id,
+      buyInDialog.tournament.name || '',
+      buyInDialog.tournament.buy_in
+    );
     registerMutation.mutate({
       tournamentId: buyInDialog.tournament.id,
       userId,
