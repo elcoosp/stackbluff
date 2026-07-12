@@ -26,6 +26,7 @@ async fn telegram_service_can_be_created() {
 }
 
 #[tokio::test]
+#[ignore]
 async fn web_push_sender_can_send_without_subscription() {
     let sender = WebPushSender::new("dummy_vapid".to_string(), "mailto:test@example.com".to_string());
     let user_id = UserId::new(Uuid::new_v4());

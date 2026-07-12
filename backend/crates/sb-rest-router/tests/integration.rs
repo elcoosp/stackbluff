@@ -356,6 +356,16 @@ impl sb_contracts::repo_api::ClubRepo for DummyClubRepo {
     ) -> Result<Vec<sb_shared_types::ClubId>, sb_contracts::ClubError> {
         Ok(vec![])
     }
+
+    async fn update_club_details(
+        &self,
+        _club_id: sb_shared_types::ClubId,
+        _name: Option<String>,
+        _telegram_chat_id: Option<i64>,
+        _logo_url: Option<String>,
+    ) -> Result<(), sb_contracts::ClubError> {
+        Ok(())
+    }
 }
 
 #[tokio::test]
@@ -375,8 +385,9 @@ async fn test_unauthenticated_returns_401() {
     let club_repo = Arc::new(sb_db_repos::club_repo::ClubRepoImpl::new(
         sea_orm::Database::connect("sqlite::memory:").await.unwrap(),
     ));
+    let broker = Arc::new(sb_table_registry::connection_broker::ConnectionBroker::new());
     let club_service: Arc<dyn sb_contracts::service_api::ClubService + Send + Sync> =
-        Arc::new(sb_club::ClubServiceImpl::new(club_repo));
+        Arc::new(sb_club::ClubServiceImpl::new(club_repo, broker));
 
     let broker = Arc::new(sb_table_registry::connection_broker::ConnectionBroker::new());
 

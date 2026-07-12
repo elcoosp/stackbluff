@@ -29,7 +29,8 @@ async fn setup_test_app() -> (
     Migrator::up(&db, None).await.expect("migrations");
 
     let repo: Arc<dyn ClubRepo> = Arc::new(ClubRepoImpl::new(db.clone()));
-    let service = Arc::new(ClubServiceImpl::new(repo.clone()));
+    let broker = Arc::new(sb_table_registry::connection_broker::ConnectionBroker::new());
+    let service = Arc::new(ClubServiceImpl::new(repo.clone(), broker));
 
     let state = ClubState {
         service: service.clone(),
@@ -78,9 +79,6 @@ async fn test_http_get_leaderboard_with_division() {
         .create_club(&ctx, "HTTP Test Club", None, user_id)
         .await
         .expect("create club");
-
-    service.join_club(&ctx, club_id, user_id).await.expect("join");
-
     // Test GET /clubs/{id}/leaderboard?division=1
     let request = Request::builder()
         .uri(format!("/clubs/{}/leaderboard?division=1", club_id))
@@ -124,9 +122,6 @@ async fn test_http_get_leaderboard_default_division() {
         .create_club(&ctx, "HTTP Test Club 3", None, user_id)
         .await
         .expect("create club");
-
-    service.join_club(&ctx, club_id, user_id).await.expect("join");
-
     // Test GET /clubs/{id}/leaderboard (no division param, should default to 1)
     let request = Request::builder()
         .uri(format!("/clubs/{}/leaderboard", club_id))

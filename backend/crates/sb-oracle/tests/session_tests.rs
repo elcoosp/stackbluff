@@ -119,6 +119,24 @@ impl UserRepo for DummyRepo {
     ) -> Result<Option<UserId>, PersistenceError> {
         Ok(None)
     }
+
+    async fn extend_season_pass(
+        &self,
+        _ctx: RequestContext,
+        _user_id: UserId,
+        _duration_days: i64,
+    ) -> Result<(), PersistenceError> {
+        Ok(())
+    }
+
+    async fn extend_club_pro(
+        &self,
+        _ctx: RequestContext,
+        _user_id: UserId,
+        _duration_days: i64,
+    ) -> Result<(), PersistenceError> {
+        Ok(())
+    }
 }
 
 #[tokio::test]

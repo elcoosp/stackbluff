@@ -194,6 +194,24 @@ mod tests {
         ) -> PersistenceResult<Option<UserId>> {
             Ok(None)
         }
+
+        async fn extend_season_pass(
+            &self,
+            _ctx: RequestContext,
+            _user_id: UserId,
+            _duration_days: i64,
+        ) -> PersistenceResult<()> {
+            Ok(())
+        }
+
+        async fn extend_club_pro(
+            &self,
+            _ctx: RequestContext,
+            _user_id: UserId,
+            _duration_days: i64,
+        ) -> PersistenceResult<()> {
+            Ok(())
+        }
     }
 
     fn test_config() -> AuthConfig {
@@ -373,6 +391,22 @@ mod tests {
                     .get_user_profile(ctx, user_id)
                     .await
                     .map_err(|e| sb_shared_types::AppError::Database(e.to_string()))
+            }
+
+            async fn extend_season_pass(
+                &self,
+                _user_id: UserId,
+                _duration_days: i64,
+            ) -> Result<(), sb_shared_types::AppError> {
+                Ok(())
+            }
+
+            async fn extend_club_pro(
+                &self,
+                _user_id: UserId,
+                _duration_days: i64,
+            ) -> Result<(), sb_shared_types::AppError> {
+                Ok(())
             }
         }
 

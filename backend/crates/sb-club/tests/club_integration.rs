@@ -25,7 +25,8 @@ async fn setup_db() -> (
     Migrator::up(&db, None).await.expect("migrations");
 
     let repo: Arc<dyn ClubRepo> = Arc::new(ClubRepoImpl::new(db.clone()));
-    let service = Arc::new(ClubServiceImpl::new(repo.clone()));
+    let broker = Arc::new(sb_table_registry::connection_broker::ConnectionBroker::new());
+    let service = Arc::new(ClubServiceImpl::new(repo.clone(), broker));
     (service, repo, db)
 }
 
@@ -110,7 +111,18 @@ async fn test_add_xp_not_member() {
         .create_club(&ctx, "NoXP Club", None, owner_id)
         .await
         .expect("create");
-    let result = svc.add_xp(&ctx, club_id, owner_id, 100).await;
+
+    // Create a separate user who is NOT a member
+    let non_member_ctx = RequestContext {
+        request_id: Uuid::new_v4(),
+        user_id: Some(UserId(Uuid::new_v4())),
+        ip: "127.0.0.1".to_string(),
+    };
+    let non_member_id = non_member_ctx.user_id.unwrap();
+    ensure_user(&db, non_member_id).await;
+
+    // Attempt to add XP for the non-member
+    let result = svc.add_xp(&non_member_ctx, club_id, non_member_id, 100).await;
     assert!(matches!(result, Err(ClubError::NotAMember)));
 }
 
@@ -124,7 +136,7 @@ async fn test_add_xp_member() {
         .create_club(&ctx, "XP Club", None, owner_id)
         .await
         .expect("create");
-    svc.join_club(&ctx, club_id, owner_id).await.expect("join");
+    // Owner is automatically a member, so no join needed
     svc.add_xp(&ctx, club_id, owner_id, 100)
         .await
         .expect("add xp");
@@ -141,10 +153,7 @@ async fn test_leaderboard_divisions() {
         .await
         .expect("create");
 
-    svc.join_club(&ctx, club_id, owner_id)
-        .await
-        .expect("owner join");
-
+    // Owner is automatically a member
     for i in 0..599 {
         let member_ctx = RequestContext {
             request_id: Uuid::new_v4(),
@@ -200,11 +209,7 @@ async fn test_get_user_division() {
         .await
         .expect("create");
 
-    // Owner joins (should be division 1)
-    svc.join_club(&ctx, club_id, owner_id)
-        .await
-        .expect("owner join");
-
+    // Owner is automatically a member (division 1)
     let division = svc
         .get_user_division(&ctx, club_id, owner_id)
         .await
@@ -255,10 +260,7 @@ async fn test_rebalance_divisions() {
         .await
         .expect("create");
 
-    svc.join_club(&ctx, club_id, owner_id)
-        .await
-        .expect("owner join");
-
+    // Owner is automatically a member
     // Add 999 more members (total 1000)
     for _i in 0..999 {
         let member_ctx = RequestContext {
@@ -310,11 +312,8 @@ async fn test_division_assignment_edge_cases() {
         .await
         .expect("create");
 
+    // Owner is automatically a member
     // Test exactly 500 members (all in division 1)
-    svc.join_club(&ctx, club_id, owner_id)
-        .await
-        .expect("owner join");
-
     for _i in 0..499 {
         let member_ctx = RequestContext {
             request_id: Uuid::new_v4(),
@@ -366,10 +365,7 @@ async fn test_rebalance_updates_membership_divisions() {
         .await
         .expect("create");
 
-    svc.join_club(&ctx, club_id, owner_id)
-        .await
-        .expect("owner join");
-
+    // Owner is automatically a member
     // Add 999 more members
     for _ in 0..999 {
         let member_ctx = RequestContext {
@@ -448,11 +444,7 @@ async fn test_concurrent_joins_assign_correct_divisions() {
         .await
         .expect("create");
 
-    // Join owner first
-    svc.join_club(&ctx, club_id, owner_id)
-        .await
-        .expect("owner join");
-
+    // Owner is automatically a member
     // Simulate concurrent joins by joining many members sequentially
     // (SQLite doesn't support true concurrency, but this tests the logic)
     // Add 499 members so total is 500 (owner + 499 = 500, all in division 1)
@@ -512,10 +504,7 @@ async fn test_performance_large_club() {
         .await
         .expect("create");
 
-    svc.join_club(&ctx, club_id, owner_id)
-        .await
-        .expect("owner join");
-
+    // Owner is automatically a member
     // Add 500 members
     for _ in 0..499 {
         let member_ctx = RequestContext {
@@ -611,10 +600,7 @@ async fn test_large_scale_club_10000_members() {
         .await
         .expect("create");
 
-    svc.join_club(&ctx, club_id, owner_id)
-        .await
-        .expect("owner join");
-
+    // Owner is automatically a member
     // Add 9999 more members (total 10000)
     let start = Instant::now();
     for _ in 0..9999 {

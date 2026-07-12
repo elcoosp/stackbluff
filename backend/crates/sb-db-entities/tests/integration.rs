@@ -31,6 +31,7 @@ async fn test_migration_and_basic_ops() {
         deleted_at: sea_orm::ActiveValue::Set(None),
         // FIX: Added the missing club_pro_expires_at field
         club_pro_expires_at: sea_orm::ActiveValue::Set(None),
+        push_subscription: sea_orm::ActiveValue::Set(None),
     };
     let user = user_active.insert(&db).await.unwrap();
 

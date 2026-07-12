@@ -33,7 +33,7 @@ mod m20250702_add_tournament_name;
 mod m20260710_000001_add_hand_count_to_referral;
 mod m20260614_145806_add_referrals_and_counters;
 mod m20260711_000001_create_device_fingerprints;
-mod m20260711_add_push_subscription;
+mod m20260712_000001_create_analytics_events;
 
 use sea_orm_migration::prelude::*;
 
@@ -80,7 +80,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260629162121_grandfather_existing_users::Migration),
             // 7. Products table
             Box::new(m20260709_000001_create_products_table::Migration),
-            Box::new(m20260711_add_push_subscription::Migration),
+            Box::new(m20260712_000001_create_analytics_events::Migration),
             // 8. Device Fingerprints table
             Box::new(m20260711_000001_create_device_fingerprints::Migration),
         ]

@@ -75,6 +75,7 @@ impl MigrationTrait for Migration {
                             .default(Platform::Pwa.to_value()),
                     )
                     .col(ColumnDef::new(user::Column::EmailVerifiedAt).date_time())
+                    .col(ColumnDef::new(Alias::new("push_subscription")).json())
                     .check(Expr::col(Alias::new("chip_balance")).gte(0))
                     .to_owned(),
             )
