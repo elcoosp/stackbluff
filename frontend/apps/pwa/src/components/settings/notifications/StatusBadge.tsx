@@ -1,21 +1,24 @@
+import { CheckCircle, XCircle, Circle, AlertTriangle, type LucideIcon } from 'lucide-react';
 import type { PermissionDisplay } from './types';
 
 interface StatusBadgeProps {
-status: PermissionDisplay;
+  status: PermissionDisplay;
 }
 
-const STATUS_CONFIG: Record<PermissionDisplay, { label: string; className: string }> = {
-enabled: { label: ' Enabled', className: 'bg-green-500/20 text-green-400' },
-blocked: { label: ' Blocked', className: 'bg-red-500/20 text-red-400' },
-not_set: { label: ' Not set', className: 'bg-white/10 text-white/80' },
-unsupported: { label: '️ Not supported', className: 'bg-yellow-500/20 text-yellow-400' },
+const STATUS_CONFIG: Record<PermissionDisplay, { label: string; className: string; icon: LucideIcon }> = {
+  enabled: { label: 'Enabled', className: 'bg-green-500/20 text-green-400', icon: CheckCircle },
+  blocked: { label: 'Blocked', className: 'bg-red-500/20 text-red-400', icon: XCircle },
+  not_set: { label: 'Not set', className: 'bg-white/10 text-white/80', icon: Circle },
+  unsupported: { label: 'Not supported', className: 'bg-yellow-500/20 text-yellow-400', icon: AlertTriangle },
 };
 
 export function StatusBadge({ status }: StatusBadgeProps) {
-const config = STATUS_CONFIG[status];
-return (
-<span className={`text-sm font-medium px-3 py-1 rounded-full ${config.className}`}>
-{config.label}
-</span>
-);
+  const config = STATUS_CONFIG[status];
+  const Icon = config.icon;
+  return (
+    <span className={`text-sm font-medium px-3 py-1 rounded-full flex items-center gap-1.5 ${config.className}`}>
+      <Icon className="w-4 h-4" />
+      {config.label}
+    </span>
+  );
 }
