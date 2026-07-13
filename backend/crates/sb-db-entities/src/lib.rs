@@ -31,3 +31,5 @@ pub mod puzzle_submission;
 pub mod user_season_card;
 pub mod analytics_event;
 pub mod products;
+
+pub mod push_subscription;

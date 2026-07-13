@@ -320,16 +320,35 @@ async fn run_app() {
     #[cfg(not(feature = "test-stubs"))]
     let (notification_service, bot_handler) = {
         use sb_notification::TelegramNotificationService;
+        use sb_notification::config::WebPushConfig;
+        use sb_notification::web_push::WebPushSender;
+        use sb_notification::multi_channel::MultiChannelNotifier;
+        use sb_db_repos::push_subscription_repo::PushSubscriptionRepoImpl;
+
         let bot_token = std::env::var("TELEGRAM_BOT_TOKEN")
             .expect("TELEGRAM_BOT_TOKEN must be set in production");
-        let notif = Arc::new(
+        let telegram_notif = Arc::new(
             TelegramNotificationService::new(bot_token)
                 .with_user_repo(user_repo.clone())
                 .with_club_repo(club_repo.clone()),
         );
+
+        let web_push_cfg = WebPushConfig::from_env().expect("WebPush config");
+        let web_push_sender = Arc::new(
+            WebPushSender::new(web_push_cfg.private_key_bytes().expect("VAPID key bytes"), web_push_cfg.subject)
+                .expect("WebPushSender init"),
+        );
+        let push_repo = Arc::new(PushSubscriptionRepoImpl { db: db.clone() });
+
+        let multi_notifier = Arc::new(MultiChannelNotifier::new(
+            telegram_notif.clone(),
+            web_push_sender,
+            push_repo,
+        ));
+
         let notification_service =
-            notif.clone() as Arc<dyn sb_contracts::notification_api::NotificationService>;
-        let bot_handler = Some(notif as Arc<dyn sb_contracts::notification_api::ClubNotifier>);
+            multi_notifier.clone() as Arc<dyn sb_contracts::notification_api::NotificationService>;
+        let bot_handler = Some(telegram_notif as Arc<dyn sb_contracts::notification_api::ClubNotifier>);
         (notification_service, bot_handler)
     };
 
@@ -507,7 +526,10 @@ async fn run_app() {
         .merge(season_card::router(db.clone()))
         .merge(club_tournament_router)
         .merge(mission_router)
-        .merge(notification_routes(Arc::new(db.clone())))
+        .merge(notification_routes(Arc::new(sb_rest_router::notification_routes::NotificationState {
+            db: db.clone(),
+            vapid_public_key: std::env::var("VAPID_PUBLIC_KEY").unwrap_or_default(),
+        })))
         .merge(club_router)
         .layer(axum::Extension(app_state.clone()))
         .merge(sb_rest_router::analytics_routes::analytics_routes())

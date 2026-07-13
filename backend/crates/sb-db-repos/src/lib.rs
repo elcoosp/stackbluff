@@ -28,3 +28,5 @@ pub mod season_card_repo;
 pub mod product_repo;
 
 pub use gdpr_repo::PgGdprRepo;
+
+pub mod push_subscription_repo;
