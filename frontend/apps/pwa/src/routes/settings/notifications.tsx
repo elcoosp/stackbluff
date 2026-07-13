@@ -12,7 +12,7 @@ export const Route = createFileRoute('/settings/notifications')({
 });
 
 function NotificationsSettingsPage() {
-  const {} = useAuthStore();
+  const { } = useAuthStore();
 
 
   return (

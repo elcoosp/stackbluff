@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { usePushNotifications } from '../../hooks/usePushNotifications';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@stackbluff/shared/api/client';
@@ -48,8 +47,6 @@ function saveSettings(settings: NotificationSettings): void {
 }
 
 export function NotificationPreferences() {
-  const { isSubscribed, loading, subscribe, unsubscribe } = usePushNotifications();
-
   const queryClient = useQueryClient();
   const { user, isAuthenticated } = useAuthStore();
   const [settings, setSettings] = useState<NotificationSettings>(DEFAULTS);
