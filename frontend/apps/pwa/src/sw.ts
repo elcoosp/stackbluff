@@ -37,3 +37,37 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
+
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil(
+    (async () => {
+      try {
+        const response = await fetch('/notifications/vapid-public-key');
+        const data = await response.json();
+        const vapidPublicKey = data.public_key;
+        if (!vapidPublicKey) return;
+
+        const padding = '='.repeat((4 - vapidPublicKey.length % 4) % 4);
+        const base64 = (vapidPublicKey + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) {
+          outputArray[i] = rawData.charCodeAt(i);
+        }
+
+        const newSubscription = await self.registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: outputArray as unknown as BufferSource
+        });
+
+        await fetch('/notifications/subscribe', {
+          method: 'POST',
+          body: JSON.stringify(newSubscription),
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (error) {
+        console.error('Failed to resubscribe:', error);
+      }
+    })()
+  );
+});
