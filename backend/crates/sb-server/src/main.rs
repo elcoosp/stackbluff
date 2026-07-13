@@ -348,7 +348,7 @@ async fn run_app() {
 
         let web_push_cfg = WebPushConfig::from_env().expect("WebPush config");
         let web_push_sender = Arc::new(
-            WebPushSender::new(web_push_cfg.private_key_bytes().expect("VAPID key bytes"), web_push_cfg.subject)
+            WebPushSender::new(web_push_cfg.private_key_pem, web_push_cfg.subject)
                 .expect("WebPushSender init"),
         );
         let push_repo = Arc::new(PushSubscriptionRepoImpl { db: db.clone() });

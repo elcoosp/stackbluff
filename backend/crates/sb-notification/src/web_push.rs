@@ -1,90 +1,48 @@
-use sb_contracts::notification::NotificationEvent;
-use sb_shared_types::{errors::AppError, ids::UserId};
-use serde_json::json;
+use anyhow::Result;
+use sb_db_entities::push_subscription::Model;
 use web_push::*;
+use web_push::WebPushError;
+use std::io::Cursor;
 
 pub struct WebPushSender {
-    vapid_private_key: String,
-    vapid_subject: String,
+    client: IsahcWebPushClient,
+    private_key_pem: String,
+    subject: String,
+}
+
+pub enum SendOutcome {
+    Delivered,
+    Gone,
 }
 
 impl WebPushSender {
-    pub fn new(vapid_private_key: String, vapid_subject: String) -> Self {
-        Self {
-            vapid_private_key,
-            vapid_subject,
-        }
+    pub fn new(private_key_pem: String, subject: String) -> Result<Self> {
+        Ok(Self {
+            client: IsahcWebPushClient::new()?,
+            private_key_pem,
+            subject,
+        })
     }
 
-    #[tracing::instrument(skip_all)]
-    pub async fn send(
-        &self,
-        _user_id: UserId,
-        subscription_json: &Option<serde_json::Value>,
-        event: &NotificationEvent,
-    ) -> Result<(), AppError> {
-        let sub_json = subscription_json.as_ref().ok_or_else(|| {
-            AppError::InvalidInput("No push subscription for user".into())
-        })?;
+    pub async fn send(&self, sub: &Model, payload: String) -> Result<SendOutcome> {
+        let subscription = SubscriptionInfo::new(&sub.endpoint, &sub.p256dh, &sub.auth);
 
-        let subscription: SubscriptionInfo = serde_json::from_value(sub_json.clone())
-            .map_err(|e| AppError::InvalidInput(format!("Invalid subscription: {}", e)))?;
+        let mut sig_builder = VapidSignatureBuilder::from_pem(Cursor::new(self.private_key_pem.as_bytes()), &subscription)?;
+        sig_builder.add_claim("sub", self.subject.as_str());
+        let signature = sig_builder.build()?;
 
-        let (title, body) = match event {
-            NotificationEvent::TournamentReminder { tournament_name, start_time, deep_link } => {
-                (format!("Tournament Reminder: {}", tournament_name),
-                 format!("{} starts at {}\nJoin now: {}", tournament_name, start_time, deep_link))
+        let mut builder = WebPushMessageBuilder::new(&subscription);
+        builder.set_payload(ContentEncoding::Aes128Gcm, payload.as_bytes());
+        builder.set_vapid_signature(signature);
+
+        let message = builder.build()?;
+
+        match self.client.send(message).await {
+            Ok(_) => Ok(SendOutcome::Delivered),
+            Err(WebPushError::EndpointNotValid(_)) | Err(WebPushError::EndpointNotFound(_)) => {
+                Ok(SendOutcome::Gone)
             }
-            NotificationEvent::StreakAlert { streak_count } => {
-                ("Streak Alert!".to_string(), format!("You're on a {} day streak! Keep it up!", streak_count))
-            }
-            NotificationEvent::ReferralBonus { from_user_id: _, amount } => {
-                ("Referral Bonus Earned".to_string(), format!("You received {} chips from a referral!", amount))
-            }
-            NotificationEvent::MissionComplete { mission_name } => {
-                ("Mission Complete!".to_string(), format!("You completed '{}'!", mission_name))
-            }
-        };
-
-        let payload = json!({
-            "title": title,
-            "body": body,
-            "icon": "/icon-192.png",
-            "badge": "/badge-72.png",
-            "tag": "stackbluff-notification",
-            "data": {
-                "url": "/"
-            },
-            "vibrate": [200, 100, 200]
-        });
-
-        let payload_bytes = serde_json::to_vec(&payload)
-            .map_err(|e| AppError::Internal(format!("Failed to serialize payload: {}", e)))?;
-
-        let mut builder = VapidSignatureBuilder::from_pem(
-            self.vapid_private_key.as_bytes(),
-            &subscription,
-        )
-        .map_err(|e| AppError::Internal(format!("VAPID key error: {}", e)))?;
-
-        builder.add_claim("sub", self.vapid_subject.clone());
-
-        let vapid_signature = builder.build()
-            .map_err(|e| AppError::Internal(format!("VAPID build error: {}", e)))?;
-
-        let mut msg_builder = WebPushMessageBuilder::new(&subscription);
-        msg_builder.set_payload(ContentEncoding::Aes128Gcm, &payload_bytes);
-        msg_builder.set_vapid_signature(vapid_signature);
-
-        let message = msg_builder.build()
-            .map_err(|e| AppError::Internal(format!("Failed to build message: {}", e)))?;
-
-        let client = IsahcWebPushClient::new()
-            .map_err(|e| AppError::Internal(format!("Failed to create push client: {}", e)))?;
-        client.send(message).await
-            .map_err(|e| AppError::External(format!("Push notification failed: {}", e)))?;
-
-        tracing::info!("Push notification sent successfully");
-        Ok(())
+            Err(e) => Err(e.into()),
+        }
     }
 }
