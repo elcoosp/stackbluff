@@ -1,29 +1,39 @@
-use sb_shared_types::chips::ChipAmount;
-use sb_shared_types::errors::AppError;
-use sb_shared_types::ids::UserId;
-use sb_shared_types::request_context::RequestContext;
+use async_trait::async_trait;
+use sb_shared_types::{errors::AppError, RequestContext, UserId};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", content = "data")]
 pub enum NotificationEvent {
     TournamentReminder {
-        tournament_name: String,
-        start_time: String,
-        deep_link: String,
+        tournament_id: String,
+        name: String,
+        starts_at: String,
     },
-    StreakAlert {
-        streak_count: u32,
+    TournamentStarting {
+        tournament_id: String,
     },
-    ReferralBonus {
-        from_user_id: UserId,
-        amount: ChipAmount,
+    TournamentResult {
+        tournament_id: String,
+        position: u32,
+        prize: i64,
     },
-    MissionComplete {
-        mission_name: String,
+    ClubReminder {
+        club_id: String,
+        message: String,
+    },
+    FriendInvite {
+        from_user_id: String,
+    },
+    ReplayCardReady {
+        hand_id: String,
+    },
+    SeasonCardReady {
+        season_id: i32,
     },
 }
 
-#[async_trait::async_trait]
+#[async_trait]
 pub trait NotificationService: Send + Sync {
     async fn send(
         &self,

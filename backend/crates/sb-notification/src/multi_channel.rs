@@ -5,6 +5,56 @@ use sb_db_repos::push_subscription_repo::PushSubscriptionRepo;
 use sb_shared_types::{errors::AppError, RequestContext, UserId, ClubId};
 use std::sync::Arc;
 use crate::web_push::{WebPushSender, SendOutcome};
+use serde::Serialize;
+
+#[derive(Serialize)]
+struct PushPayload {
+    title: String,
+    body: String,
+    url: String,
+}
+
+impl PushPayload {
+    fn from_event(event: &NotificationEvent) -> Self {
+        match event {
+            NotificationEvent::TournamentReminder { tournament_id, name, starts_at } => Self {
+                title: "Tournament Reminder".to_string(),
+                body: format!("{} starts at {}", name, starts_at),
+                url: format!("/tournaments/{}", tournament_id),
+            },
+            NotificationEvent::TournamentStarting { tournament_id } => Self {
+                title: "Tournament Starting".to_string(),
+                body: "Your tournament is starting now!".to_string(),
+                url: format!("/tournaments/{}", tournament_id),
+            },
+            NotificationEvent::TournamentResult { tournament_id, position, prize } => Self {
+                title: "Tournament Result".to_string(),
+                body: format!("You finished #{} and won {} chips!", position, prize),
+                url: format!("/tournaments/{}", tournament_id),
+            },
+            NotificationEvent::ClubReminder { club_id, message } => Self {
+                title: "Club Reminder".to_string(),
+                body: message.clone(),
+                url: format!("/clubs/{}", club_id),
+            },
+            NotificationEvent::FriendInvite { from_user_id } => Self {
+                title: "Friend Invite".to_string(),
+                body: format!("You have a friend invite from {}", from_user_id),
+                url: "/friends".to_string(),
+            },
+            NotificationEvent::ReplayCardReady { hand_id } => Self {
+                title: "Replay Card Ready".to_string(),
+                body: "Your replay card is ready to view!".to_string(),
+                url: format!("/replays/{}", hand_id),
+            },
+            NotificationEvent::SeasonCardReady { season_id } => Self {
+                title: "Season Card Ready".to_string(),
+                body: format!("Your season {} card is ready!", season_id),
+                url: "/profile".to_string(),
+            },
+        }
+    }
+}
 
 pub struct MultiChannelNotifier {
     pub telegram: Arc<dyn NotificationService>,
@@ -71,7 +121,8 @@ impl sb_contracts::notification::NotificationService for MultiChannelNotifier {
             .await
             .map_err(|e| AppError::Internal(e.to_string()))?;
 
-        let payload = serde_json::to_string(&event).unwrap_or_else(|_| "{}".to_string());
+        let payload = serde_json::to_string(&PushPayload::from_event(&event))
+            .unwrap_or_else(|_| "{}".to_string());
 
         for sub in subs {
             let sender = self.push_sender.clone();

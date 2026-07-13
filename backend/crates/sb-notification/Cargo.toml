@@ -14,6 +14,7 @@ async-trait = { workspace = true }
 reqwest = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
+openssl = "0.10"
 sb-db-entities = { path = "../sb-db-entities" }
 sb-db-repos = { path = "../sb-db-repos" }
 sb-contracts = { path = "../sb-contracts" }
@@ -21,4 +22,3 @@ sb-shared-types = { path = "../sb-shared-types" }
 
 [dev-dependencies]
 wiremock = { workspace = true }
-openssl = "0.10"
