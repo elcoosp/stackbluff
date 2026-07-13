@@ -11,6 +11,7 @@ pub trait PushSubscriptionRepo: Send + Sync {
     async fn list_for_user(&self, user_id: Uuid) -> Result<Vec<Model>>;
     async fn delete_by_endpoint(&self, endpoint: String) -> Result<()>;
     async fn delete_expired(&self) -> Result<()>;
+    async fn delete_for_user(&self, user_id: Uuid) -> Result<()>;
 }
 
 pub struct PushSubscriptionRepoImpl {
@@ -45,6 +46,11 @@ impl PushSubscriptionRepo for PushSubscriptionRepoImpl {
     async fn delete_expired(&self) -> Result<()> {
         let now = Utc::now().timestamp();
         Entity::delete_many().filter(Column::ExpirationTime.lt(Some(now))).exec(&self.db).await?;
+        Ok(())
+    }
+
+    async fn delete_for_user(&self, user_id: Uuid) -> Result<()> {
+        Entity::delete_many().filter(Column::UserId.eq(user_id)).exec(&self.db).await?;
         Ok(())
     }
 }

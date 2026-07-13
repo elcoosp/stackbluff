@@ -42,6 +42,7 @@ use sb_db_repos::badge_repo::BadgeRepoImpl;
 use sb_db_repos::club_repo::ClubRepoImpl;
 use sb_db_repos::gdpr_repo::PgGdprRepo;
 use sb_db_repos::hand_history_repo::{HandHistoryRepoImpl, spawn_hand_history_cleanup};
+use sb_db_repos::push_subscription_repo::PushSubscriptionRepo;
 use sb_db_repos::init_writer_loop;
 use sb_db_repos::player_stats_repo::PlayerStatsRepoImpl;
 use sb_db_repos::product_repo::ProductRepoImpl;
@@ -293,6 +294,18 @@ async fn run_app() {
     spawn_history_recorder(event_rx, hand_history_repo.clone());
 
     spawn_hand_history_cleanup(db.clone()).await;
+
+    let push_db = db.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(3600));
+        loop {
+            interval.tick().await;
+            let repo = sb_db_repos::push_subscription_repo::PushSubscriptionRepoImpl { db: push_db.clone() };
+            if let Err(e) = repo.delete_expired().await {
+                tracing::error!("Failed to cleanup expired push subscriptions: {}", e);
+            }
+        }
+    });
 
     let stats_event_rx = registry.event_sender().subscribe();
     spawn_stats_aggregator(stats_event_rx, stats_repo.clone());
@@ -690,6 +703,8 @@ async fn start_gdpr_job(state: std::sync::Arc<AppState>) {
                                 );
                                 continue;
                             }
+                            use sb_db_entities::push_subscription::{Entity, Column};
+                            let _ = Entity::delete_many().filter(Column::UserId.eq(req.user_id)).exec(&state.db).await;
                             let _ = state.gdpr_repo.mark_deletion_completed(req.user_id).await;
                         }
                     }
