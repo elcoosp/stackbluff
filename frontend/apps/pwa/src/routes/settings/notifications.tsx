@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { PushNotificationToggle } from '@/components/PushNotificationToggle';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,7 +26,6 @@ function NotificationsSettingsPage() {
 
       <NotificationPreferences />
       <NotificationsSettings />
-      <PushNotificationToggle />
     </div>
   );
 }

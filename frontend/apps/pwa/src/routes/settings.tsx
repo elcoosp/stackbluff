@@ -1,4 +1,3 @@
-import { PushNotificationToggle } from '../components/PushNotificationToggle';
 import { createFileRoute, Link, Outlet, useMatchRoute } from '@tanstack/react-router';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
