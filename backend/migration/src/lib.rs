@@ -2,6 +2,7 @@
 #![allow(clippy::enum_variant_names)]
 
 mod m20250101_000001_add_participants_to_hand_history;
+mod m20240101_000001_push_subscriptions;
 mod m20250614_create_payment_intents;
 mod m20250701_000001_add_telegram_chat_id_to_clubs;
 mod m20260101_000008_player_statistics;
@@ -43,6 +44,7 @@ pub struct Migrator;
 impl MigratorTrait for Migrator {
     fn migrations() -> Vec<Box<dyn MigrationTrait>> {
         vec![
+            Box::new(m20240101_000001_push_subscriptions::Migration),
             // 1. Core tables
             Box::new(m20260607_000001_create_all_tables::Migration),
             Box::new(m20260710_000001_add_hand_count_to_referral::Migration),

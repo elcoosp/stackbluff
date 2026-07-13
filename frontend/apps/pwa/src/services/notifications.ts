@@ -18,13 +18,31 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
+async function waitForServiceWorkerReady(timeoutMs = 5000): Promise<ServiceWorkerRegistration | null> {
+  if (!('serviceWorker' in navigator)) return null;
+  try {
+    const regPromise = navigator.serviceWorker.ready;
+    const timeoutPromise = new Promise<ServiceWorkerRegistration | null>((resolve) =>
+      setTimeout(() => resolve(null), timeoutMs)
+    );
+    return await Promise.race([regPromise, timeoutPromise]);
+  } catch {
+    return null;
+  }
+}
+
 export async function subscribeToPushNotifications(): Promise<boolean> {
   if (!isPushSupported()) return false;
   try {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') return false;
 
-    const reg = await navigator.serviceWorker.ready;
+    const reg = await waitForServiceWorkerReady();
+    if (!reg) {
+      console.error('Service worker not ready in time');
+      return false;
+    }
+
     let subscription = await reg.pushManager.getSubscription();
     if (!subscription) {
       const res = await fetch('/notifications/vapid-public-key');
@@ -54,19 +72,25 @@ export async function subscribeToPushNotifications(): Promise<boolean> {
 export async function unsubscribeFromPushNotifications(): Promise<boolean> {
   if (!isPushSupported()) return false;
   try {
-    const reg = await navigator.serviceWorker.ready;
-    const subscription = await reg.pushManager.getSubscription();
-    if (!subscription) return false;
+    const reg = await waitForServiceWorkerReady();
+    if (!reg) return false;
 
+    const subscription = await reg.pushManager.getSubscription();
+    if (!subscription) return true; // Already unsubscribed
+
+    // Unsubscribe locally first
     await subscription.unsubscribe();
 
+    // Then notify backend
     const response = await fetch('/notifications/unsubscribe', {
       method: 'POST',
       body: JSON.stringify({ endpoint: subscription.endpoint }),
       headers: { 'Content-Type': 'application/json' },
     });
 
-    return response.ok;
+    // Even if backend fails, we are locally unsubscribed.
+    // The backend will clean up on next push attempt.
+    return true;
   } catch (e) {
     console.error('Failed to unsubscribe from push notifications', e);
     return false;
@@ -76,7 +100,9 @@ export async function unsubscribeFromPushNotifications(): Promise<boolean> {
 export async function resyncSubscription(): Promise<boolean> {
   if (!isPushSupported()) return false;
   try {
-    const reg = await navigator.serviceWorker.ready;
+    const reg = await waitForServiceWorkerReady();
+    if (!reg) return false;
+
     const subscription = await reg.pushManager.getSubscription();
     if (!subscription) return false;
 

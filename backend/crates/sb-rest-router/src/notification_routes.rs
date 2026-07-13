@@ -11,6 +11,7 @@ use sb_db_repos::push_subscription_repo::{PushSubscriptionRepo, PushSubscription
 use sb_shared_types::UserId;
 use sea_orm::DatabaseConnection;
 use std::sync::Arc;
+use tracing;
 
 pub struct NotificationState {
     pub db: DatabaseConnection,
@@ -61,6 +62,7 @@ async fn subscribe(
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<SubscribeRequest>,
 ) -> Result<StatusCode, (StatusCode, String)> {
+    tracing::info!("Received push subscribe request for user {}", auth_user.user_id);
     let user_id = match uuid::Uuid::parse_str(&auth_user.user_id) {
         Ok(uid) => UserId::new(uid),
         Err(_) => return Err((StatusCode::BAD_REQUEST, "Invalid user ID".to_string())),
@@ -84,6 +86,7 @@ async fn unsubscribe(
     State(state): State<Arc<NotificationState>>,
     Json(req): Json<UnsubscribeRequest>,
 ) -> Result<StatusCode, (StatusCode, String)> {
+    tracing::info!("Received push unsubscribe request for endpoint {}", req.endpoint);
     let repo = PushSubscriptionRepoImpl { db: state.db.clone() };
     repo.delete_by_endpoint(req.endpoint)
         .await
