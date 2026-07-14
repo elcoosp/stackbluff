@@ -4,6 +4,7 @@ import { isPushSupported, subscribeToPushNotifications } from '@/services/notifi
 import { consentLogger } from '@/lib/logger';
 import { useInterval } from '@/hooks/useInterval';
 import { FIRST_HAND_PLAYED_KEY, MAYBE_LATER_COOLDOWN_MS } from '@/lib/consent/constants';
+import { Trans, t } from '@lingui/react/macro';
 
 interface NotificationPromptProps {
   onDecision?: (decision: 'allowed' | 'denied' | 'later') => void;
@@ -102,10 +103,10 @@ export function NotificationPrompt({ onDecision }: NotificationPromptProps) {
     >
       <div className="mb-4">
         <h3 className="text-base font-semibold mb-2">
-          🔔 Stay in the game
+          <Trans>🔔 Stay in the game</Trans>
         </h3>
         <p className="text-sm leading-relaxed opacity-90">
-          Get tournament reminders and streak alerts. Allow notifications?
+          <Trans>Get tournament reminders and streak alerts. Allow notifications?</Trans>
         </p>
       </div>
 
@@ -117,7 +118,7 @@ export function NotificationPrompt({ onDecision }: NotificationPromptProps) {
           data-testid="notification-prompt-allow"
           className="px-4 py-2.5 rounded-lg border-none bg-blue-500 text-white text-sm font-semibold hover:bg-blue-600 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          {isProcessing ? 'Processing...' : 'Allow'}
+          {isProcessing ? t`Processing...` : t`Allow`}
         </button>
 
         <button
@@ -127,7 +128,7 @@ export function NotificationPrompt({ onDecision }: NotificationPromptProps) {
           data-testid="notification-prompt-deny"
           className="px-4 py-2.5 rounded-lg border border-white/20 bg-transparent text-white text-sm font-medium hover:bg-white/10 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          No thanks
+          <Trans>No thanks</Trans>
         </button>
 
         <button
@@ -137,7 +138,7 @@ export function NotificationPrompt({ onDecision }: NotificationPromptProps) {
           data-testid="notification-prompt-later"
           className="px-4 py-2 rounded border-none bg-transparent text-white/60 text-xs underline hover:text-white/80 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          Maybe later
+          <Trans>Maybe later</Trans>
         </button>
       </div>
     </div>
