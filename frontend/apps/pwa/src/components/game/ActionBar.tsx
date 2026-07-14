@@ -15,7 +15,8 @@ import {
 } from 'lucide-react';
 import type { PreAction } from '../../hooks/usePreAction';
 import { trackPlayerAction } from '@/lib/customAnalytics';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 // Helper: format currency with "k" shorthand
 function formatCurrency(amount: number): string {
@@ -335,7 +336,9 @@ const ExecutionBanner = ({
   const amount = visibleAction?.amount;
 
   const isCall = action?.toLowerCase() === 'call';
-  const displayText = t`Auto ${action} ${isCall && amount && amount > 0 ? `$${amount}` : ''}`.trim();
+  const actionText = action || '';
+  const amountText = (isCall && amount && amount > 0) ? ` $${amount}` : '';
+  const displayText = (t`Auto ${actionText}` + amountText).trim();
 
   return (
     <AnimatePresence>
