@@ -4,6 +4,7 @@ import { X, Minus, Plus, Check } from 'lucide-react';
 import { TimerBar } from './TimerBar';
 import { cn } from '@/lib/utils';
 import { useFeedback } from '@stackbluff/shared/hooks/useFeedback';
+import { Trans, t } from '@lingui/react/macro';
 
 interface RaiseSliderProps {
   min: number;
@@ -73,11 +74,11 @@ export const RaiseSlider = ({
     triggerTick();
   }, [amount, handleAmountChange, triggerTick]);
 
-  // Liste fixe de 10 presets pour garantir 2 lignes de 5 boutons
+  // Fixed list of 10 presets to guarantee 2 rows of 5 buttons
   const presets = useMemo(() => {
     const configs = presetMode === 'bb'
       ? [
-        { label: 'Min', value: min, isSpecial: true },
+        { label: t`Min`, value: min, isSpecial: true },
         { label: '2BB', value: bigBlind * 2 },
         { label: '2.5BB', value: bigBlind * 2.5 },
         { label: '3BB', value: bigBlind * 3 },
@@ -86,7 +87,7 @@ export const RaiseSlider = ({
         { label: '10BB', value: bigBlind * 10 },
         { label: '15BB', value: bigBlind * 15 },
         { label: '20BB', value: bigBlind * 20 },
-        { label: 'All', value: max, isSpecial: true },
+        { label: t`All`, value: max, isSpecial: true },
       ]
       : [
         { label: '10%', value: pot * 0.10 },
@@ -98,10 +99,10 @@ export const RaiseSlider = ({
         { label: '150%', value: pot * 1.50 },
         { label: '200%', value: pot * 2.00 },
         { label: '300%', value: pot * 3.00 },
-        { label: 'All', value: max, isSpecial: true },
+        { label: t`All`, value: max, isSpecial: true },
       ];
 
-    // On ne filtre plus, on désactive juste les boutons illégaux pour garder la grille fixe
+    // Disable illegal buttons but keep grid fixed
     return configs.map(p => {
       const val = Math.round(p.value / step) * step;
       const isDisabled = !p.isSpecial && (val < min || val > max);
@@ -212,7 +213,7 @@ export const RaiseSlider = ({
                 className="flex items-center gap-3"
               >
                 <span className="font-label-caps text-[10px] text-tertiary tracking-widest uppercase">
-                  Raise Amount
+                  <Trans>Raise Amount</Trans>
                 </span>
 
                 {/* Segmented Control (Switch) */}
@@ -227,7 +228,7 @@ export const RaiseSlider = ({
                       presetMode === 'bb' ? 'bg-tertiary/20 text-tertiary shadow-sm' : 'text-on-surface-variant/60 hover:text-on-surface-variant'
                     )}
                   >
-                    BB
+                    <Trans>BB</Trans>
                   </motion.button>
                   <motion.button
                     type="button"
@@ -239,7 +240,7 @@ export const RaiseSlider = ({
                       presetMode === 'pot' ? 'bg-tertiary/20 text-tertiary shadow-sm' : 'text-on-surface-variant/60 hover:text-on-surface-variant'
                     )}
                   >
-                    Pot %
+                    <Trans>Pot %</Trans>
                   </motion.button>
                 </div>
               </motion.div>
@@ -295,7 +296,7 @@ export const RaiseSlider = ({
                       </span>
                       {pot > 0 && (
                         <span className="text-[9px] font-mono text-on-surface-variant/70 uppercase tracking-wider">
-                          {potRatio.toFixed(0)}% Pot
+                          {potRatio.toFixed(0)}% <Trans>Pot</Trans>
                         </span>
                       )}
                     </motion.div>
@@ -442,7 +443,7 @@ export const RaiseSlider = ({
                 whileTap={{ scale: 0.95 }}
               >
                 <Check className="w-3.5 h-3.5" />
-                Confirm Raise
+                <Trans>Confirm Raise</Trans>
               </motion.button>
             </motion.div>
           </div>
