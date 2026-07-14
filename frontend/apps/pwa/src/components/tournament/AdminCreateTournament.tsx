@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, Plus, Trophy, Calendar, Users, Coins } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useBlindTemplates } from '@/hooks/useBlindTemplates';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 interface AdminCreateTournamentProps {
   open: boolean;
@@ -91,32 +93,32 @@ export function AdminCreateTournament({ open, onClose, onSuccess }: AdminCreateT
       });
     },
     onSuccess: () => {
-      toast.success('Tournament created successfully!');
+      toast.success(t`Tournament created successfully!`);
       queryClient.invalidateQueries({ queryKey: ['tournaments'] });
       onSuccess?.();
       onClose();
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Failed to create tournament');
+      toast.error(error.message || t`Failed to create tournament`);
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) {
-      toast.error('Tournament name is required');
+      toast.error(t`Tournament name is required`);
       return;
     }
     if (!form.scheduled_start) {
-      toast.error('Please select a start date and time');
+      toast.error(t`Please select a start date and time`);
       return;
     }
     if (form.buy_in < 0) {
-      toast.error('Buy-in must be 0 or more');
+      toast.error(t`Buy-in must be 0 or more`);
       return;
     }
     if (form.max_players < 2) {
-      toast.error('Minimum 2 players required');
+      toast.error(t`Minimum 2 players required`);
       return;
     }
     mutation.mutate(form);
@@ -135,10 +137,10 @@ export function AdminCreateTournament({ open, onClose, onSuccess }: AdminCreateT
           <div>
             <h2 className="text-lg font-semibold text-on-surface flex items-center gap-2">
               <Trophy className="w-5 h-5 text-yellow-400" />
-              Create Tournament
+              <Trans>Create Tournament</Trans>
             </h2>
             <p className="text-[11px] text-on-surface-variant mt-0.5">
-              Create a global tournament for all players
+              <Trans>Create a global tournament for all players</Trans>
             </p>
           </div>
         </div>
@@ -147,13 +149,13 @@ export function AdminCreateTournament({ open, onClose, onSuccess }: AdminCreateT
           {/* Tournament Name */}
           <div className="space-y-2">
             <Label htmlFor="admin-name" className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
-              Tournament Name *
+              <Trans>Tournament Name *</Trans>
             </Label>
             <Input
               id="admin-name"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              placeholder="e.g., Sunday Special"
+              placeholder={t`e.g., Sunday Special`}
               className="bg-surface-container-high border-outline-variant/50 text-on-surface"
               required
             />
@@ -162,7 +164,7 @@ export function AdminCreateTournament({ open, onClose, onSuccess }: AdminCreateT
           {/* Tournament Type */}
           <div className="space-y-2">
             <Label className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
-              Tournament Type
+              <Trans>Tournament Type</Trans>
             </Label>
             <div className="flex gap-2">
               <button
@@ -178,7 +180,7 @@ export function AdminCreateTournament({ open, onClose, onSuccess }: AdminCreateT
                     : 'border-white/10 text-on-surface-variant hover:border-white/30'
                 )}
               >
-                Sit & Go
+                <Trans>Sit & Go</Trans>
               </button>
               <button
                 type="button"
@@ -193,7 +195,7 @@ export function AdminCreateTournament({ open, onClose, onSuccess }: AdminCreateT
                     : 'border-white/10 text-on-surface-variant hover:border-white/30'
                 )}
               >
-                MTT
+                <Trans>MTT</Trans>
               </button>
             </div>
           </div>
@@ -201,7 +203,7 @@ export function AdminCreateTournament({ open, onClose, onSuccess }: AdminCreateT
           {/* Max Players */}
           <div className="space-y-2">
             <Label className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
-              Max Players: {form.max_players}
+              <Trans>Max Players: {form.max_players}</Trans>
             </Label>
             <input
               type="range"
@@ -221,7 +223,7 @@ export function AdminCreateTournament({ open, onClose, onSuccess }: AdminCreateT
           {/* Buy-in */}
           <div className="space-y-2">
             <Label htmlFor="admin-buyin" className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
-              Buy-in (chips)
+              <Trans>Buy-in (chips)</Trans>
             </Label>
             <div className="relative">
               <Coins className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant/50" />
@@ -240,7 +242,7 @@ export function AdminCreateTournament({ open, onClose, onSuccess }: AdminCreateT
           {/* Scheduled Start */}
           <div className="space-y-2">
             <Label htmlFor="admin-start" className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
-              Start Date & Time *
+              <Trans>Start Date & Time *</Trans>
             </Label>
             <div className="relative">
               <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant/50" />
@@ -259,7 +261,7 @@ export function AdminCreateTournament({ open, onClose, onSuccess }: AdminCreateT
           {/* Start Delay (seconds) */}
           <div className="space-y-2">
             <Label className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
-              Start Delay: {form.start_delay_seconds}s
+              <Trans>Start Delay: {form.start_delay_seconds}s</Trans>
             </Label>
             <input
               type="range"
@@ -279,7 +281,7 @@ export function AdminCreateTournament({ open, onClose, onSuccess }: AdminCreateT
           {/* Min Players to Start */}
           <div className="space-y-2">
             <Label className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
-              Min Players to Start: {form.min_players_to_start}
+              <Trans>Min Players to Start: {form.min_players_to_start}</Trans>
             </Label>
             <input
               type="range"
@@ -299,14 +301,14 @@ export function AdminCreateTournament({ open, onClose, onSuccess }: AdminCreateT
           {/* Blind Schedule Template */}
           <div className="space-y-2">
             <Label className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
-              Blind Schedule
+              <Trans>Blind Schedule</Trans>
             </Label>
             <Select
               value={form.blind_schedule_id}
               onValueChange={(value) => setForm((f) => ({ ...f, blind_schedule_id: value }))}
             >
               <SelectTrigger className="bg-surface-container-high border-outline-variant/50 text-on-surface">
-                <SelectValue placeholder={templatesLoading ? 'Loading...' : 'Select a template'} />
+                <SelectValue placeholder={templatesLoading ? t`Loading...` : t`Select a template`} />
               </SelectTrigger>
               <SelectContent>
                 {templates?.map((template) => (
@@ -315,7 +317,7 @@ export function AdminCreateTournament({ open, onClose, onSuccess }: AdminCreateT
                   </SelectItem>
                 ))}
                 {(!templates || templates.length === 0) && (
-                  <SelectItem value="default" disabled>No templates available</SelectItem>
+                  <SelectItem value="default" disabled><Trans>No templates available</Trans></SelectItem>
                 )}
               </SelectContent>
             </Select>
@@ -331,7 +333,7 @@ export function AdminCreateTournament({ open, onClose, onSuccess }: AdminCreateT
             disabled={mutation.isPending}
             className="border-white/10 text-on-surface-variant hover:bg-white/5 hover:text-on-surface"
           >
-            Cancel
+            <Trans>Cancel</Trans>
           </Button>
           <Button
             type="submit"
@@ -341,12 +343,12 @@ export function AdminCreateTournament({ open, onClose, onSuccess }: AdminCreateT
             {mutation.isPending ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Creating...
+                <Trans>Creating...</Trans>
               </>
             ) : (
               <>
                 <Plus className="w-4 h-4 mr-2" />
-                Create Tournament
+                <Trans>Create Tournament</Trans>
               </>
             )}
           </Button>
