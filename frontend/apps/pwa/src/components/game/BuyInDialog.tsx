@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Wallet, Minus, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Trans, t } from '@lingui/react/macro';
 
 interface BuyInDialogProps {
   open: boolean;
@@ -47,10 +48,10 @@ export function BuyInDialog({
   const isValid = amount >= minBuyIn && amount <= effectiveMax;
 
   const presets = [
-    { label: 'MIN', value: minBuyIn },
-    { label: '50%', value: Math.max(minBuyIn, Math.floor(effectiveMax * 0.5)) },
-    { label: '75%', value: Math.max(minBuyIn, Math.floor(effectiveMax * 0.75)) },
-    { label: 'MAX', value: effectiveMax },
+    { label: t`MIN`, value: minBuyIn },
+    { label: t`50%`, value: Math.max(minBuyIn, Math.floor(effectiveMax * 0.5)) },
+    { label: t`75%`, value: Math.max(minBuyIn, Math.floor(effectiveMax * 0.75)) },
+    { label: t`MAX`, value: effectiveMax },
   ];
 
   // Deduplicate presets
@@ -94,10 +95,10 @@ export function BuyInDialog({
             {/* Header */}
             <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/5">
               <div>
-                <h2 className="text-sm font-semibold text-on-surface">{isRebuy ? 'Rebuy' : 'Buy In'}</h2>
+                <h2 className="text-sm font-semibold text-on-surface">{isRebuy ? t`Rebuy` : t`Buy In`}</h2>
                 {isTournament && (
                   <p className="text-xs text-yellow-400 mt-1">
-                    ⚠️ Tournament mode: no rebuys allowed
+                    <Trans>⚠️ Tournament mode: no rebuys allowed</Trans>
                   </p>
                 )}
                 {tableName && (
@@ -120,7 +121,7 @@ export function BuyInDialog({
               {/* Balance */}
               <div className="flex items-center justify-between">
                 <span className="text-[11px] uppercase tracking-wider text-on-surface-variant">
-                  Available Balance
+                  <Trans>Available Balance</Trans>
                 </span>
                 <span
                   className={cn(
@@ -134,7 +135,7 @@ export function BuyInDialog({
 
               {!canAfford && (
                 <div className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[11px]">
-                  Insufficient balance. Minimum buy-in is ${minBuyIn.toLocaleString()}.
+                  <Trans>Insufficient balance. Minimum buy-in is ${minBuyIn.toLocaleString()}.</Trans>
                 </div>
               )}
 
@@ -300,8 +301,8 @@ export function BuyInDialog({
 
               {/* Min/Max labels */}
               <div className="flex justify-between text-[10px] text-on-surface-variant font-mono">
-                <span>MIN ${minBuyIn.toLocaleString()}</span>
-                <span>MAX ${effectiveMax.toLocaleString()}</span>
+                <span><Trans>MIN ${minBuyIn.toLocaleString()}</Trans></span>
+                <span><Trans>MAX ${effectiveMax.toLocaleString()}</Trans></span>
               </div>
             </div>
 
@@ -314,7 +315,7 @@ export function BuyInDialog({
                 onClick={onClose}
                 className="flex-1 py-2.5 rounded-lg border border-white/10 text-on-surface-variant text-[11px] font-label-caps uppercase tracking-wider hover:bg-white/5 transition-all"
               >
-                Cancel
+                <Trans>Cancel</Trans>
               </motion.button>
               <motion.button
                 type="button"
@@ -330,7 +331,7 @@ export function BuyInDialog({
                 )}
               >
                 <Wallet className="w-3.5 h-3.5 inline mr-1.5" />
-                {isRebuy ? 'Rebuy' : 'Take Seat'}
+                {isRebuy ? t`Rebuy` : t`Take Seat`}
               </motion.button>
             </div>
           </motion.div>
