@@ -15,8 +15,9 @@ import {
 } from 'lucide-react';
 import type { PreAction } from '../../hooks/usePreAction';
 import { trackPlayerAction } from '@/lib/customAnalytics';
+import { Trans, t } from '@lingui/react/macro';
 
-// ── Helper: format currency with "k" shorthand ──
+// Helper: format currency with "k" shorthand
 function formatCurrency(amount: number): string {
   if (amount >= 1000) {
     const k = (amount / 1000).toFixed(1);
@@ -39,7 +40,7 @@ const transition = { duration: 0.25, ease: [0.22, 1, 0.36, 1] as const };
 
 const MOBILE_BREAK = 390;
 
-// ── Hook to keep banner visible for a minimum duration ──
+// Hook to keep banner visible for a minimum duration
 function useVisibleAction(action: string | null, amount: number, delay = 2500) {
   const [visible, setVisible] = useState<{ action: string; amount: number } | null>(null);
   const prevActionRef = useRef<string | null>(null);
@@ -63,7 +64,7 @@ function useVisibleAction(action: string | null, amount: number, delay = 2500) {
   return visible;
 }
 
-// ── Hook for Random Sparkle Effect ──
+// Hook for Random Sparkle Effect
 function useRandomSparkle(enabled: boolean) {
   const [sparkIndex, setSparkIndex] = useState<number | null>(null);
 
@@ -97,7 +98,7 @@ function useRandomSparkle(enabled: boolean) {
   return sparkIndex;
 }
 
-// ── Keyboard handler ──
+// Keyboard handler
 function useActionKeys(
   onAction: (action: string, amount?: number) => void,
   onToggleRaise: () => void,
@@ -132,7 +133,7 @@ function useActionKeys(
   }, [handleKey]);
 }
 
-// ── Responsive width hook ──
+// Responsive width hook
 function useViewportWidth() {
   const [width, setWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 500);
   useEffect(() => {
@@ -143,19 +144,19 @@ function useViewportWidth() {
   return width;
 }
 
-// ── Pre-action definitions ──
+// Pre-action definitions
 const preActionOptions: {
   key: PreAction['type'];
   label: string;
   shortLabel: string;
   Icon: React.FC<{ className?: string }>;
 }[] = [
-    { key: 'fold', label: 'Fold', shortLabel: 'Fold', Icon: LogOut },
-    { key: 'check_or_fold', label: 'Check / Fold', shortLabel: 'Chk/Fld', Icon: RotateCcw },
-    { key: 'check_or_call_any', label: 'Call Any', shortLabel: 'Call Any', Icon: Infinity },
+    { key: 'fold', label: t`Fold`, shortLabel: t`Fold`, Icon: LogOut },
+    { key: 'check_or_fold', label: t`Check / Fold`, shortLabel: t`Chk/Fld`, Icon: RotateCcw },
+    { key: 'check_or_call_any', label: t`Call Any`, shortLabel: t`Call Any`, Icon: Infinity },
   ];
 
-// ── Variant config ──
+// Variant config
 const variantConfig: Record<
   string,
   {
@@ -226,7 +227,7 @@ const variantConfig: Record<
   },
 };
 
-// ── Subtle hover hook ──
+// Subtle hover hook
 function useSubtleHover(cfg: typeof variantConfig[string], disabled: boolean) {
   const [hovered, setHovered] = useState(false);
   const isDisabled = disabled;
@@ -250,7 +251,7 @@ function useSubtleHover(cfg: typeof variantConfig[string], disabled: boolean) {
   return { style, handlers, hovered };
 }
 
-// ── Action button with motion ──
+// Action button with motion
 const ActionBtn = ({
   variant,
   onClick,
@@ -324,7 +325,7 @@ const ActionBtn = ({
   );
 };
 
-// ── Execution Banner ──
+// Execution Banner
 const ExecutionBanner = ({
   visibleAction,
 }: {
@@ -334,7 +335,7 @@ const ExecutionBanner = ({
   const amount = visibleAction?.amount;
 
   const isCall = action?.toLowerCase() === 'call';
-  const displayText = `Auto ${action} ${isCall && amount && amount > 0 ? `$${amount}` : ''}`.trim();
+  const displayText = t`Auto ${action} ${isCall && amount && amount > 0 ? `$${amount}` : ''}`.trim();
 
   return (
     <AnimatePresence>
@@ -357,7 +358,7 @@ const ExecutionBanner = ({
   );
 };
 
-// ── Pre-action panel ──
+// Pre-action panel
 const PreActionPanel = ({
   preAction,
   onSetPreAction,
@@ -406,7 +407,7 @@ const PreActionPanel = ({
         <div className="flex items-center gap-1.5">
           {callUpToEditing ? (
             <div className="flex-1 flex items-center gap-1.5 py-2 px-2.5 rounded-lg border border-tertiary/40 bg-black/30">
-              <span className="text-[9px] text-tertiary/50 shrink-0">Call ≤ $</span>
+              <span className="text-[9px] text-tertiary/50 shrink-0"><Trans>Call ≤ $</Trans></span>
               <input
                 type="number"
                 value={callUpToValue}
@@ -443,8 +444,8 @@ const PreActionPanel = ({
               whileTap={{ scale: 0.95 }}
             >
               {preAction?.type === 'call_up_to'
-                ? `Call ≤ $${(preAction as { type: 'call_up_to'; amount: number }).amount}`
-                : 'Call ≤ $…'}
+                ? t`Call ≤ $${(preAction as { type: 'call_up_to'; amount: number }).amount}`
+                : t`Call ≤ $…`}
             </motion.button>
           )}
         </div>
@@ -463,7 +464,7 @@ const PreActionPanel = ({
             <div className="flex items-center justify-center gap-1.5 py-0.5">
               <span className="w-1 h-1 rounded-full bg-tertiary animate-pulse" />
               <span className="text-[9px] text-tertiary/50 font-label-caps uppercase tracking-widest">
-                Queued
+                <Trans>Queued</Trans>
               </span>
             </div>
           </motion.div>
@@ -473,9 +474,9 @@ const PreActionPanel = ({
   );
 };
 
-/* ═══════════════════════════════════════════
+/* ────────────────────────────────────────────────────────────────
    DESKTOP
-   ═══════════════════════════════════════════ */
+   ──────────────────────────────────────────────────────────────── */
 const DesktopActionBar = ({
   actionRequired,
   toCall,
@@ -515,16 +516,16 @@ const DesktopActionBar = ({
   const isCheck = toCall === 0;
   const isAllInCall = heroStack > 0 && heroStack < toCall;
   const callLabel = isCheck
-    ? 'Check'
+    ? t`Check`
     : isAllInCall
-      ? `All-in ${formatCurrency(heroStack)}`
-      : `Call ${formatCurrency(toCall)}`;
+      ? t`All-in ${formatCurrency(heroStack)}`
+      : t`Call ${formatCurrency(toCall)}`;
 
   const allInDisabled = !actionRequired || heroStack === 0;
 
   const handleAction = useCallback((action: string, amount?: number) => {
     onAction(action, amount);
-  trackPlayerAction(action, amount, pot);
+    trackPlayerAction(action, amount, pot);
     setActionSent(true);
     if (actionSentTimerRef.current) clearTimeout(actionSentTimerRef.current);
     actionSentTimerRef.current = setTimeout(() => setActionSent(false), 2500);
@@ -533,7 +534,6 @@ const DesktopActionBar = ({
   const toggleRaise = useCallback(() => setRaiseOpen((p) => !p), []);
   const visibleAction = useVisibleAction(executingAction, toCall);
 
-  // Prevent layout flashing when waiting for backend to process an action
   const isActing = !!visibleAction || actionSent;
   const layoutActionRequired = actionRequired || isActing;
 
@@ -542,9 +542,9 @@ const DesktopActionBar = ({
   const sparkIndex = useRandomSparkle(!actionRequired && !raiseOpen);
 
   const getPreActionLabel = () => {
-    if (!preAction) return 'Auto';
+    if (!preAction) return t`Auto`;
     const label = preAction.type.replace(/_/g, ' ');
-    return `Auto: ${label}`;
+    return t`Auto: ${label}`;
   };
 
   return (
@@ -628,16 +628,16 @@ const DesktopActionBar = ({
           )}
 
           <ActionBtn variant="fold" onClick={() => handleAction('fold')} disabled={!actionRequired} shortcut="F" isMobile={false} sparkId={0} currentSpark={sparkIndex}>
-            Fold
+            <Trans>Fold</Trans>
           </ActionBtn>
           <ActionBtn variant="call" onClick={() => handleAction(isCheck ? 'check' : 'call')} disabled={!actionRequired} shortcut="C" isMobile={false} IconOverride={isCheck ? Check : undefined} sparkId={1} currentSpark={sparkIndex}>
             {callLabel}
           </ActionBtn>
           <ActionBtn variant="raise" onClick={toggleRaise} disabled={!actionRequired || !canRaise} shortcut="R" isMobile={false} sparkId={2} currentSpark={sparkIndex}>
-            {raiseOpen ? 'Close' : 'Raise'}
+            {raiseOpen ? t`Close` : t`Raise`}
           </ActionBtn>
           <ActionBtn variant="all-in" onClick={() => handleAction('all-in')} disabled={allInDisabled} shortcut="A" isMobile={false} sparkId={3} currentSpark={sparkIndex}>
-            All-in
+            <Trans>All-in</Trans>
           </ActionBtn>
         </div>
       </div>
@@ -645,9 +645,9 @@ const DesktopActionBar = ({
   );
 };
 
-/* ═══════════════════════════════════════════
+/* ────────────────────────────────────────────────────────────────
    MOBILE
-   ═══════════════════════════════════════════ */
+   ──────────────────────────────────────────────────────────────── */
 const MobileActionBar = ({
   actionRequired,
   toCall,
@@ -687,16 +687,16 @@ const MobileActionBar = ({
   const isCheck = toCall === 0;
   const isAllInCall = heroStack > 0 && heroStack < toCall;
   const callLabel = isCheck
-    ? 'Check'
+    ? t`Check`
     : isAllInCall
-      ? `All-in ${formatCurrency(heroStack)}`
-      : `Call ${formatCurrency(toCall)}`;
+      ? t`All-in ${formatCurrency(heroStack)}`
+      : t`Call ${formatCurrency(toCall)}`;
 
   const allInDisabled = !actionRequired || heroStack === 0;
 
   const handleAction = useCallback((action: string, amount?: number) => {
     onAction(action, amount);
-  trackPlayerAction(action, amount, pot);
+    trackPlayerAction(action, amount, pot);
     setActionSent(true);
     if (actionSentTimerRef.current) clearTimeout(actionSentTimerRef.current);
     actionSentTimerRef.current = setTimeout(() => setActionSent(false), 2500);
@@ -707,7 +707,6 @@ const MobileActionBar = ({
   const toggleRaise = useCallback(() => setRaiseOpen((p) => !p), []);
   const visibleAction = useVisibleAction(executingAction, toCall);
 
-  // Prevent layout flashing when waiting for backend to process an action
   const isActing = !!visibleAction || actionSent;
   const layoutActionRequired = actionRequired || isActing;
 
@@ -722,7 +721,7 @@ const MobileActionBar = ({
 
   const foldBtn = (
     <ActionBtn variant="fold" onClick={() => handleAction('fold')} disabled={!actionRequired} isMobile sparkId={0} currentSpark={sparkIndex}>
-      Fold
+      <Trans>Fold</Trans>
     </ActionBtn>
   );
   const callBtn = (
@@ -732,12 +731,12 @@ const MobileActionBar = ({
   );
   const raiseBtn = (
     <ActionBtn variant="raise" onClick={toggleRaise} disabled={!actionRequired || !canRaise} isMobile sparkId={2} currentSpark={sparkIndex}>
-      {raiseOpen ? 'Close' : 'Raise'}
+      {raiseOpen ? t`Close` : t`Raise`}
     </ActionBtn>
   );
   const allInBtn = (
     <ActionBtn variant="all-in" onClick={() => handleAction('all-in')} disabled={allInDisabled} isMobile sparkId={3} currentSpark={sparkIndex}>
-      All-in
+      <Trans>All-in</Trans>
     </ActionBtn>
   );
 
@@ -837,7 +836,7 @@ const MobileActionBar = ({
                   whileTap={{ scale: 0.95 }}
                 >
                   <Bot className="w-3 h-3 shrink-0" />
-                  {preAction ? `Auto: ${getPreActionText()}` : 'Auto'}
+                  {preAction ? t`Auto: ${getPreActionText()}` : t`Auto`}
                 </motion.button>
               )}
             </div>
