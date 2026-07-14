@@ -11,6 +11,7 @@ import { Loader2, Upload, Image as ImageIcon, Palette, Crown, Save, Info, Settin
 import { cn } from '@/lib/utils';
 import { uploadFile } from '@/lib/uploadFile';
 import type { ClubDetails } from '@/types/club';
+import { Trans, t } from '@lingui/react/macro';
 
 const VALID_COLORS = [
   "#1a6b42", "#2d7a5a", "#3d8b6b", "#4a9c7a",
@@ -18,11 +19,11 @@ const VALID_COLORS = [
 ];
 
 const CHIP_PRESETS = [
-  { id: 'classic', name: 'Classic Red & Blue' },
-  { id: 'gold', name: 'Gold & Black' },
-  { id: 'emerald', name: 'Emerald Green' },
-  { id: 'royal', name: 'Royal Purple' },
-  { id: 'neon', name: 'Neon Blue' },
+  { id: 'classic', name: t`Classic Red & Blue` },
+  { id: 'gold', name: t`Gold & Black` },
+  { id: 'emerald', name: t`Emerald Green` },
+  { id: 'royal', name: t`Royal Purple` },
+  { id: 'neon', name: t`Neon Blue` },
 ];
 
 const containerVariants = {
@@ -85,10 +86,10 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['club', club.id] });
-      toast.success('Club settings updated successfully');
+      toast.success(t`Club settings updated successfully`);
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'Failed to update club settings');
+      toast.error(error instanceof Error ? error.message : t`Failed to update club settings`);
     },
   });
 
@@ -97,11 +98,11 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      toast.error('Please upload an image file');
+      toast.error(t`Please upload an image file`);
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('Logo must be less than 5MB');
+      toast.error(t`Logo must be less than 5MB`);
       return;
     }
 
@@ -110,9 +111,9 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
       const url = await uploadFile(file);
       setLogoPreview(url);
       setFormData((prev) => ({ ...prev, logo_url: url }));
-      toast.success('Logo uploaded');
+      toast.success(t`Logo uploaded`);
     } catch (err) {
-      toast.error('Failed to upload logo');
+      toast.error(t`Failed to upload logo`);
     } finally {
       setIsUploadingLogo(false);
     }
@@ -123,11 +124,11 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      toast.error('Please upload an image file');
+      toast.error(t`Please upload an image file`);
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      toast.error('Banner must be less than 10MB');
+      toast.error(t`Banner must be less than 10MB`);
       return;
     }
 
@@ -136,9 +137,9 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
       const url = await uploadFile(file);
       setBannerPreview(url);
       setFormData((prev) => ({ ...prev, banner_url: url }));
-      toast.success('Banner uploaded');
+      toast.success(t`Banner uploaded`);
     } catch (err) {
-      toast.error('Failed to upload banner');
+      toast.error(t`Failed to upload banner`);
     } finally {
       setIsUploadingBanner(false);
     }
@@ -147,7 +148,7 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) {
-      toast.error('Club name is required');
+      toast.error(t`Club name is required`);
       return;
     }
 
@@ -183,37 +184,37 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
             <Settings className="w-5 h-5 text-tertiary" />
           </div>
           <div>
-            <span className="text-xs font-data-mono uppercase tracking-widest text-tertiary">Configuration</span>
-            <h3 className="font-headline-md text-base text-on-surface">Basic Information</h3>
+            <span className="text-xs font-data-mono uppercase tracking-widest text-tertiary"><Trans>Configuration</Trans></span>
+            <h3 className="font-headline-md text-base text-on-surface"><Trans>Basic Information</Trans></h3>
           </div>
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="club-name" className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant">
-            Club Name *
+            <Trans>Club Name *</Trans>
           </Label>
           <Input
             id="club-name"
             value={formData.name}
             onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-            placeholder="Enter club name"
+            placeholder={t`Enter club name`}
             className="h-12 bg-white/5 border-white/10 rounded-xl px-4 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-tertiary/50 transition-all"
           />
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="telegram-group" className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant">
-            Telegram Group ID
+            <Trans>Telegram Group ID</Trans>
           </Label>
           <Input
             id="telegram-group"
             value={formData.telegram_group_id}
             onChange={(e) => setFormData((prev) => ({ ...prev, telegram_group_id: e.target.value }))}
-            placeholder="e.g., -1001234567890"
+            placeholder={t`e.g., -1001234567890`}
             className="h-12 bg-white/5 border-white/10 rounded-xl px-4 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-tertiary/50 transition-all"
           />
           <p className="text-xs text-on-surface-variant/60 flex items-center gap-1.5 mt-1">
-            <Info className="w-3 h-3" /> Link your club to a Telegram group for notifications.
+            <Info className="w-3 h-3" /> <Trans>Link your club to a Telegram group for notifications.</Trans>
           </p>
         </div>
       </motion.div>
@@ -225,8 +226,8 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
             <ImageIcon className="w-5 h-5 text-blue-400" />
           </div>
           <div>
-            <span className="text-xs font-data-mono uppercase tracking-widest text-blue-400">Assets</span>
-            <h3 className="font-headline-md text-base text-on-surface">Branding</h3>
+            <span className="text-xs font-data-mono uppercase tracking-widest text-blue-400"><Trans>Assets</Trans></span>
+            <h3 className="font-headline-md text-base text-on-surface"><Trans>Branding</Trans></h3>
           </div>
         </div>
 
@@ -262,10 +263,10 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
               ) : (
                 <Upload className="w-4 h-4 mr-2" />
               )}
-              Upload Logo
+              <Trans>Upload Logo</Trans>
             </Button>
             <p className="text-xs text-on-surface-variant/60 mt-2">
-              Recommended: 200x200px, max 5MB
+              <Trans>Recommended: 200x200px, max 5MB</Trans>
             </p>
           </div>
         </div>
@@ -279,15 +280,15 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
               <Crown className="w-5 h-5 text-yellow-400" />
             </div>
             <div>
-              <span className="text-xs font-data-mono uppercase tracking-widest text-yellow-400">Premium</span>
-              <h3 className="font-headline-md text-base text-on-surface">Club Pro Customization</h3>
+              <span className="text-xs font-data-mono uppercase tracking-widest text-yellow-400"><Trans>Premium</Trans></span>
+              <h3 className="font-headline-md text-base text-on-surface"><Trans>Club Pro Customization</Trans></h3>
             </div>
           </div>
 
           {/* Banner Upload */}
           <div className="space-y-2">
             <Label className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant">
-              Banner Image
+              <Trans>Banner Image</Trans>
             </Label>
             <div className="space-y-3">
               {bannerPreview ? (
@@ -298,7 +299,7 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
                 />
               ) : (
                 <div className="w-full h-32 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-on-surface-variant/50">
-                  No banner uploaded
+                  <Trans>No banner uploaded</Trans>
                 </div>
               )}
               <input
@@ -320,10 +321,10 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
                 ) : (
                   <Upload className="w-4 h-4 mr-2" />
                 )}
-                Upload Banner
+                <Trans>Upload Banner</Trans>
               </Button>
               <p className="text-xs text-on-surface-variant/60">
-                Recommended: 1200x300px, max 10MB
+                <Trans>Recommended: 1200x300px, max 10MB</Trans>
               </p>
             </div>
           </div>
@@ -331,7 +332,7 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
           {/* Chip Preset */}
           <div className="space-y-2">
             <Label className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant">
-              Chip Design Preset
+              <Trans>Chip Design Preset</Trans>
             </Label>
             <select
               value={formData.chip_preset}
@@ -349,7 +350,7 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
           {/* Felt Color */}
           <div className="space-y-2">
             <Label className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant">
-              Felt Color
+              <Trans>Felt Color</Trans>
             </Label>
             <div className="flex flex-wrap gap-2">
               {VALID_COLORS.map((color) => (
@@ -364,7 +365,7 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
                       : "border-white/10 hover:border-white/30"
                   )}
                   style={{ backgroundColor: color }}
-                  aria-label={`Select ${color}`}
+                  aria-label={t`Select ${color}`}
                 />
               ))}
             </div>
@@ -392,12 +393,12 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
           {updateMutation.isPending ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              Saving Changes...
+              <Trans>Saving Changes...</Trans>
             </>
           ) : (
             <>
               <Save className="w-4 h-4" />
-              Save Changes
+              <Trans>Save Changes</Trans>
             </>
           )}
         </Button>
