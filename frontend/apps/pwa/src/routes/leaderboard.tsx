@@ -6,8 +6,9 @@ import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card } from '@/components/ui/card';
 import { Trophy, Medal, Calendar, TrendingUp, Crown, Sparkles, ChevronRight, User } from 'lucide-react';
-import {useState, useEffect} from "react";
+import { useState, useEffect } from 'react';
 import { trackGameEvent } from '@/lib/customAnalytics';
+import { Trans, t } from '@lingui/react/macro';
 
 export const Route = createFileRoute('/leaderboard')({
   component: LeaderboardPage,
@@ -42,7 +43,6 @@ function LeaderboardPage() {
   const currentUser = useAuthStore((s) => s.user);
   const [period, setPeriod] = useState<Period>('global');
 
-
   // Track leaderboard view when data is loaded
   useEffect(() => {
     if (!isLoading && entries && entries.length > 0) {
@@ -53,15 +53,14 @@ function LeaderboardPage() {
     }
   }, [isLoading, entries, period]);
 
-
-    if (isLoading) {
+  if (isLoading) {
     return <LeaderboardSkeleton />;
   }
 
   if (error) {
     return (
       <div className="flex justify-center items-center min-h-[60vh] text-red-400">
-        Failed to load leaderboard: {(error as Error).message}
+        <Trans>Failed to load leaderboard: {(error as Error).message}</Trans>
       </div>
     );
   }
@@ -69,7 +68,7 @@ function LeaderboardPage() {
   if (!entries || entries.length === 0) {
     return (
       <div className="flex justify-center items-center min-h-[60vh] text-on-surface-variant">
-        No leaderboard data available yet.
+        <Trans>No leaderboard data available yet.</Trans>
       </div>
     );
   }
@@ -81,9 +80,9 @@ function LeaderboardPage() {
   const currentUserEntry = displayEntries.find((e) => e.user_id === currentUser?.id);
 
   const periodLabels: Record<Period, { label: string; icon: React.ReactNode }> = {
-    global: { label: 'All Time', icon: <Trophy className="w-4 h-4" /> },
-    weekly: { label: 'This Week', icon: <Calendar className="w-4 h-4" /> },
-    monthly: { label: 'This Month', icon: <TrendingUp className="w-4 h-4" /> },
+    global: { label: t`All Time`, icon: <Trophy className="w-4 h-4" /> },
+    weekly: { label: t`This Week`, icon: <Calendar className="w-4 h-4" /> },
+    monthly: { label: t`This Month`, icon: <TrendingUp className="w-4 h-4" /> },
   };
 
   // Podium logic: 2nd, 1st, 3rd
@@ -127,14 +126,14 @@ function LeaderboardPage() {
         <div className="flex items-center gap-2 mb-1">
           <Sparkles className="w-4 h-4 text-yellow-400" />
           <span className="text-xs font-data-mono uppercase tracking-widest text-yellow-400">
-            Top Players
+            <Trans>Top Players</Trans>
           </span>
         </div>
         <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface">
-          Leaderboard
+          <Trans>Leaderboard</Trans>
         </h1>
         <p className="text-on-surface-variant text-sm mt-1 max-w-md">
-          Compete globally and climb the ranks to earn exclusive rewards.
+          <Trans>Compete globally and climb the ranks to earn exclusive rewards.</Trans>
         </p>
       </motion.div>
 
@@ -251,7 +250,7 @@ function LeaderboardPage() {
                     {entry.display_name}
                     {isCurrentUser && (
                       <span className="text-[10px] font-data-mono uppercase tracking-wider text-tertiary bg-tertiary/10 px-2 py-0.5 rounded-full border border-tertiary/20">
-                        You
+                        <Trans>You</Trans>
                       </span>
                     )}
                   </span>
@@ -288,12 +287,12 @@ function LeaderboardPage() {
                 {userRank}
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-on-surface-variant font-medium">Your Rank</p>
+                <p className="text-[10px] uppercase tracking-wider text-on-surface-variant font-medium"><Trans>Your Rank</Trans></p>
                 <p className="text-sm font-medium text-on-surface truncate">{currentUserEntry.display_name}</p>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-[10px] uppercase tracking-wider text-on-surface-variant font-medium">Chips Won</p>
+              <p className="text-[10px] uppercase tracking-wider text-on-surface-variant font-medium"><Trans>Chips Won</Trans></p>
               <p className="text-sm font-data-mono font-bold text-tertiary">
                 ${(currentUserEntry.total_chips_won || 0).toLocaleString()}
               </p>
