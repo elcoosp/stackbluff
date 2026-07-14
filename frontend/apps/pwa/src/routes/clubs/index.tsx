@@ -12,6 +12,7 @@ import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { CreateClubModal } from '@/components/club/CreateClubModal';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { requireAuth } from '@/lib/authGuard';
+import { Trans, t } from '@lingui/react/macro';
 
 interface Club {
   id: string;
@@ -65,13 +66,13 @@ function ClubsListPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full text-on-surface-variant animate-pulse">
-        Loading clubs...
+        <Trans>Loading clubs...</Trans>
       </div>
     );
   }
 
   if (error) {
-    return <ErrorState onRetry={() => refetch()} message="Failed to load clubs" />;
+    return <ErrorState onRetry={() => refetch()} message={t`Failed to load clubs`} />;
   }
 
   return (
@@ -91,14 +92,14 @@ function ClubsListPage() {
           <div className="flex items-center gap-2 mb-1">
             <Sparkles className="w-4 h-4 text-purple-400" />
             <span className="text-xs font-data-mono uppercase tracking-widest text-purple-400">
-              Community & Play
+              <Trans>Community & Play</Trans>
             </span>
           </div>
           <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface flex items-center gap-3">
-            Poker Clubs
+            <Trans>Poker Clubs</Trans>
           </h1>
           <p className="text-on-surface-variant text-sm mt-1 max-w-md">
-            Create your private club or join an exclusive community.
+            <Trans>Create your private club or join an exclusive community.</Trans>
           </p>
         </div>
         <Button
@@ -106,7 +107,7 @@ function ClubsListPage() {
           className="flex items-center gap-2 px-4 py-2 bg-tertiary text-on-tertiary font-label-caps text-xs hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg shadow-emerald-500/10 rounded-lg"
         >
           <Plus className="w-4 h-4" />
-          Create Club
+          <Trans>Create Club</Trans>
         </Button>
       </motion.div>
 
@@ -119,7 +120,7 @@ function ClubsListPage() {
         <Card className="p-4 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl flex flex-col sm:flex-row items-center gap-3">
           <input
             type="text"
-            placeholder="Enter invite code"
+            placeholder={t`Enter invite code`}
             id="invite-code-input"
             className="flex-1 w-full bg-surface-container-high border border-white/10 rounded-lg px-4 py-2 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-tertiary/50 transition-all"
           />
@@ -131,13 +132,13 @@ function ClubsListPage() {
               if (code) {
                 navigate({ to: '/clubs/join', search: { invite: code } });
               } else {
-                toast.error('Please enter an invite code');
+                toast.error(t`Please enter an invite code`);
               }
             }}
             className="flex items-center gap-2 px-4 py-2 border-outline-variant text-on-surface hover:border-tertiary hover:text-tertiary hover:bg-tertiary/10 font-label-caps text-xs uppercase tracking-wider rounded-lg w-full sm:w-auto justify-center"
           >
             <Users className="w-4 h-4" />
-            Join Club
+            <Trans>Join Club</Trans>
           </Button>
         </Card>
       </motion.div>
@@ -151,16 +152,16 @@ function ClubsListPage() {
         >
           <Card className="p-12 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl text-center flex flex-col items-center">
             <Users className="w-12 h-12 text-on-surface-variant/30 mx-auto mb-4" />
-            <p className="text-on-surface-variant">You haven't joined any clubs yet.</p>
+            <p className="text-on-surface-variant"><Trans>You haven't joined any clubs yet.</Trans></p>
             <p className="text-on-surface-variant/60 text-sm mt-2">
-              Create a club or join one with an invite.
+              <Trans>Create a club or join one with an invite.</Trans>
             </p>
             <Button
               onClick={handleCreateClub}
               className="mt-6 px-4 py-2 bg-tertiary text-on-tertiary font-label-caps text-xs hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg shadow-emerald-500/10 rounded-lg flex items-center gap-2"
             >
               <Plus className="w-4 h-4 mr-1" />
-              Create Your First Club
+              <Trans>Create Your First Club</Trans>
             </Button>
           </Card>
         </motion.div>
@@ -196,12 +197,12 @@ function ClubsListPage() {
                       </h3>
                       {club.is_owner && (
                         <Badge variant="outline" className="border-yellow-500/30 text-yellow-400 bg-yellow-500/10 font-mono flex-shrink-0">
-                          <Crown className="w-3 h-3 mr-1" /> Owner
+                          <Crown className="w-3 h-3 mr-1" /> <Trans>Owner</Trans>
                         </Badge>
                       )}
                     </div>
                     <p className="text-xs text-on-surface-variant mt-1 flex items-center gap-1.5">
-                      <Users className="w-3 h-3" /> {club.members_count} members
+                      <Users className="w-3 h-3" /> {club.members_count} <Trans>members</Trans>
                     </p>
                   </div>
                   <ChevronRight className="w-5 h-5 text-outline-variant opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all flex-shrink-0" />
