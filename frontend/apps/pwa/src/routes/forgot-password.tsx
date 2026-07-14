@@ -12,9 +12,10 @@ import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Trans, t } from '@lingui/react/macro';
 
 const forgotPasswordSchema = z.object({
-  email: z.string().min(1, 'Email is required').email('Invalid email address'),
+  email: z.string().min(1, t`Email is required`).email(t`Invalid email address`),
 });
 
 export const Route = createFileRoute('/forgot-password')({
@@ -31,7 +32,7 @@ function ForgotPasswordPage() {
       setSuccess(true);
     },
     onError: (error) => {
-      toast.error(error.message || 'Something went wrong');
+      toast.error(error.message || t`Something went wrong`);
     },
   });
 
@@ -47,15 +48,15 @@ function ForgotPasswordPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#1a1b1e_0%,_#0a0a0a_100%)]" />
         <div className="relative z-10 w-full max-w-md">
           <div className="text-center mb-8">
-            <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter">STACKBLUFF</h1>
-            <p className="font-data-mono text-xs text-outline mt-2 tracking-widest">PASSWORD RESET</p>
+            <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter"><Trans>STACKBLUFF</Trans></h1>
+            <p className="font-data-mono text-xs text-outline mt-2 tracking-widest"><Trans>PASSWORD RESET</Trans></p>
           </div>
           <GlassPanel>
             <div className="space-y-6 p-2">
               <div className="text-center">
-                <h2 className="text-lg font-semibold text-on-surface mb-2">Check your email</h2>
+                <h2 className="text-lg font-semibold text-on-surface mb-2"><Trans>Check your email</Trans></h2>
                 <p className="text-on-surface-variant text-sm">
-                  If the email exists, we've sent a password reset link.
+                  <Trans>If the email exists, we've sent a password reset link.</Trans>
                 </p>
               </div>
               <LiquidMetalButton
@@ -65,7 +66,7 @@ function ForgotPasswordPage() {
                 onClick={() => navigate({ to: '/login' })}
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Sign In
+                <Trans>Back to Sign In</Trans>
               </LiquidMetalButton>
             </div>
           </GlassPanel>
@@ -79,8 +80,8 @@ function ForgotPasswordPage() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#1a1b1e_0%,_#0a0a0a_100%)]" />
       <div className="relative z-10 w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter">STACKBLUFF</h1>
-          <p className="font-data-mono text-xs text-outline mt-2 tracking-widest">RESET PASSWORD</p>
+          <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter"><Trans>STACKBLUFF</Trans></h1>
+          <p className="font-data-mono text-xs text-outline mt-2 tracking-widest"><Trans>RESET PASSWORD</Trans></p>
         </div>
         <GlassPanel>
           <form
@@ -97,7 +98,7 @@ function ForgotPasswordPage() {
                     htmlFor="email"
                     className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase"
                   >
-                    Email Address
+                    <Trans>Email Address</Trans>
                   </Label>
                   <div className="relative mt-2">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -107,7 +108,7 @@ function ForgotPasswordPage() {
                       value={field.state.value}
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
-                      placeholder="user@stackbluff.com"
+                      placeholder={t`user@stackbluff.com`}
                       className="pl-9 bg-background/50 border-white/10 text-on-surface placeholder:text-muted-foreground/50 focus-visible:ring-tertiary"
                     />
                   </div>
@@ -138,13 +139,13 @@ function ForgotPasswordPage() {
               variant="silver"
               className="w-full"
             >
-              {mutation.isPending ? 'SENDING...' : 'SEND RESET LINK'}
+              {mutation.isPending ? t`SENDING...` : t`SEND RESET LINK`}
             </LiquidMetalButton>
 
             <div className="text-center pt-4">
               <Link to="/login" className="font-label-caps text-[10px] text-on-surface-variant hover:text-on-surface transition-all tracking-widest uppercase">
                 <ArrowLeft className="w-3 h-3 inline mr-1" />
-                BACK TO SIGN IN
+                <Trans>BACK TO SIGN IN</Trans>
               </Link>
             </div>
           </form>
