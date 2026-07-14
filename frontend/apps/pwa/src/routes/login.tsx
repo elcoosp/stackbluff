@@ -102,12 +102,8 @@ function LoginPage() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#1a1b1e_0%,_#0a0a0a_100%)]" />
       <div className="relative z-10 w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter">
-            <Trans>STACKBLUFF</Trans>
-          </h1>
-          <p className="font-data-mono text-xs text-outline mt-2 tracking-widest">
-            <Trans>SECURE LOGIN</Trans>
-          </p>
+          <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter"><Trans>STACKBLUFF</Trans></h1>
+          <p className="font-data-mono text-xs text-outline mt-2 tracking-widest"><Trans>SECURE LOGIN</Trans></p>
         </div>
         <GlassPanel>
           <form onSubmit={(e) => { e.preventDefault(); form.handleSubmit(); }} className="space-y-6">
@@ -152,7 +148,7 @@ function LoginPage() {
                           value={field.state.value}
                           onBlur={field.handleBlur}
                           onChange={(e) => field.handleChange(e.target.value)}
-                          placeholder="user@stackbluff.com"
+                          placeholder={t`user@stackbluff.com`}
                           className="pl-9 bg-background/50 border-white/10 text-on-surface placeholder:text-muted-foreground/50 focus-visible:ring-tertiary"
                         />
                       </div>
@@ -246,13 +242,13 @@ function LoginPage() {
           </form>
         </GlassPanel>
 
-        <div className="flex flex-wrap gap-4 justify-center text-sm text-on-surface-variant mt-6">
-          <Link to="/legal/terms" className="hover:text-tertiary transition-colors"><Trans>Terms of Service</Trans></Link>
-          <span className="text-white/20">|</span>
-          <Link to="/legal/privacy" className="hover:text-tertiary transition-colors"><Trans>Privacy Policy</Trans></Link>
-          <span className="text-white/20">|</span>
-          <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors"><Trans>Responsible Gaming</Trans></Link>
-        </div>
+      <div className="flex flex-wrap gap-4 justify-center text-sm text-on-surface-variant mt-6">
+        <Link to="/legal/terms" className="hover:text-tertiary transition-colors"><Trans>Terms of Service</Trans></Link>
+        <span className="text-white/20">|</span>
+        <Link to="/legal/privacy" className="hover:text-tertiary transition-colors"><Trans>Privacy Policy</Trans></Link>
+        <span className="text-white/20">|</span>
+        <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors"><Trans>Responsible Gaming</Trans></Link>
+      </div>
       </div>
     </div>
   );
