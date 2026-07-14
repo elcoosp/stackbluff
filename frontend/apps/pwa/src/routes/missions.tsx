@@ -28,6 +28,7 @@ import {
   Coins,
   Sparkles,
 } from 'lucide-react';
+import { Trans, t } from '@lingui/react/macro';
 
 export const Route = createFileRoute('/missions')({
   component: MissionsPage,
@@ -91,15 +92,15 @@ function MissionsPage() {
         { method: 'POST' }
       ),
     onSuccess: (data) => {
-      toast.success(`Claimed ${data.chips_awarded} chips!`);
+      toast.success(t`Claimed ${data.chips_awarded} chips!`);
       if (data.weekly_bonus_awarded) {
-        toast.success('Weekly bonus unlocked! +10,000 chips');
+        toast.success(t`Weekly bonus unlocked! +10,000 chips`);
       }
       queryClient.invalidateQueries({ queryKey: ['missions'] });
       queryClient.invalidateQueries({ queryKey: ['user-me'] });
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'Failed to claim reward');
+      toast.error(error instanceof Error ? error.message : t`Failed to claim reward`);
     },
   });
 
@@ -110,21 +111,20 @@ function MissionsPage() {
         body: JSON.stringify({ mission_id: missionId }),
       }),
     onSuccess: () => {
-      toast.success('Mission rerolled!');
+      toast.success(t`Mission rerolled!`);
       queryClient.invalidateQueries({ queryKey: ['missions'] });
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'Failed to reroll mission');
+      toast.error(error instanceof Error ? error.message : t`Failed to reroll mission`);
     },
   });
-
 
   if (isLoading) {
     return <MissionsSkeleton />;
   }
 
   if (error || !missions) {
-    return <ErrorState onRetry={() => refetch()} message="Failed to load missions." />;
+    return <ErrorState onRetry={() => refetch()} message={t`Failed to load missions.`} />;
   }
 
   const allCompleted = missions.length > 0 && missions.every((m) => m.completed);
@@ -150,14 +150,14 @@ function MissionsPage() {
           <div className="flex items-center gap-2 mb-1">
             <Sparkles className="w-4 h-4 text-tertiary" />
             <span className="text-xs font-data-mono uppercase tracking-widest text-tertiary">
-              Daily Objectives
+              <Trans>Daily Objectives</Trans>
             </span>
           </div>
           <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface flex items-center gap-3">
-            Missions
+            <Trans>Missions</Trans>
           </h1>
           <p className="text-on-surface-variant text-sm mt-1 max-w-md">
-            Complete missions to earn chips and build your streak.
+            <Trans>Complete missions to earn chips and build your streak.</Trans>
           </p>
         </div>
 
@@ -178,7 +178,7 @@ function MissionsPage() {
           )}
           <Gift className="w-5 h-5 relative z-10" />
           <span className="relative z-10">
-            {claimMutation.isPending ? 'Claiming...' : 'Claim All'}
+            {claimMutation.isPending ? t`Claiming...` : t`Claim All`}
           </span>
         </motion.button>
       </motion.div>
@@ -194,7 +194,7 @@ function MissionsPage() {
         <Card className="md:col-span-2 p-6 bg-white/5 backdrop-blur-xl border-white/10 shadow-xl rounded-2xl">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-medium text-on-surface-variant flex items-center gap-2">
-              <Target className="w-4 h-4" /> Overall Progress
+              <Target className="w-4 h-4" /> <Trans>Overall Progress</Trans>
             </span>
             <span className="font-data-mono text-2xl text-on-surface font-bold">
               {Math.round(overallProgress)}%
@@ -209,10 +209,10 @@ function MissionsPage() {
             />
           </div>
           <div className="flex justify-between text-xs text-on-surface-variant mt-2 font-medium">
-            <span>{completedCount} / {missions.length} Completed</span>
+            <span>{completedCount} / {missions.length} <Trans>Completed</Trans></span>
             {allCompleted && (
               <span className="text-tertiary flex items-center gap-1">
-                <CheckCircle className="w-3.5 h-3.5" /> Ready to claim!
+                <CheckCircle className="w-3.5 h-3.5" /> <Trans>Ready to claim!</Trans>
               </span>
             )}
           </div>
@@ -222,16 +222,16 @@ function MissionsPage() {
         <Card className="p-6 bg-gradient-to-br from-orange-500/10 to-red-500/5 backdrop-blur-xl border-orange-500/20 shadow-xl rounded-2xl">
           <div className="flex flex-col h-full justify-between">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-on-surface-variant">Streak</span>
+              <span className="text-sm font-medium text-on-surface-variant"><Trans>Streak</Trans></span>
               <Flame className="w-5 h-5 text-orange-400" />
             </div>
             <div className="mt-2">
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl font-bold font-data-mono text-orange-400">7</span>
-                <span className="text-sm text-on-surface-variant">days</span>
+                <span className="text-sm text-on-surface-variant"><Trans>days</Trans></span>
               </div>
               <p className="text-[10px] text-on-surface-variant mt-1 opacity-80">
-                Keep it up!
+                <Trans>Keep it up!</Trans>
               </p>
             </div>
           </div>
@@ -335,7 +335,7 @@ function MissionsPage() {
                           className="flex items-center gap-1 text-xs font-medium text-tertiary"
                         >
                           <CheckCircle className="w-4 h-4" />
-                          <span>Done</span>
+                          <span><Trans>Done</Trans></span>
                         </motion.div>
                       ) : (
                         canReroll && (
@@ -345,7 +345,7 @@ function MissionsPage() {
                             onClick={() => rerollMutation.mutate(mission.id)}
                             disabled={rerollMutation.isPending}
                             className="text-on-surface-variant hover:text-tertiary hover:bg-tertiary/10 rounded-full p-2 h-auto w-auto transition-colors"
-                            title="Reroll Mission"
+                            title={t`Reroll Mission`}
                           >
                             <RotateCcw className="w-4 h-4" />
                           </Button>
@@ -368,7 +368,7 @@ function MissionsPage() {
         className="text-center pt-4"
       >
         <p className="text-xs text-on-surface-variant/60 font-mono">
-          Missions reset in <span className="text-tertiary">14h 32m</span>
+          <Trans>Missions reset in <span className="text-tertiary">14h 32m</span></Trans>
         </p>
       </motion.div>
     </div>
