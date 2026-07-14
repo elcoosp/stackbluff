@@ -4,6 +4,7 @@ import { authApi } from '@stackbluff/shared/auth/api';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Loader2, Mail, CheckCircle, AlertCircle } from 'lucide-react';
+import { Trans, t } from '@lingui/react/macro';
 
 export function AccountSettings() {
   const { user, loadUser } = useAuthStore();
@@ -14,17 +15,15 @@ export function AccountSettings() {
 
   const handleResendVerification = async () => {
     if (!user?.id) {
-      toast.error('You must be logged in to request verification.');
+      toast.error(t`You must be logged in to request verification.`);
       return;
     }
     setIsResending(true);
     try {
       await authApi.resendVerification();
-      toast.success('Verification email sent! Please check your inbox.');
-      // After resend, we could optionally refresh user data to reflect the new verification status
-      // But the user won't be verified until they click the link, so we don't need to reload.
+      toast.success(t`Verification email sent! Please check your inbox.`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to send verification email.';
+      const message = error instanceof Error ? error.message : t`Failed to send verification email.`;
       toast.error(message);
     } finally {
       setIsResending(false);
@@ -33,24 +32,24 @@ export function AccountSettings() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-semibold text-on-surface">Account Settings</h2>
+      <h2 className="text-lg font-semibold text-on-surface"><Trans>Account Settings</Trans></h2>
 
       {/* Email Verification Section */}
       {hasEmail && (
         <div className="p-4 rounded-lg bg-surface-container-high border border-outline-variant">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-on-surface">Email Verification</p>
+              <p className="text-sm font-medium text-on-surface"><Trans>Email Verification</Trans></p>
               <p className="text-xs text-on-surface-variant mt-0.5">
                 {isEmailVerified ? (
                   <span className="flex items-center gap-1 text-tertiary">
                     <CheckCircle className="w-4 h-4" />
-                    Verified
+                    <Trans>Verified</Trans>
                   </span>
                 ) : (
                   <span className="flex items-center gap-1 text-yellow-400">
                     <AlertCircle className="w-4 h-4" />
-                    Not verified
+                    <Trans>Not verified</Trans>
                   </span>
                 )}
               </p>
@@ -65,12 +64,12 @@ export function AccountSettings() {
                 {isResending ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Sending...
+                    <Trans>Sending...</Trans>
                   </>
                 ) : (
                   <>
                     <Mail className="w-4 h-4 mr-2" />
-                    Resend Verification
+                    <Trans>Resend Verification</Trans>
                   </>
                 )}
               </Button>
@@ -78,7 +77,7 @@ export function AccountSettings() {
           </div>
           {!isEmailVerified && (
             <p className="text-xs text-on-surface-variant mt-2">
-              Verify your email to unlock full account features and secure your account.
+              <Trans>Verify your email to unlock full account features and secure your account.</Trans>
             </p>
           )}
         </div>
@@ -86,9 +85,9 @@ export function AccountSettings() {
 
       {/* Additional account settings can go here */}
       <div className="p-4 rounded-lg bg-surface-container-high border border-outline-variant">
-        <p className="text-sm text-on-surface">Account ID: {user?.id || 'Not logged in'}</p>
+        <p className="text-sm text-on-surface"><Trans>Account ID:</Trans> {user?.id || t`Not logged in`}</p>
         <p className="text-xs text-on-surface-variant mt-1">
-          Platform: {user?.platform || 'Unknown'}
+          <Trans>Platform:</Trans> {user?.platform || t`Unknown`}
         </p>
       </div>
     </div>
