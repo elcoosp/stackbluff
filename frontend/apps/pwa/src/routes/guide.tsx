@@ -16,6 +16,7 @@ import {
   ListChecks,
   Brain,
 } from 'lucide-react';
+import { Trans, t } from '@lingui/react/macro';
 
 export const Route = createFileRoute('/guide')({
   component: GuidePage,
@@ -23,38 +24,38 @@ export const Route = createFileRoute('/guide')({
 
 // Hand ranks ordered from highest to lowest
 const HAND_RANKS = [
-  { name: 'Royal Flush', description: 'Ace, King, Queen, Jack, 10, all same suit' },
-  { name: 'Straight Flush', description: 'Five consecutive cards, all same suit' },
-  { name: 'Four of a Kind', description: 'Four cards of the same rank' },
-  { name: 'Full House', description: 'Three of a kind + a pair' },
-  { name: 'Flush', description: 'Five cards, all same suit' },
-  { name: 'Straight', description: 'Five consecutive cards' },
-  { name: 'Three of a Kind', description: 'Three cards of the same rank' },
-  { name: 'Two Pair', description: 'Two different pairs' },
-  { name: 'One Pair', description: 'Two cards of the same rank' },
-  { name: 'High Card', description: 'Highest card wins when no other hand is made' },
+  { name: t`Royal Flush`, description: t`Ace, King, Queen, Jack, 10, all same suit` },
+  { name: t`Straight Flush`, description: t`Five consecutive cards, all same suit` },
+  { name: t`Four of a Kind`, description: t`Four cards of the same rank` },
+  { name: t`Full House`, description: t`Three of a kind + a pair` },
+  { name: t`Flush`, description: t`Five cards, all same suit` },
+  { name: t`Straight`, description: t`Five consecutive cards` },
+  { name: t`Three of a Kind`, description: t`Three cards of the same rank` },
+  { name: t`Two Pair`, description: t`Two different pairs` },
+  { name: t`One Pair`, description: t`Two cards of the same rank` },
+  { name: t`High Card`, description: t`Highest card wins when no other hand is made` },
 ];
 
 // Texas Hold'em position guide
 const POSITIONS = [
-  { name: 'UTG', label: 'Under the Gun', desc: 'First to act preflop, tightest range', color: 'text-red-400', bg: 'bg-red-500/10' },
-  { name: 'HJ', label: 'Hijack', desc: 'Middle position, can open wider', color: 'text-orange-400', bg: 'bg-orange-500/10' },
-  { name: 'CO', label: 'Cutoff', desc: 'Just before button, steal blinds', color: 'text-yellow-400', bg: 'bg-yellow-500/10' },
-  { name: 'BTN', label: 'Button', desc: 'Best position, play the widest range', color: 'text-tertiary', bg: 'bg-tertiary/10' },
-  { name: 'SB', label: 'Small Blind', desc: 'Bad position, defend carefully', color: 'text-blue-400', bg: 'bg-blue-500/10' },
-  { name: 'BB', label: 'Big Blind', desc: 'Bad position, but get a discount', color: 'text-purple-400', bg: 'bg-purple-500/10' },
+  { name: 'UTG', label: t`Under the Gun`, desc: t`First to act preflop, tightest range`, color: 'text-red-400', bg: 'bg-red-500/10' },
+  { name: 'HJ', label: t`Hijack`, desc: t`Middle position, can open wider`, color: 'text-orange-400', bg: 'bg-orange-500/10' },
+  { name: 'CO', label: t`Cutoff`, desc: t`Just before button, steal blinds`, color: 'text-yellow-400', bg: 'bg-yellow-500/10' },
+  { name: 'BTN', label: t`Button`, desc: t`Best position, play the widest range`, color: 'text-tertiary', bg: 'bg-tertiary/10' },
+  { name: 'SB', label: t`Small Blind`, desc: t`Bad position, defend carefully`, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+  { name: 'BB', label: t`Big Blind`, desc: t`Bad position, but get a discount`, color: 'text-purple-400', bg: 'bg-purple-500/10' },
 ];
 
 // Common poker terms
 const TERMS = [
-  { term: 'C‑bet', definition: 'Continuation bet – betting on the flop after raising preflop' },
-  { term: '3‑bet', definition: 'A re‑raise preflop' },
-  { term: 'Bluff', definition: 'Betting with a weak hand to force folds' },
-  { term: 'Value Bet', definition: 'Betting with a strong hand to get called' },
-  { term: 'Pot Odds', definition: 'Ratio of pot to call; used to decide if a call is profitable' },
-  { term: 'Equity', definition: 'Your share of the pot based on your chance to win' },
-  { term: 'Fold Equity', definition: 'Chance that your opponent folds to your bet' },
-  { term: 'ICM', definition: 'Independent Chip Model – used in tournaments' },
+  { term: t`C-bet`, definition: t`Continuation bet – betting on the flop after raising preflop` },
+  { term: t`3-bet`, definition: t`A re-raise preflop` },
+  { term: t`Bluff`, definition: t`Betting with a weak hand to force folds` },
+  { term: t`Value Bet`, definition: t`Betting with a strong hand to get called` },
+  { term: t`Pot Odds`, definition: t`Ratio of pot to call; used to decide if a call is profitable` },
+  { term: t`Equity`, definition: t`Your share of the pot based on your chance to win` },
+  { term: t`Fold Equity`, definition: t`Chance that your opponent folds to your bet` },
+  { term: t`ICM`, definition: t`Independent Chip Model – used in tournaments` },
 ];
 
 const containerVariants = {
@@ -94,14 +95,14 @@ function GuidePage() {
         <div className="flex items-center gap-2 mb-1">
           <Sparkles className="w-4 h-4 text-blue-400" />
           <span className="text-xs font-data-mono uppercase tracking-widest text-blue-400">
-            Learn & Master
+            <Trans>Learn & Master</Trans>
           </span>
         </div>
         <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface flex items-center gap-3">
-          Poker Guide
+          <Trans>Poker Guide</Trans>
         </h1>
         <p className="text-on-surface-variant text-sm mt-1 max-w-md">
-          Master the rules, positions, and strategies to dominate the table.
+          <Trans>Master the rules, positions, and strategies to dominate the table.</Trans>
         </p>
       </motion.div>
 
@@ -112,29 +113,29 @@ function GuidePage() {
             value="hand-ranks"
             className="flex-1 flex items-center gap-2 py-2.5 rounded-xl text-sm font-medium data-[state=active]:bg-white/10 data-[state=active]:text-on-surface transition-all"
           >
-            <Target className="w-4 h-4" /> Hand Ranks
+            <Target className="w-4 h-4" /> <Trans>Hand Ranks</Trans>
           </TabsTrigger>
           <TabsTrigger
             value="positions"
             className="flex-1 flex items-center gap-2 py-2.5 rounded-xl text-sm font-medium data-[state=active]:bg-white/10 data-[state=active]:text-on-surface transition-all"
           >
-            <Users className="w-4 h-4" /> Positions
+            <Users className="w-4 h-4" /> <Trans>Positions</Trans>
           </TabsTrigger>
           <TabsTrigger
             value="terms"
             className="flex-1 flex items-center gap-2 py-2.5 rounded-xl text-sm font-medium data-[state=active]:bg-white/10 data-[state=active]:text-on-surface transition-all"
           >
-            <ListChecks className="w-4 h-4" /> Key Terms
+            <ListChecks className="w-4 h-4" /> <Trans>Key Terms</Trans>
           </TabsTrigger>
           <TabsTrigger
             value="strategy"
             className="flex-1 flex items-center gap-2 py-2.5 rounded-xl text-sm font-medium data-[state=active]:bg-white/10 data-[state=active]:text-on-surface transition-all"
           >
-            <Brain className="w-4 h-4" /> Strategy
+            <Brain className="w-4 h-4" /> <Trans>Strategy</Trans>
           </TabsTrigger>
         </TabsList>
 
-        {/* ── Hand Ranks ── */}
+        {/* Hand Ranks */}
         <TabsContent value="hand-ranks">
           <motion.div
             variants={containerVariants}
@@ -169,7 +170,7 @@ function GuidePage() {
                       </div>
                       {isTop && (
                         <Badge variant="outline" className="border-yellow-500/30 text-yellow-400 bg-yellow-500/10 font-mono">
-                          <Crown className="w-3 h-3 mr-1" /> Top
+                          <Crown className="w-3 h-3 mr-1" /> <Trans>Top</Trans>
                         </Badge>
                       )}
                     </div>
@@ -180,7 +181,7 @@ function GuidePage() {
           </motion.div>
         </TabsContent>
 
-        {/* ── Positions ── */}
+        {/* Positions */}
         <TabsContent value="positions">
           <motion.div
             variants={containerVariants}
@@ -209,7 +210,7 @@ function GuidePage() {
           </motion.div>
         </TabsContent>
 
-        {/* ── Terms ── */}
+        {/* Terms */}
         <TabsContent value="terms">
           <motion.div
             variants={containerVariants}
@@ -233,7 +234,7 @@ function GuidePage() {
           </motion.div>
         </TabsContent>
 
-        {/* ── Strategy ── */}
+        {/* Strategy */}
         <TabsContent value="strategy">
           <motion.div
             variants={containerVariants}
@@ -247,14 +248,14 @@ function GuidePage() {
                   <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
                     <Target className="w-5 h-5 text-blue-400" />
                   </div>
-                  <h3 className="font-headline-md text-base text-on-surface">Preflop Basics</h3>
+                  <h3 className="font-headline-md text-base text-on-surface"><Trans>Preflop Basics</Trans></h3>
                 </div>
                 <div className="space-y-3">
                   {[
-                    "Play tight in early positions, wider in late positions",
-                    "Raise or fold – avoid limping (just calling)",
-                    "3‑bet with strong hands, 4‑bet with premiums",
-                    "Suited connectors and high cards play well in position"
+                    t`Play tight in early positions, wider in late positions`,
+                    t`Raise or fold – avoid limping (just calling)`,
+                    t`3-bet with strong hands, 4-bet with premiums`,
+                    t`Suited connectors and high cards play well in position`
                   ].map((tip, i) => (
                     <div key={i} className="flex items-start gap-3">
                       <div className="w-5 h-5 rounded-full bg-tertiary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -273,14 +274,14 @@ function GuidePage() {
                   <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
                     <Gem className="w-5 h-5 text-purple-400" />
                   </div>
-                  <h3 className="font-headline-md text-base text-on-surface">Postflop Fundamentals</h3>
+                  <h3 className="font-headline-md text-base text-on-surface"><Trans>Postflop Fundamentals</Trans></h3>
                 </div>
                 <div className="space-y-3">
                   {[
-                    "C‑bet frequently when you were the aggressor",
-                    "Consider your opponent's range, not just your hand",
-                    "Bet for value with strong hands, bluff with weak ones",
-                    "Use pot odds to decide if calling is profitable"
+                    t`C-bet frequently when you were the aggressor`,
+                    t`Consider your opponent's range, not just your hand`,
+                    t`Bet for value with strong hands, bluff with weak ones`,
+                    t`Use pot odds to decide if calling is profitable`
                   ].map((tip, i) => (
                     <div key={i} className="flex items-start gap-3">
                       <div className="w-5 h-5 rounded-full bg-tertiary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -299,14 +300,14 @@ function GuidePage() {
                   <div className="w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20">
                     <Crown className="w-5 h-5 text-yellow-400" />
                   </div>
-                  <h3 className="font-headline-md text-base text-on-surface">Tournament Strategy</h3>
+                  <h3 className="font-headline-md text-base text-on-surface"><Trans>Tournament Strategy</Trans></h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {[
-                    "Preserve your stack – avoid marginal all-ins early",
-                    "Apply pressure on the bubble",
-                    "Understand ICM – chip values change as payouts approach",
-                    "Adjust to increasing blinds and antes"
+                    t`Preserve your stack – avoid marginal all-ins early`,
+                    t`Apply pressure on the bubble`,
+                    t`Understand ICM – chip values change as payouts approach`,
+                    t`Adjust to increasing blinds and antes`
                   ].map((tip, i) => (
                     <div key={i} className="flex items-start gap-3">
                       <div className="w-5 h-5 rounded-full bg-yellow-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
