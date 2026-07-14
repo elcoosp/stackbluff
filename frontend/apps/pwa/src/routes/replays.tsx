@@ -30,6 +30,7 @@ import { toast } from 'sonner';
 import { useState, useMemo } from 'react';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { requireAuth } from '@/lib/authGuard';
+import { Trans, t } from '@lingui/react/macro';
 
 export const Route = createFileRoute('/replays')({
   component: ReplaysPage,
@@ -152,14 +153,12 @@ function ReplaysPage() {
   });
 
   // Fetch lobby tables to map table_id to table_name
-  // Using try/catch inside queryFn to gracefully handle failures without crashing the page
   const { data: tablesData } = useQuery<TableInfo[]>({
     queryKey: ['lobby-tables'],
     queryFn: async () => {
       try {
         return await apiClient<TableInfo[]>('/lobby');
       } catch (err) {
-        // If the endpoint fails, return an empty array to avoid unhandled errors
         return [];
       }
     },
@@ -177,7 +176,6 @@ function ReplaysPage() {
     return map;
   }, [tablesData]);
 
-
   if (isLoading) {
     return <ReplaysSkeleton />;
   }
@@ -186,7 +184,7 @@ function ReplaysPage() {
     return (
       <div className="relative max-w-5xl mx-auto p-4 md:p-8">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-red-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-        <ErrorState onRetry={() => refetch()} message="Failed to load replay cards." />
+        <ErrorState onRetry={() => refetch()} message={t`Failed to load replay cards.`} />
       </div>
     );
   }
@@ -210,14 +208,14 @@ function ReplaysPage() {
         <div className="flex items-center gap-2 mb-1">
           <Sparkles className="w-4 h-4 text-yellow-400" />
           <span className="text-xs font-data-mono uppercase tracking-widest text-yellow-400">
-            Your Highlights
+            <Trans>Your Highlights</Trans>
           </span>
         </div>
         <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface flex items-center gap-3">
-          Replay Cards
+          <Trans>Replay Cards</Trans>
         </h1>
         <p className="text-on-surface-variant text-sm mt-1 max-w-md">
-          Relive your most significant hands and share your victories with friends.
+          <Trans>Relive your most significant hands and share your victories with friends.</Trans>
         </p>
       </motion.div>
 
@@ -229,9 +227,9 @@ function ReplaysPage() {
           animate="visible"
           className="grid grid-cols-2 md:grid-cols-3 gap-3"
         >
-          <StatCard icon={Layers} label="Total Replays" value={totalReplays.toLocaleString()} tint="blue" />
-          <StatCard icon={Coins} label="Total Won" value={`$${totalWinnings.toLocaleString()}`} tint="tertiary" />
-          <StatCard icon={Crown} label="Biggest Pot" value={`$${biggestPot.toLocaleString()}`} tint="yellow" />
+          <StatCard icon={Layers} label={t`Total Replays`} value={totalReplays.toLocaleString()} tint="blue" />
+          <StatCard icon={Coins} label={t`Total Won`} value={`$${totalWinnings.toLocaleString()}`} tint="tertiary" />
+          <StatCard icon={Crown} label={t`Biggest Pot`} value={`$${biggestPot.toLocaleString()}`} tint="yellow" />
         </motion.div>
       )}
 
@@ -248,13 +246,13 @@ function ReplaysPage() {
               <div className="w-16 h-16 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center mx-auto mb-4">
                 <Share2 className="w-8 h-8 text-yellow-400" />
               </div>
-              <h3 className="font-headline-md text-lg text-on-surface mb-1">No replay cards yet</h3>
+              <h3 className="font-headline-md text-lg text-on-surface mb-1"><Trans>No replay cards yet</Trans></h3>
               <p className="text-on-surface-variant text-sm max-w-sm mx-auto">
-                Play more hands to unlock replay cards. Your biggest wins will appear here to be shared.
+                <Trans>Play more hands to unlock replay cards. Your biggest wins will appear here to be shared.</Trans>
               </p>
               <Link to="/lobby" className="mt-5 inline-block">
                 <Button className="bg-tertiary text-black hover:bg-tertiary/90">
-                  Find a Table
+                  <Trans>Find a Table</Trans>
                   <ArrowRight className="w-4 h-4 ml-1" />
                 </Button>
               </Link>
@@ -305,9 +303,7 @@ function StatCard({
           <Icon className="w-5 h-5" />
         </div>
         <div className="min-w-0">
-          <p className="text-[10px] font-data-mono uppercase tracking-wider text-on-surface-variant truncate">
-            {label}
-          </p>
+          <p className="text-[10px] font-data-mono uppercase tracking-wider text-on-surface-variant truncate">{label}</p>
           <p className="font-display text-lg text-on-surface leading-tight truncate">{value}</p>
         </div>
       </div>
@@ -331,18 +327,16 @@ function ReplayCardItem({
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const shareText = `I won a ${replay.hand_description} pot of $${replay.pot} on Stackbluff Poker! 🃏`;
-
-  // Ensure the URL is absolute (prepend domain if backend sends a relative path)
+  const shareText = t`I won a ${replay.hand_description} pot of $${replay.pot} on Stackbluff Poker! 🃏`;
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   const rawUrl = replay.share_url || `/hands/${replay.id}`;
   const shareUrl = rawUrl.startsWith('http') ? rawUrl : `${origin}${rawUrl}`;
 
   const socials = [
-    { name: 'Twitter', Icon: XIcon, url: `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}` },
-    { name: 'Facebook', Icon: FacebookIcon, url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}` },
-    { name: 'Reddit', Icon: RedditIcon, url: `https://www.reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareText)}` },
-    { name: 'Telegram', Icon: TelegramIcon, url: `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}` },
+    { name: t`Twitter`, Icon: XIcon, url: `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}` },
+    { name: t`Facebook`, Icon: FacebookIcon, url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}` },
+    { name: t`Reddit`, Icon: RedditIcon, url: `https://www.reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareText)}` },
+    { name: t`Telegram`, Icon: TelegramIcon, url: `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}` },
   ];
 
   const handleCopyLink = () => {
@@ -350,16 +344,16 @@ function ReplayCardItem({
       .writeText(shareUrl)
       .then(() => {
         setCopied(true);
-        toast.success('Link copied to clipboard!');
+        toast.success(t`Link copied to clipboard!`);
         setTimeout(() => setCopied(false), 2000);
       })
-      .catch(() => toast.error('Failed to copy link'));
+      .catch(() => toast.error(t`Failed to copy link`));
   };
 
   const handleNativeShare = () => {
     if (navigator.share) {
       navigator.share({
-        title: 'Check out my poker hand!',
+        title: t`Check out my poker hand!`,
         text: shareText,
         url: shareUrl,
       }).catch(() => { });
@@ -368,8 +362,7 @@ function ReplayCardItem({
     }
   };
 
-  // Fallback to ID slice if the table name isn't fetched or found
-  const tableName = tableMap.get(replay.table_id) || `Table ${replay.table_id.slice(0, 6)}`;
+  const tableName = tableMap.get(replay.table_id) || t`Table ${replay.table_id.slice(0, 6)}`;
 
   return (
     <>
@@ -390,7 +383,7 @@ function ReplayCardItem({
                   {replay.hand_description}
                 </h3>
                 <p className="text-xs text-on-surface-variant mt-0.5 truncate">
-                  Won by <span className="text-on-surface font-medium">{isMe ? 'You' : replay.winner_name}</span>
+                  <Trans>Won by <span className="text-on-surface font-medium">{isMe ? 'You' : replay.winner_name}</span></Trans>
                 </p>
               </div>
             </div>
@@ -422,7 +415,7 @@ function ReplayCardItem({
             {replay.winner_cards && replay.winner_cards.length > 0 && (
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-data-mono uppercase tracking-wider text-on-surface-variant w-14">
-                  Hole
+                  <Trans>Hole</Trans>
                 </span>
                 <div className="flex gap-1.5">
                   {replay.winner_cards.map((card, idx) => (
@@ -439,7 +432,7 @@ function ReplayCardItem({
             {replay.community_cards && replay.community_cards.length > 0 && (
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-data-mono uppercase tracking-wider text-on-surface-variant w-14">
-                  Board
+                  <Trans>Board</Trans>
                 </span>
                 <div className="flex gap-1.5">
                   {replay.community_cards.map((card, idx) => (
@@ -469,7 +462,7 @@ function ReplayCardItem({
               className="flex-1 bg-white/5 border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-white/10 rounded-xl group/btn"
             >
               <Eye className="w-4 h-4 mr-1.5 transition-transform group-hover/btn:scale-110" />
-              View Hand
+              <Trans>View Hand</Trans>
               <ChevronRight className="w-3.5 h-3.5 ml-1 transition-transform group-hover/btn:translate-x-0.5" />
             </Button>
             <Button
@@ -509,9 +502,9 @@ function ReplayCardItem({
                 <X className="w-4 h-4" />
               </button>
 
-              <h3 className="font-display-lg text-xl text-on-surface mb-1">Share Your Hand</h3>
+              <h3 className="font-display-lg text-xl text-on-surface mb-1"><Trans>Share Your Hand</Trans></h3>
               <p className="text-on-surface-variant text-sm mb-5">
-                Show off your {replay.hand_description} to the world!
+                <Trans>Show off your {replay.hand_description} to the world!</Trans>
               </p>
 
               {/* Socials Grid */}
@@ -550,10 +543,10 @@ function ReplayCardItem({
                 >
                   {copied ? (
                     <>
-                      <Check className="w-3.5 h-3.5 mr-1" /> Copied
+                      <Check className="w-3.5 h-3.5 mr-1" /> <Trans>Copied</Trans>
                     </>
                   ) : (
-                    "Copy"
+                    <Trans>Copy</Trans>
                   )}
                 </Button>
               </div>
@@ -566,7 +559,7 @@ function ReplayCardItem({
                 className="w-full text-on-surface-variant hover:text-on-surface hover:bg-white/5"
               >
                 <MoreHorizontal className="w-4 h-4 mr-2" />
-                More Options
+                <Trans>More Options</Trans>
               </Button>
             </motion.div>
           </motion.div>
