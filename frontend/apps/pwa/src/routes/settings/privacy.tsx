@@ -10,6 +10,7 @@ import { AlertTriangle, Download, Trash2, Shield, Loader2, CheckCircle, ArrowLef
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { requireAuth } from '@/lib/authGuard';
+import { Trans, t } from '@lingui/react/macro';
 
 export const Route = createFileRoute('/settings/privacy')({
   component: PrivacySettingsPage,
@@ -42,12 +43,12 @@ function PrivacySettingsPage() {
       method: 'POST',
     }),
     onSuccess: () => {
-      toast.success('Deletion request submitted. Your account will be deleted in 30 days.');
+      toast.success(t`Deletion request submitted. Your account will be deleted in 30 days.`);
       queryClient.invalidateQueries({ queryKey: ['gdpr'] });
       setIsDeletionDialogOpen(false);
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'Failed to request deletion');
+      toast.error(error instanceof Error ? error.message : t`Failed to request deletion`);
     },
   });
 
@@ -57,11 +58,11 @@ function PrivacySettingsPage() {
       method: 'POST',
     }),
     onSuccess: () => {
-      toast.success('Deletion request cancelled.');
+      toast.success(t`Deletion request cancelled.`);
       queryClient.invalidateQueries({ queryKey: ['gdpr'] });
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'Failed to cancel deletion');
+      toast.error(error instanceof Error ? error.message : t`Failed to cancel deletion`);
     },
   });
 
@@ -71,15 +72,14 @@ function PrivacySettingsPage() {
       method: 'POST',
     }),
     onSuccess: (data) => {
-      toast.success('Data export request submitted. You will receive a download link by email within 72 hours.');
+      toast.success(t`Data export request submitted. You will receive a download link by email within 72 hours.`);
       setIsExporting(false);
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'Failed to request data export');
+      toast.error(error instanceof Error ? error.message : t`Failed to request data export`);
       setIsExporting(false);
     },
   });
-
 
   if (statusLoading) {
     return <PrivacySkeleton />;
@@ -95,22 +95,22 @@ function PrivacySettingsPage() {
           <ArrowLeft className="w-5 h-5 text-on-surface-variant" />
         </Link>
         <h1 className="font-display-lg text-2xl text-on-surface">
-          Privacy & Data
+          <Trans>Privacy & Data</Trans>
         </h1>
       </div>
-      <p className="text-on-surface-variant text-sm -mt-4 mb-6">Manage your account data and privacy settings.</p>
+      <p className="text-on-surface-variant text-sm -mt-4 mb-6"><Trans>Manage your account data and privacy settings.</Trans></p>
 
       {/* Data Export */}
       <Card>
         <CardHeader>
           <CardTitle className="text-sm font-semibold text-on-surface flex items-center gap-2">
             <Download className="w-4 h-4 text-tertiary" />
-            Export Your Data
+            <Trans>Export Your Data</Trans>
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-on-surface-variant mb-4">
-            Request a copy of all your personal data. You'll receive a download link by email within 72 hours.
+            <Trans>Request a copy of all your personal data. You'll receive a download link by email within 72 hours.</Trans>
           </p>
           <Button
             onClick={() => exportMutation.mutate()}
@@ -121,19 +121,19 @@ function PrivacySettingsPage() {
             {exportMutation.isPending ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Requesting...
+                <Trans>Requesting...</Trans>
               </>
             ) : (
               <>
                 <Download className="w-4 h-4 mr-2" />
-                Request Data Export
+                <Trans>Request Data Export</Trans>
               </>
             )}
           </Button>
           {isPending && (
             <p className="text-xs text-yellow-400 mt-2 flex items-center gap-1">
               <AlertTriangle className="w-3 h-3" />
-              Deletion pending – export may be limited.
+              <Trans>Deletion pending – export may be limited.</Trans>
             </p>
           )}
         </CardContent>
@@ -144,22 +144,22 @@ function PrivacySettingsPage() {
         <CardHeader>
           <CardTitle className="text-sm font-semibold text-red-400 flex items-center gap-2">
             <Trash2 className="w-4 h-4" />
-            Delete Account
+            <Trans>Delete Account</Trans>
           </CardTitle>
         </CardHeader>
         <CardContent>
           {isCompleted ? (
             <div className="text-center py-4">
               <CheckCircle className="w-8 h-8 text-green-400 mx-auto mb-2" />
-              <p className="text-sm text-on-surface">Your account has been deleted.</p>
+              <p className="text-sm text-on-surface"><Trans>Your account has been deleted.</Trans></p>
             </div>
           ) : isPending ? (
             <div className="space-y-3">
               <p className="text-sm text-on-surface-variant">
-                Your account deletion is pending. It will be permanently deleted in 30 days.
+                <Trans>Your account deletion is pending. It will be permanently deleted in 30 days.</Trans>
                 <br />
                 <span className="text-xs text-on-surface-variant/50">
-                  Requested on: {new Date(deletionStatus.requested_at!).toLocaleDateString()}
+                  <Trans>Requested on: {new Date(deletionStatus.requested_at!).toLocaleDateString()}</Trans>
                 </span>
               </p>
               <Button
@@ -168,15 +168,15 @@ function PrivacySettingsPage() {
                 variant="outline"
                 className="border-white/10 text-on-surface-variant hover:text-on-surface"
               >
-                {cancelMutation.isPending ? 'Cancelling...' : 'Cancel Deletion'}
+                {cancelMutation.isPending ? t`Cancelling...` : t`Cancel Deletion`}
               </Button>
             </div>
           ) : (
             <div className="space-y-3">
               <p className="text-sm text-on-surface-variant">
-                Permanently delete your account and all associated data. This action is irreversible and cannot be undone.
+                <Trans>Permanently delete your account and all associated data. This action is irreversible and cannot be undone.</Trans>
                 <br />
-                <span className="text-xs text-red-400/70">You will have 30 days to cancel this request.</span>
+                <span className="text-xs text-red-400/70"><Trans>You will have 30 days to cancel this request.</Trans></span>
               </p>
               <Button
                 onClick={() => setIsDeletionDialogOpen(true)}
@@ -184,7 +184,7 @@ function PrivacySettingsPage() {
                 className="bg-red-500 hover:bg-red-600"
               >
                 <Trash2 className="w-4 h-4 mr-2" />
-                Request Account Deletion
+                <Trans>Request Account Deletion</Trans>
               </Button>
             </div>
           )}
@@ -195,11 +195,11 @@ function PrivacySettingsPage() {
       {isDeletionDialogOpen && (
         <div className="fixed inset-0 z-[1000] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <Card className="max-w-md w-full p-6 bg-surface-container border border-white/10">
-            <h3 className="text-lg font-semibold text-on-surface mb-2">Confirm Account Deletion</h3>
+            <h3 className="text-lg font-semibold text-on-surface mb-2"><Trans>Confirm Account Deletion</Trans></h3>
             <p className="text-sm text-on-surface-variant mb-4">
-              Are you sure you want to delete your account? This will permanently remove all your data, including chips, statistics, and tournament history.
+              <Trans>Are you sure you want to delete your account? This will permanently remove all your data, including chips, statistics, and tournament history.</Trans>
               <br />
-              <span className="text-red-400">This action cannot be undone.</span>
+              <span className="text-red-400"><Trans>This action cannot be undone.</Trans></span>
             </p>
             <div className="flex gap-3 justify-end">
               <Button
@@ -207,7 +207,7 @@ function PrivacySettingsPage() {
                 onClick={() => setIsDeletionDialogOpen(false)}
                 className="border-white/10 text-on-surface-variant"
               >
-                Cancel
+                <Trans>Cancel</Trans>
               </Button>
               <Button
                 onClick={() => deleteMutation.mutate()}
@@ -218,10 +218,10 @@ function PrivacySettingsPage() {
                 {deleteMutation.isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Submitting...
+                    <Trans>Submitting...</Trans>
                   </>
                 ) : (
-                  'Yes, Delete My Account'
+                  <Trans>Yes, Delete My Account</Trans>
                 )}
               </Button>
             </div>
@@ -231,11 +231,11 @@ function PrivacySettingsPage() {
 
       {/* Legal Links */}
       <div className="flex flex-wrap gap-4 justify-center text-sm text-on-surface-variant border-t border-white/10 pt-6">
-        <Link to="/legal/terms" className="hover:text-tertiary transition-colors">Terms of Service</Link>
+        <Link to="/legal/terms" className="hover:text-tertiary transition-colors"><Trans>Terms of Service</Trans></Link>
         <span className="text-white/20">|</span>
-        <Link to="/legal/privacy" className="hover:text-tertiary transition-colors">Privacy Policy</Link>
+        <Link to="/legal/privacy" className="hover:text-tertiary transition-colors"><Trans>Privacy Policy</Trans></Link>
         <span className="text-white/20">|</span>
-        <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors">Responsible Gaming</Link>
+        <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors"><Trans>Responsible Gaming</Trans></Link>
       </div>
     </div>
   );
