@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Calendar, Coins, Users, Plus, CheckCircle, XCircle, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Trans, t } from '@lingui/react/macro';
 
 interface ClubTournamentsTabProps {
   clubId: string;
@@ -65,7 +66,9 @@ function TournamentCard({
                 <Calendar className="w-4 h-4 text-tertiary" />
               </div>
               <div>
-                <p className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant">Date & Time</p>
+                <p className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant">
+                  <Trans>Date & Time</Trans>
+                </p>
                 <p className="text-on-surface font-medium text-sm mt-0.5">
                   {startDate.toLocaleDateString()} at {startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </p>
@@ -76,9 +79,11 @@ function TournamentCard({
                 <Coins className="w-4 h-4 text-yellow-400" />
               </div>
               <div>
-                <p className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant">Buy-in</p>
+                <p className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant">
+                  <Trans>Buy-in</Trans>
+                </p>
                 <p className="text-on-surface font-medium text-sm mt-0.5">
-                  {tournament.buy_in.toLocaleString()} chips
+                  {tournament.buy_in.toLocaleString()} <Trans>chips</Trans>
                 </p>
               </div>
             </div>
@@ -87,7 +92,9 @@ function TournamentCard({
                 <Users className="w-4 h-4 text-blue-400" />
               </div>
               <div>
-                <p className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant">Players</p>
+                <p className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant">
+                  <Trans>Players</Trans>
+                </p>
                 <p className="text-on-surface font-medium text-sm mt-0.5">
                   {tournament.current_registrations} / {tournament.max_players}
                 </p>
@@ -102,7 +109,9 @@ function TournamentCard({
                 )}
               </div>
               <div>
-                <p className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant">Status</p>
+                <p className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant">
+                  <Trans>Status</Trans>
+                </p>
                 <p className={cn(
                   "font-medium text-sm mt-0.5",
                   tournament.status === 'Registering' ? "text-emerald-400" : "text-purple-400"
@@ -123,7 +132,7 @@ function TournamentCard({
               className="w-full px-4 py-3 border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500/50 hover:text-red-400 font-label-caps text-xs uppercase tracking-wider rounded-xl justify-center"
             >
               <XCircle className="w-4 h-4 mr-2" />
-              {isUnregistering ? 'Unregistering' : 'Unregister'}
+              {isUnregistering ? <Trans>Unregistering</Trans> : <Trans>Unregister</Trans>}
             </Button>
           ) : (
             <Button
@@ -134,14 +143,14 @@ function TournamentCard({
               {isRegistering ? (
                 <>
                   <RotateCcw className="w-4 h-4 mr-2 animate-spin" />
-                  Registering
+                  <Trans>Registering</Trans>
                 </>
               ) : isFull ? (
-                'Tournament Full'
+                <Trans>Tournament Full</Trans>
               ) : (
                 <>
                   <CheckCircle className="w-4 h-4 mr-2" />
-                  Register ({spotsLeft} left)
+                  <Trans>Register ({spotsLeft} left)</Trans>
                 </>
               )}
             </Button>
@@ -167,25 +176,25 @@ export function ClubTournamentsTab({ clubId, isOwner }: ClubTournamentsTabProps)
   const handleRegister = async (tournamentId: string, tournamentName: string) => {
     try {
       await register(tournamentId);
-      toast.success(`Registered for "${tournamentName}"`);
+      toast.success(t`Registered for "${tournamentName}"`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to register');
+      toast.error(err instanceof Error ? err.message : t`Failed to register`);
     }
   };
 
   const handleUnregister = async (tournamentId: string, tournamentName: string) => {
     try {
       await unregister(tournamentId);
-      toast.success(`Unregistered from "${tournamentName}"`);
+      toast.success(t`Unregistered from "${tournamentName}"`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to unregister');
+      toast.error(err instanceof Error ? err.message : t`Failed to unregister`);
     }
   };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="text-on-surface-variant">Loading tournaments...</div>
+        <div className="text-on-surface-variant"><Trans>Loading tournaments...</Trans></div>
       </div>
     );
   }
@@ -193,9 +202,9 @@ export function ClubTournamentsTab({ clubId, isOwner }: ClubTournamentsTabProps)
   if (error) {
     return (
       <Card className="p-6 bg-red-500/5 border border-red-500/20 rounded-2xl">
-        <h3 className="font-headline-md text-lg text-red-400 mb-2">Error Loading Tournaments</h3>
+        <h3 className="font-headline-md text-lg text-red-400 mb-2"><Trans>Error Loading Tournaments</Trans></h3>
         <p className="text-on-surface-variant text-sm">
-          {error instanceof Error ? error.message : 'Failed to load tournaments'}
+          {error instanceof Error ? error.message : t`Failed to load tournaments`}
         </p>
       </Card>
     );
@@ -214,12 +223,12 @@ export function ClubTournamentsTab({ clubId, isOwner }: ClubTournamentsTabProps)
           <div className="flex items-center gap-2 mb-1">
             <Calendar className="w-4 h-4 text-tertiary" />
             <span className="text-xs font-data-mono uppercase tracking-widest text-tertiary">
-              Events
+              <Trans>Events</Trans>
             </span>
           </div>
-          <h2 className="font-headline-md text-xl text-on-surface">Tournaments</h2>
+          <h2 className="font-headline-md text-xl text-on-surface"><Trans>Tournaments</Trans></h2>
           <p className="text-on-surface-variant text-sm mt-1">
-            {upcomingTournaments.length} upcoming tournament{upcomingTournaments.length !== 1 ? 's' : ''}
+            <Trans>{upcomingTournaments.length} upcoming tournament{upcomingTournaments.length !== 1 ? 's' : ''}</Trans>
           </p>
         </div>
         {isOwner && (
@@ -228,17 +237,17 @@ export function ClubTournamentsTab({ clubId, isOwner }: ClubTournamentsTabProps)
             className="flex items-center gap-2 px-4 py-3 bg-tertiary text-on-tertiary font-label-caps text-xs hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg shadow-emerald-500/10 rounded-xl w-full sm:w-auto justify-center"
           >
             <Plus className="w-4 h-4" />
-            Schedule Tournament
+            <Trans>Schedule Tournament</Trans>
           </Button>
         )}
       </div>
 
       {upcomingTournaments.length === 0 ? (
         <div className="text-center py-16 bg-white/5 border border-white/10 rounded-2xl">
-          <p className="text-on-surface-variant">No upcoming tournaments scheduled</p>
+          <p className="text-on-surface-variant"><Trans>No upcoming tournaments scheduled</Trans></p>
           {isOwner && (
             <p className="text-on-surface-variant/60 text-sm mt-2">
-              Click "Schedule Tournament" to create one!
+              <Trans>Click "Schedule Tournament" to create one!</Trans>
             </p>
           )}
         </div>
@@ -266,7 +275,7 @@ export function ClubTournamentsTab({ clubId, isOwner }: ClubTournamentsTabProps)
       {pastTournaments.length > 0 && (
         <div className="mt-10">
           <h3 className="font-headline-md text-lg text-on-surface-variant mb-4 flex items-center gap-2">
-            <RotateCcw className="w-4 h-4" /> Past Tournaments
+            <RotateCcw className="w-4 h-4" /> <Trans>Past Tournaments</Trans>
           </h3>
           <div className="space-y-2">
             {pastTournaments.slice(0, 5).map((tournament: any) => (
@@ -281,7 +290,7 @@ export function ClubTournamentsTab({ clubId, isOwner }: ClubTournamentsTabProps)
                   </p>
                 </div>
                 <span className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant px-3 py-1 bg-white/5 rounded-full border border-white/10">
-                  Completed
+                  <Trans>Completed</Trans>
                 </span>
               </div>
             ))}
