@@ -4,6 +4,8 @@ import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import type { TournamentResultEntry } from '@stackbluff/shared/types/tournament.types';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 interface TournamentResultsModalProps {
   open: boolean;
@@ -51,7 +53,7 @@ export function TournamentResultsModal({ open, results, tournamentId, onClose }:
             <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/5 shrink-0">
               <div className="flex items-center gap-2">
                 <Trophy className="w-5 h-5 text-tertiary" />
-                <h2 className="text-sm font-semibold text-on-surface">Tournament Complete</h2>
+                <h2 className="text-sm font-semibold text-on-surface"><Trans>Tournament Complete</Trans></h2>
               </div>
               <button
                 type="button"
@@ -67,7 +69,7 @@ export function TournamentResultsModal({ open, results, tournamentId, onClose }:
               <div className="px-5 py-4 bg-tertiary/5 border-b border-white/5 flex items-center gap-4">
                 <div className="text-3xl">🏆</div>
                 <div>
-                  <div className="text-xs text-on-surface-variant">Winner</div>
+                  <div className="text-xs text-on-surface-variant"><Trans>Winner</Trans></div>
                   <div className="font-semibold text-on-surface">{winner.display_name || winner.user_id.slice(0, 8)}</div>
                   <div className="font-data-mono text-tertiary text-sm">{formatCurrency(winner.prize)}</div>
                 </div>
@@ -126,7 +128,7 @@ export function TournamentResultsModal({ open, results, tournamentId, onClose }:
                 onClick={onClose}
                 className="w-full py-2.5 rounded-lg bg-tertiary text-on-tertiary font-label-caps text-[11px] uppercase tracking-wider hover:bg-tertiary-fixed transition-all"
               >
-                Return to Lobby
+                <Trans>Return to Lobby</Trans>
               </motion.button>
             </div>
           </motion.div>
