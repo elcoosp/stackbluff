@@ -1,4 +1,6 @@
 import type { PermissionDisplay } from './types';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 interface ToggleButtonProps {
   status: PermissionDisplay;
@@ -13,12 +15,12 @@ export function ToggleButton({ status, isProcessing, onClick }: ToggleButtonProp
   const isBlocked = status === 'blocked';
 
   const label = isProcessing
-    ? 'Processing...'
+    ? t`Processing...`
     : isEnabled
-      ? 'Disable Notifications'
+      ? t`Disable Notifications`
       : isBlocked
-        ? 'Enable in Browser Settings'
-        : 'Enable Notifications';
+        ? t`Enable in Browser Settings`
+        : t`Enable Notifications`;
 
   const colorClass = isEnabled
     ? 'bg-red-500 hover:bg-red-600'
