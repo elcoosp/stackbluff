@@ -12,6 +12,8 @@ import { useBlindTemplates } from '@/hooks/useBlindTemplates';
 import { z } from 'zod';
 import { useForm } from '@tanstack/react-form';
 import { cn } from '@/lib/utils';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 interface ScheduleTournamentDialogProps {
   clubId: string;
@@ -20,10 +22,10 @@ interface ScheduleTournamentDialogProps {
 }
 
 const tournamentSchema = z.object({
-  name: z.string().min(3, 'Name must be at least 3 characters').max(100),
-  max_players: z.number().int().min(10, 'Minimum 10 players').max(500, 'Maximum 500 players'),
-  buy_in: z.number().int().min(0, 'Buy-in must be 0 or more'),
-  scheduled_start: z.string().datetime({ message: 'Invalid date/time' }),
+  name: z.string().min(3, t`Name must be at least 3 characters`).max(100),
+  max_players: z.number().int().min(10, t`Minimum 10 players`).max(500, t`Maximum 500 players`),
+  buy_in: z.number().int().min(0, t`Buy-in must be 0 or more`),
+  scheduled_start: z.string().datetime({ message: t`Invalid date/time` }),
   tournament_type: z.enum(['SitAndGo', 'Mtt']),
   blind_schedule_id: z.string(),
 });
@@ -56,12 +58,12 @@ export function ScheduleTournamentDialog({ clubId, isOpen, onClose }: ScheduleTo
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['club-tournaments', clubId] });
-      toast.success('Tournament scheduled successfully!');
+      toast.success(t`Tournament scheduled successfully!`);
       onClose();
       form.reset();
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Failed to schedule tournament');
+      toast.error(error.message || t`Failed to schedule tournament`);
     },
   });
 
@@ -84,9 +86,9 @@ export function ScheduleTournamentDialog({ clubId, isOpen, onClose }: ScheduleTo
       <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
         <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/5 shrink-0">
           <div>
-            <h2 className="text-lg font-semibold text-on-surface">Schedule Tournament</h2>
+            <h2 className="text-lg font-semibold text-on-surface"><Trans>Schedule Tournament</Trans></h2>
             <p className="text-[11px] text-on-surface-variant mt-0.5">
-              Create a new tournament for your club
+              <Trans>Create a new tournament for your club</Trans>
             </p>
           </div>
         </div>
@@ -97,13 +99,13 @@ export function ScheduleTournamentDialog({ clubId, isOpen, onClose }: ScheduleTo
             {(field) => (
               <div className="space-y-2">
                 <Label htmlFor="tournament-name" className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
-                  Tournament Name *
+                  <Trans>Tournament Name *</Trans>
                 </Label>
                 <Input
                   id="tournament-name"
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
-                  placeholder="e.g., Sunday Special"
+                  placeholder={t`e.g., Sunday Special`}
                   className="bg-surface-container-high border-outline-variant/50 text-on-surface"
                 />
                 {field.state.meta.errors.length > 0 && (
@@ -118,7 +120,7 @@ export function ScheduleTournamentDialog({ clubId, isOpen, onClose }: ScheduleTo
             {(field) => (
               <div className="space-y-2">
                 <Label className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
-                  Tournament Type
+                  <Trans>Tournament Type</Trans>
                 </Label>
                 <div className="flex gap-2">
                   <button
@@ -135,7 +137,7 @@ export function ScheduleTournamentDialog({ clubId, isOpen, onClose }: ScheduleTo
                     )}
                   >
                     <Zap className="w-4 h-4" />
-                    Sit & Go
+                    <Trans>Sit & Go</Trans>
                   </button>
                   <button
                     type="button"
@@ -151,7 +153,7 @@ export function ScheduleTournamentDialog({ clubId, isOpen, onClose }: ScheduleTo
                     )}
                   >
                     <Users className="w-4 h-4" />
-                    MTT
+                    <Trans>MTT</Trans>
                   </button>
                 </div>
               </div>
@@ -163,7 +165,7 @@ export function ScheduleTournamentDialog({ clubId, isOpen, onClose }: ScheduleTo
             {(field) => (
               <div className="space-y-2">
                 <Label className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
-                  Max Players: {field.state.value}
+                  <Trans>Max Players: {field.state.value}</Trans>
                 </Label>
                 <input
                   type="range"
@@ -190,7 +192,7 @@ export function ScheduleTournamentDialog({ clubId, isOpen, onClose }: ScheduleTo
             {(field) => (
               <div className="space-y-2">
                 <Label htmlFor="buy-in" className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
-                  Buy-in (chips)
+                  <Trans>Buy-in (chips)</Trans>
                 </Label>
                 <div className="relative">
                   <Coins className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant/50" />
@@ -213,7 +215,7 @@ export function ScheduleTournamentDialog({ clubId, isOpen, onClose }: ScheduleTo
             {(field) => (
               <div className="space-y-2">
                 <Label htmlFor="start-time" className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
-                  Start Date & Time *
+                  <Trans>Start Date & Time *</Trans>
                 </Label>
                 <div className="relative">
                   <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant/50" />
@@ -238,14 +240,14 @@ export function ScheduleTournamentDialog({ clubId, isOpen, onClose }: ScheduleTo
             {(field) => (
               <div className="space-y-2">
                 <Label className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
-                  Blind Schedule
+                  <Trans>Blind Schedule</Trans>
                 </Label>
                 <Select
                   value={field.state.value}
                   onValueChange={(value) => field.handleChange(value)}
                 >
                   <SelectTrigger className="bg-surface-container-high border-outline-variant/50 text-on-surface">
-                    <SelectValue placeholder={templatesLoading ? 'Loading...' : 'Select a template'} />
+                    <SelectValue placeholder={templatesLoading ? t`Loading...` : t`Select a template`} />
                   </SelectTrigger>
                   <SelectContent>
                     {templates?.map((template) => (
@@ -254,7 +256,7 @@ export function ScheduleTournamentDialog({ clubId, isOpen, onClose }: ScheduleTo
                       </SelectItem>
                     ))}
                     {!templates || templates.length === 0 && (
-                      <SelectItem value="default" disabled>No templates available</SelectItem>
+                      <SelectItem value="default" disabled><Trans>No templates available</Trans></SelectItem>
                     )}
                   </SelectContent>
                 </Select>
@@ -275,7 +277,7 @@ export function ScheduleTournamentDialog({ clubId, isOpen, onClose }: ScheduleTo
             disabled={mutation.isPending}
             className="border-white/10 text-on-surface-variant hover:bg-white/5 hover:text-on-surface"
           >
-            Cancel
+            <Trans>Cancel</Trans>
           </Button>
           <Button
             type="submit"
@@ -285,10 +287,10 @@ export function ScheduleTournamentDialog({ clubId, isOpen, onClose }: ScheduleTo
             {mutation.isPending ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Scheduling...
+                <Trans>Scheduling...</Trans>
               </>
             ) : (
-              'Schedule Tournament'
+              <Trans>Schedule Tournament</Trans>
             )}
           </Button>
         </div>
