@@ -236,7 +236,7 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
           {logoPreview ? (
             <img
               src={logoPreview}
-              alt="Logo preview"
+              alt={t`Logo preview`}
               className="w-20 h-20 rounded-xl object-cover border border-white/10"
             />
           ) : (
@@ -295,7 +295,7 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
               {bannerPreview ? (
                 <img
                   src={bannerPreview}
-                  alt="Banner preview"
+                  alt={t`Banner preview`}
                   className="w-full h-32 rounded-xl object-cover border border-white/10"
                 />
               ) : (
