@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Sparkles, Users } from 'lucide-react';
 import type { ClubDetails } from '../../types/club';
+import { Trans, t } from '@lingui/react/macro';
 
 interface ClubHeaderProps {
   club: ClubDetails;
@@ -12,7 +13,7 @@ export function ClubHeader({ club }: ClubHeaderProps) {
       <div className="flex items-center gap-2 mb-1">
         <Sparkles className="w-4 h-4 text-purple-400" />
         <span className="text-xs font-data-mono uppercase tracking-widest text-purple-400">
-          Community & Play
+          <Trans>Community & Play</Trans>
         </span>
       </div>
       <div className="flex items-center gap-4 mt-2">
@@ -32,7 +33,7 @@ export function ClubHeader({ club }: ClubHeaderProps) {
             {club.name}
           </h1>
           <p className="text-on-surface-variant text-sm mt-1 flex items-center gap-1.5">
-            <Users className="w-3.5 h-3.5" /> {club.members_count} members
+            <Users className="w-3.5 h-3.5" /> {club.members_count} <Trans>members</Trans>
           </p>
         </div>
       </div>
