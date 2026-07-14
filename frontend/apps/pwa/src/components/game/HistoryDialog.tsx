@@ -10,8 +10,9 @@ import TimeAgo from 'react-timeago-i18n';
 import { createPortal } from 'react-dom';
 import { Link } from '@tanstack/react-router';
 import { cn } from '@/lib/utils';
+import { Trans, t, Plural } from '@lingui/react/macro';
 
-// ── Types ──
+// Types
 interface WinnerSummary {
   user_id: string;
   amount: number;
@@ -40,7 +41,7 @@ interface HistoryDialogProps {
   tableId: string;
 }
 
-// ── Helpers ──
+// Helpers
 function shortId(id: string): string {
   return id.slice(0, 8);
 }
@@ -58,7 +59,6 @@ function parseCard(cardStr: string): { rank: string; suit: string } {
   return { rank: rankMap[rank] || rank, suit: suitMap[suit] || suit };
 }
 
-// ── Component ──
 export function HistoryDialog({ open, onClose, tableId }: HistoryDialogProps) {
   const userId = useAuthStore((s) => s.user?.id);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -119,9 +119,9 @@ export function HistoryDialog({ open, onClose, tableId }: HistoryDialogProps) {
             {/* Header */}
             <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/5 shrink-0">
               <div className="flex items-center gap-3">
-                <h2 className="text-sm font-semibold text-on-surface">Hand History</h2>
+                <h2 className="text-sm font-semibold text-on-surface"><Trans>Hand History</Trans></h2>
                 <span className="text-xs text-on-surface-variant bg-white/5 px-2 py-0.5 rounded-full">
-                  {total} hands
+                  <Trans>{total} hands</Trans>
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -132,7 +132,7 @@ export function HistoryDialog({ open, onClose, tableId }: HistoryDialogProps) {
                     onChange={() => setShowOnlyMine(!showOnlyMine)}
                     className="accent-tertiary"
                   />
-                  My hands only
+                  <Trans>My hands only</Trans>
                 </label>
                 <button
                   type="button"
@@ -147,13 +147,13 @@ export function HistoryDialog({ open, onClose, tableId }: HistoryDialogProps) {
             {/* Content */}
             <div ref={containerRef} className="flex-1 overflow-y-auto px-5 py-4 dialog-scroll">
               {status === 'pending' && (
-                <div className="flex justify-center py-8 text-on-surface-variant">Loading...</div>
+                <div className="flex justify-center py-8 text-on-surface-variant"><Trans>Loading...</Trans></div>
               )}
               {status === 'error' && (
-                <div className="text-center py-8 text-red-400">Failed to load history.</div>
+                <div className="text-center py-8 text-red-400"><Trans>Failed to load history.</Trans></div>
               )}
               {status === 'success' && allHistory.length === 0 && (
-                <div className="text-center py-8 text-on-surface-variant">No hands played yet.</div>
+                <div className="text-center py-8 text-on-surface-variant"><Trans>No hands played yet.</Trans></div>
               )}
 
               <div
@@ -181,7 +181,7 @@ export function HistoryDialog({ open, onClose, tableId }: HistoryDialogProps) {
                     >
                       {isLoader ? (
                         <div className="py-4 text-center text-on-surface-variant text-sm">
-                          Loading more...
+                          <Trans>Loading more...</Trans>
                         </div>
                       ) : (
                         <Link
@@ -211,7 +211,11 @@ export function HistoryDialog({ open, onClose, tableId }: HistoryDialogProps) {
                                 <span className="text-on-surface-variant/50">|</span>
                                 <Users className="w-3 h-3 text-on-surface-variant/50" />
                                 <span className="text-on-surface-variant">
-                                  {hand.winners.length} winner{hand.winners.length > 1 ? 's' : ''}
+                                  <Plural
+                                    value={hand.winners.length}
+                                    one="# winner"
+                                    other="# winners"
+                                  />
                                 </span>
                               </div>
                             </div>
@@ -238,9 +242,9 @@ export function HistoryDialog({ open, onClose, tableId }: HistoryDialogProps) {
                             {/* Winner info */}
                             <div className="flex items-center justify-between mt-2 text-xs">
                               <div className="flex items-center gap-2">
-                                <span className="text-on-surface-variant">Winner:</span>
+                                <span className="text-on-surface-variant"><Trans>Winner:</Trans></span>
                                 <span className="text-on-surface font-medium">
-                                  {hand.winners[0]?.user_id === userId ? 'You' : shortId(hand.winners[0]?.user_id || '')}
+                                  {hand.winners[0]?.user_id === userId ? t`You` : shortId(hand.winners[0]?.user_id || '')}
                                 </span>
                                 <span className="text-on-surface-variant/50">
                                   {hand.winners[0]?.hand_rank || ''}
@@ -248,7 +252,7 @@ export function HistoryDialog({ open, onClose, tableId }: HistoryDialogProps) {
                               </div>
                               <div className="flex items-center gap-1 text-tertiary">
                                 <Eye className="w-3 h-3" />
-                                <span className="group-hover:underline">View</span>
+                                <span className="group-hover:underline"><Trans>View</Trans></span>
                                 <ChevronRight className="w-3 h-3" />
                               </div>
                             </div>
@@ -268,7 +272,7 @@ export function HistoryDialog({ open, onClose, tableId }: HistoryDialogProps) {
                 onClick={onClose}
                 className="px-4 py-2 rounded-lg border border-white/10 text-on-surface-variant text-sm hover:bg-white/5 transition-colors"
               >
-                Close
+                <Trans>Close</Trans>
               </button>
             </div>
           </motion.div>
