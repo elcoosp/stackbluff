@@ -4,7 +4,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { FeedbackProvider } from '@stackbluff/shared/components/feedback/FeedbackProvider';
 import { I18nProvider } from '@lingui/react';
 import { i18n } from '@lingui/core';
-import { initSentry } from './lib/sentry';
 import './index.css';
 
 // --- 1. Load default locale synchronously ---
@@ -24,16 +23,15 @@ function LoadingSpinner() {
   );
 }
 
-// --- 3. Root app ---
+// --- 3. Root app with lazy router and one-time Sentry init ---
 function RootApp() {
   const [isReady, setIsReady] = useState(false);
   const [RouterComponent, setRouterComponent] = useState<React.ComponentType | null>(null);
 
   useEffect(() => {
-    async function init() {
-      // Initialize Sentry once (guarded)
-      initSentry();
+    let sentryInitialized = false;
 
+    async function init() {
       // Ensure default locale is active
       i18n.activate('en');
 
@@ -49,11 +47,17 @@ function RootApp() {
         }
       }
 
-      // Dynamically import router
+      // --- 4. Initialize Sentry only once (guard inside the module) ---
+      if (!sentryInitialized) {
+        const { initSentry } = await import('./lib/sentry');
+        initSentry();
+        sentryInitialized = true;
+      }
+
+      // --- 5. Dynamically import the router ---
       const { RouterProvider, createRouter } = await import('@tanstack/react-router');
       const { routeTree } = await import('./routeTree.gen');
       const router = createRouter({ routeTree });
-
       const Router = () => <RouterProvider router={router} />;
       setRouterComponent(() => Router);
       setIsReady(true);
@@ -66,7 +70,6 @@ function RootApp() {
     return <LoadingSpinner />;
   }
 
-  // Query client - can be created now
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { staleTime: 5 * 60 * 1000, refetchOnWindowFocus: false, retry: 1 },
@@ -84,7 +87,7 @@ function RootApp() {
   );
 }
 
-// --- 4. Mount ---
+// --- 6. Mount ---
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <RootApp />
