@@ -16,10 +16,11 @@ import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
 import { isAccountLocked, getLockoutRemaining, clearLockout } from '@/lib/errorHandler';
 import { trackGameEvent } from '@/lib/customAnalytics';
+import { Trans, t } from '@lingui/react/macro';
 
 const loginSchema = z.object({
-  email: z.string().min(1, 'Email is required').email('Invalid email address'),
-  password: z.string().min(1, 'Password is required'),
+  email: z.string().min(1, t`Email is required`).email(t`Invalid email address`),
+  password: z.string().min(1, t`Password is required`),
 });
 
 export const Route = createFileRoute('/login')({
@@ -62,7 +63,7 @@ function LoginPage() {
       navigate({ to: '/' });
     },
     onError: (error) => {
-      toast.error(error.message || 'Invalid credentials');
+      toast.error(error.message || t`Invalid credentials`);
     },
   });
 
@@ -71,11 +72,11 @@ function LoginPage() {
     onSuccess: (data) => {
       setToken(data.token);
       setAuth(data.user, data.token, data.balance || 0);
-      trackGameEvent('login_success', { platform: 'email' });
+      trackGameEvent('login_success', { platform: 'telegram' });
       navigate({ to: '/' });
     },
     onError: (error) => {
-      toast.error(error.message || 'Telegram authentication failed');
+      toast.error(error.message || t`Telegram authentication failed`);
     },
   });
 
@@ -88,7 +89,7 @@ function LoginPage() {
   const handleTelegramLogin = () => {
     const initData = window.Telegram?.WebApp?.initData;
     if (!initData) {
-      toast.error('Telegram environment not detected or initData missing');
+      toast.error(t`Telegram environment not detected or initData missing`);
       return;
     }
     telegramMutation.mutate(initData);
@@ -101,8 +102,12 @@ function LoginPage() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#1a1b1e_0%,_#0a0a0a_100%)]" />
       <div className="relative z-10 w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter">STACKBLUFF</h1>
-          <p className="font-data-mono text-xs text-outline mt-2 tracking-widest">SECURE LOGIN</p>
+          <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter">
+            <Trans>STACKBLUFF</Trans>
+          </h1>
+          <p className="font-data-mono text-xs text-outline mt-2 tracking-widest">
+            <Trans>SECURE LOGIN</Trans>
+          </p>
         </div>
         <GlassPanel>
           <form onSubmit={(e) => { e.preventDefault(); form.handleSubmit(); }} className="space-y-6">
@@ -115,14 +120,14 @@ function LoginPage() {
                   variant="emerald"
                   className="w-full"
                 >
-                  {telegramMutation.isPending ? 'AUTHENTICATING...' : 'LOGIN WITH TELEGRAM'}
+                  {telegramMutation.isPending ? t`AUTHENTICATING...` : t`LOGIN WITH TELEGRAM`}
                 </LiquidMetalButton>
                 <div className="relative my-4">
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t border-white/10" />
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-black/60 px-2 text-on-surface-variant">or</span>
+                    <span className="bg-black/60 px-2 text-on-surface-variant"><Trans>or</Trans></span>
                   </div>
                 </div>
               </div>
@@ -137,7 +142,7 @@ function LoginPage() {
                         htmlFor="email"
                         className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase"
                       >
-                        Email Address
+                        <Trans>Email Address</Trans>
                       </Label>
                       <div className="relative mt-2">
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -177,7 +182,7 @@ function LoginPage() {
                         htmlFor="password"
                         className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase"
                       >
-                        Password
+                        <Trans>Password</Trans>
                       </Label>
                       <div className="relative mt-2">
                         <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -212,7 +217,7 @@ function LoginPage() {
 
                 {isLocked && (
                   <div className="text-center text-red-400 text-sm font-mono">
-                    Account locked. Try again in {lockoutSeconds} seconds.
+                    <Trans>Account locked. Try again in {lockoutSeconds} seconds.</Trans>
                   </div>
                 )}
 
@@ -222,32 +227,32 @@ function LoginPage() {
                   variant="silver"
                   className="w-full"
                 >
-                  {loginMutation.isPending ? 'AUTHENTICATING...' : 'SIGN IN'}
+                  {loginMutation.isPending ? t`AUTHENTICATING...` : t`SIGN IN`}
                 </LiquidMetalButton>
               </>
             )}
 
             <div className="text-center">
               <Link to="/forgot-password" className="font-label-caps text-[10px] text-on-surface-variant hover:text-on-surface transition-all tracking-widest uppercase">
-                FORGOT PASSWORD?
+                <Trans>FORGOT PASSWORD?</Trans>
               </Link>
             </div>
 
             <div className="text-center pt-2">
               <Link to="/register" className="font-label-caps text-[10px] text-on-surface-variant hover:text-on-surface transition-all tracking-widest uppercase">
-                NEW TO STACKBLUFF? <span className="text-tertiary">CREATE ACCOUNT</span>
+                <Trans>NEW TO STACKBLUFF? <span className="text-tertiary">CREATE ACCOUNT</span></Trans>
               </Link>
             </div>
           </form>
         </GlassPanel>
 
-      <div className="flex flex-wrap gap-4 justify-center text-sm text-on-surface-variant mt-6">
-        <Link to="/legal/terms" className="hover:text-tertiary transition-colors">Terms of Service</Link>
-        <span className="text-white/20">|</span>
-        <Link to="/legal/privacy" className="hover:text-tertiary transition-colors">Privacy Policy</Link>
-        <span className="text-white/20">|</span>
-        <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors">Responsible Gaming</Link>
-      </div>
+        <div className="flex flex-wrap gap-4 justify-center text-sm text-on-surface-variant mt-6">
+          <Link to="/legal/terms" className="hover:text-tertiary transition-colors"><Trans>Terms of Service</Trans></Link>
+          <span className="text-white/20">|</span>
+          <Link to="/legal/privacy" className="hover:text-tertiary transition-colors"><Trans>Privacy Policy</Trans></Link>
+          <span className="text-white/20">|</span>
+          <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors"><Trans>Responsible Gaming</Trans></Link>
+        </div>
       </div>
     </div>
   );
