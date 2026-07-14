@@ -1,9 +1,11 @@
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
-import react from '@vitejs/plugin-react';
+import react from '@vitejs/plugin-react-swc';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
+import { lingui } from '@lingui/vite-plugin';
+import { linguiMacroSwcPlugin } from '@lingui/swc-plugin/options';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -37,8 +39,11 @@ export default defineConfig({
         ]
       }
     }),
-    react(),
-    tailwindcss(), // ✅ now included
+    react({
+      plugins: [linguiMacroSwcPlugin()],
+    }),
+    tailwindcss(),
+    lingui(),
   ],
   resolve: {
     alias: {
@@ -51,7 +56,7 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''), // 👈 this removes '/api'
+        rewrite: (path) => path.replace(/^\/api/, ''),
       },
       '/ws': {
         target: 'ws://localhost:3000',
@@ -66,19 +71,3 @@ export default defineConfig({
     setupFiles: ['./src/__tests__/setup.ts'],
   },
 });
-
-import { sentryVitePlugin } from '@sentry/vite-plugin';
-
-// Add to plugins array (after react())
-// plugins: [
-//   react(),
-//   sentryVitePlugin({
-//     org: process.env.SENTRY_ORG,
-//     project: process.env.SENTRY_PROJECT,
-//     authToken: process.env.SENTRY_AUTH_TOKEN,
-//   }),
-// ],
-//
-// build: {
-//   sourcemap: true,
-// },

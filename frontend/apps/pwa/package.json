@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "pnpm gen:routes && vite --port 5173",
     "gen:routes": "tsr generate",
+    "extract": "lingui extract",
+    "compile": "lingui compile",
     "build": "pnpm gen:routes && vite build",
     "check": "tsc --noEmit",
     "preview": "vite preview",
@@ -16,6 +18,11 @@
     "test:e2e:headless": "HEADLESS=true vitest --config e2e/vitest.config.e2e.ts"
   },
   "dependencies": {
+    "@lingui/core": "^6.5.0",
+    "@lingui/macro": "^5.9.5",
+    "@lingui/react": "^6.5.0",
+    "@lingui/swc-plugin": "^6.5.1",
+    "@lingui/vite-plugin": "^6.5.0",
     "@radix-ui/react-dialog": "^1.1.16",
     "@radix-ui/react-label": "^2.1.10",
     "@radix-ui/react-select": "^2.3.0",
@@ -38,6 +45,7 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "@lingui/cli": "^6.5.0",
     "@tanstack/router-cli": "1.167.17",
     "@tanstack/router-plugin": "^1.168.18",
     "@testing-library/jest-dom": "^6.6.3",
@@ -45,9 +53,9 @@
     "@types/axios": "^0.14.4",
     "@types/jest": "^30.0.0",
     "@types/node": "^25.9.3",
-    "@types/react": "^19.2.7",
-    "@types/react-dom": "19.2.3",
-    "@vitejs/plugin-react": "^6.0.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react-swc": "^4.3.1",
     "@vitest/ui": "^4.1.9",
     "axios": "^1.18.1",
     "dotenv": "^17.4.2",
