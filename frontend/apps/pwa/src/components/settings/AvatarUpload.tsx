@@ -8,6 +8,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Loader2, Upload, Camera, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 const AVATAR_STORAGE_KEY = 'stackbluff-avatar-url';
 
@@ -55,7 +57,7 @@ export function AvatarUpload({ className, onAvatarUpdated }: AvatarUploadProps) 
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-me'] });
-      toast.success('Avatar updated successfully!');
+      toast.success(t`Avatar updated successfully!`);
       if (onAvatarUpdated && preview) onAvatarUpdated(preview);
     },
     onError: () => {
@@ -69,13 +71,13 @@ export function AvatarUpload({ className, onAvatarUpdated }: AvatarUploadProps) 
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      toast.error('Please upload an image file');
+      toast.error(t`Please upload an image file`);
       return;
     }
 
     // Validate file size (max 2MB)
     if (file.size > 2 * 1024 * 1024) {
-      toast.error('Image must be less than 2MB');
+      toast.error(t`Image must be less than 2MB`);
       return;
     }
 
@@ -95,7 +97,7 @@ export function AvatarUpload({ className, onAvatarUpdated }: AvatarUploadProps) 
       // Try to save to profile (best effort)
       updateAvatarMutation.mutate(url);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Upload failed');
+      toast.error(error instanceof Error ? error.message : t`Upload failed`);
       // Revert preview
       setPreview(localStorage.getItem(AVATAR_STORAGE_KEY) || null);
     } finally {
@@ -108,7 +110,7 @@ export function AvatarUpload({ className, onAvatarUpdated }: AvatarUploadProps) 
   };
 
   const handleRemove = () => {
-    if (confirm('Remove your avatar?')) {
+    if (confirm(t`Remove your avatar?`)) {
       setPreview(null);
       // Try to update profile (best effort)
       updateAvatarMutation.mutate('');
@@ -145,7 +147,7 @@ export function AvatarUpload({ className, onAvatarUpdated }: AvatarUploadProps) 
       </div>
 
       <div className="flex flex-col gap-1">
-        <p className="text-sm text-on-surface">Profile Picture</p>
+        <p className="text-sm text-on-surface"><Trans>Profile Picture</Trans></p>
         <div className="flex gap-2">
           <Button
             variant="outline"
@@ -159,7 +161,7 @@ export function AvatarUpload({ className, onAvatarUpdated }: AvatarUploadProps) 
             ) : (
               <Upload className="w-3.5 h-3.5 mr-1" />
             )}
-            Upload
+            <Trans>Upload</Trans>
           </Button>
           {preview && (
             <Button
@@ -170,12 +172,12 @@ export function AvatarUpload({ className, onAvatarUpdated }: AvatarUploadProps) 
               className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
             >
               <X className="w-3.5 h-3.5 mr-1" />
-              Remove
+              <Trans>Remove</Trans>
             </Button>
           )}
         </div>
         <p className="text-[10px] text-on-surface-variant/50">
-          JPEG, PNG, GIF. Max 2MB.
+          <Trans>JPEG, PNG, GIF. Max 2MB.</Trans>
         </p>
       </div>
     </div>
