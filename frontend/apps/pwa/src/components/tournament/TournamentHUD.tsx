@@ -8,6 +8,7 @@ import { tournamentApi } from '@stackbluff/shared/api/tournamentApi';
 import { useTournamentStore } from '@stackbluff/shared/stores/tournamentStore';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import type { TournamentState } from '@stackbluff/shared/types/tournament.types';
+import { Trans, t, Plural } from '@lingui/react/macro';
 
 interface TournamentHUDProps {
   tournamentId: string;
@@ -33,7 +34,7 @@ export function TournamentHUD({ tournamentId, isMobile = false, heroStack = 0 }:
   const setPayouts = useTournamentStore((s) => s.setPayouts);
   const balance = useAuthStore((s) => s.balance);
 
-    // ── Fetch payout structure ──
+  // ── Fetch payout structure ──
   useEffect(() => {
     if (tournamentId && !payouts) {
       tournamentApi.getPayoutStructure(tournamentId).then((p) => {
@@ -48,9 +49,6 @@ export function TournamentHUD({ tournamentId, isMobile = false, heroStack = 0 }:
       });
     }
   }, [tournamentId, payouts, setPayouts]);
-
-  // Get player's stack from game store – we'll pass it from TablePage
-  // For now, we'll show a placeholder; we'll read from gameStore in TablePage.
 
   if (!state) {
     return (
@@ -73,9 +71,6 @@ export function TournamentHUD({ tournamentId, isMobile = false, heroStack = 0 }:
   const totalPlayers = max_players;
   const progress = totalPlayers > 0 ? (playersLeft / totalPlayers) * 100 : 100;
 
-  // Blind level display
-  // We need blinds from the tournament state – backend sends "blinds" in TournamentBlindLevel event
-  // We'll store it in a local state updated via custom event.
   const [blinds, setBlinds] = useState<{ smallBlind: number; bigBlind: number } | null>(null);
 
   useEffect(() => {
@@ -89,9 +84,8 @@ export function TournamentHUD({ tournamentId, isMobile = false, heroStack = 0 }:
     return () => window.removeEventListener('tournament:blind_level', handler as EventListener);
   }, [tournamentId]);
 
-  const blindText = blinds ? `${blinds.smallBlind}/${blinds.bigBlind}` : `Level ${blind_level || '?'}`;
+  const blindText = blinds ? `${blinds.smallBlind}/${blinds.bigBlind}` : t`Level ${blind_level || '?'}`;
 
-  // Timer for next blind
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   useEffect(() => {
     if (!next_blind_at) {
@@ -126,10 +120,14 @@ export function TournamentHUD({ tournamentId, isMobile = false, heroStack = 0 }:
       >
         <div className="flex items-center gap-2">
           <Trophy className="w-4 h-4 text-tertiary" />
-          <span className="font-label-caps text-[10px] uppercase tracking-wider text-on-surface-variant">Tournament</span>
+          <span className="font-label-caps text-[10px] uppercase tracking-wider text-on-surface-variant">
+            <Trans>Tournament</Trans>
+          </span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="font-data-mono text-xs text-tertiary">Level {blind_level || '?'}</span>
+          <span className="font-data-mono text-xs text-tertiary">
+            <Trans>Level {blind_level || '?'}</Trans>
+          </span>
           {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </div>
       </button>
@@ -160,7 +158,7 @@ export function TournamentHUD({ tournamentId, isMobile = false, heroStack = 0 }:
               {/* Players remaining */}
               <div>
                 <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-on-surface-variant">Players Left</span>
+                  <span className="text-on-surface-variant"><Trans>Players Left</Trans></span>
                   <span className="font-data-mono text-on-surface font-bold">{playersLeft} / {totalPlayers}</span>
                 </div>
                 <div className="mt-1 h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
@@ -180,7 +178,7 @@ export function TournamentHUD({ tournamentId, isMobile = false, heroStack = 0 }:
                 >
                   <span className="text-on-surface-variant flex items-center gap-1">
                     <Coins className="w-3.5 h-3.5" />
-                    Prize Pool
+                    <Trans>Prize Pool</Trans>
                   </span>
                   <span className="font-data-mono text-tertiary font-bold">{formatCurrency(prize_pool)}</span>
                 </button>
@@ -192,18 +190,26 @@ export function TournamentHUD({ tournamentId, isMobile = false, heroStack = 0 }:
                       exit={{ opacity: 0, y: 5 }}
                       className="absolute left-0 right-0 top-full mt-2 bg-surface-container border border-white/10 rounded-lg p-3 z-10 shadow-xl"
                     >
-                      <div className="text-[10px] text-on-surface-variant font-label-caps uppercase tracking-wider mb-2">Payout Structure</div>
+                      <div className="text-[10px] text-on-surface-variant font-label-caps uppercase tracking-wider mb-2">
+                        <Trans>Payout Structure</Trans>
+                      </div>
                       <div className="space-y-1 text-xs">
                         {payouts && payouts.length > 0 ? (
                           payouts.slice(0, 5).map((p) => (
                             <div key={p.position} className="flex justify-between text-on-surface-variant">
-                              {p.position}{p.position === 1 ? "st" : p.position === 2 ? "nd" : "th"}: <span className="text-tertiary">{(p.percentage * 100).toFixed(0)}%</span>
+                              <span>
+                                {p.position}
+                                {p.position === 1 ? 'st' : p.position === 2 ? 'nd' : 'th'}:
+                              </span>
+                              <span className="text-tertiary">{(p.percentage * 100).toFixed(0)}%</span>
                             </div>
                           ))
                         ) : (
-                          <div className="text-on-surface-variant text-[10px]">Loading payouts...</div>
+                          <div className="text-on-surface-variant text-[10px]"><Trans>Loading payouts...</Trans></div>
                         )}
-                        <div className="text-[9px] text-on-surface-variant/50 mt-1">* Based on prize pool</div>
+                        <div className="text-[9px] text-on-surface-variant/50 mt-1">
+                          <Trans>* Based on prize pool</Trans>
+                        </div>
                       </div>
                     </motion.div>
                   )}
@@ -212,12 +218,10 @@ export function TournamentHUD({ tournamentId, isMobile = false, heroStack = 0 }:
 
               {/* Your stack - will be passed from TablePage */}
               <div className="flex items-center justify-between text-[11px] border-t border-white/5 pt-2">
-                <span className="text-on-surface-variant">Your Stack</span>
+                <span className="text-on-surface-variant"><Trans>Your Stack</Trans></span>
                 <span className="font-data-mono text-tertiary font-bold">
-                  {/* We'll get this from TablePage via prop later */}
-                  {/* For now, we'll read from gameStore inside TablePage */}
-                  {/* Let's use a placeholder and update via context/props */}
-                  {/* We'll pass heroStack from TablePage */}
+                  {/* Will be passed from TablePage via prop */}
+                  ${heroStack.toLocaleString()}
                 </span>
               </div>
             </div>
