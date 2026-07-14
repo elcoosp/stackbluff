@@ -8,14 +8,15 @@ import { PurchaseToast } from '../components/shop/PurchaseToast';
 import { cn } from '@/lib/utils';
 import { ShieldCheck, Zap, Loader2, ShoppingBag } from 'lucide-react';
 import { trackProductView } from '@/lib/customAnalytics';
+import { Trans, t } from '@lingui/react/macro';
 
 type Category = 'all' | 'chips' | 'season_pass' | 'club_pro';
 
 const CATEGORY_LABELS: Record<Category, string> = {
-  all: 'All Products',
-  chips: 'Chips',
-  season_pass: 'Season Pass',
-  club_pro: 'Club Pro',
+  all: t`All Products`,
+  chips: t`Chips`,
+  season_pass: t`Season Pass`,
+  club_pro: t`Club Pro`,
 };
 
 export default function ShopPage() {
@@ -89,7 +90,9 @@ export default function ShopPage() {
       <div className="flex h-full min-h-screen items-center justify-center bg-[#131315]">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-8 h-8 text-tertiary animate-spin" />
-          <div className="animate-pulse text-lg text-on-surface-variant font-label-caps tracking-widest uppercase">Loading Shop...</div>
+          <div className="animate-pulse text-lg text-on-surface-variant font-label-caps tracking-widest uppercase">
+            <Trans>Loading Shop...</Trans>
+          </div>
         </div>
       </div>
     );
@@ -111,17 +114,17 @@ export default function ShopPage() {
 
           <div className="relative z-10 p-6 md:p-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div>
-              <h1 className="font-display-lg text-4xl md:text-5xl text-on-surface mb-2">Shop</h1>
+              <h1 className="font-display-lg text-4xl md:text-5xl text-on-surface mb-2"><Trans>Shop</Trans></h1>
               <p className="text-on-surface-variant max-w-md text-sm md:text-base">
-                Power up your game with premium chips, passes, and exclusive features.
+                <Trans>Power up your game with premium chips, passes, and exclusive features.</Trans>
               </p>
             </div>
             <div className="flex items-center gap-6 text-[10px] font-label-caps uppercase tracking-widest text-outline">
               <span className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-tertiary" /> Secure Payments
+                <ShieldCheck className="w-4 h-4 text-tertiary" /> <Trans>Secure Payments</Trans>
               </span>
               <span className="flex items-center gap-2">
-                <Zap className="w-4 h-4 text-tertiary" /> Instant Delivery
+                <Zap className="w-4 h-4 text-tertiary" /> <Trans>Instant Delivery</Trans>
               </span>
             </div>
           </div>
@@ -150,7 +153,9 @@ export default function ShopPage() {
           {filteredProducts.length === 0 ? (
             <div className="col-span-full flex flex-col items-center justify-center py-24 text-on-surface-variant border border-dashed border-white/10 rounded-xl">
               <ShoppingBag className="w-12 h-12 mb-4 text-outline" />
-              <p className="font-label-caps uppercase tracking-widest">No products available in this category.</p>
+              <p className="font-label-caps uppercase tracking-widest">
+                <Trans>No products available in this category.</Trans>
+              </p>
             </div>
           ) : (
             filteredProducts.map((product) => (
