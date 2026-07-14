@@ -34,6 +34,7 @@ import {
 import type { PlayerStats } from '@/types/player-stats';
 import { requireAuth } from '@/lib/authGuard';
 import { trackGameEvent } from '@/lib/customAnalytics';
+import { Trans, t } from '@lingui/react/macro';
 
 export const Route = createFileRoute('/profile')({
   component: ProfilePage,
@@ -75,8 +76,6 @@ function ProfilePage() {
   const isLoading = badgesLoading || statsLoading;
   const balance = useAuthStore((s) => s.balance);
 
-
-
   // Track profile view when data is loaded
   useEffect(() => {
     if (!isLoading && user) {
@@ -87,12 +86,11 @@ function ProfilePage() {
     }
   }, [isLoading, user]);
 
-
-    if (isLoading) {
+  if (isLoading) {
     return <ProfileSkeleton />;
   }
 
-  const displayName = user?.username || 'Player';
+  const displayName = user?.username || t`Player`;
   const handsPlayed = stats?.hands_played || 0;
   const winRate = stats?.win_rate ?? 0;
   const vpip = stats?.vpip ?? 0;
@@ -123,29 +121,29 @@ function ProfilePage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <Sparkles className="w-4 h-4 text-tertiary" />
-                  <span className="text-xs font-data-mono uppercase tracking-widest text-tertiary">Player Profile</span>
+                  <span className="text-xs font-data-mono uppercase tracking-widest text-tertiary"><Trans>Player Profile</Trans></span>
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
                   <h1 className="font-display-lg text-3xl text-on-surface">{displayName}</h1>
                   {hasFoundingMember && (
                     <Badge variant="outline" className="bg-yellow-500/10 text-yellow-400 border-yellow-500/30 font-mono">
                       <Crown className="w-3 h-3 mr-1" />
-                      Founding Member
+                      <Trans>Founding Member</Trans>
                     </Badge>
                   )}
                   <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/30 font-mono">
                     <Trophy className="w-3 h-3 mr-1" />
-                    Silver
+                    <Trans>Silver</Trans>
                   </Badge>
                 </div>
                 <p className="text-on-surface-variant text-sm mt-1.5 flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5" /> Member since {new Date().toLocaleDateString()}
+                  <Calendar className="w-3.5 h-3.5" /> <Trans>Member since {new Date().toLocaleDateString()}</Trans>
                 </p>
                 <div className="flex flex-wrap gap-4 mt-3">
                   <div className="flex items-center gap-1.5 text-sm font-data-mono bg-black/20 px-3 py-1.5 rounded-lg border border-white/5">
                     <Coins className="w-4 h-4 text-yellow-400" />
                     <span className="text-on-surface font-bold">{balance.toLocaleString()}</span>
-                    <span className="text-on-surface-variant text-xs">chips</span>
+                    <span className="text-on-surface-variant text-xs"><Trans>chips</Trans></span>
                   </div>
                 </div>
               </div>
@@ -156,7 +154,7 @@ function ProfilePage() {
                 className="bg-white/5 border-white/10 hover:bg-white/10 rounded-xl px-4 py-2 text-sm"
               >
                 <Edit className="w-4 h-4 mr-2" />
-                Edit Profile
+                <Trans>Edit Profile</Trans>
               </Button>
             </div>
           </Card>
@@ -165,12 +163,12 @@ function ProfilePage() {
         {/* Quick Links */}
         <motion.div variants={itemVariants} className="flex flex-wrap gap-2">
           {[
-            { to: '/history', icon: History, label: 'History' },
-            { to: '/replays', icon: Film, label: 'Replays' },
-            { to: '/missions', icon: Target, label: 'Missions' },
-            { to: '/referrals', icon: Users, label: 'Referrals' },
-            { to: '/clubs', icon: Building2, label: 'Clubs' },
-            { to: '/settings', icon: Settings, label: 'Settings' },
+            { to: '/history', icon: History, label: t`History` },
+            { to: '/replays', icon: Film, label: t`Replays` },
+            { to: '/missions', icon: Target, label: t`Missions` },
+            { to: '/referrals', icon: Users, label: t`Referrals` },
+            { to: '/clubs', icon: Building2, label: t`Clubs` },
+            { to: '/settings', icon: Settings, label: t`Settings` },
           ].map((link) => (
             <Link
               key={link.to}
@@ -185,10 +183,10 @@ function ProfilePage() {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard label="Hands Played" value={handsPlayed.toLocaleString()} icon={<Target className="w-4 h-4" />} color="text-blue-400" bg="bg-blue-500/10" variants={itemVariants} />
-          <StatCard label="Win Rate" value={`${(winRate * 100).toFixed(1)}%`} icon={<TrendingUp className="w-4 h-4" />} color="text-tertiary" bg="bg-tertiary/10" variants={itemVariants} />
-          <StatCard label="Net Profit" value={`${netProfit >= 0 ? '+' : ''}${netProfit.toLocaleString()}`} icon={<Coins className="w-4 h-4" />} color="text-yellow-400" bg="bg-yellow-500/10" variants={itemVariants} />
-          <StatCard label="Biggest Pot" value={biggestPot.toLocaleString()} icon={<Gem className="w-4 h-4" />} color="text-purple-400" bg="bg-purple-500/10" variants={itemVariants} />
+          <StatCard label={t`Hands Played`} value={handsPlayed.toLocaleString()} icon={<Target className="w-4 h-4" />} color="text-blue-400" bg="bg-blue-500/10" variants={itemVariants} />
+          <StatCard label={t`Win Rate`} value={`${(winRate * 100).toFixed(1)}%`} icon={<TrendingUp className="w-4 h-4" />} color="text-tertiary" bg="bg-tertiary/10" variants={itemVariants} />
+          <StatCard label={t`Net Profit`} value={`${netProfit >= 0 ? '+' : ''}${netProfit.toLocaleString()}`} icon={<Coins className="w-4 h-4" />} color="text-yellow-400" bg="bg-yellow-500/10" variants={itemVariants} />
+          <StatCard label={t`Biggest Pot`} value={biggestPot.toLocaleString()} icon={<Gem className="w-4 h-4" />} color="text-purple-400" bg="bg-purple-500/10" variants={itemVariants} />
         </div>
 
         {/* Detailed Stats */}
@@ -199,12 +197,12 @@ function ProfilePage() {
                 <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
                   <Target className="w-4 h-4 text-blue-400" />
                 </div>
-                <h3 className="font-headline-md text-base text-on-surface">Preflop Aggression</h3>
+                <h3 className="font-headline-md text-base text-on-surface"><Trans>Preflop Aggression</Trans></h3>
               </div>
               <div className="space-y-4">
-                <StatBar label="VPIP" value={`${(vpip * 100).toFixed(1)}%`} percentage={vpip * 100} />
-                <StatBar label="PFR" value={`${(pfr * 100).toFixed(1)}%`} percentage={pfr * 100} />
-                <StatRow label="Aggression Factor" value={aggressionFactor.toFixed(2)} />
+                <StatBar label={t`VPIP`} value={`${(vpip * 100).toFixed(1)}%`} percentage={vpip * 100} />
+                <StatBar label={t`PFR`} value={`${(pfr * 100).toFixed(1)}%`} percentage={pfr * 100} />
+                <StatRow label={t`Aggression Factor`} value={aggressionFactor.toFixed(2)} />
               </div>
             </Card>
           </motion.div>
@@ -215,12 +213,12 @@ function ProfilePage() {
                 <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
                   <Swords className="w-4 h-4 text-purple-400" />
                 </div>
-                <h3 className="font-headline-md text-base text-on-surface">Showdowns</h3>
+                <h3 className="font-headline-md text-base text-on-surface"><Trans>Showdowns</Trans></h3>
               </div>
               <div className="space-y-4">
-                <StatBar label="Showdown Win Rate" value={showdowns > 0 ? `${((showdownWins / showdowns) * 100).toFixed(1)}%` : '0%'} percentage={showdowns > 0 ? (showdownWins / showdowns) * 100 : 0} />
-                <StatRow label="Total Showdowns" value={showdowns.toString()} />
-                <StatRow label="All-Ins" value={allInCount.toString()} />
+                <StatBar label={t`Showdown Win Rate`} value={showdowns > 0 ? `${((showdownWins / showdowns) * 100).toFixed(1)}%` : '0%'} percentage={showdowns > 0 ? (showdownWins / showdowns) * 100 : 0} />
+                <StatRow label={t`Total Showdowns`} value={showdowns.toString()} />
+                <StatRow label={t`All-Ins`} value={allInCount.toString()} />
               </div>
             </Card>
           </motion.div>
@@ -233,7 +231,7 @@ function ProfilePage() {
               <div className="w-8 h-8 rounded-full bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20">
                 <Award className="w-4 h-4 text-yellow-400" />
               </div>
-              <h3 className="font-headline-md text-base text-on-surface">Badges</h3>
+              <h3 className="font-headline-md text-base text-on-surface"><Trans>Badges</Trans></h3>
             </div>
             {badges && badges.length > 0 ? (
               <div className="flex flex-wrap gap-2">
@@ -245,7 +243,7 @@ function ProfilePage() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-on-surface-variant text-center py-4 opacity-80">No badges yet. Keep playing to earn them!</p>
+              <p className="text-sm text-on-surface-variant text-center py-4 opacity-80"><Trans>No badges yet. Keep playing to earn them!</Trans></p>
             )}
           </Card>
         </motion.div>
@@ -257,7 +255,7 @@ function ProfilePage() {
               <div className="w-8 h-8 rounded-full bg-tertiary/10 flex items-center justify-center border border-tertiary/20">
                 <Calendar className="w-4 h-4 text-tertiary" />
               </div>
-              <h3 className="font-headline-md text-base text-on-surface">Season Cards</h3>
+              <h3 className="font-headline-md text-base text-on-surface"><Trans>Season Cards</Trans></h3>
             </div>
             <SeasonCardDisplay />
           </Card>
