@@ -1,5 +1,6 @@
 import { useLeaderboard, type LeaderboardEntry } from '../hooks/useLeaderboard';
 import { BadgeIcon } from './BadgeIcon';
+import { Trans, t } from '@lingui/react/macro';
 
 interface LeaderboardProps {
   userId: string;
@@ -47,8 +48,8 @@ export function Leaderboard({ userId }: LeaderboardProps) {
   if (error) {
     return (
       <div className="rounded-lg border bg-card p-6">
-        <h2 className="mb-2 text-lg font-semibold">Global Leaderboard</h2>
-        <p className="text-sm text-destructive">Failed to load leaderboard. Retrying automatically…</p>
+        <h2 className="mb-2 text-lg font-semibold"><Trans>Global Leaderboard</Trans></h2>
+        <p className="text-sm text-destructive"><Trans>Failed to load leaderboard. Retrying automatically…</Trans></p>
       </div>
     );
   }
@@ -56,9 +57,9 @@ export function Leaderboard({ userId }: LeaderboardProps) {
   return (
     <div className="rounded-lg border bg-card p-4">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Global Leaderboard</h2>
+        <h2 className="text-lg font-semibold"><Trans>Global Leaderboard</Trans></h2>
         {isFetching && !isLoading && (
-          <span className="text-xs text-muted-foreground animate-pulse">Updating…</span>
+          <span className="text-xs text-muted-foreground animate-pulse"><Trans>Updating…</Trans></span>
         )}
       </div>
       <div className="space-y-1">
@@ -68,7 +69,7 @@ export function Leaderboard({ userId }: LeaderboardProps) {
       </div>
       {data && data.length === 0 && (
         <p className="py-8 text-center text-sm text-muted-foreground">
-          No leaderboard data yet. Play some hands to see rankings!
+          <Trans>No leaderboard data yet. Play some hands to see rankings!</Trans>
         </p>
       )}
     </div>
