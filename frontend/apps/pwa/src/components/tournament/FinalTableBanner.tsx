@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy } from 'lucide-react';
+import { Trans } from '@lingui/react/macro';
 
 interface FinalTableBannerProps {
   visible: boolean;
@@ -18,7 +19,7 @@ export function FinalTableBanner({ visible }: FinalTableBannerProps) {
         >
           <Trophy className="w-5 h-5 text-yellow-400" />
           <span className="font-label-caps text-sm uppercase tracking-widest text-tertiary font-bold">
-            FINAL TABLE
+            <Trans>FINAL TABLE</Trans>
           </span>
           <motion.div
             className="w-2 h-2 rounded-full bg-tertiary"
