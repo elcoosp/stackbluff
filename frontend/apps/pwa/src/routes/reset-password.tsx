@@ -12,18 +12,7 @@ import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
-
-const resetPasswordSchema = z
-  .object({
-    password: z.string().min(8, t`Password must be at least 8 characters`),
-    confirmPassword: z.string().min(8, t`Password must be at least 8 characters`),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: t`Passwords do not match`,
-    path: ['confirmPassword'],
-  });
+import { Trans, t } from '@lingui/react/macro';
 
 type SearchParams = {
   token?: string;
@@ -40,6 +29,17 @@ function ResetPasswordPage() {
   const navigate = useNavigate();
   const { token } = useSearch({ from: '/reset-password' });
   const [success, setSuccess] = useState(false);
+
+  // Define schema inside component to use t after locale activation
+  const resetPasswordSchema = z
+    .object({
+      password: z.string().min(8, t`Password must be at least 8 characters`),
+      confirmPassword: z.string().min(8, t`Password must be at least 8 characters`),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      message: t`Passwords do not match`,
+      path: ['confirmPassword'],
+    });
 
   const mutation = useMutation({
     mutationFn: (data: { token: string; new_password: string }) =>

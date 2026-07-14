@@ -12,12 +12,7 @@ import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
-
-const forgotPasswordSchema = z.object({
-  email: z.string().min(1, t`Email is required`).email(t`Invalid email address`),
-});
+import { Trans, t } from '@lingui/react/macro';
 
 export const Route = createFileRoute('/forgot-password')({
   component: ForgotPasswordPage,
@@ -26,6 +21,10 @@ export const Route = createFileRoute('/forgot-password')({
 function ForgotPasswordPage() {
   const navigate = useNavigate();
   const [success, setSuccess] = useState(false);
+
+  const forgotPasswordSchema = z.object({
+    email: z.string().min(1, t`Email is required`).email(t`Invalid email address`),
+  });
 
   const mutation = useMutation({
     mutationFn: (email: string) => authApi.forgotPassword(email),
@@ -124,7 +123,7 @@ function ForgotPasswordPage() {
                           className="text-xs font-data-mono text-red-400 mt-1"
                         >
                           {field.state.meta.errors.map((e) =>
-                            typeof e === 'string' ? e : e?.message || 'Invalid'
+                            typeof e === 'string' ? e : e?.message || t`Invalid`
                           ).join(', ')}
                         </motion.p>
                       )}
