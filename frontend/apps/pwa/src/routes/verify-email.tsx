@@ -7,6 +7,7 @@ import { LiquidMetalButton } from '@stackbluff/shared/ui/LiquidMetalButton';
 import { Link } from '@tanstack/react-router';
 import { CheckCircle, XCircle, Loader2, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
+import { Trans, t } from '@lingui/react/macro';
 
 type SearchParams = {
   token?: string;
@@ -34,10 +35,10 @@ function VerifyEmailPage() {
       try {
         await authApi.verifyEmail(token);
         setStatus('success');
-        toast.success('Email verified successfully!');
+        toast.success(t`Email verified successfully!`);
       } catch (error) {
         setStatus('error');
-        toast.error(error instanceof Error ? error.message : 'Verification failed');
+        toast.error(error instanceof Error ? error.message : t`Verification failed`);
       }
     };
 
@@ -54,8 +55,8 @@ function VerifyEmailPage() {
               <div className="flex justify-center mb-4">
                 <Loader2 className="w-16 h-16 text-tertiary animate-spin" />
               </div>
-              <h2 className="text-lg font-semibold text-on-surface mb-2">Verifying...</h2>
-              <p className="text-on-surface-variant text-sm">Please wait while we verify your email.</p>
+              <h2 className="text-lg font-semibold text-on-surface mb-2"><Trans>Verifying...</Trans></h2>
+              <p className="text-on-surface-variant text-sm"><Trans>Please wait while we verify your email.</Trans></p>
             </div>
           </GlassPanel>
         </div>
@@ -69,17 +70,17 @@ function VerifyEmailPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#1a1b1e_0%,_#0a0a0a_100%)]" />
         <div className="relative z-10 w-full max-w-md">
           <div className="text-center mb-8">
-            <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter">STACKBLUFF</h1>
-            <p className="font-data-mono text-xs text-outline mt-2 tracking-widest">EMAIL VERIFIED</p>
+            <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter"><Trans>STACKBLUFF</Trans></h1>
+            <p className="font-data-mono text-xs text-outline mt-2 tracking-widest"><Trans>EMAIL VERIFIED</Trans></p>
           </div>
           <GlassPanel>
             <div className="space-y-6 p-2 text-center">
               <div className="flex justify-center">
                 <CheckCircle className="w-16 h-16 text-tertiary" />
               </div>
-              <h2 className="text-lg font-semibold text-on-surface">Email Verified!</h2>
+              <h2 className="text-lg font-semibold text-on-surface"><Trans>Email Verified!</Trans></h2>
               <p className="text-on-surface-variant text-sm">
-                Your email has been successfully verified. You can now access all features.
+                <Trans>Your email has been successfully verified. You can now access all features.</Trans>
               </p>
               <LiquidMetalButton
                 type="button"
@@ -87,7 +88,7 @@ function VerifyEmailPage() {
                 className="w-full"
                 onClick={() => navigate({ to: '/lobby' })}
               >
-                Continue to Lobby
+                <Trans>Continue to Lobby</Trans>
               </LiquidMetalButton>
             </div>
           </GlassPanel>
@@ -102,17 +103,17 @@ function VerifyEmailPage() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#1a1b1e_0%,_#0a0a0a_100%)]" />
       <div className="relative z-10 w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter">STACKBLUFF</h1>
-          <p className="font-data-mono text-xs text-outline mt-2 tracking-widest">VERIFICATION FAILED</p>
+          <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter"><Trans>STACKBLUFF</Trans></h1>
+          <p className="font-data-mono text-xs text-outline mt-2 tracking-widest"><Trans>VERIFICATION FAILED</Trans></p>
         </div>
         <GlassPanel>
           <div className="space-y-6 p-2 text-center">
             <div className="flex justify-center">
               <XCircle className="w-16 h-16 text-red-400" />
             </div>
-            <h2 className="text-lg font-semibold text-on-surface">Verification Failed</h2>
+            <h2 className="text-lg font-semibold text-on-surface"><Trans>Verification Failed</Trans></h2>
             <p className="text-on-surface-variant text-sm">
-              {token ? 'The verification link is invalid or has expired.' : 'No verification token provided.'}
+              {token ? t`The verification link is invalid or has expired.` : t`No verification token provided.`}
             </p>
             <div className="space-y-3">
               <LiquidMetalButton
@@ -122,10 +123,10 @@ function VerifyEmailPage() {
                 onClick={() => navigate({ to: '/login' })}
               >
                 <ArrowLeft className="w-4 h-4 mr-2 inline" />
-                Back to Sign In
+                <Trans>Back to Sign In</Trans>
               </LiquidMetalButton>
               <p className="text-xs text-on-surface-variant">
-                If you didn't receive a verification email, you can request a new one from your account settings.
+                <Trans>If you didn't receive a verification email, you can request a new one from your account settings.</Trans>
               </p>
             </div>
           </div>
