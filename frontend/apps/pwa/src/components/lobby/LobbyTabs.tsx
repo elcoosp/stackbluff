@@ -1,17 +1,17 @@
 import { useNavigate, useLocation } from '@tanstack/react-router';
 import { cn } from '@/lib/utils';
 import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
-
-const tabs = [
-  { label: t`Cash Games`, path: '/lobby' },
-  { label: t`Tournaments`, path: '/tournaments' },
-  { label: t`Clubs`, path: '/clubs' },
-];
 
 export function LobbyTabs() {
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Use Trans directly – no t calls at module level
+  const tabs = [
+    { path: '/lobby', label: <Trans>Cash Games</Trans> },
+    { path: '/tournaments', label: <Trans>Tournaments</Trans> },
+    { path: '/clubs', label: <Trans>Clubs</Trans> },
+  ];
 
   return (
     <div className="flex gap-1 bg-surface-container p-1 rounded-xl border border-outline-variant self-start md:self-auto">

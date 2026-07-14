@@ -9,26 +9,22 @@ import './index.css';
 import { I18nProvider } from '@lingui/react';
 import { i18n } from '@lingui/core';
 
-// --- 1. Import default locale messages statically (synchronous) ---
-// This ensures the default locale is activated before any component uses t.
+// --- 1. STATICALLY IMPORT DEFAULT LOCALE ---
 import { messages as enMessages } from './locales/en/messages.mjs';
 
-// --- 2. Activate default locale immediately ---
+// --- 2. ACTIVATE DEFAULT LOCALE IMMEDIATELY ---
 i18n.load('en', enMessages);
 i18n.activate('en');
 
-// --- 3. Async loader for other locales (on-demand) ---
-async function loadLocale(locale: string) {
-  if (locale === 'en') return; // already loaded
-  const { messages } = await import(`./locales/${locale}/messages.mjs`);
-  i18n.load(locale, messages);
-  i18n.activate(locale);
-}
-
-// --- 4. Optionally, load the user's preferred locale from storage ---
+// --- 3. Load stored locale (if different) asynchronously ---
 const storedLocale = localStorage.getItem('stackbluff-language') || 'en';
 if (storedLocale !== 'en') {
-  loadLocale(storedLocale).catch(console.error);
+  import(`./locales/${storedLocale}/messages.mjs`)
+    .then(({ messages }) => {
+      i18n.load(storedLocale, messages);
+      i18n.activate(storedLocale);
+    })
+    .catch(() => console.warn(`Failed to load locale: ${storedLocale}`));
 }
 
 const queryClient = new QueryClient({
