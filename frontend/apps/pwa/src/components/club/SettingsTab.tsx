@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { useAuthStore } from "@/stores/authStore";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Trans, t } from "@lingui/react/macro";
 // // import axios from "axios";
 
 const VALID_COLORS = [
@@ -52,10 +53,10 @@ export function SettingsTab({ clubId, settings }: { clubId: string; settings?: C
   if (!isPro) {
     return (
       <div className="rounded-lg border border-dashed p-8 text-center">
-        <h3 className="text-lg font-semibold mb-2">Club Pro Required</h3>
-        <p className="text-muted-foreground mb-4">Upgrade to Club Pro to customise your club.</p>
+        <h3 className="text-lg font-semibold mb-2"><Trans>Club Pro Required</Trans></h3>
+        <p className="text-muted-foreground mb-4"><Trans>Upgrade to Club Pro to customise your club.</Trans></p>
         <a href="/shop?product=club-pro" className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-          Upgrade to Club Pro
+          <Trans>Upgrade to Club Pro</Trans>
         </a>
       </div>
     );
@@ -64,14 +65,14 @@ export function SettingsTab({ clubId, settings }: { clubId: string; settings?: C
   return (
     <div className="space-y-6">
       <div>
-        <label className="block text-sm font-medium mb-2">Club Banner</label>
+        <label className="block text-sm font-medium mb-2"><Trans>Club Banner</Trans></label>
         <div className="border rounded-lg p-4">
-          {preview && <img src={preview} alt="Banner preview" className="w-full h-32 object-cover rounded mb-2" />}
+          {preview && <img src={preview} alt={t`Banner preview`} className="w-full h-32 object-cover rounded mb-2" />}
           <input type="file" accept="image/*" onChange={onBanner} className="block w-full text-sm" />
         </div>
       </div>
       <div>
-        <label className="block text-sm font-medium mb-2">Chip Design</label>
+        <label className="block text-sm font-medium mb-2"><Trans>Chip Design</Trans></label>
         <div className="flex gap-3">
           {CHIP_PRESETS.map((id) => (
             <button key={id} onClick={() => setLocal((s) => ({ ...s, chip_preset_id: id }))}
@@ -83,17 +84,17 @@ export function SettingsTab({ clubId, settings }: { clubId: string; settings?: C
         </div>
       </div>
       <div>
-        <label className="block text-sm font-medium mb-2">Felt Colour</label>
+        <label className="block text-sm font-medium mb-2"><Trans>Felt Colour</Trans></label>
         <div className="flex gap-3 flex-wrap">
           {VALID_COLORS.map((c) => (
             <button key={c} onClick={() => setLocal((s) => ({ ...s, felt_color: c }))}
               className={`w-10 h-10 rounded-lg border-2 ${local.felt_color === c ? "border-primary ring-2 ring-primary" : "border-gray-300"}`}
-              style={{ backgroundColor: c }} aria-label={`Select ${c}`} />
+              style={{ backgroundColor: c }} aria-label={t`Select ${c}`} />
           ))}
         </div>
       </div>
       <div className="rounded-lg p-6 border" style={{ background: local.felt_color ? `linear-gradient(135deg,${local.felt_color},${local.felt_color}dd)` : "linear-gradient(135deg,#1a6b42,#2d7a5a)" }}>
-        <p className="text-white/90 text-sm font-medium mb-2">Live Preview</p>
+        <p className="text-white/90 text-sm font-medium mb-2"><Trans>Live Preview</Trans></p>
         {local.chip_preset_id && (
           <div className="w-8 h-8 rounded-full border border-white/30 shadow"
             style={{ background: `conic-gradient(from 0deg, hsl(${(local.chip_preset_id*60)%360},70%,50%), hsl(${(local.chip_preset_id*60+180)%360},70%,50%))` }} />
@@ -101,9 +102,9 @@ export function SettingsTab({ clubId, settings }: { clubId: string; settings?: C
       </div>
       <button onClick={() => update.mutate(local)} disabled={update.isPending}
         className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
-        {update.isPending ? "Saving..." : "Save Changes"}
+        {update.isPending ? <Trans>Saving...</Trans> : <Trans>Save Changes</Trans>}
       </button>
-      {update.isError && <p className="text-sm text-destructive">Failed: {update.error?.message}</p>}
+      {update.isError && <p className="text-sm text-destructive"><Trans>Failed: {update.error?.message}</Trans></p>}
     </div>
   );
 }
