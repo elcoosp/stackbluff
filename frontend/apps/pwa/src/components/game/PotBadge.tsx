@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Coins, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useEffect, useRef } from 'react';
+import { Trans, t } from '@lingui/react/macro';
 
 function useAnimatedCounter(target: number, duration = 500) {
   const [value, setValue] = useState(target);
@@ -42,7 +43,7 @@ interface PotBadgeProps {
   isMobile?: boolean;
   showdownReveal: any;
   potRef: React.RefObject<HTMLDivElement>;
-  lastAction?: any; // Added prop
+  lastAction?: any;
 }
 
 export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, potRef, lastAction }: PotBadgeProps) => {
@@ -172,7 +173,7 @@ export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, pot
                     animation: 'shimmer 5s infinite linear',
                   }}
                 >
-                  {isMobile ? '' : 'POT '}
+                  {isMobile ? '' : <Trans>POT </Trans>}
                   ${formatAmount(Math.round(animatedAmount))}
                 </span>
               </div>
@@ -188,7 +189,7 @@ export const PotBadge = ({ amount, toCall, isMobile = false, showdownReveal, pot
                 <span className="text-white/15">|</span>
                 <Target className={cn('text-tertiary/50', isMobile ? 'w-2.5 h-2.5' : 'w-2.5 h-2.5')} />
                 <span className="text-white/50 text-center tabular-nums">
-                  {isMobile ? '' : 'CALL '}
+                  {isMobile ? '' : <Trans>CALL </Trans>}
                   <span className="text-tertiary">${formatAmount(Math.round(animatedToCall))}</span>
                 </span>
               </motion.div>
