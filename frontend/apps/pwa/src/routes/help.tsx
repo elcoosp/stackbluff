@@ -18,6 +18,7 @@ import {
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { Trans, t } from '@lingui/react/macro';
 
 export const Route = createFileRoute('/help')({
   component: HelpPage,
@@ -25,44 +26,36 @@ export const Route = createFileRoute('/help')({
 
 const FAQ_ITEMS = [
   {
-    question: 'How do I create a table?',
-    answer:
-      'Go to the Lobby, click "Create Table", choose the stake level and number of players, then click "Create". Your table will appear in the lobby list.',
+    question: t`How do I create a table?`,
+    answer: t`Go to the Lobby, click "Create Table", choose the stake level and number of players, then click "Create". Your table will appear in the lobby list.`,
   },
   {
-    question: 'How do I join a tournament?',
-    answer:
-      'Navigate to the Tournaments page, find a tournament that is in the "Registering" state, and click "Register". You will need to have enough chips for the buy-in.',
+    question: t`How do I join a tournament?`,
+    answer: t`Navigate to the Tournaments page, find a tournament that is in the "Registering" state, and click "Register". You will need to have enough chips for the buy-in.`,
   },
   {
-    question: 'What are the different stake levels?',
-    answer:
-      'Micro ($0.02/$0.05), Low ($0.10/$0.25), Medium ($0.50/$1.00), High ($2/$4), Very High ($5/$10). The stakes determine the minimum and maximum buy-in amounts.',
+    question: t`What are the different stake levels?`,
+    answer: t`Micro ($0.02/$0.05), Low ($0.10/$0.25), Medium ($0.50/$1.00), High ($2/$4), Very High ($5/$10). The stakes determine the minimum and maximum buy-in amounts.`,
   },
   {
-    question: 'How do I sit out?',
-    answer:
-      'At the table, click the "Sit Out" button (moon icon) to be dealt out of hands. You will remain at the table but will not be dealt cards until you click "Sit In" (sun icon).',
+    question: t`How do I sit out?`,
+    answer: t`At the table, click the "Sit Out" button (moon icon) to be dealt out of hands. You will remain at the table but will not be dealt cards until you click "Sit In" (sun icon).`,
   },
   {
-    question: 'What is the Oracle?',
-    answer:
-      'The Oracle is our hand analysis tool. It provides real-time advice on your actions using Monte Carlo simulations. Free users get 3 analyses per session; Season Pass holders get unlimited access.',
+    question: t`What is the Oracle?`,
+    answer: t`The Oracle is our hand analysis tool. It provides real-time advice on your actions using Monte Carlo simulations. Free users get 3 analyses per session; Season Pass holders get unlimited access.`,
   },
   {
-    question: 'How do I invite friends?',
-    answer:
-      "Go to the Referrals page to get your unique referral link. Share it with friends, and you'll earn bonuses when they play 5+ hands.",
+    question: t`How do I invite friends?`,
+    answer: t`Go to the Referrals page to get your unique referral link. Share it with friends, and you'll earn bonuses when they play 5+ hands.`,
   },
   {
-    question: 'What are the founding member badges?',
-    answer:
-      'The Founding Member badge is awarded to players who refer 10 friends who each play at least 5 hands. It is a one-time exclusive badge.',
+    question: t`What are the founding member badges?`,
+    answer: t`The Founding Member badge is awarded to players who refer 10 friends who each play at least 5 hands. It is a one-time exclusive badge.`,
   },
   {
-    question: 'How do I contact support?',
-    answer:
-      'Use the contact form below, or join our Telegram support group: https://t.me/StackBluffSupport',
+    question: t`How do I contact support?`,
+    answer: t`Use the contact form below, or join our Telegram support group: https://t.me/StackBluffSupport`,
   },
 ];
 
@@ -88,7 +81,7 @@ const itemVariants = {
 };
 
 function HelpPage() {
-  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0); // Default open the first one
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
@@ -101,11 +94,11 @@ function HelpPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !email.trim() || !message.trim()) {
-      toast.error('Please fill in all fields');
+      toast.error(t`Please fill in all fields`);
       return;
     }
     if (!email.includes('@')) {
-      toast.error('Please enter a valid email address');
+      toast.error(t`Please enter a valid email address`);
       return;
     }
 
@@ -116,12 +109,12 @@ function HelpPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, message }),
       });
-      toast.success("Message sent! We'll get back to you within 24 hours.");
+      toast.success(t`Message sent! We'll get back to you within 24 hours.`);
       setName('');
       setEmail('');
       setMessage('');
     } catch {
-      toast.error('Failed to send message. Please try again later.');
+      toast.error(t`Failed to send message. Please try again later.`);
     } finally {
       setIsSubmitting(false);
     }
@@ -142,14 +135,14 @@ function HelpPage() {
         <div className="flex items-center gap-2 mb-1">
           <Sparkles className="w-4 h-4 text-cyan-400" />
           <span className="text-xs font-data-mono uppercase tracking-widest text-cyan-400">
-            Assistance
+            <Trans>Assistance</Trans>
           </span>
         </div>
         <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface">
-          Help & Support
+          <Trans>Help & Support</Trans>
         </h1>
         <p className="text-on-surface-variant text-sm mt-1 max-w-md">
-          Find answers to common questions or reach out to our support team.
+          <Trans>Find answers to common questions or reach out to our support team.</Trans>
         </p>
       </motion.div>
 
@@ -169,8 +162,8 @@ function HelpPage() {
                     <BookOpen className="w-6 h-6" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-headline-md text-base text-on-surface">Guide</p>
-                    <p className="text-xs text-on-surface-variant">Learn the rules</p>
+                    <p className="font-headline-md text-base text-on-surface"><Trans>Guide</Trans></p>
+                    <p className="text-xs text-on-surface-variant"><Trans>Learn the rules</Trans></p>
                   </div>
                   <ChevronDown className="w-5 h-5 text-on-surface-variant -rotate-90 group-hover:text-on-surface transition-colors" />
                 </div>
@@ -186,8 +179,8 @@ function HelpPage() {
                     <Users className="w-6 h-6" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-headline-md text-base text-on-surface">Community</p>
-                    <p className="text-xs text-on-surface-variant">Join our Discord</p>
+                    <p className="font-headline-md text-base text-on-surface"><Trans>Community</Trans></p>
+                    <p className="text-xs text-on-surface-variant"><Trans>Join our Discord</Trans></p>
                   </div>
                   <ChevronDown className="w-5 h-5 text-on-surface-variant -rotate-90 group-hover:text-on-surface transition-colors" />
                 </div>
@@ -206,8 +199,8 @@ function HelpPage() {
                     <Bug className="w-6 h-6" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-headline-md text-base text-on-surface">Report Bug</p>
-                    <p className="text-xs text-on-surface-variant">Help us improve</p>
+                    <p className="font-headline-md text-base text-on-surface"><Trans>Report Bug</Trans></p>
+                    <p className="text-xs text-on-surface-variant"><Trans>Help us improve</Trans></p>
                   </div>
                   <ChevronDown className="w-5 h-5 text-on-surface-variant -rotate-90 group-hover:text-on-surface transition-colors" />
                 </div>
@@ -224,7 +217,7 @@ function HelpPage() {
                 <div className="w-10 h-10 rounded-full bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20">
                   <HelpCircle className="w-5 h-5 text-cyan-400" />
                 </div>
-                <h3 className="font-headline-md text-base text-on-surface">Frequently Asked Questions</h3>
+                <h3 className="font-headline-md text-base text-on-surface"><Trans>Frequently Asked Questions</Trans></h3>
               </div>
             </div>
             <div className="p-6 pt-4 space-y-3">
@@ -279,7 +272,7 @@ function HelpPage() {
                 <div className="w-10 h-10 rounded-full bg-tertiary/10 flex items-center justify-center border border-tertiary/20">
                   <MessageCircle className="w-5 h-5 text-tertiary" />
                 </div>
-                <h3 className="font-headline-md text-base text-on-surface">Contact Support</h3>
+                <h3 className="font-headline-md text-base text-on-surface"><Trans>Contact Support</Trans></h3>
               </div>
             </div>
             <div className="p-6 pt-4">
@@ -287,27 +280,27 @@ function HelpPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-2">
                     <Label htmlFor="contact-name" className="text-on-surface-variant text-xs uppercase tracking-wider">
-                      Your Name
+                      <Trans>Your Name</Trans>
                     </Label>
                     <Input
                       id="contact-name"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="John Doe"
+                      placeholder={t`John Doe`}
                       className="bg-black/20 border-white/10 rounded-xl text-on-surface focus-visible:ring-tertiary/50 focus-visible:border-tertiary/50"
                       required
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="contact-email" className="text-on-surface-variant text-xs uppercase tracking-wider">
-                      Email Address
+                      <Trans>Email Address</Trans>
                     </Label>
                     <Input
                       id="contact-email"
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="john@example.com"
+                      placeholder={t`john@example.com`}
                       className="bg-black/20 border-white/10 rounded-xl text-on-surface focus-visible:ring-tertiary/50 focus-visible:border-tertiary/50"
                       required
                     />
@@ -315,13 +308,13 @@ function HelpPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="contact-message" className="text-on-surface-variant text-xs uppercase tracking-wider">
-                    Message
+                    <Trans>Message</Trans>
                   </Label>
                   <Textarea
                     id="contact-message"
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Describe your issue or question..."
+                    placeholder={t`Describe your issue or question...`}
                     className="bg-black/20 border-white/10 rounded-xl text-on-surface min-h-[140px] focus-visible:ring-tertiary/50 focus-visible:border-tertiary/50 resize-none"
                     required
                   />
@@ -335,17 +328,17 @@ function HelpPage() {
                     {isSubmitting ? (
                       <>
                         <span className="animate-spin mr-2">◌</span>
-                        Sending...
+                        <Trans>Sending...</Trans>
                       </>
                     ) : (
                       <>
                         <Send className="w-4 h-4 mr-2" />
-                        Send Message
+                        <Trans>Send Message</Trans>
                       </>
                     )}
                   </Button>
                   <p className="text-xs text-on-surface-variant/60 font-mono">
-                    We typically respond within 24 hours.
+                    <Trans>We typically respond within 24 hours.</Trans>
                   </p>
                 </div>
               </form>
@@ -359,15 +352,15 @@ function HelpPage() {
           className="flex flex-wrap gap-4 justify-center text-sm text-on-surface-variant border-t border-white/10 pt-6"
         >
           <Link to="/legal/terms" className="hover:text-tertiary transition-colors">
-            Terms of Service
+            <Trans>Terms of Service</Trans>
           </Link>
           <span className="text-white/20">|</span>
           <Link to="/legal/privacy" className="hover:text-tertiary transition-colors">
-            Privacy Policy
+            <Trans>Privacy Policy</Trans>
           </Link>
           <span className="text-white/20">|</span>
           <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors">
-            Responsible Gaming
+            <Trans>Responsible Gaming</Trans>
           </Link>
         </motion.div>
       </motion.div>
