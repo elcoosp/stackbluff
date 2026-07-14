@@ -1,11 +1,11 @@
 import { useNavigate, useLocation } from '@tanstack/react-router';
 import { cn } from '@/lib/utils';
-import { Trans } from '@lingui/react/macro';
+import { Trans, t } from '@lingui/react/macro';
 
 const tabs = [
-  { label: <Trans>Cash Games</Trans>, path: '/lobby' },
-  { label: <Trans>Tournaments</Trans>, path: '/tournaments' },
-  { label: <Trans>Clubs</Trans>, path: '/clubs' },
+  { label: t`Cash Games`, path: '/lobby' },
+  { label: t`Tournaments`, path: '/tournaments' },
+  { label: t`Clubs`, path: '/clubs' },
 ];
 
 export function LobbyTabs() {
