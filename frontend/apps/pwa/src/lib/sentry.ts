@@ -1,6 +1,13 @@
 import * as Sentry from '@sentry/react';
 
+let initialized = false;
+
 export function initSentry() {
+  if (initialized) {
+    console.debug('Sentry already initialized, skipping.');
+    return;
+  }
+
   const dsn = import.meta.env.VITE_SENTRY_DSN;
   if (!dsn) {
     console.warn('Sentry DSN not configured. Skipping Sentry initialization.');
@@ -11,7 +18,6 @@ export function initSentry() {
     dsn,
     environment: import.meta.env.VITE_SENTRY_ENVIRONMENT || 'development',
     release: import.meta.env.VITE_SENTRY_RELEASE || 'local',
-    // BrowserTracing is now included in @sentry/react v10
     integrations: [
       Sentry.browserTracingIntegration(),
       Sentry.replayIntegration({
@@ -19,14 +25,13 @@ export function initSentry() {
         blockAllMedia: false,
       }),
     ],
-    // Capture 10% of transactions in development
     tracesSampleRate: 0.1,
-    // Capture 10% of sessions for replay
     replaysSessionSampleRate: 0.1,
     replaysOnErrorSampleRate: 1.0,
     attachStacktrace: true,
   });
 
+  initialized = true;
   console.log('✅ Sentry initialized');
 }
 
@@ -55,5 +60,4 @@ export function addBreadcrumb(message: string, category?: string, level?: Sentry
   });
 }
 
-// Export ErrorBoundary for convenience
 export const ErrorBoundary = Sentry.ErrorBoundary;

@@ -29,15 +29,15 @@ function RootApp() {
   const [isReady, setIsReady] = useState(false);
   const [RouterComponent, setRouterComponent] = useState<React.ComponentType | null>(null);
 
-  // Initialize Sentry only once
-  useEffect(() => {
-    initSentry();
-  }, []);
-
   useEffect(() => {
     async function init() {
+      // Initialize Sentry once (guarded)
+      initSentry();
+
+      // Ensure default locale is active
       i18n.activate('en');
 
+      // Load stored locale preference (if any and different from 'en')
       const storedLocale = localStorage.getItem('stackbluff-language');
       if (storedLocale && storedLocale !== 'en') {
         try {
@@ -49,6 +49,7 @@ function RootApp() {
         }
       }
 
+      // Dynamically import router
       const { RouterProvider, createRouter } = await import('@tanstack/react-router');
       const { routeTree } = await import('./routeTree.gen');
       const router = createRouter({ routeTree });
@@ -65,6 +66,7 @@ function RootApp() {
     return <LoadingSpinner />;
   }
 
+  // Query client - can be created now
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { staleTime: 5 * 60 * 1000, refetchOnWindowFocus: false, retry: 1 },
