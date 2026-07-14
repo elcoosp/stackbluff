@@ -8,17 +8,9 @@ import { PurchaseToast } from '../components/shop/PurchaseToast';
 import { cn } from '@/lib/utils';
 import { ShieldCheck, Zap, Loader2, ShoppingBag } from 'lucide-react';
 import { trackProductView } from '@/lib/customAnalytics';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
+import { Trans, t } from '@lingui/react/macro';
 
 type Category = 'all' | 'chips' | 'season_pass' | 'club_pro';
-
-const CATEGORY_LABELS: Record<Category, string> = {
-  all: t`All Products`,
-  chips: t`Chips`,
-  season_pass: t`Season Pass`,
-  club_pro: t`Club Pro`,
-};
 
 export default function ShopPage() {
   const shop = useShopStore();
@@ -27,6 +19,14 @@ export default function ShopPage() {
   const [category, setCategory] = useState<Category>('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
+
+  // Define category labels inside the component (t works here after locale activation)
+  const CATEGORY_LABELS: Record<Category, string> = {
+    all: t`All Products`,
+    chips: t`Chips`,
+    season_pass: t`Season Pass`,
+    club_pro: t`Club Pro`,
+  };
 
   const transformedProducts = useMemo(() => {
     if (!productsData) return [];
@@ -53,7 +53,6 @@ export default function ShopPage() {
     const newIds = transformedProducts.map(p => p.id).sort().join(',');
     if (currentIds !== newIds) {
       shop.setProducts(transformedProducts);
-      // Track product views
       transformedProducts.forEach((p) => trackProductView(p.id, p.name));
     }
   }, [transformedProducts, shop]);
