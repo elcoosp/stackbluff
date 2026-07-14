@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { Loader2, Plus } from 'lucide-react';
 import { apiClient } from '@stackbluff/shared/api/client';
 import { motion } from 'framer-motion';
+import { Trans, t } from '@lingui/react/macro';
 
 interface CreateClubModalProps {
   open: boolean;
@@ -30,19 +31,19 @@ export function CreateClubModal({ open, onClose }: CreateClubModalProps) {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['clubs'] });
-      toast.success('Club created successfully!');
+      toast.success(t`Club created successfully!`);
       onClose();
       navigate({ to: '/clubs/$clubId', params: { clubId: data.club_id } });
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'Failed to create club');
+      toast.error(error instanceof Error ? error.message : t`Failed to create club`);
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      toast.error('Club name is required');
+      toast.error(t`Club name is required`);
       return;
     }
     mutation.mutate({
@@ -67,10 +68,10 @@ export function CreateClubModal({ open, onClose }: CreateClubModalProps) {
         {/* Header */}
         <div>
           <h2 className="font-display-lg text-2xl md:text-3xl text-on-surface">
-            Create New Club
+            <Trans>Create New Club</Trans>
           </h2>
           <p className="text-on-surface-variant text-sm mt-1">
-            Start your own community and invite players.
+            <Trans>Start your own community and invite players.</Trans>
           </p>
         </div>
 
@@ -80,13 +81,13 @@ export function CreateClubModal({ open, onClose }: CreateClubModalProps) {
               htmlFor="club-name"
               className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant"
             >
-              Club Name *
+              <Trans>Club Name *</Trans>
             </Label>
             <Input
               id="club-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., Poker Legends"
+              placeholder={t`e.g., Poker Legends`}
               className="h-12 bg-white/5 border-white/10 rounded-xl px-4 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-tertiary/50 transition-all"
               autoFocus
               required
@@ -98,17 +99,17 @@ export function CreateClubModal({ open, onClose }: CreateClubModalProps) {
               htmlFor="telegram-group"
               className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant"
             >
-              Telegram Group ID (optional)
+              <Trans>Telegram Group ID (optional)</Trans>
             </Label>
             <Input
               id="telegram-group"
               value={telegramGroupId}
               onChange={(e) => setTelegramGroupId(e.target.value)}
-              placeholder="e.g., -1001234567890"
+              placeholder={t`e.g., -1001234567890`}
               className="h-12 bg-white/5 border-white/10 rounded-xl px-4 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-tertiary/50 transition-all"
             />
             <p className="text-xs text-on-surface-variant/60">
-              Link your club to a Telegram group for notifications.
+              <Trans>Link your club to a Telegram group for notifications.</Trans>
             </p>
           </div>
         </div>
@@ -122,7 +123,7 @@ export function CreateClubModal({ open, onClose }: CreateClubModalProps) {
             disabled={mutation.isPending}
             className="flex items-center gap-2 px-4 py-3 border-outline-variant text-on-surface hover:border-tertiary hover:text-tertiary hover:bg-tertiary/10 font-label-caps text-xs uppercase tracking-wider rounded-xl w-full sm:w-auto justify-center"
           >
-            Cancel
+            <Trans>Cancel</Trans>
           </Button>
           <Button
             type="submit"
@@ -132,12 +133,12 @@ export function CreateClubModal({ open, onClose }: CreateClubModalProps) {
             {mutation.isPending ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Creating...
+                <Trans>Creating...</Trans>
               </>
             ) : (
               <>
                 <Plus className="w-4 h-4" />
-                Create Club
+                <Trans>Create Club</Trans>
               </>
             )}
           </Button>
