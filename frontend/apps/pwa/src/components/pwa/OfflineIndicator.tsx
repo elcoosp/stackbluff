@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { WifiOff, Wifi, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Trans, t } from '@lingui/react/macro';
 
 export function OfflineIndicator() {
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -59,7 +60,7 @@ export function OfflineIndicator() {
             {isOffline ? (
               <>
                 <WifiOff className="w-4 h-4" />
-                <span>You are offline. Some features may be unavailable.</span>
+                <span><Trans>You are offline. Some features may be unavailable.</Trans></span>
                 <button
                   type="button"
                   onClick={handleRetry}
@@ -72,7 +73,7 @@ export function OfflineIndicator() {
             ) : (
               <>
                 <Wifi className="w-4 h-4" />
-                <span>Back online! Reconnecting...</span>
+                <span><Trans>Back online! Reconnecting...</Trans></span>
               </>
             )}
           </div>
