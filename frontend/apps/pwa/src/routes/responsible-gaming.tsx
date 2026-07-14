@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Heart, AlertTriangle, Shield, Clock, Coins, UserX } from 'lucide-react';
 import { toast } from 'sonner';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 export const Route = createFileRoute('/responsible-gaming')({
   component: ResponsibleGamingPage,

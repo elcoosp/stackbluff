@@ -17,7 +17,8 @@ import { logger } from '../lib/logger';
 import { XCircle, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { trackClubView } from '@/lib/customAnalytics';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 const containerVariants = {
   hidden: { opacity: 0 },

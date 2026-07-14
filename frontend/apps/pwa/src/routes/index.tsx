@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Link } from '@tanstack/react-router';
 import { Swords, Trophy, BookOpen, ShoppingBag } from 'lucide-react';
 import { motion } from 'motion/react';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 export const Route = createFileRoute('/')({
   component: IndexPage,

@@ -4,7 +4,8 @@ import { X, Minus, Plus, Check } from 'lucide-react';
 import { TimerBar } from './TimerBar';
 import { cn } from '@/lib/utils';
 import { useFeedback } from '@stackbluff/shared/hooks/useFeedback';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 interface RaiseSliderProps {
   min: number;

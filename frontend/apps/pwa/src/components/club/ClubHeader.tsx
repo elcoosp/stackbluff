@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion';
 import { Sparkles, Users } from 'lucide-react';
 import type { ClubDetails } from '../../types/club';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 interface ClubHeaderProps {
   club: ClubDetails;

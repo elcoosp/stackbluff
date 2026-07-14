@@ -8,7 +8,8 @@ import { tournamentApi } from '@stackbluff/shared/api/tournamentApi';
 import { useTournamentStore } from '@stackbluff/shared/stores/tournamentStore';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import type { TournamentState } from '@stackbluff/shared/types/tournament.types';
-import { Trans, t, Plural } from '@lingui/react/macro';
+import { Trans, Plural } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 interface TournamentHUDProps {
   tournamentId: string;

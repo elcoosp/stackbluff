@@ -14,7 +14,8 @@ import { History, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { LobbyTabs } from '@/components/lobby/LobbyTabs';
 import { trackTournamentRegistration } from '@/lib/customAnalytics';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 export const Route = createFileRoute('/tournaments')({
   component: TournamentsPage,

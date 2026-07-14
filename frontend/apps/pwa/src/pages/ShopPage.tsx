@@ -8,7 +8,8 @@ import { PurchaseToast } from '../components/shop/PurchaseToast';
 import { cn } from '@/lib/utils';
 import { ShieldCheck, Zap, Loader2, ShoppingBag } from 'lucide-react';
 import { trackProductView } from '@/lib/customAnalytics';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 type Category = 'all' | 'chips' | 'season_pass' | 'club_pro';
 

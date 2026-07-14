@@ -4,6 +4,7 @@ export {};
 declare const self: ServiceWorkerGlobalScope;
 
 // Inject manifest placeholder for vite-plugin-pwa
+// @ts-ignore
 self.__WB_MANIFEST;
 
 self.addEventListener('push', (event) => {

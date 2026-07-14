@@ -10,7 +10,8 @@ import TimeAgo from 'react-timeago-i18n';
 import { createPortal } from 'react-dom';
 import { Link } from '@tanstack/react-router';
 import { cn } from '@/lib/utils';
-import { Trans, t, Plural } from '@lingui/react/macro';
+import { Trans, Plural } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 // Types
 interface WinnerSummary {

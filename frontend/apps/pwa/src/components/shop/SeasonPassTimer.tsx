@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 interface SeasonPassTimerProps {
   expiresAt: string;

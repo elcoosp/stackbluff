@@ -22,7 +22,8 @@ import {
   Layers,
   Trophy,
 } from 'lucide-react';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 interface Puzzle {
   id: number;

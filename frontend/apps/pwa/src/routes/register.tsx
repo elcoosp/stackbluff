@@ -15,7 +15,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
 import { trackGameEvent } from '@/lib/customAnalytics';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 const step1Schema = z.object({ username: z.string().min(3, t`Username must be at least 3 characters`) });
 const step2Schema = z.object({ email: z.string().email(t`Invalid email address`) });

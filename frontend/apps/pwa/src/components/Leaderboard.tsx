@@ -1,6 +1,7 @@
 import { useLeaderboard, type LeaderboardEntry } from '../hooks/useLeaderboard';
 import { BadgeIcon } from './BadgeIcon';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 interface LeaderboardProps {
   userId: string;

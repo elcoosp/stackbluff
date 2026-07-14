@@ -5,7 +5,8 @@ import { apiClient } from '@stackbluff/shared/api/client';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Loader2, Bell } from 'lucide-react';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 interface NotificationSettings {
   tournamentReminder60: boolean;

@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Download, X, Smartphone, Laptop, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { trackEvent } from '@/lib/analytics';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;

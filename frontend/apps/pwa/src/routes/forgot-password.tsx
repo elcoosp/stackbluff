@@ -12,7 +12,8 @@ import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 const forgotPasswordSchema = z.object({
   email: z.string().min(1, t`Email is required`).email(t`Invalid email address`),

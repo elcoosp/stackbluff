@@ -1,7 +1,8 @@
 import { useState, useCallback } from "react";
 import { useAuthStore } from "@/stores/authStore";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Trans, t } from "@lingui/react/macro";
+import { Trans } from "@lingui/react/macro";
+import { t } from "@lingui/core/macro";
 // // import axios from "axios";
 
 const VALID_COLORS = [

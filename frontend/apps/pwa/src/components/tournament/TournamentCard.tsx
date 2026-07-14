@@ -3,7 +3,8 @@ import { Button } from '@/components/ui/button';
 import type { TournamentSummary } from '@stackbluff/shared/types/tournament.types';
 import { Clock, Users, Trophy, Zap, Eye } from 'lucide-react';
 import { TimerBar } from '@/components/game/TimerBar';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 interface TournamentCardProps {
   tournament: TournamentSummary;

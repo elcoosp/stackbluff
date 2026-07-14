@@ -4,7 +4,8 @@ import { authApi } from '@stackbluff/shared/auth/api';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Loader2, Mail, CheckCircle, AlertCircle } from 'lucide-react';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 export function AccountSettings() {
   const { user, loadUser } = useAuthStore();

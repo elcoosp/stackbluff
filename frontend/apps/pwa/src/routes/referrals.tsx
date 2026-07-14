@@ -29,7 +29,8 @@ import {
   Coins,
   Clock,
 } from 'lucide-react';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 export const Route = createFileRoute('/referrals')({
   component: ReferralsPage,

@@ -11,7 +11,8 @@ import { Loader2, Upload, Image as ImageIcon, Palette, Crown, Save, Info, Settin
 import { cn } from '@/lib/utils';
 import { uploadFile } from '@/lib/uploadFile';
 import type { ClubDetails } from '@/types/club';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 const VALID_COLORS = [
   "#1a6b42", "#2d7a5a", "#3d8b6b", "#4a9c7a",

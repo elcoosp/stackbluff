@@ -32,7 +32,8 @@ import { cn } from '@/lib/utils';
 import type { TournamentSummary, TournamentResultEntry, PayoutEntry } from '@stackbluff/shared/types/tournament.types';
 import { BlindSchedulePreview } from '@/components/tournament/BlindSchedulePreview';
 import { PayoutStructurePreview } from '@/components/tournament/PayoutStructurePreview';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 export const Route = createFileRoute('/tournaments/$tournamentId')({
   component: TournamentDetailPage,

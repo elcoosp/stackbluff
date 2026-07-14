@@ -18,7 +18,8 @@ import {
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 export const Route = createFileRoute('/help')({
   component: HelpPage,

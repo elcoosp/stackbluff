@@ -8,7 +8,8 @@ import { Card } from '@/components/ui/card';
 import { Trophy, Medal, Calendar, TrendingUp, Crown, Sparkles, ChevronRight, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { trackGameEvent } from '@/lib/customAnalytics';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 export const Route = createFileRoute('/leaderboard')({
   component: LeaderboardPage,

@@ -10,7 +10,8 @@ import { AlertTriangle, Download, Trash2, Shield, Loader2, CheckCircle, ArrowLef
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { requireAuth } from '@/lib/authGuard';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 export const Route = createFileRoute('/settings/privacy')({
   component: PrivacySettingsPage,

@@ -8,7 +8,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
 import { Trophy, Calendar, Users, Coins, Sparkles, ChevronRight, LogIn } from 'lucide-react';
 import type { TournamentResultEntry, TournamentSummary } from '@stackbluff/shared/types/tournament.types';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 export const Route = createFileRoute('/tournaments-history')({
   component: TournamentHistoryPage,

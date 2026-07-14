@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Send, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { requireAuth } from '@/lib/authGuard';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 export const Route = createFileRoute('/settings/telegram')({
   component: TelegramSettingsPage,

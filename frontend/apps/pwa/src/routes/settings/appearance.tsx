@@ -8,7 +8,8 @@ import { ArrowLeft } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { requireAuth } from '@/lib/authGuard';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 export const Route = createFileRoute('/settings/appearance')({
   component: AppearanceSettingsPage,

@@ -4,7 +4,8 @@ import { isPushSupported, subscribeToPushNotifications } from '@/services/notifi
 import { consentLogger } from '@/lib/logger';
 import { useInterval } from '@/hooks/useInterval';
 import { FIRST_HAND_PLAYED_KEY, MAYBE_LATER_COOLDOWN_MS } from '@/lib/consent/constants';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 interface NotificationPromptProps {
   onDecision?: (decision: 'allowed' | 'denied' | 'later') => void;

@@ -34,7 +34,8 @@ import {
 import type { PlayerStats } from '@/types/player-stats';
 import { requireAuth } from '@/lib/authGuard';
 import { trackGameEvent } from '@/lib/customAnalytics';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 export const Route = createFileRoute('/profile')({
   component: ProfilePage,

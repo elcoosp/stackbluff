@@ -7,7 +7,8 @@ import { LiquidMetalButton } from '@stackbluff/shared/ui/LiquidMetalButton';
 import { Link } from '@tanstack/react-router';
 import { CheckCircle, XCircle, Loader2, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 type SearchParams = {
   token?: string;

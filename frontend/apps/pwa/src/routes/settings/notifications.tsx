@@ -6,7 +6,8 @@ import { ArrowLeft } from 'lucide-react';
 import { NotificationPreferences } from '@/components/settings/NotificationPreferences';
 import { NotificationsSettings } from '@/components/settings/NotificationsSettings';
 import { requireAuth } from '@/lib/authGuard';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 export const Route = createFileRoute('/settings/notifications')({
   component: NotificationsSettingsPage,

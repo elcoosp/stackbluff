@@ -16,7 +16,8 @@ import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
 import { isAccountLocked, getLockoutRemaining, clearLockout } from '@/lib/errorHandler';
 import { trackGameEvent } from '@/lib/customAnalytics';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 const loginSchema = z.object({
   email: z.string().min(1, t`Email is required`).email(t`Invalid email address`),

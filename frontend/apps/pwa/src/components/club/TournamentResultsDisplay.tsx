@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Trophy, Medal, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 interface TournamentResult {
   tournament_id: string;

@@ -5,7 +5,8 @@ import {
   ANALYTICS_COOKIE_CONSENT_ACCEPTED,
   ANALYTICS_COOKIE_CONSENT_DECLINED,
 } from '@/lib/consent/constants';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 /**
  * Cookie consent banner – bottom-fixed, non-dismissible except via Accept/Decline.

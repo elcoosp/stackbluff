@@ -4,7 +4,8 @@ import { cn } from '@/lib/utils';
 import { Coins, Crown, Sparkles, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import { getProductImageUrl } from '@/lib/productImages';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 interface ProductCardProps {
   product: {

@@ -26,7 +26,8 @@ import {
 import { useState, useMemo } from 'react';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { requireAuth } from '@/lib/authGuard';
-import { Trans, t } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 export const Route = createFileRoute('/history')({
   component: HistoryPage,
