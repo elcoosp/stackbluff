@@ -4,6 +4,8 @@ import { useGameWebSocket } from '@/hooks/useGameWebSocket';
 import { Moon, Sun } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 interface SitOutButtonProps {
   roomId: string;
@@ -49,7 +51,7 @@ export function SitOutButton({ roomId, className }: SitOutButtonProps) {
           : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10',
         className
       )}
-      title={isSittingOut ? 'Sit In' : 'Sit Out'}
+      title={isSittingOut ? t`Sit In` : t`Sit Out`}
     >
       {isSittingOut ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
     </motion.button>
