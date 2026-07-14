@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Trans, t } from "@lingui/react/macro";
 
 interface Props {
   badgeType: string;
@@ -16,10 +17,10 @@ export const BadgeUnlockToast: React.FC<Props> = ({ badgeType, inviteLink }) => 
   if (!visible) return null;
 
   const handleShare = () => {
-    const message = `I just became a Founding Member of StackBluff by referring 10 friends who played 5+ hands! Join me: ${inviteLink || window.location.origin}`;
+    const message = t`I just became a Founding Member of StackBluff by referring 10 friends who played 5+ hands! Join me: ${inviteLink || window.location.origin}`;
 
     if (navigator.share) {
-      navigator.share({ title: "StackBluff Founding Member", text: message })
+      navigator.share({ title: t`StackBluff Founding Member`, text: message })
         .catch(() => navigator.clipboard.writeText(message));
     } else {
       navigator.clipboard.writeText(message).catch(() => {});
@@ -33,16 +34,16 @@ export const BadgeUnlockToast: React.FC<Props> = ({ badgeType, inviteLink }) => 
           <span className="text-2xl">🏆</span>
           <div className="flex-1">
             <p className="font-semibold text-sm">
-              You've unlocked the Founding Member badge!
+              <Trans>You've unlocked the Founding Member badge!</Trans>
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Share your achievement with friends.
+              <Trans>Share your achievement with friends.</Trans>
             </p>
             <button
               onClick={handleShare}
               className="mt-2 inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
             >
-              Share
+              <Trans>Share</Trans>
             </button>
           </div>
           <button
