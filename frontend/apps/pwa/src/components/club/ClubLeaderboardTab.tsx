@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, RotateCcw, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Trans, t } from '@lingui/react/macro';
 
 interface ClubLeaderboardTabProps {
   clubId: string;
@@ -66,12 +67,12 @@ export function ClubLeaderboardTab({ clubId }: ClubLeaderboardTabProps) {
 
     return (
       <div className="text-center py-12">
-        <p className="text-red-400 mb-4">Failed to load leaderboard</p>
+        <p className="text-red-400 mb-4"><Trans>Failed to load leaderboard</Trans></p>
         <Button
           onClick={() => refetch()}
           className="bg-tertiary text-on-tertiary hover:bg-tertiary/80 rounded-xl"
         >
-          <RotateCcw className="w-4 h-4 mr-2" /> Retry
+          <RotateCcw className="w-4 h-4 mr-2" /> <Trans>Retry</Trans>
         </Button>
       </div>
     );
@@ -80,9 +81,9 @@ export function ClubLeaderboardTab({ clubId }: ClubLeaderboardTabProps) {
   if (!data || data.entries.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-on-surface-variant">No tournament results yet.</p>
+        <p className="text-on-surface-variant"><Trans>No tournament results yet.</Trans></p>
         <p className="text-on-surface-variant/60 text-sm mt-2">
-          Once tournaments are completed, the leaderboard will appear here.
+          <Trans>Once tournaments are completed, the leaderboard will appear here.</Trans>
         </p>
       </div>
     );
@@ -97,12 +98,12 @@ export function ClubLeaderboardTab({ clubId }: ClubLeaderboardTabProps) {
           <div className="flex items-center gap-2 mb-1">
             <Trophy className="w-4 h-4 text-yellow-400" />
             <span className="text-xs font-data-mono uppercase tracking-widest text-yellow-400">
-              Rankings
+              <Trans>Rankings</Trans>
             </span>
           </div>
-          <h2 className="font-headline-md text-xl text-on-surface">Club Leaderboard</h2>
+          <h2 className="font-headline-md text-xl text-on-surface"><Trans>Club Leaderboard</Trans></h2>
           <p className="text-on-surface-variant text-sm mt-1">
-            {total_members} total members • Division {currentDivision} of {total_divisions}
+            <Trans>{total_members} total members • Division {currentDivision} of {total_divisions}</Trans>
           </p>
         </div>
         <Button
@@ -112,7 +113,7 @@ export function ClubLeaderboardTab({ clubId }: ClubLeaderboardTabProps) {
           className="border-outline-variant text-on-surface hover:border-tertiary hover:text-tertiary hover:bg-tertiary/10 font-label-caps text-xs uppercase tracking-wider rounded-xl w-full sm:w-auto justify-center"
         >
           <RotateCcw className={cn("w-4 h-4 mr-2", isFetching && "animate-spin")} />
-          {isFetching ? 'Refreshing' : 'Refresh'}
+          {isFetching ? <Trans>Refreshing</Trans> : <Trans>Refresh</Trans>}
         </Button>
       </div>
 
@@ -170,7 +171,7 @@ export function ClubLeaderboardTab({ clubId }: ClubLeaderboardTabProps) {
 
             <div className="flex-shrink-0 text-right">
               <p className="font-headline-md text-sm text-on-surface">{entry.weekly_xp.toLocaleString()}</p>
-              <p className="text-on-surface-variant text-xs">XP this week</p>
+              <p className="text-on-surface-variant text-xs"><Trans>XP this week</Trans></p>
             </div>
           </motion.div>
         ))}
@@ -184,10 +185,10 @@ export function ClubLeaderboardTab({ clubId }: ClubLeaderboardTabProps) {
             variant="outline"
             className="border-outline-variant text-on-surface hover:border-tertiary hover:text-tertiary hover:bg-tertiary/10 font-label-caps text-xs uppercase tracking-wider rounded-xl disabled:opacity-40 px-4 py-2"
           >
-            <ChevronLeft className="w-4 h-4 mr-1" /> Prev
+            <ChevronLeft className="w-4 h-4 mr-1" /> <Trans>Prev</Trans>
           </Button>
           <span className="text-sm font-data-mono text-on-surface-variant">
-            Division {currentDivision} / {total_divisions}
+            <Trans>Division {currentDivision} / {total_divisions}</Trans>
           </span>
           <Button
             onClick={() => setCurrentDivision((d) => Math.min(total_divisions, d + 1))}
@@ -195,7 +196,7 @@ export function ClubLeaderboardTab({ clubId }: ClubLeaderboardTabProps) {
             variant="outline"
             className="border-outline-variant text-on-surface hover:border-tertiary hover:text-tertiary hover:bg-tertiary/10 font-label-caps text-xs uppercase tracking-wider rounded-xl disabled:opacity-40 px-4 py-2"
           >
-            Next <ChevronRight className="w-4 h-4 ml-1" />
+            <Trans>Next</Trans> <ChevronRight className="w-4 h-4 ml-1" />
           </Button>
         </div>
       )}
