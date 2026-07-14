@@ -6,3 +6,38 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: @lingui/cli\n"
 "Language: en\n"
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Plural-Forms: \n"
+
+#: src/App.tsx:47
+msgid "Check out StackBluff"
+msgstr "Check out StackBluff"
+
+#: src/App.tsx:38
+msgid "Loading user..."
+msgstr "Loading user..."
+
+#: src/App.tsx:42
+msgid "Platform: PWA"
+msgstr "Platform: PWA"
+
+#: src/App.tsx:53
+msgid "Share"
+msgstr "Share"
+
+#: src/App.tsx:34
+msgid "Something went wrong"
+msgstr "Something went wrong"
+
+#: src/App.tsx:37
+msgid "StackBluff PWA"
+msgstr "StackBluff PWA"
+
+#. placeholder {0}: user.name
+#: src/App.tsx:41
+msgid "Welcome, {0}!"
+msgstr "Welcome, {0}!"

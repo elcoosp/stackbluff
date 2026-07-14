@@ -6,6 +6,8 @@ import { CookieConsentBanner } from '@/components/consent/CookieConsentBanner';
 import { NotificationPrompt } from '@/components/consent/NotificationPrompt';
 import { registerServiceWorker, cleanupServiceWorker } from '@/lib/serviceWorker';
 import { logger } from '@/lib/logger';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 const appLogger = logger.child({ component: 'App' });
 
@@ -14,20 +16,14 @@ function App() {
 
   useEffect(() => {
     loadUser();
-
-    // Initialize club WebSocket connection
     clubWebSocket.connect();
   }, [loadUser]);
 
-  // Register service worker on app startup (with cleanup)
   useEffect(() => {
     appLogger.info('Initializing app');
-
     registerServiceWorker().catch((err) => {
       appLogger.error('Failed to register service worker', err);
     });
-
-    // Cleanup on unmount
     return () => {
       appLogger.info('Cleaning up app');
       cleanupServiceWorker();
@@ -35,26 +31,26 @@ function App() {
   }, []);
 
   return (
-    <ErrorBoundary fallback={<div className="p-8 text-center text-red-400">Something went wrong</div>}>
+    <ErrorBoundary fallback={<div className="p-8 text-center text-red-400"><Trans>Something went wrong</Trans></div>}>
     <div className="font-sans">
       <div className="p-8">
-        <h1 className="text-3xl font-bold mb-4">StackBluff PWA</h1>
-        {loading && <p className="text-gray-400">Loading user...</p>}
+        <h1 className="text-3xl font-bold mb-4"><Trans>StackBluff PWA</Trans></h1>
+        {loading && <p className="text-gray-400"><Trans>Loading user...</Trans></p>}
         {user && (
           <div className="space-y-2">
-            <p className="text-lg">Welcome, {user.name}!</p>
-            <p className="text-sm text-gray-400">Platform: PWA</p>
+            <p className="text-lg"><Trans>Welcome, {user.name}!</Trans></p>
+            <p className="text-sm text-gray-400"><Trans>Platform: PWA</Trans></p>
             <button
               type="button"
               onClick={() =>
                 getPlatform().shareContent({
-                  title: 'Check out StackBluff',
+                  title: t`Check out StackBluff`,
                   url: window.location.href,
                 })
               }
               className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
             >
-              Share
+              <Trans>Share</Trans>
             </button>
           </div>
         )}
