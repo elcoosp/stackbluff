@@ -1,6 +1,8 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { TrendingUp } from 'lucide-react';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 interface BlindLevelNotificationProps {
   tournamentId: string;
@@ -37,7 +39,7 @@ export function BlindLevelNotification({ tournamentId }: BlindLevelNotificationP
           <TrendingUp className="w-5 h-5 text-tertiary" />
           <div>
             <div className="font-label-caps text-[10px] uppercase tracking-wider text-tertiary">
-              Blind Level {notification.level}
+              <Trans>Blind Level {notification.level}</Trans>
             </div>
             <div className="font-data-mono text-sm text-on-surface">
               {notification.blinds.smallBlind} / {notification.blinds.bigBlind}
