@@ -8,22 +8,75 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
-import { useState } from 'react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { ArrowLeft, Loader2, CheckCircle, AlertCircle, Globe } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { requireAuth } from '@/lib/authGuard';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
+import { Trans, t } from '@lingui/react/macro';
+import { i18n } from '@lingui/core';
+
+// Helper to load locale dynamically
+async function loadLocale(locale: string) {
+  const { messages } = await import(`../../locales/${locale}/messages.mjs`);
+  i18n.load(locale, messages);
+  i18n.activate(locale);
+}
+
+// Store language preference
+const LANG_STORAGE_KEY = 'stackbluff-language';
+
+function getStoredLanguage(): string {
+  if (typeof window === 'undefined') return 'en';
+  return localStorage.getItem(LANG_STORAGE_KEY) || 'en';
+}
+
+function setStoredLanguage(locale: string) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(LANG_STORAGE_KEY, locale);
+}
 
 export const Route = createFileRoute('/settings/account')({
   component: AccountSettingsPage,
 });
 
 function AccountSettingsPage() {
-  const {user} = useAuthStore();
+  const { user } = useAuthStore();
   const [displayName, setDisplayName] = useState(user?.username || '');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // Language state
+  const [selectedLanguage, setSelectedLanguage] = useState<string>(() => {
+    const stored = getStoredLanguage();
+    // Fallback to current i18n locale or stored
+    return stored || i18n.locale || 'en';
+  });
+  const [isLoadingLang, setIsLoadingLang] = useState(false);
+
+  // When language changes, load and activate
+  useEffect(() => {
+    const current = i18n.locale || 'en';
+    if (selectedLanguage !== current) {
+      setIsLoadingLang(true);
+      loadLocale(selectedLanguage)
+        .then(() => {
+          setStoredLanguage(selectedLanguage);
+          toast.success(t`Language changed to ${selectedLanguage.toUpperCase()}`);
+        })
+        .catch((err) => {
+          console.error('Failed to load locale', err);
+          toast.error(t`Failed to change language`);
+        })
+        .finally(() => setIsLoadingLang(false));
+    }
+  }, [selectedLanguage]);
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: { display_name?: string; password?: string }) => {
@@ -126,6 +179,45 @@ function AccountSettingsPage() {
                 className="bg-surface-container-high border-outline-variant/50 text-on-surface"
               />
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Language Selector */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-semibold text-on-surface flex items-center gap-2">
+              <Globe className="w-4 h-4 text-tertiary" />
+              <Trans>Language</Trans>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-3">
+              <Select
+                value={selectedLanguage}
+                onValueChange={(value) => setSelectedLanguage(value)}
+                disabled={isLoadingLang}
+              >
+                <SelectTrigger className="w-48 bg-surface-container-high border-outline-variant/50 text-on-surface">
+                  <SelectValue placeholder={t`Select language`} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="fr">Français</SelectItem>
+                  <SelectItem value="es">Español</SelectItem>
+                </SelectContent>
+              </Select>
+              {isLoadingLang && (
+                <Loader2 className="w-4 h-4 animate-spin text-tertiary" />
+              )}
+              {!isLoadingLang && selectedLanguage && (
+                <span className="text-xs text-on-surface-variant">
+                  <Trans>Current: {selectedLanguage.toUpperCase()}</Trans>
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-on-surface-variant/60 mt-2">
+              <Trans>Choose your preferred language for the app interface.</Trans>
+            </p>
           </CardContent>
         </Card>
 
