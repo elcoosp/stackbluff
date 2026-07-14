@@ -3,6 +3,8 @@ import { Dialog } from '@stackbluff/shared/components/Dialog';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UserX, Clock, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 interface KickVoteDialogProps {
   open: boolean;
@@ -90,7 +92,7 @@ export function KickVoteDialog({
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <UserX className="w-5 h-5 text-yellow-400" />
-            <h2 className="text-lg font-semibold text-on-surface">Kick Vote</h2>
+            <h2 className="text-lg font-semibold text-on-surface"><Trans>Kick Vote</Trans></h2>
           </div>
           <div className="flex items-center gap-1 text-sm font-mono text-on-surface-variant">
             <Clock className="w-4 h-4" />
@@ -99,14 +101,14 @@ export function KickVoteDialog({
         </div>
 
         <p className="text-sm text-on-surface-variant mb-4">
-          Vote to remove <span className="text-on-surface font-medium">{targetName}</span> from the table.
-          {requiredVotes} votes needed.
+          <Trans>Vote to remove <span className="text-on-surface font-medium">{targetName}</span> from the table.</Trans>
+          {requiredVotes} <Trans>votes needed.</Trans>
         </p>
 
         <div className="mb-4">
           <div className="flex justify-between text-xs text-on-surface-variant mb-1">
-            <span>{votes} votes</span>
-            <span>{requiredVotes} needed</span>
+            <span>{votes} <Trans>votes</Trans></span>
+            <span>{requiredVotes} <Trans>needed</Trans></span>
           </div>
           <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
             <motion.div
@@ -121,12 +123,12 @@ export function KickVoteDialog({
         {passed ? (
           <div className="flex items-center gap-2 text-green-400 text-sm">
             <CheckCircle className="w-4 h-4" />
-            Vote passed! Player will be removed.
+            <Trans>Vote passed! Player will be removed.</Trans>
           </div>
         ) : isTimeout ? (
           <div className="flex items-center gap-2 text-red-400 text-sm">
             <AlertTriangle className="w-4 h-4" />
-            Vote timed out. Player stays.
+            <Trans>Vote timed out. Player stays.</Trans>
           </div>
         ) : (
           <div className="flex gap-3 mt-2">
@@ -140,13 +142,13 @@ export function KickVoteDialog({
                   : 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30'
               )}
             >
-              {hasVoted ? 'Voted ✓' : 'Vote Yes'}
+              {hasVoted ? <Trans>Voted ✓</Trans> : <Trans>Vote Yes</Trans>}
             </button>
             <button
               onClick={onClose}
               className="flex-1 py-2 rounded-lg bg-white/5 text-white/60 hover:bg-white/10 transition-colors"
             >
-              Cancel
+              <Trans>Cancel</Trans>
             </button>
           </div>
         )}
