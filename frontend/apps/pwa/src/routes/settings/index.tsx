@@ -10,6 +10,8 @@ import {
   Send,
   ChevronRight,
 } from 'lucide-react';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 function SettingsPage() {
   const matches = useMatches();
@@ -24,44 +26,44 @@ function SettingsPage() {
   // Otherwise render the settings list (index)
   const settingsSections = [
     {
-      title: 'Account',
-      description: 'Manage your profile, password, and email',
+      title: t`Account`,
+      description: t`Manage your profile, password, and email`,
       icon: User,
       to: '/settings/account',
     },
     {
-      title: 'Notifications',
-      description: 'Push notifications and alert preferences',
+      title: t`Notifications`,
+      description: t`Push notifications and alert preferences`,
       icon: Bell,
       to: '/settings/notifications',
     },
     {
-      title: 'Appearance',
-      description: 'Theme, felt color, and visual preferences',
+      title: t`Appearance`,
+      description: t`Theme, felt color, and visual preferences`,
       icon: Palette,
       to: '/settings/appearance',
     },
     {
-      title: 'Audio',
-      description: 'Sound effects, music, and haptics',
+      title: t`Audio`,
+      description: t`Sound effects, music, and haptics`,
       icon: Volume2,
       to: '/settings/audio',
     },
     {
-      title: 'Privacy & Data',
-      description: 'GDPR, data export, and account deletion',
+      title: t`Privacy & Data`,
+      description: t`GDPR, data export, and account deletion`,
       icon: Shield,
       to: '/settings/privacy',
     },
     {
-      title: 'Payments',
-      description: 'Purchase history and invoices',
+      title: t`Payments`,
+      description: t`Purchase history and invoices`,
       icon: CreditCard,
       to: '/settings/payments',
     },
     {
-      title: 'Telegram',
-      description: 'Link your Telegram account for notifications',
+      title: t`Telegram`,
+      description: t`Link your Telegram account for notifications`,
       icon: Send,
       to: '/settings/telegram',
     },
@@ -71,11 +73,11 @@ function SettingsPage() {
     <div className="max-w-2xl mx-auto p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-display-lg text-3xl text-on-surface flex items-center gap-2">
-          <Settings className="w-8 h-8 text-tertiary" />Settings
+          <Settings className="w-8 h-8 text-tertiary" /><Trans>Settings</Trans>
         </h1>
         <Link to="/profile" className="text-sm text-tertiary hover:text-tertiary/80 transition-colors flex items-center gap-1">
           <User className="w-4 h-4" />
-          Profile
+          <Trans>Profile</Trans>
         </Link>
       </div>
 
