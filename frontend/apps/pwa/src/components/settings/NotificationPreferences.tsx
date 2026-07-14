@@ -5,6 +5,7 @@ import { apiClient } from '@stackbluff/shared/api/client';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Loader2, Bell } from 'lucide-react';
+import { Trans, t } from '@lingui/react/macro';
 
 interface NotificationSettings {
   tournamentReminder60: boolean;
@@ -84,11 +85,11 @@ export function NotificationPreferences() {
       setIsDirty(false);
       saveSettings(settings);
       queryClient.invalidateQueries({ queryKey: ['notification-preferences'] });
-      toast.success('Notification preferences saved');
+      toast.success(t`Notification preferences saved`);
     },
     onError: (error) => {
       setIsSaving(false);
-      toast.error(error instanceof Error ? error.message : 'Failed to save preferences');
+      toast.error(error instanceof Error ? error.message : t`Failed to save preferences`);
     },
   });
 
@@ -116,7 +117,7 @@ export function NotificationPreferences() {
       <section className="p-6 rounded-xl bg-white/5 border border-white/10">
         <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
           <Bell className="w-5 h-5 text-tertiary" />
-          Notification Preferences
+          <Trans>Notification Preferences</Trans>
         </h3>
         <div className="space-y-3 animate-pulse">
           {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -131,46 +132,46 @@ export function NotificationPreferences() {
     <section className="p-6 rounded-xl bg-white/5 border border-white/10">
       <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
         <Bell className="w-5 h-5 text-tertiary" />
-        Notification Preferences
+        <Trans>Notification Preferences</Trans>
       </h3>
       <p className="text-sm text-gray-400 mb-4">
-        Choose which notifications you receive. Changes are saved to your account.
+        <Trans>Choose which notifications you receive. Changes are saved to your account.</Trans>
       </p>
 
       <div className="space-y-3">
         <ToggleRow
-          label="60-minute tournament reminder"
-          description="Get notified 1 hour before a tournament starts"
+          label={t`60-minute tournament reminder`}
+          description={t`Get notified 1 hour before a tournament starts`}
           checked={settings.tournamentReminder60}
           onChange={() => handleToggle('tournamentReminder60')}
         />
         <ToggleRow
-          label="10-minute tournament reminder"
-          description="Get notified 10 minutes before a tournament starts"
+          label={t`10-minute tournament reminder`}
+          description={t`Get notified 10 minutes before a tournament starts`}
           checked={settings.tournamentReminder10}
           onChange={() => handleToggle('tournamentReminder10')}
         />
         <ToggleRow
-          label="Tournament results"
-          description="Get notified when tournaments you played in finish"
+          label={t`Tournament results`}
+          description={t`Get notified when tournaments you played in finish`}
           checked={settings.tournamentResults}
           onChange={() => handleToggle('tournamentResults')}
         />
         <ToggleRow
-          label="Club announcements"
-          description="Receive club tournament and event announcements"
+          label={t`Club announcements`}
+          description={t`Receive club tournament and event announcements`}
           checked={settings.clubAnnouncements}
           onChange={() => handleToggle('clubAnnouncements')}
         />
         <ToggleRow
-          label="Friend activity"
-          description="Get notified when friends are online or play hands"
+          label={t`Friend activity`}
+          description={t`Get notified when friends are online or play hands`}
           checked={settings.friendActivity}
           onChange={() => handleToggle('friendActivity')}
         />
         <ToggleRow
-          label="Promotional"
-          description="Receive special offers and updates about new features"
+          label={t`Promotional`}
+          description={t`Receive special offers and updates about new features`}
           checked={settings.promotional}
           onChange={() => handleToggle('promotional')}
         />
@@ -185,10 +186,10 @@ export function NotificationPreferences() {
           {isSaving ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Saving...
+              <Trans>Saving...</Trans>
             </>
           ) : (
-            'Save Preferences'
+            <Trans>Save Preferences</Trans>
           )}
         </Button>
         <Button
@@ -197,13 +198,13 @@ export function NotificationPreferences() {
           disabled={!isDirty}
           className="border-white/10 text-on-surface-variant hover:text-on-surface"
         >
-          Reset to Defaults
+          <Trans>Reset to Defaults</Trans>
         </Button>
       </div>
 
       {!isAuthenticated && (
         <p className="text-xs text-on-surface-variant/50 mt-4">
-          Sign in to sync your preferences across devices.
+          <Trans>Sign in to sync your preferences across devices.</Trans>
         </p>
       )}
     </section>
