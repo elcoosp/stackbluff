@@ -1,6 +1,8 @@
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trophy, Medal } from 'lucide-react';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 export interface PayoutEntry {
   position: number;
@@ -38,7 +40,7 @@ export function PayoutStructurePreview({ entries, prizePool, className }: Payout
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-semibold flex items-center gap-2">
           <Trophy className="w-4 h-4 text-yellow-400" />
-          Payout Structure
+          <Trans>Payout Structure</Trans>
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
