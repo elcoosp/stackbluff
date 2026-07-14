@@ -8,6 +8,8 @@ import { TimerBar } from './TimerBar';
 import { cn } from '@/lib/utils';
 import { LogOut, DollarSign, TrendingUp, Swords, Check } from 'lucide-react';
 import { RankTierBadge } from '@/components/game/RankTierBadge';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 // ─── Animated Counter Hook ──────────────────────────────────────────────────
 function useAnimatedCounter(target: number, duration = 600) {
@@ -323,7 +325,7 @@ export const PlayerSpot = memo(({
   onShowStats,
 }: any) => {
   const {
-    display_name = seat.user_id?.slice(0, 8) || 'Player',
+    display_name = seat.user_id?.slice(0, 8) || t`Player`,
     stack,
     current_bet,
     is_all_in,
@@ -402,7 +404,7 @@ export const PlayerSpot = memo(({
           : (isLeftSide ? '-bottom-2 -right-2 w-5 h-5 text-[9px]' : '-bottom-2 -left-2 w-5 h-5 text-[9px]')
       )}
     >
-      <span className="relative z-10">D</span>
+      <span className="relative z-10"><Trans>D</Trans></span>
       <motion.div
         className="absolute inset-0 pointer-events-none z-0"
         style={{ background: 'linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.8) 50%, transparent 70%)' }}
@@ -594,7 +596,7 @@ export const PlayerSpot = memo(({
             type="button"
             onClick={() => onShowStats(seat.user_id)}
             className="absolute inset-0 w-full h-full z-[60] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50 rounded-sm"
-            aria-label={`Show stats for ${display_name}`}
+            aria-label={t`Show stats for ${display_name}`}
           />
         )}
 
@@ -675,7 +677,7 @@ export const PlayerSpot = memo(({
         <button
           onClick={() => onKick(seat.user_id)}
           className="absolute -bottom-1 right-0 z-[60] p-1 rounded-full bg-red-500/20 hover:bg-red-500/40 text-red-300 text-[10px] transition-colors"
-          title="Kick player"
+          title={t`Kick player`}
         >
           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
