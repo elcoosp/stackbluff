@@ -1,16 +1,18 @@
 import { cn } from '@/lib/utils';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 export type RankTier = 'brick' | 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond' | 'maestro' | 'legend';
 
 const RANK_CONFIG: Record<RankTier, { label: string; emoji: string; color: string }> = {
-  brick: { label: 'Brick', emoji: '🧱', color: 'text-amber-800' },
-  bronze: { label: 'Bronze', emoji: '🥉', color: 'text-amber-600' },
-  silver: { label: 'Silver', emoji: '🥈', color: 'text-gray-300' },
-  gold: { label: 'Gold', emoji: '🥇', color: 'text-yellow-400' },
-  platinum: { label: 'Platinum', emoji: '💿', color: 'text-cyan-300' },
-  diamond: { label: 'Diamond', emoji: '💎', color: 'text-blue-300' },
-  maestro: { label: 'Maestro', emoji: '🎭', color: 'text-purple-400' },
-  legend: { label: 'Legend', emoji: '👑', color: 'text-yellow-500' },
+  brick: { label: t`Brick`, emoji: '🧱', color: 'text-amber-800' },
+  bronze: { label: t`Bronze`, emoji: '🥉', color: 'text-amber-600' },
+  silver: { label: t`Silver`, emoji: '🥈', color: 'text-gray-300' },
+  gold: { label: t`Gold`, emoji: '🥇', color: 'text-yellow-400' },
+  platinum: { label: t`Platinum`, emoji: '💿', color: 'text-cyan-300' },
+  diamond: { label: t`Diamond`, emoji: '💎', color: 'text-blue-300' },
+  maestro: { label: t`Maestro`, emoji: '🎭', color: 'text-purple-400' },
+  legend: { label: t`Legend`, emoji: '👑', color: 'text-yellow-500' },
 };
 
 interface RankTierBadgeProps {
