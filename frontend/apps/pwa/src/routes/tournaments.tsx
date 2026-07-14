@@ -12,11 +12,10 @@ import type { TournamentSummary } from '@stackbluff/shared/types/tournament.type
 import { cn } from '@/lib/utils';
 import { History, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
-
 import { LobbyTabs } from '@/components/lobby/LobbyTabs';
 import { trackTournamentRegistration } from '@/lib/customAnalytics';
+import { Trans, t } from '@lingui/react/macro';
 
-// @ts-ignore – route will be added to route tree on dev server restart
 export const Route = createFileRoute('/tournaments')({
   component: TournamentsPage,
 });
@@ -95,7 +94,7 @@ function TournamentsPage() {
     },
 
     onSuccess: (_, { tournamentId }) => {
-      toast.success('Registered successfully!');
+      toast.success(t`Registered successfully!`);
       if (userId) setRegistered(tournamentId, userId, true);
       queryClient.invalidateQueries({ queryKey: ['tournaments'] });
       setRegisteringId(null);
@@ -103,7 +102,7 @@ function TournamentsPage() {
     },
 
     onError: (error, { tournamentId }) => {
-      toast.error(error.message || 'Registration failed');
+      toast.error(error.message || t`Registration failed`);
       setRegisteringId(null);
     },
   });
@@ -117,25 +116,25 @@ function TournamentsPage() {
     },
 
     onSuccess: (_, { tournamentId }) => {
-      toast.success('Unregistered successfully');
+      toast.success(t`Unregistered successfully`);
       if (userId) setRegistered(tournamentId, userId, false);
       queryClient.invalidateQueries({ queryKey: ['tournaments'] });
       setUnregisteringId(null);
     },
 
     onError: (error, { tournamentId }) => {
-      toast.error(error.message || 'Unregistration failed');
+      toast.error(error.message || t`Unregistration failed`);
       setUnregisteringId(null);
     },
   });
 
   const handleRegister = (tournament: TournamentSummary) => {
     if (!userId) {
-      toast.error('Please log in first');
+      toast.error(t`Please log in first`);
       return;
     }
     if (registeredUsers[tournament.id]?.[userId]) {
-      toast.info('You are already registered for this tournament');
+      toast.info(t`You are already registered for this tournament`);
       return;
     }
     setBuyInDialog({ open: true, tournament });
@@ -143,7 +142,7 @@ function TournamentsPage() {
 
   const handleConfirmRegistration = () => {
     if (!buyInDialog.tournament || !userId) {
-      toast.error('Your session has expired. Please log in again.');
+      toast.error(t`Your session has expired. Please log in again.`);
       setBuyInDialog({ open: false, tournament: null });
       return;
     }
@@ -176,10 +175,10 @@ function TournamentsPage() {
           search: { tournamentId },
         });
       } else {
-        toast.info('You are not seated yet. Wait for the tournament to start.');
+        toast.info(t`You are not seated yet. Wait for the tournament to start.`);
       }
     } catch (error) {
-      toast.error('Failed to get table. Please try again.');
+      toast.error(t`Failed to get table. Please try again.`);
     }
   };
 
@@ -210,14 +209,14 @@ function TournamentsPage() {
           <div className="flex items-center gap-2 mb-1">
             <Sparkles className="w-4 h-4 text-yellow-400" />
             <span className="text-xs font-data-mono uppercase tracking-widest text-yellow-400">
-              Compete & Win
+              <Trans>Compete & Win</Trans>
             </span>
           </div>
           <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface flex items-center gap-3">
-            Tournaments
+            <Trans>Tournaments</Trans>
           </h1>
           <p className="text-on-surface-variant text-sm mt-1 max-w-md">
-            Sit & Go and Multi-Table Tournaments. Register now and compete for the prize pool.
+            <Trans>Sit & Go and Multi-Table Tournaments. Register now and compete for the prize pool.</Trans>
           </p>
         </div>
         <LobbyTabs />
@@ -229,7 +228,7 @@ function TournamentsPage() {
           className="inline-flex items-center gap-1.5 px-3 py-2 border border-outline-variant text-on-surface hover:border-tertiary hover:text-tertiary hover:bg-tertiary/10 font-label-caps text-[10px] uppercase tracking-wider rounded-lg transition-colors"
         >
           <History className="w-3.5 h-3.5" />
-          History
+          <Trans>History</Trans>
         </Link>
       </div>
 
@@ -252,7 +251,7 @@ function TournamentsPage() {
                   : 'text-on-surface-variant hover:text-on-surface hover:bg-white/5'
               )}
             >
-              {type === 'All' ? 'All Types' : type === 'SitAndGo' ? 'Sit & Go' : 'MTT'}
+              {type === 'All' ? t`All Types` : type === 'SitAndGo' ? t`Sit & Go` : t`MTT`}
             </button>
           ))}
         </div>
@@ -268,7 +267,7 @@ function TournamentsPage() {
                   : 'text-on-surface-variant hover:text-on-surface hover:bg-white/5'
               )}
             >
-              {status === 'All' ? 'All Status' : status}
+              {status === 'All' ? t`All Status` : status}
             </button>
           ))}
         </div>
@@ -281,11 +280,11 @@ function TournamentsPage() {
         className="flex flex-col gap-3"
       >
         {tournamentsQuery.isLoading ? (
-          <div className="text-center py-8 text-on-surface-variant text-sm">Loading tournaments...</div>
+          <div className="text-center py-8 text-on-surface-variant text-sm"><Trans>Loading tournaments...</Trans></div>
         ) : tournamentsQuery.error ? (
-          <div className="text-red-400 text-sm text-center py-8">Failed to load tournaments. Retrying...</div>
+          <div className="text-red-400 text-sm text-center py-8"><Trans>Failed to load tournaments. Retrying...</Trans></div>
         ) : filteredTournaments.length === 0 ? (
-          <div className="text-center py-8 text-on-surface-variant text-sm">No tournaments match the current filters.</div>
+          <div className="text-center py-8 text-on-surface-variant text-sm"><Trans>No tournaments match the current filters.</Trans></div>
         ) : (
           filteredTournaments.map((tournament) => {
             const cached = tournamentCache[tournament.id];
