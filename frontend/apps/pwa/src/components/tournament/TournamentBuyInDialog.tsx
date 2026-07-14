@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { Wallet, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Dialog } from '@stackbluff/shared/components/Dialog';
+import { Trans, t } from '@lingui/react/macro';
 
 interface TournamentBuyInDialogProps {
   open: boolean;
@@ -33,7 +34,7 @@ export function TournamentBuyInDialog({
       <div data-testid="buyin-dialog">
         <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/5">
           <div>
-            <h2 className="text-sm font-semibold text-on-surface">Confirm Registration</h2>
+            <h2 className="text-sm font-semibold text-on-surface"><Trans>Confirm Registration</Trans></h2>
             {tournamentName && (
               <p className="text-[11px] text-on-surface-variant mt-0.5">{tournamentName}</p>
             )}
@@ -42,12 +43,12 @@ export function TournamentBuyInDialog({
 
         <div className="px-5 py-4 space-y-5">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] uppercase tracking-wider text-on-surface-variant">Buy-in</span>
+            <span className="text-[11px] uppercase tracking-wider text-on-surface-variant"><Trans>Buy-in</Trans></span>
             <span className="font-mono text-lg font-bold text-tertiary">{formatCurrency(buyIn)}</span>
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-[11px] uppercase tracking-wider text-on-surface-variant">Your Balance</span>
+            <span className="text-[11px] uppercase tracking-wider text-on-surface-variant"><Trans>Your Balance</Trans></span>
             <span className={cn('font-mono text-sm font-bold', canAfford ? 'text-tertiary' : 'text-red-400')}>
               {formatCurrency(currentBalance)}
             </span>
@@ -55,7 +56,7 @@ export function TournamentBuyInDialog({
 
           {!canAfford && (
             <div className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[11px]">
-              Insufficient balance. You need {formatCurrency(buyIn - currentBalance)} more.
+              <Trans>Insufficient balance. You need {formatCurrency(buyIn - currentBalance)} more.</Trans>
             </div>
           )}
         </div>
@@ -68,7 +69,7 @@ export function TournamentBuyInDialog({
             onClick={onClose}
             className="flex-1 py-2.5 rounded-lg border border-white/10 text-on-surface-variant text-[11px] font-label-caps uppercase tracking-wider hover:bg-white/5 transition-all"
           >
-            Cancel
+            <Trans>Cancel</Trans>
           </motion.button>
           <motion.button
             data-testid="confirm-buyin"
@@ -85,7 +86,7 @@ export function TournamentBuyInDialog({
             )}
           >
             <Wallet className="w-3.5 h-3.5 inline mr-1.5" />
-            {isProcessing ? 'Registering...' : 'Register'}
+            {isProcessing ? t`Registering...` : t`Register`}
           </motion.button>
         </div>
       </div>
