@@ -1,4 +1,5 @@
 import React from "react";
+import { t } from "@lingui/core/macro";
 
 interface BadgeIconProps {
   badgeType: string;
@@ -9,8 +10,8 @@ interface BadgeIconProps {
 const BADGE_META: Record<string, { icon: string; label: string; tooltip: string }> = {
   founding_member: {
     icon: "👑",
-    label: "Founding Member",
-    tooltip: "Founding Member – Referred 10 friends who played 5+ hands.",
+    label: t`Founding Member`,
+    tooltip: t`Founding Member – Referred 10 friends who played 5+ hands.`,
   },
 };
 
