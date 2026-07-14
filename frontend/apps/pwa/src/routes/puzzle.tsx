@@ -22,6 +22,7 @@ import {
   Layers,
   Trophy,
 } from 'lucide-react';
+import { Trans, t } from '@lingui/react/macro';
 
 interface Puzzle {
   id: number;
@@ -131,14 +132,14 @@ function PuzzlePage() {
     onSuccess: (data) => {
       setSubmitted(true);
       if (data.correct) {
-        toast.success('Correct! 🎉');
+        toast.success(t`Correct! 🎉`);
       } else {
-        toast.error('Not quite. Try again tomorrow!');
+        toast.error(t`Not quite. Try again tomorrow!`);
       }
       queryClient.invalidateQueries({ queryKey: ['puzzle', 'today'] });
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'Submission failed');
+      toast.error(error instanceof Error ? error.message : t`Submission failed`);
     },
   });
 
@@ -182,15 +183,15 @@ function PuzzlePage() {
           <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4">
             <XCircle className="w-8 h-8 text-red-400" />
           </div>
-          <h1 className="font-display-lg text-3xl text-on-surface mb-2">Failed to Load</h1>
+          <h1 className="font-display-lg text-3xl text-on-surface mb-2"><Trans>Failed to Load</Trans></h1>
           <p className="text-on-surface-variant text-sm mb-6">
-            We couldn't load today's puzzle. Please try again.
+            <Trans>We couldn't load today's puzzle. Please try again.</Trans>
           </p>
           <Button
             onClick={() => refetch()}
             className="bg-tertiary text-on-tertiary hover:bg-tertiary/80"
           >
-            <RotateCcw className="w-4 h-4 mr-2" /> Retry
+            <RotateCcw className="w-4 h-4 mr-2" /> <Trans>Retry</Trans>
           </Button>
         </motion.div>
       </div>
@@ -209,9 +210,9 @@ function PuzzlePage() {
           <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-4">
             <Brain className="w-8 h-8 text-on-surface-variant" />
           </div>
-          <h1 className="font-display-lg text-3xl text-on-surface mb-2">No Puzzle Today</h1>
+          <h1 className="font-display-lg text-3xl text-on-surface mb-2"><Trans>No Puzzle Today</Trans></h1>
           <p className="text-on-surface-variant text-sm">
-            Check back tomorrow for a fresh challenge!
+            <Trans>Check back tomorrow for a fresh challenge!</Trans>
           </p>
         </motion.div>
       </div>
@@ -236,22 +237,22 @@ function PuzzlePage() {
         <div className="flex items-center gap-2 mb-1">
           <Sparkles className="w-4 h-4 text-tertiary" />
           <span className="text-xs font-data-mono uppercase tracking-widest text-tertiary">
-            Daily Challenge
+            <Trans>Daily Challenge</Trans>
           </span>
         </div>
         <div className="flex items-center gap-3">
           <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface">
-            Puzzle of the Day
+            <Trans>Puzzle of the Day</Trans>
           </h1>
           <Badge
             variant="outline"
             className="border-tertiary/30 text-tertiary bg-tertiary/10 font-data-mono"
           >
-            <Crown className="w-3 h-3 mr-1" /> Daily
+            <Crown className="w-3 h-3 mr-1" /> <Trans>Daily</Trans>
           </Badge>
         </div>
         <p className="text-on-surface-variant text-sm mt-1 max-w-md">
-          Analyze the scenario and pick the optimal action. Sharpen your instincts one hand at a time.
+          <Trans>Analyze the scenario and pick the optimal action. Sharpen your instincts one hand at a time.</Trans>
         </p>
       </motion.div>
 
@@ -271,9 +272,9 @@ function PuzzlePage() {
               </div>
               <div>
                 <span className="text-xs font-data-mono uppercase tracking-widest text-tertiary">
-                  Scenario
+                  <Trans>Scenario</Trans>
                 </span>
-                <h2 className="font-headline-md text-base text-on-surface">Read the Situation</h2>
+                <h2 className="font-headline-md text-base text-on-surface"><Trans>Read the Situation</Trans></h2>
               </div>
             </div>
             <p className="text-sm text-on-surface-variant leading-relaxed mb-6 relative">
@@ -286,7 +287,7 @@ function PuzzlePage() {
                 <div className="flex items-center gap-2 mb-3">
                   <Layers className="w-3.5 h-3.5 text-on-surface-variant" />
                   <span className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant">
-                    Hole Cards
+                    <Trans>Hole Cards</Trans>
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-3">
@@ -301,7 +302,7 @@ function PuzzlePage() {
                   <div className="flex items-center gap-2 mb-3">
                     <Target className="w-3.5 h-3.5 text-on-surface-variant" />
                     <span className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant">
-                      Community Cards
+                      <Trans>Community Cards</Trans>
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-3">
@@ -326,7 +327,7 @@ function PuzzlePage() {
               <div className="flex items-center gap-2">
                 <Brain className="w-3.5 h-3.5 text-tertiary" />
                 <span className="text-xs font-data-mono uppercase tracking-widest text-tertiary">
-                  Choose Your Move
+                  <Trans>Choose Your Move</Trans>
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -373,11 +374,11 @@ function PuzzlePage() {
               >
                 {submitMutation.isPending ? (
                   <span className="flex items-center gap-2">
-                    <RotateCcw className="w-4 h-4 animate-spin" /> Submitting...
+                    <RotateCcw className="w-4 h-4 animate-spin" /> <Trans>Submitting...</Trans>
                   </span>
                 ) : (
                   <span className="flex items-center gap-2">
-                    Submit Answer <ArrowRight className="w-4 h-4" />
+                    <Trans>Submit Answer</Trans> <ArrowRight className="w-4 h-4" />
                   </span>
                 )}
               </Button>
@@ -426,7 +427,7 @@ function PuzzlePage() {
                         isCorrect ? 'text-tertiary' : 'text-red-400'
                       )}
                     >
-                      {isCorrect ? 'Nice Play' : 'Missed It'}
+                      {isCorrect ? t`Nice Play` : t`Missed It`}
                     </span>
                     <h2
                       className={cn(
@@ -434,7 +435,7 @@ function PuzzlePage() {
                         isCorrect ? 'text-tertiary' : 'text-red-400'
                       )}
                     >
-                      {isCorrect ? 'Correct!' : 'Incorrect'}
+                      {isCorrect ? t`Correct!` : t`Incorrect`}
                     </h2>
                   </div>
                 </div>
@@ -443,7 +444,7 @@ function PuzzlePage() {
                   <div className="flex items-center gap-2 mb-2">
                     <Lightbulb className="w-3.5 h-3.5 text-tertiary" />
                     <span className="text-xs font-data-mono uppercase tracking-widest text-tertiary">
-                      Explanation
+                      <Trans>Explanation</Trans>
                     </span>
                   </div>
                   <p className="text-sm text-on-surface-variant leading-relaxed">
@@ -454,7 +455,7 @@ function PuzzlePage() {
                 <div className="grid grid-cols-2 gap-3 mb-6">
                   <div className="p-4 rounded-xl bg-white/5 border border-white/10">
                     <span className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant block mb-1">
-                      Your Action
+                      <Trans>Your Action</Trans>
                     </span>
                     <span className="font-headline-md text-base text-on-surface font-mono">
                       {submitMutation.data?.user_action?.toUpperCase()}
@@ -469,7 +470,7 @@ function PuzzlePage() {
                     )}
                   >
                     <span className="text-xs font-data-mono uppercase tracking-widest text-tertiary block mb-1">
-                      Correct Action
+                      <Trans>Correct Action</Trans>
                     </span>
                     <span className="font-headline-md text-base text-tertiary font-mono">
                       {submitMutation.data?.correct_action?.toUpperCase()}
@@ -486,7 +487,7 @@ function PuzzlePage() {
                     refetch();
                   }}
                 >
-                  Try Another <ArrowRight className="w-4 h-4 ml-2" />
+                  <Trans>Try Another</Trans> <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </div>
             </Card>
