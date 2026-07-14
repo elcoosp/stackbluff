@@ -3,6 +3,8 @@ import { useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Users, ChevronRight, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 interface TableOverviewPanelProps {
   tables: Record<string, number> | undefined;
@@ -47,10 +49,10 @@ export function TableOverviewPanel({
       <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
         <span className="font-label-caps text-[10px] uppercase tracking-wider text-on-surface-variant flex items-center gap-2">
           <Activity className="w-3.5 h-3.5" />
-          Tables ({tableEntries.length})
+          <Trans>Tables ({tableEntries.length})</Trans>
         </span>
         <span className="font-data-mono text-xs text-on-surface-variant">
-          {totalPlayers} players
+          <Trans>{totalPlayers} players</Trans>
         </span>
       </div>
 
@@ -87,7 +89,7 @@ export function TableOverviewPanel({
               >
                 <div className="flex items-center gap-2">
                   <span className="font-data-mono text-xs text-on-surface">
-                    Table {tableId.slice(0, 6)}
+                    <Trans>Table {tableId.slice(0, 6)}</Trans>
                   </span>
                   {isActive && (
                     <span className="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse" />
