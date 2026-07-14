@@ -29,6 +29,7 @@ import {
   Coins,
   Clock,
 } from 'lucide-react';
+import { Trans, t } from '@lingui/react/macro';
 
 export const Route = createFileRoute('/referrals')({
   component: ReferralsPage,
@@ -93,9 +94,9 @@ function ReferralsPage() {
   const handleCopyLink = () => {
     if (navigator.clipboard) {
       navigator.clipboard.writeText(referralLink).then(() => {
-        toast.success('Referral link copied!');
+        toast.success(t`Referral link copied!`);
       }).catch(() => {
-        toast.error('Failed to copy link');
+        toast.error(t`Failed to copy link`);
       });
     } else {
       const textarea = document.createElement('textarea');
@@ -104,12 +105,12 @@ function ReferralsPage() {
       textarea.select();
       document.execCommand('copy');
       document.body.removeChild(textarea);
-      toast.success('Referral link copied!');
+      toast.success(t`Referral link copied!`);
     }
   };
 
   const handleShare = (platform: string) => {
-    const text = `Join me on StackBluff! Use my referral link: ${referralLink}`;
+    const text = t`Join me on StackBluff! Use my referral link: ${referralLink}`;
     const url = encodeURIComponent(referralLink);
     const textEncoded = encodeURIComponent(text);
     let shareUrl = '';
@@ -129,7 +130,6 @@ function ReferralsPage() {
     window.open(shareUrl, '_blank');
   };
 
-
   const isLoading = statsLoading || referralsLoading;
 
   if (isLoading) {
@@ -137,7 +137,7 @@ function ReferralsPage() {
   }
 
   if (statsError || referralsError || !stats) {
-    return <ErrorState onRetry={() => window.location.reload()} message="Failed to load referral data." />;
+    return <ErrorState onRetry={() => window.location.reload()} message={t`Failed to load referral data.`} />;
   }
 
   const { total_referred, bonus_earned, pending_bonus } = stats;
@@ -159,14 +159,14 @@ function ReferralsPage() {
         <div className="flex items-center gap-2 mb-1">
           <Sparkles className="w-4 h-4 text-purple-400" />
           <span className="text-xs font-data-mono uppercase tracking-widest text-purple-400">
-            Viral Rewards
+            <Trans>Viral Rewards</Trans>
           </span>
         </div>
         <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface flex items-center gap-3">
-          Referrals
+          <Trans>Referrals</Trans>
         </h1>
         <p className="text-on-surface-variant text-sm mt-1 max-w-md">
-          Invite friends to StackBluff. Earn chips and unlock exclusive badges.
+          <Trans>Invite friends to StackBluff. Earn chips and unlock exclusive badges.</Trans>
         </p>
       </motion.div>
 
@@ -181,39 +181,39 @@ function ReferralsPage() {
           <motion.div variants={itemVariants}>
             <Card className="p-6 bg-white/5 backdrop-blur-xl border-white/10 shadow-xl rounded-2xl h-full">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">Total Referrals</span>
+                <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider"><Trans>Total Referrals</Trans></span>
                 <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
                   <Users className="w-4 h-4 text-blue-400" />
                 </div>
               </div>
               <div className="text-3xl font-bold font-data-mono text-on-surface">{total_referred}</div>
-              <p className="text-xs text-on-surface-variant mt-1 opacity-80">Friends invited</p>
+              <p className="text-xs text-on-surface-variant mt-1 opacity-80"><Trans>Friends invited</Trans></p>
             </Card>
           </motion.div>
 
           <motion.div variants={itemVariants}>
             <Card className="p-6 bg-white/5 backdrop-blur-xl border-white/10 shadow-xl rounded-2xl h-full">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">Bonus Earned</span>
+                <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider"><Trans>Bonus Earned</Trans></span>
                 <div className="w-8 h-8 rounded-full bg-tertiary/10 flex items-center justify-center">
                   <Coins className="w-4 h-4 text-tertiary" />
                 </div>
               </div>
               <div className="text-3xl font-bold font-data-mono text-tertiary">{bonus_earned * 100}</div>
-              <p className="text-xs text-on-surface-variant mt-1 opacity-80">Chips distributed</p>
+              <p className="text-xs text-on-surface-variant mt-1 opacity-80"><Trans>Chips distributed</Trans></p>
             </Card>
           </motion.div>
 
           <motion.div variants={itemVariants}>
             <Card className="p-6 bg-white/5 backdrop-blur-xl border-white/10 shadow-xl rounded-2xl h-full">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">Pending Bonus</span>
+                <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider"><Trans>Pending Bonus</Trans></span>
                 <div className="w-8 h-8 rounded-full bg-yellow-500/10 flex items-center justify-center">
                   <Clock className="w-4 h-4 text-yellow-400" />
                 </div>
               </div>
               <div className="text-3xl font-bold font-data-mono text-yellow-400">{pending_bonus * 100}</div>
-              <p className="text-xs text-on-surface-variant mt-1 opacity-80">Awaiting hands played</p>
+              <p className="text-xs text-on-surface-variant mt-1 opacity-80"><Trans>Awaiting hands played</Trans></p>
             </Card>
           </motion.div>
         </div>
@@ -240,20 +240,20 @@ function ReferralsPage() {
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-headline-md text-base text-on-surface leading-tight">Founding Member Badge</h3>
+                  <h3 className="font-headline-md text-base text-on-surface leading-tight"><Trans>Founding Member Badge</Trans></h3>
                   {hasFoundingMember ? (
                     <Badge variant="outline" className="text-[10px] border-yellow-500/30 text-yellow-400 bg-yellow-500/10 font-mono">
                       <CheckCircle className="w-3 h-3 mr-1" />
-                      Unlocked
+                      <Trans>Unlocked</Trans>
                     </Badge>
                   ) : (
                     <Badge variant="outline" className="text-[10px] border-white/10 text-on-surface-variant bg-white/5 font-mono">
-                      {10 - bonus_earned} referrals needed
+                      {10 - bonus_earned} <Trans>referrals needed</Trans>
                     </Badge>
                   )}
                 </div>
                 <p className="text-sm text-on-surface-variant mt-1.5 mb-3">
-                  Refer 10 friends who play at least 5 hands to permanently unlock this exclusive badge.
+                  <Trans>Refer 10 friends who play at least 5 hands to permanently unlock this exclusive badge.</Trans>
                 </p>
                 <div className="relative w-full h-2 bg-black/20 rounded-full overflow-hidden">
                   <motion.div
@@ -277,7 +277,7 @@ function ReferralsPage() {
           <Card className="p-6 bg-white/5 backdrop-blur-xl border-white/10 shadow-xl rounded-2xl">
             <div className="flex flex-col md:flex-row md:items-center gap-4">
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-on-surface-variant uppercase tracking-wider mb-2">Your Referral Link</p>
+                <p className="text-xs font-medium text-on-surface-variant uppercase tracking-wider mb-2"><Trans>Your Referral Link</Trans></p>
                 <div className="flex items-center gap-2 bg-black/30 border border-white/5 rounded-xl px-4 py-3">
                   <LinkIcon className="w-4 h-4 text-on-surface-variant/50 flex-shrink-0" />
                   <span className="text-sm text-on-surface truncate font-data-mono">{referralLink}</span>
@@ -289,14 +289,14 @@ function ReferralsPage() {
                   className="bg-tertiary text-on-tertiary hover:bg-tertiary-fixed px-4 py-2.5 rounded-xl h-auto"
                 >
                   <Copy className="w-4 h-4 mr-2" />
-                  Copy
+                  <Trans>Copy</Trans>
                 </Button>
                 <Button
                   onClick={() => handleShare('twitter')}
                   variant="outline"
                   size="icon"
                   className="bg-white/5 border-white/10 hover:bg-white/10 rounded-xl h-auto w-auto p-2.5"
-                  title="Share on X"
+                  title={t`Share on X`}
                 >
                   <X className="w-4 h-4" />
                 </Button>
@@ -305,7 +305,7 @@ function ReferralsPage() {
                   variant="outline"
                   size="icon"
                   className="bg-white/5 border-white/10 hover:bg-white/10 rounded-xl h-auto w-auto p-2.5"
-                  title="Share on Telegram"
+                  title={t`Share on Telegram`}
                 >
                   <Send className="w-4 h-4" />
                 </Button>
@@ -314,7 +314,7 @@ function ReferralsPage() {
                   variant="outline"
                   size="icon"
                   className="bg-white/5 border-white/10 hover:bg-white/10 rounded-xl h-auto w-auto p-2.5"
-                  title="Share on WhatsApp"
+                  title={t`Share on WhatsApp`}
                 >
                   <MessageCircle className="w-4 h-4" />
                 </Button>
@@ -329,9 +329,9 @@ function ReferralsPage() {
             <div className="p-6 pb-4 border-b border-white/5">
               <h3 className="font-headline-md text-base text-on-surface flex items-center gap-2">
                 <Users className="w-5 h-5 text-purple-400" />
-                Referred Friends
+                <Trans>Referred Friends</Trans>
               </h3>
-              <p className="text-xs text-on-surface-variant mt-1">Track progress of players you've invited</p>
+              <p className="text-xs text-on-surface-variant mt-1"><Trans>Track progress of players you've invited</Trans></p>
             </div>
             <div className="p-6 pt-4">
               {referrals && referrals.length > 0 ? (
@@ -348,25 +348,25 @@ function ReferralsPage() {
                         </div>
                         <div className="min-w-0">
                           <span className="text-sm text-on-surface font-medium truncate block">
-                            {ref.display_name || `Player ${ref.referred_id.slice(0, 8)}`}
+                            {ref.display_name || t`Player ${ref.referred_id.slice(0, 8)}`}
                           </span>
                           <span className="text-xs text-on-surface-variant font-mono">
-                            {ref.hand_count} hands played
+                            {ref.hand_count} <Trans>hands played</Trans>
                           </span>
                         </div>
                       </div>
                       <div className="flex-shrink-0 ml-2">
                         {ref.bonus_awarded ? (
                           <span className="text-xs text-tertiary font-medium flex items-center gap-1 bg-tertiary/10 px-2 py-1 rounded-md">
-                            <CheckCircle className="w-3 h-3" /> Awarded
+                            <CheckCircle className="w-3 h-3" /> <Trans>Awarded</Trans>
                           </span>
                         ) : ref.hand_count >= 5 ? (
                           <span className="text-xs text-yellow-400 font-medium flex items-center gap-1 bg-yellow-500/10 px-2 py-1 rounded-md">
-                            <Clock className="w-3 h-3" /> Pending
+                            <Clock className="w-3 h-3" /> <Trans>Pending</Trans>
                           </span>
                         ) : (
                           <span className="text-xs text-on-surface-variant font-medium flex items-center gap-1 bg-white/5 px-2 py-1 rounded-md">
-                            <TrendingUp className="w-3 h-3" /> {5 - ref.hand_count} left
+                            <TrendingUp className="w-3 h-3" /> {5 - ref.hand_count} <Trans>left</Trans>
                           </span>
                         )}
                       </div>
@@ -378,8 +378,8 @@ function ReferralsPage() {
                   <div className="w-12 h-12 mx-auto rounded-full bg-white/5 flex items-center justify-center mb-3">
                     <Users className="w-6 h-6 text-on-surface-variant/50" />
                   </div>
-                  <p className="text-sm text-on-surface-variant font-medium">No referrals yet</p>
-                  <p className="text-xs text-on-surface-variant/70 mt-1">Share your link above to start earning chips!</p>
+                  <p className="text-sm text-on-surface-variant font-medium"><Trans>No referrals yet</Trans></p>
+                  <p className="text-xs text-on-surface-variant/70 mt-1"><Trans>Share your link above to start earning chips!</Trans></p>
                 </div>
               )}
             </div>
