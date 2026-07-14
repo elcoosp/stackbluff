@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import type { TournamentSummary } from '@stackbluff/shared/types/tournament.types';
 import { Clock, Users, Trophy, Zap, Eye } from 'lucide-react';
 import { TimerBar } from '@/components/game/TimerBar';
+import { Trans, t } from '@lingui/react/macro';
 
 interface TournamentCardProps {
   tournament: TournamentSummary;
@@ -32,19 +33,19 @@ function getStatusColor(status: string): string {
 
 function getStatusLabel(status: string): string {
   switch (status) {
-    case 'Registering': return 'Registering';
-    case 'Running': return 'Live';
-    case 'Completed': return 'Completed';
+    case 'Registering': return t`Registering`;
+    case 'Running': return t`Live`;
+    case 'Completed': return t`Completed`;
     default: return status;
   }
 }
 
 function getStakeLabel(buy_in: number): string {
-  if (buy_in <= 100) return 'Micro';
-  if (buy_in <= 250) return 'Low';
-  if (buy_in <= 500) return 'Medium';
-  if (buy_in <= 2000) return 'High';
-  return 'Very High';
+  if (buy_in <= 100) return t`Micro`;
+  if (buy_in <= 250) return t`Low`;
+  if (buy_in <= 500) return t`Medium`;
+  if (buy_in <= 2000) return t`High`;
+  return t`Very High`;
 }
 
 function getStakeText(buy_in: number): string {
@@ -141,13 +142,13 @@ export function TournamentCard({
               {getStatusLabel(status)}
             </span>
             <span className="text-[9px] font-label-caps uppercase text-tertiary border border-tertiary/30 px-2 py-0.5 rounded-full">
-              {tournament_type === 'SitAndGo' ? 'S&G' : 'MTT'}
+              {tournament_type === 'SitAndGo' ? t`S&G` : t`MTT`}
             </span>
           </div>
           <div className="flex items-center gap-3 mt-1 text-[10px] text-on-surface-variant">
             <span>{getStakeText(buy_in)}</span>
             <span>•</span>
-            <span>Buy-in {formatCurrency(buy_in)}</span>
+            <span><Trans>Buy-in {formatCurrency(buy_in)}</Trans></span>
             <span>•</span>
             <span className="flex items-center gap-1">
               <Trophy className="w-3 h-3" />
@@ -156,7 +157,7 @@ export function TournamentCard({
             {current_blind_level && (
               <>
                 <span>•</span>
-                <span>Level {current_blind_level}</span>
+                <span><Trans>Level {current_blind_level}</Trans></span>
               </>
             )}
           </div>
@@ -180,11 +181,11 @@ export function TournamentCard({
         )}
         {needsPlayers && (
           <div className="text-[10px] text-on-surface-variant">
-            Needs {min_players_to_start - registered} more player{min_players_to_start - registered > 1 ? 's' : ''}
+            <Trans>Needs {min_players_to_start - registered} more player{min_players_to_start - registered > 1 ? 's' : ''}</Trans>
           </div>
         )}
         {isRegisteringStatus && starts_in_seconds === 0 && (
-          <div className="text-[10px] text-tertiary">Starting soon…</div>
+          <div className="text-[10px] text-tertiary"><Trans>Starting soon…</Trans></div>
         )}
       </div>
 
@@ -196,7 +197,7 @@ export function TournamentCard({
             disabled={isRegistering || isFull}
             className="flex-1 lg:flex-initial px-3 lg:px-4 py-2 bg-tertiary text-on-tertiary font-label-caps text-[10px] hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg shadow-emerald-500/10 rounded-lg"
           >
-            {isRegistering ? 'Registering...' : isFull ? 'Full' : 'Register'}
+            {isRegistering ? t`Registering...` : isFull ? t`Full` : t`Register`}
           </Button>
         )}
         {canUnregister && (
@@ -207,7 +208,7 @@ export function TournamentCard({
             variant="outline"
             className="flex-1 lg:flex-initial px-3 lg:px-4 py-2 border-outline-variant text-on-surface hover:border-red-400 hover:text-red-400 font-label-caps text-[10px] uppercase tracking-wider rounded-lg"
           >
-            {isUnregistering ? '...' : 'Unregister'}
+            {isUnregistering ? '...' : t`Unregister`}
           </Button>
         )}
         {isRegistered && isRunning && (
@@ -217,7 +218,7 @@ export function TournamentCard({
             className="flex-1 lg:flex-initial px-3 lg:px-4 py-2 bg-tertiary text-on-tertiary font-label-caps text-[10px] hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg shadow-emerald-500/10 rounded-lg"
           >
             <Zap className="w-3 h-3 mr-1" />
-            Play
+            <Trans>Play</Trans>
           </Button>
         )}
         {canSpectate && (
@@ -228,7 +229,7 @@ export function TournamentCard({
             className="flex-1 lg:flex-initial px-3 lg:px-4 py-2 border-outline-variant text-on-surface hover:border-tertiary hover:text-tertiary font-label-caps text-[10px] uppercase tracking-wider rounded-lg"
           >
             <Eye className="w-3 h-3 mr-1" />
-            Spectate
+            <Trans>Spectate</Trans>
           </Button>
         )}
         {canResults && (
@@ -238,7 +239,7 @@ export function TournamentCard({
             variant="outline"
             className="flex-1 lg:flex-initial px-3 lg:px-4 py-2 border-outline-variant text-on-surface hover:border-tertiary hover:text-tertiary font-label-caps text-[10px] uppercase tracking-wider rounded-lg"
           >
-            Results
+            <Trans>Results</Trans>
           </Button>
         )}
         {isRegistered && isRegisteringStatus && (
@@ -246,7 +247,7 @@ export function TournamentCard({
             data-testid="registered-badge"
             className="flex-1 lg:flex-initial px-3 py-2 text-center text-[10px] text-tertiary font-label-caps uppercase tracking-wider border border-tertiary/30 rounded-lg bg-tertiary/5"
           >
-            Registered
+            <Trans>Registered</Trans>
           </span>
         )}
       </div>
