@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Download, X, Smartphone, Laptop, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { trackEvent } from '@/lib/analytics';
+import { Trans, t } from '@lingui/react/macro';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -89,9 +90,9 @@ export function InstallPrompt() {
       // Fallback: open app store or guide
       if (isMobile) {
         // On iOS, suggest adding to home screen
-        alert('To install StackBluff on your device: tap the share button and select "Add to Home Screen".');
+        alert(t`To install StackBluff on your device: tap the share button and select "Add to Home Screen".`);
       } else {
-        alert('To install StackBluff: click the install icon in your browser address bar.');
+        alert(t`To install StackBluff: click the install icon in your browser address bar.`);
       }
       return;
     }
@@ -150,10 +151,10 @@ export function InstallPrompt() {
             <div className="flex-1 min-w-0">
               <h3 className="text-sm font-semibold text-on-surface flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-tertiary" />
-                Install StackBluff
+                <Trans>Install StackBluff</Trans>
               </h3>
               <p className="text-xs text-on-surface-variant mt-0.5">
-                Get the app for a faster, smoother experience with offline support.
+                <Trans>Get the app for a faster, smoother experience with offline support.</Trans>
               </p>
             </div>
 
@@ -173,7 +174,7 @@ export function InstallPrompt() {
               onClick={handleDismiss}
               className="flex-1 py-2.5 rounded-lg border border-white/10 text-on-surface-variant text-sm font-medium hover:bg-white/5 transition-colors"
             >
-              Maybe Later
+              <Trans>Maybe Later</Trans>
             </button>
             <button
               type="button"
@@ -181,7 +182,7 @@ export function InstallPrompt() {
               className="flex-1 py-2.5 rounded-lg bg-tertiary text-on-tertiary text-sm font-semibold hover:bg-tertiary/80 transition-colors flex items-center justify-center gap-2"
             >
               <Download className="w-4 h-4" />
-              Install App
+              <Trans>Install App</Trans>
             </button>
           </div>
         </div>
