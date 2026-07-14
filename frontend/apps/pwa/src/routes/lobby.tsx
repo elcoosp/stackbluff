@@ -42,6 +42,7 @@ const STAKE_CONFIG = {
 
 const getStakeBB = (stakeLevel: keyof typeof STAKE_CONFIG) => STAKE_CONFIG[stakeLevel]?.bb ?? 0;
 
+// Helper to convert table name to kebab-case for image fetching
 const toKebabCase = (str: string) =>
   str
     .toLowerCase()
@@ -308,7 +309,7 @@ function LobbyPage() {
                     className="absolute inset-0 w-full h-full bg-cover bg-center blur-md scale-105 group-hover:blur-none group-hover:scale-100 transition-all duration-500 ease-in-out z-0"
                     style={{ backgroundImage: `url(${imageUrl})` }}
                   />
-                  {/* Gradient Overlay Layer - Less dark, smooth transition */}
+                  {/* Gradient Overlay Layer */}
                   <div
                     className="absolute inset-0 w-full h-full z-0 transition-all duration-500 bg-gradient-to-r from-[#0a0a0c]/85 via-[#0a0a0c]/50 to-[#0a0a0c]/85 group-hover:from-[#0a0a0c]/75 group-hover:via-[#0a0a0c]/35 group-hover:to-[#0a0a0c]/75"
                   />
@@ -322,13 +323,13 @@ function LobbyPage() {
                     />
                     <div className="flex-1 min-w-0">
                       <h4 className="font-headline-md text-base text-on-surface truncate">{table.name}</h4>
-                      <p className="text-[10px] text-outline font-label-caps mt-0.5"><Trans>NO LIMIT HOLD'EM</Trans></p>
+                      <p className="text-[10px] text-outline font-label-caps mt-0.5"><Trans>NO LIMIT HOLD&apos;EM</Trans></p>
                       <div className="flex items-center gap-3 mt-2.5 lg:hidden">
                         <span className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-md px-2 py-0.5 text-[10px] font-data-mono text-tertiary tracking-wide">
                           {STAKE_CONFIG[table.stake_level]?.text || table.stake_level}
                         </span>
                         <span className="text-[10px] text-on-surface-variant font-data-mono">
-                          <Trans>{table.current_players}/{table.max_players} seated</Trans>
+                          {table.current_players}/{table.max_players} <Trans>seated</Trans>
                         </span>
                       </div>
                     </div>
