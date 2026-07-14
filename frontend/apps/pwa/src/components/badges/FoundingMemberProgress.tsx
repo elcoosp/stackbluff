@@ -1,4 +1,5 @@
 import React from "react";
+import { Trans } from "@lingui/react/macro";
 
 interface Props {
   completed: number;
@@ -10,9 +11,9 @@ export const FoundingMemberProgress: React.FC<Props> = ({ completed, required })
   return (
     <div className="w-full max-w-xs">
       <div className="flex justify-between text-xs text-muted-foreground mb-1">
-        <span>Referral progress</span>
+        <span><Trans>Referral progress</Trans></span>
         <span>
-          {completed}/{required} referrals completed
+          <Trans>{completed}/{required} referrals completed</Trans>
         </span>
       </div>
       <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
