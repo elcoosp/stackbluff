@@ -16,6 +16,7 @@ import { UnsupportedMessage } from './notifications/UnsupportedMessage';
 import { MessageFeedback } from './notifications/MessageFeedback';
 import type { PermissionDisplay } from './notifications/types';
 import { Bell } from 'lucide-react';
+import { Trans, t } from '@lingui/react/macro';
 
 const logger = notificationLogger.child({ component: 'NotificationsSettings' });
 
@@ -64,33 +65,33 @@ export function NotificationsSettings() {
         const success = await unsubscribeFromPushNotifications();
         if (success) {
           setPermissionDisplay('not_set');
-          setMessage({ type: 'success', text: 'Notifications disabled.' });
+          setMessage({ type: 'success', text: t`Notifications disabled.` });
         } else {
-          setMessage({ type: 'error', text: 'Failed to disable notifications.' });
+          setMessage({ type: 'error', text: t`Failed to disable notifications.` });
         }
       } else if (isBlocked) {
         logger.warn('Cannot enable: blocked in browser settings');
         setMessage({
           type: 'error',
-          text: 'Notifications are blocked in your browser settings. Please enable them in your browser and try again.',
+          text: t`Notifications are blocked in your browser settings. Please enable them in your browser and try again.`,
         });
       } else {
         logger.info('Enabling notifications');
         const success = await subscribeToPushNotifications();
         if (success) {
           setPermissionDisplay('enabled');
-          setMessage({ type: 'success', text: 'Notifications enabled!' });
+          setMessage({ type: 'success', text: t`Notifications enabled!` });
         } else {
           setPermissionDisplay(getPermissionDisplay());
           setMessage({
             type: 'error',
-            text: 'Failed to enable notifications. Permission may have been denied.',
+            text: t`Failed to enable notifications. Permission may have been denied.`,
           });
         }
       }
     } catch (error) {
       logger.error('Toggle failed', error);
-      setMessage({ type: 'error', text: 'An error occurred. Please try again.' });
+      setMessage({ type: 'error', text: t`An error occurred. Please try again.` });
     } finally {
       setIsProcessing(false);
     }
@@ -104,13 +105,13 @@ export function NotificationsSettings() {
       logger.info('Resyncing subscription');
       const success = await resyncSubscription();
       if (success) {
-        setMessage({ type: 'success', text: 'Subscription synced successfully.' });
+        setMessage({ type: 'success', text: t`Subscription synced successfully.` });
       } else {
-        setMessage({ type: 'error', text: 'Failed to sync subscription.' });
+        setMessage({ type: 'error', text: t`Failed to sync subscription.` });
       }
     } catch (error) {
       logger.error('Resync failed', error);
-      setMessage({ type: 'error', text: 'An error occurred while syncing.' });
+      setMessage({ type: 'error', text: t`An error occurred while syncing.` });
     } finally {
       setIsProcessing(false);
     }
@@ -120,15 +121,15 @@ export function NotificationsSettings() {
     <section className="p-6 rounded-xl bg-white/5 border border-white/10">
       <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
         <Bell className="w-5 h-5 text-tertiary" />
-        Notifications
+        <Trans>Notifications</Trans>
       </h3>
       <p className="text-sm text-gray-400 mb-4">
-        Receive tournament reminders, streak alerts, and game updates.
+        <Trans>Receive tournament reminders, streak alerts, and game updates.</Trans>
       </p>
 
       {/* Status */}
       <div className="flex items-center justify-between mb-4">
-        <span className="text-sm">Status:</span>
+        <span className="text-sm"><Trans>Status:</Trans></span>
         <StatusBadge status={permissionDisplay} />
       </div>
 
