@@ -27,10 +27,10 @@ import { BuyInDialog } from '../components/game/BuyInDialog';
 import { apiClient } from '@stackbluff/shared';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { Leaderboard } from "../components/Leaderboard";
-
 import { LobbyTabs } from '@/components/lobby/LobbyTabs';
 import { removeToken } from '@stackbluff/shared/auth/token';
 import { requireAuth } from '@/lib/authGuard';
+import { Trans, t } from '@lingui/react/macro';
 
 const STAKE_CONFIG = {
   Micro: { text: "$0.02/$0.05", bb: 5 },
@@ -42,7 +42,6 @@ const STAKE_CONFIG = {
 
 const getStakeBB = (stakeLevel: keyof typeof STAKE_CONFIG) => STAKE_CONFIG[stakeLevel]?.bb ?? 0;
 
-// Helper to convert table name to kebab-case for image fetching
 const toKebabCase = (str: string) =>
   str
     .toLowerCase()
@@ -125,11 +124,11 @@ function LobbyPage() {
   };
 
   if (isLoading) {
-    return <div className="flex justify-center p-8 text-on-surface">Loading tables...</div>;
+    return <div className="flex justify-center p-8 text-on-surface"><Trans>Loading tables...</Trans></div>;
   }
 
   if (error) {
-    return <div className="text-error p-8 text-center">Error: {(error as Error).message}</div>;
+    return <div className="text-error p-8 text-center"><Trans>Error: {(error as Error).message}</Trans></div>;
   }
 
   return (
@@ -138,61 +137,61 @@ function LobbyPage() {
       <aside className="hidden md:flex flex-col w-64 bg-surface-container-low border-r border-outline-variant py-gutter sticky top-0 h-screen">
         <div className="px-6 pt-6 mb-8">
           <div className="p-4 rounded-lg bg-surface-container-highest razor-highlight border border-outline-variant">
-            <h3 className="font-headline-md text-headline-md text-on-surface mb-1">StackBluff Elite</h3>
-            <p className="font-label-caps text-[10px] text-tertiary">Tier: Obsidian</p>
+            <h3 className="font-headline-md text-headline-md text-on-surface mb-1"><Trans>StackBluff Elite</Trans></h3>
+            <p className="font-label-caps text-[10px] text-tertiary"><Trans>Tier: Obsidian</Trans></p>
           </div>
         </div>
 
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto min-h-0">
           <Link to="/lobby" className="flex items-center gap-3 px-4 py-3 rounded-lg text-tertiary font-bold font-label-caps text-label-caps">
             <LayoutGrid className="w-5 h-5" />
-            <span className="font-label-caps text-label-caps">Lobby</span>
+            <span className="font-label-caps text-label-caps"><Trans>Lobby</Trans></span>
           </Link>
           <button onClick={() => navigate({ to: "/tournaments" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
             <Trophy className="w-5 h-5 text-yellow-400" />
-            <span className="font-label-caps text-label-caps">Tournaments</span>
+            <span className="font-label-caps text-label-caps"><Trans>Tournaments</Trans></span>
           </button>
           <button onClick={() => navigate({ to: "/clubs" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
             <Users className="w-5 h-5 text-purple-400" />
-            <span className="font-label-caps text-label-caps">Clubs</span>
+            <span className="font-label-caps text-label-caps"><Trans>Clubs</Trans></span>
           </button>
           <button onClick={() => navigate({ to: "/leaderboard" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
             <TrendingUp className="w-5 h-5 text-cyan-400" />
-            <span className="font-label-caps text-label-caps">Leaderboard</span>
+            <span className="font-label-caps text-label-caps"><Trans>Leaderboard</Trans></span>
           </button>
           <button onClick={() => navigate({ to: "/shop" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
             <ShoppingBag className="w-5 h-5 text-pink-400" />
-            <span className="font-label-caps text-label-caps">Shop</span>
+            <span className="font-label-caps text-label-caps"><Trans>Shop</Trans></span>
           </button>
           <div className="border-t border-outline-variant/50 my-2"></div>
           <button onClick={() => navigate({ to: "/missions" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
             <Target className="w-5 h-5 text-orange-400" />
-            <span className="font-label-caps text-label-caps">Missions</span>
+            <span className="font-label-caps text-label-caps"><Trans>Missions</Trans></span>
           </button>
           <button onClick={() => navigate({ to: "/referrals" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
             <Share2 className="w-5 h-5 text-blue-400" />
-            <span className="font-label-caps text-label-caps">Referrals</span>
+            <span className="font-label-caps text-label-caps"><Trans>Referrals</Trans></span>
           </button>
           <button onClick={() => navigate({ to: "/replays" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
             <History className="w-5 h-5 text-indigo-400" />
-            <span className="font-label-caps text-label-caps">Replays</span>
+            <span className="font-label-caps text-label-caps"><Trans>Replays</Trans></span>
           </button>
           <button onClick={() => navigate({ to: "/history" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
             <FileText className="w-5 h-5 text-sky-400" />
-            <span className="font-label-caps text-label-caps">Hand History</span>
+            <span className="font-label-caps text-label-caps"><Trans>Hand History</Trans></span>
           </button>
           <div className="border-t border-outline-variant/50 my-2"></div>
           <button onClick={() => navigate({ to: "/guide" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
             <BookOpen className="w-5 h-5 text-emerald-400" />
-            <span className="font-label-caps text-label-caps">Guide</span>
+            <span className="font-label-caps text-label-caps"><Trans>Guide</Trans></span>
           </button>
           <button onClick={() => navigate({ to: "/help" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
             <HelpCircle className="w-5 h-5 text-red-400" />
-            <span className="font-label-caps text-label-caps">Help & Support</span>
+            <span className="font-label-caps text-label-caps"><Trans>Help & Support</Trans></span>
           </button>
           <button onClick={() => navigate({ to: "/settings" })} className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left">
             <Settings className="w-5 h-5 text-slate-400" />
-            <span className="font-label-caps text-label-caps">Settings</span>
+            <span className="font-label-caps text-label-caps"><Trans>Settings</Trans></span>
           </button>
         </nav>
 
@@ -201,7 +200,7 @@ function LobbyPage() {
             onClick={() => setModalOpen(true)}
             className="w-full mb-4 py-3 rounded-lg bg-tertiary text-on-tertiary hover:bg-tertiary-fixed font-label-caps text-label-caps active:scale-95 transition-transform uppercase shadow-lg shadow-emerald-500/10"
           >
-            <Plus className="w-4 h-4 mr-2" /> New Table
+            <Plus className="w-4 h-4 mr-2" /> <Trans>New Table</Trans>
           </Button>
           <button
             onClick={() => {
@@ -212,7 +211,7 @@ function LobbyPage() {
             className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:bg-red-500/10 w-full transition-colors font-label-caps text-label-caps"
           >
             <LogOut className="w-5 h-5" />
-            <span className="font-label-caps text-label-caps">Logout</span>
+            <span className="font-label-caps text-label-caps"><Trans>Logout</Trans></span>
           </button>
         </div>
       </aside>
@@ -237,14 +236,14 @@ function LobbyPage() {
               <div className="flex items-center gap-2 mb-1">
                 <Sparkles className="w-4 h-4 text-emerald-400" />
                 <span className="text-xs font-data-mono uppercase tracking-widest text-emerald-400">
-                  Play & Profit
+                  <Trans>Play & Profit</Trans>
                 </span>
               </div>
               <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface flex items-center gap-3">
-                Game Lobby
+                <Trans>Game Lobby</Trans>
               </h1>
               <p className="text-on-surface-variant text-sm mt-1 max-w-md">
-                Join high-stakes rooms or competitive tournaments. Precision poker for the sophisticated player.
+                <Trans>Join high-stakes rooms or competitive tournaments. Precision poker for the sophisticated player.</Trans>
               </p>
             </div>
             <LobbyTabs />
@@ -258,32 +257,32 @@ function LobbyPage() {
                   className={`flex items-center gap-1.5 text-[10px] px-3 py-1.5 rounded-lg ${sortConfig.key === 'stakes' ? 'bg-white/10 text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface hover:bg-white/5'} font-label-caps uppercase tracking-wider transition-all`}
                   onClick={() => toggleSort('stakes')}
                 >
-                  Stakes {renderSortIcon('stakes')}
+                  <Trans>Stakes</Trans> {renderSortIcon('stakes')}
                 </button>
                 <button
                   className={`flex items-center gap-1.5 text-[10px] px-3 py-1.5 rounded-lg ${sortConfig.key === 'players' ? 'bg-white/10 text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface hover:bg-white/5'} font-label-caps uppercase tracking-wider transition-all`}
                   onClick={() => toggleSort('players')}
                 >
-                  Players {renderSortIcon('players')}
+                  <Trans>Players</Trans> {renderSortIcon('players')}
                 </button>
               </div>
             </div>
 
             <div className="hidden lg:grid grid-cols-12 w-full px-6 py-2 text-outline font-label-caps text-[10px] uppercase tracking-wider">
-              <div className="col-span-4">Room Name</div>
+              <div className="col-span-4"><Trans>Room Name</Trans></div>
               <div
                 className="col-span-2 text-center flex items-center justify-center gap-1 cursor-pointer hover:text-on-surface transition-colors"
                 onClick={() => toggleSort('stakes')}
               >
-                Stakes {renderSortIcon('stakes')}
+                <Trans>Stakes</Trans> {renderSortIcon('stakes')}
               </div>
               <div
                 className="col-span-2 text-center flex items-center justify-center gap-1 cursor-pointer hover:text-on-surface transition-colors"
                 onClick={() => toggleSort('players')}
               >
-                Players {renderSortIcon('players')}
+                <Trans>Players</Trans> {renderSortIcon('players')}
               </div>
-              <div className="col-span-4 text-right">Action</div>
+              <div className="col-span-4 text-right"><Trans>Action</Trans></div>
             </div>
           </div>
 
@@ -323,13 +322,13 @@ function LobbyPage() {
                     />
                     <div className="flex-1 min-w-0">
                       <h4 className="font-headline-md text-base text-on-surface truncate">{table.name}</h4>
-                      <p className="text-[10px] text-outline font-label-caps mt-0.5">NO LIMIT HOLD'EM</p>
+                      <p className="text-[10px] text-outline font-label-caps mt-0.5"><Trans>NO LIMIT HOLD'EM</Trans></p>
                       <div className="flex items-center gap-3 mt-2.5 lg:hidden">
                         <span className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-md px-2 py-0.5 text-[10px] font-data-mono text-tertiary tracking-wide">
                           {STAKE_CONFIG[table.stake_level]?.text || table.stake_level}
                         </span>
                         <span className="text-[10px] text-on-surface-variant font-data-mono">
-                          {table.current_players}/{table.max_players} seated
+                          <Trans>{table.current_players}/{table.max_players} seated</Trans>
                         </span>
                       </div>
                     </div>
@@ -361,18 +360,18 @@ function LobbyPage() {
                         navigate({
                           to: '/table/$tableId',
                           params: { tableId: table.table_id },
-                          search: { observe: 'true' } // Pass observe flag
+                          search: { observe: 'true' }
                         })
                       }
                       className="flex-1 lg:flex-initial px-3 lg:px-4 py-2 border-outline-variant text-on-surface hover:border-tertiary hover:text-tertiary hover:bg-tertiary/10 font-label-caps text-[10px] uppercase tracking-wider rounded-lg"
                     >
-                      Observe
+                      <Trans>Observe</Trans>
                     </Button>
                     <Button
                       onClick={() => setBuyInModal({ open: true, table })}
                       className="flex-1 lg:flex-initial px-3 lg:px-4 py-2 bg-tertiary text-on-tertiary font-label-caps text-[10px] hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg shadow-emerald-500/10 rounded-lg"
                     >
-                      <Wallet className="w-3.5 h-3.5 mr-1.5" /> Buy In
+                      <Wallet className="w-3.5 h-3.5 mr-1.5" /> <Trans>Buy In</Trans>
                     </Button>
                   </div>
                 </motion.div>
@@ -382,11 +381,11 @@ function LobbyPage() {
 
           {/* Legal Links Footer */}
           <div className="flex flex-wrap gap-4 justify-center text-sm text-on-surface-variant border-t border-white/10 pt-6 mt-8">
-            <Link to="/legal/terms" className="hover:text-tertiary transition-colors">Terms of Service</Link>
+            <Link to="/legal/terms" className="hover:text-tertiary transition-colors"><Trans>Terms of Service</Trans></Link>
             <span className="text-white/20">|</span>
-            <Link to="/legal/privacy" className="hover:text-tertiary transition-colors">Privacy Policy</Link>
+            <Link to="/legal/privacy" className="hover:text-tertiary transition-colors"><Trans>Privacy Policy</Trans></Link>
             <span className="text-white/20">|</span>
-            <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors">Responsible Gaming</Link>
+            <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors"><Trans>Responsible Gaming</Trans></Link>
           </div>
         </div>
       </section>

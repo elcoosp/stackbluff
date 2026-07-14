@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Link } from '@tanstack/react-router';
 import { Swords, Trophy, BookOpen, ShoppingBag } from 'lucide-react';
 import { motion } from 'motion/react';
+import { Trans, t } from '@lingui/react/macro';
 
 export const Route = createFileRoute('/')({
   component: IndexPage,
@@ -48,22 +49,22 @@ function IndexPage() {
           className="text-center mb-16"
         >
           <h1 className="font-display-lg text-6xl md:text-7xl text-on-surface uppercase tracking-tighter drop-shadow-2xl">
-            STACKBLUFF
+            <Trans>STACKBLUFF</Trans>
           </h1>
           <p className="font-data-mono text-sm md:text-base text-on-surface-variant mt-4 tracking-widest uppercase drop-shadow">
-            High Stakes Poker
+            <Trans>High Stakes Poker</Trans>
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-4">
             <Link to="/lobby">
               <Button className="bg-tertiary text-on-tertiary hover:bg-tertiary-fixed font-data-mono text-sm px-8 py-6 rounded-xl shadow-lg shadow-tertiary/30 hover:shadow-tertiary/50 transition-all duration-300">
                 <Swords className="w-5 h-5 mr-2" />
-                Play Now
+                <Trans>Play Now</Trans>
               </Button>
             </Link>
             <Link to="/shop">
               <Button variant="outline" className="border-tertiary/40 text-on-surface hover:bg-tertiary hover:text-on-tertiary font-data-mono text-sm px-8 py-6 rounded-xl shadow-lg hover:shadow-tertiary/30 transition-all duration-300">
                 <ShoppingBag className="w-5 h-5 mr-2" />
-                Shop
+                <Trans>Shop</Trans>
               </Button>
             </Link>
           </div>
@@ -81,14 +82,16 @@ function IndexPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-on-surface">
                   <Swords className="w-5 h-5 text-tertiary" />
-                  Play Now
+                  <Trans>Play Now</Trans>
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex-1 flex flex-col">
-                <p className="text-on-surface-variant text-sm mb-4">Join a table and test your skills against other players.</p>
+                <p className="text-on-surface-variant text-sm mb-4">
+                  <Trans>Join a table and test your skills against other players.</Trans>
+                </p>
                 <Link to="/lobby" className="mt-auto">
                   <Button className="w-full bg-tertiary/20 text-tertiary hover:bg-tertiary/30 font-data-mono tracking-wider uppercase text-xs border border-tertiary/20">
-                    JOIN TABLE
+                    <Trans>JOIN TABLE</Trans>
                   </Button>
                 </Link>
               </CardContent>
@@ -100,17 +103,19 @@ function IndexPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-on-surface">
                   <Trophy className="w-5 h-5 text-yellow-400" />
-                  Leaderboard
+                  <Trans>Leaderboard</Trans>
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex-1 flex flex-col">
-                <p className="text-on-surface-variant text-sm mb-4">See who's on top. Rankings update in real-time.</p>
+                <p className="text-on-surface-variant text-sm mb-4">
+                  <Trans>See who's on top. Rankings update in real-time.</Trans>
+                </p>
                 <Link to="/leaderboard" className="mt-auto">
                   <Button
                     variant="outline"
                     className="w-full border-white/20 text-on-surface hover:border-tertiary hover:text-tertiary hover:bg-tertiary/10 font-data-mono tracking-wider uppercase text-xs"
                   >
-                    VIEW RANKS
+                    <Trans>VIEW RANKS</Trans>
                   </Button>
                 </Link>
               </CardContent>
@@ -122,17 +127,19 @@ function IndexPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-on-surface">
                   <ShoppingBag className="w-5 h-5 text-tertiary" />
-                  Shop
+                  <Trans>Shop</Trans>
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex-1 flex flex-col">
-                <p className="text-on-surface-variant text-sm mb-4">Buy chips, season passes, and club upgrades.</p>
+                <p className="text-on-surface-variant text-sm mb-4">
+                  <Trans>Buy chips, season passes, and club upgrades.</Trans>
+                </p>
                 <Link to="/shop" className="mt-auto">
                   <Button
                     variant="outline"
                     className="w-full border-white/20 text-on-surface hover:border-tertiary hover:text-tertiary hover:bg-tertiary/10 font-data-mono tracking-wider uppercase text-xs"
                   >
-                    BROWSE
+                    <Trans>BROWSE</Trans>
                   </Button>
                 </Link>
               </CardContent>
@@ -144,17 +151,19 @@ function IndexPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-on-surface">
                   <BookOpen className="w-5 h-5 text-blue-400" />
-                  Learn
+                  <Trans>Learn</Trans>
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex-1 flex flex-col">
-                <p className="text-on-surface-variant text-sm mb-4">New to poker? Start with the basics.</p>
+                <p className="text-on-surface-variant text-sm mb-4">
+                  <Trans>New to poker? Start with the basics.</Trans>
+                </p>
                 <Link to="/guide" className="mt-auto">
                   <Button
                     variant="outline"
                     className="w-full border-white/20 text-on-surface hover:border-tertiary hover:text-tertiary hover:bg-tertiary/10 font-data-mono tracking-wider uppercase text-xs"
                   >
-                    GUIDE
+                    <Trans>GUIDE</Trans>
                   </Button>
                 </Link>
               </CardContent>
