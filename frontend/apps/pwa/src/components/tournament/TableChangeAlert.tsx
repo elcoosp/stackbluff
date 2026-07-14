@@ -2,6 +2,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Move, ArrowRight } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 interface TableChangeAlertProps {
   open: boolean;
@@ -40,21 +42,21 @@ export function TableChangeAlert({
                 <Move className="w-8 h-8 text-tertiary" />
               </div>
               <div>
-                <h2 className="text-sm font-semibold text-on-surface">Table Change</h2>
+                <h2 className="text-sm font-semibold text-on-surface"><Trans>Table Change</Trans></h2>
                 <p className="text-[11px] text-on-surface-variant mt-1">
-                  You have been moved to a new table.
+                  <Trans>You have been moved to a new table.</Trans>
                 </p>
               </div>
               <div className="flex items-center gap-3 text-sm text-on-surface-variant bg-white/5 px-4 py-2 rounded-lg w-full justify-center">
-                <span className="font-data-mono">Table {newRoomId.slice(0, 6)}</span>
+                <span className="font-data-mono"><Trans>Table {newRoomId.slice(0, 6)}</Trans></span>
                 <ArrowRight className="w-3 h-3 text-tertiary" />
-                <span className="font-data-mono">Seat {newSeat + 1}</span>
+                <span className="font-data-mono"><Trans>Seat {newSeat + 1}</Trans></span>
               </div>
               <Button
                 onClick={onAcknowledge}
                 className="w-full bg-tertiary text-on-tertiary font-label-caps text-[11px] uppercase tracking-wider hover:bg-tertiary-fixed"
               >
-                Go to Table
+                <Trans>Go to Table</Trans>
               </Button>
             </div>
           </motion.div>
