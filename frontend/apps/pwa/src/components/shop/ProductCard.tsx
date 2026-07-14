@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { Coins, Crown, Sparkles, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import { getProductImageUrl } from '@/lib/productImages';
+import { Trans, t } from '@lingui/react/macro';
 
 interface ProductCardProps {
   product: {
@@ -38,9 +39,9 @@ export function ProductCard({ product, onPurchase, className }: ProductCardProps
                 isSeasonPass ? <Sparkles className="w-5 h-5 text-tertiary" /> :
                 <Crown className="w-5 h-5 text-tertiary" />;
 
-  const badgeText = isChips ? 'Chips' :
-                    isSeasonPass ? 'Season Pass' :
-                    'Club Pro';
+  const badgeText = isChips ? t`Chips` :
+                    isSeasonPass ? t`Season Pass` :
+                    t`Club Pro`;
 
   const imageUrl = getProductImageUrl(product.id, product.name);
 
@@ -124,7 +125,7 @@ export function ProductCard({ product, onPurchase, className }: ProductCardProps
                   : 'bg-white/10 text-on-surface backdrop-blur-sm border border-white/20 hover:bg-tertiary hover:text-on-tertiary'
               )}
             >
-              <ShieldCheck className="w-3 h-3 mr-2" /> Buy Now
+              <ShieldCheck className="w-3 h-3 mr-2" /> <Trans>Buy Now</Trans>
             </Button>
           </div>
         </div>
