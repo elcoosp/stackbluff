@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { TimerBar } from '@/components/game/TimerBar';
 import { Trophy } from 'lucide-react';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 interface TournamentCountdownOverlayProps {
   tournamentId: string;
@@ -72,10 +74,10 @@ export function TournamentCountdownOverlay({
           >
             <Trophy className="w-16 h-16 text-tertiary mx-auto mb-6" />
             <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter">
-              Tournament Starting
+              <Trans>Tournament Starting</Trans>
             </h1>
             <p className="text-on-surface-variant text-sm mt-2 font-label-caps tracking-wider">
-              Sit & Go
+              <Trans>Sit & Go</Trans>
             </p>
 
             <div className="mt-8 flex flex-col items-center">
@@ -86,7 +88,7 @@ export function TournamentCountdownOverlay({
                 <TimerBar remainingMs={remainingMs} totalMs={totalMs} isActive />
               </div>
               <p className="text-on-surface-variant text-xs mt-4 font-label-caps tracking-widest uppercase">
-                Preparing your table...
+                <Trans>Preparing your table...</Trans>
               </p>
             </div>
           </motion.div>
