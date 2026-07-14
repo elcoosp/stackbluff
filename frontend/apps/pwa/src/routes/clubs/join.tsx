@@ -8,6 +8,8 @@ import { Loader2, Users, Crown, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { requireAuth } from '@/lib/authGuard';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 interface ClubPreview {
   id: string;
@@ -54,7 +56,7 @@ function JoinClubPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clubs'] });
       setJoined(true);
-      toast.success('Successfully joined the club!');
+      toast.success(t`Successfully joined the club!`);
       // Navigate to club page after a delay
       if (club) {
         setTimeout(() => {
@@ -63,13 +65,13 @@ function JoinClubPage() {
       }
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'Failed to join club');
+      toast.error(error instanceof Error ? error.message : t`Failed to join club`);
     },
   });
 
   const handleJoin = () => {
     if (!invite) {
-      toast.error('No invite code provided');
+      toast.error(t`No invite code provided`);
       return;
     }
     joinMutation.mutate();
@@ -79,11 +81,11 @@ function JoinClubPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-6">
         <Card className="max-w-md w-full p-6 text-center">
-          <h2 className="text-xl font-semibold text-on-surface mb-2">No Invite Code</h2>
-          <p className="text-on-surface-variant text-sm">This page requires an invite code.</p>
+          <h2 className="text-xl font-semibold text-on-surface mb-2"><Trans>No Invite Code</Trans></h2>
+          <p className="text-on-surface-variant text-sm"><Trans>This page requires an invite code.</Trans></p>
           <Button onClick={() => navigate({ to: '/clubs' })} className="mt-4">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Clubs
+            <Trans>Back to Clubs</Trans>
           </Button>
         </Card>
       </div>
@@ -94,7 +96,7 @@ function JoinClubPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-6">
         <Loader2 className="w-10 h-10 text-tertiary animate-spin" />
-        <p className="text-on-surface-variant mt-4">Loading club details...</p>
+        <p className="text-on-surface-variant mt-4"><Trans>Loading club details...</Trans></p>
       </div>
     );
   }
@@ -103,13 +105,13 @@ function JoinClubPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-6">
         <Card className="max-w-md w-full p-6 text-center">
-          <h2 className="text-xl font-semibold text-red-400 mb-2">Invalid Invite</h2>
+          <h2 className="text-xl font-semibold text-red-400 mb-2"><Trans>Invalid Invite</Trans></h2>
           <p className="text-on-surface-variant text-sm">
-            This invite link is invalid or has expired.
+            <Trans>This invite link is invalid or has expired.</Trans>
           </p>
           <Button onClick={() => navigate({ to: '/clubs' })} className="mt-4">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Clubs
+            <Trans>Back to Clubs</Trans>
           </Button>
         </Card>
       </div>
@@ -121,11 +123,11 @@ function JoinClubPage() {
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-6">
         <Card className="max-w-md w-full p-6 text-center">
           <div className="text-tertiary text-5xl mb-4">🎉</div>
-          <h2 className="text-xl font-semibold text-on-surface mb-2">You're a Member!</h2>
+          <h2 className="text-xl font-semibold text-on-surface mb-2"><Trans>You're a Member!</Trans></h2>
           <p className="text-on-surface-variant text-sm">
-            You have successfully joined <strong>{club.name}</strong>.
+            <Trans>You have successfully joined <strong>{club.name}</strong>.</Trans>
           </p>
-          <p className="text-on-surface-variant/60 text-xs mt-2">Redirecting to club page...</p>
+          <p className="text-on-surface-variant/60 text-xs mt-2"><Trans>Redirecting to club page...</Trans></p>
         </Card>
       </div>
     );
@@ -150,19 +152,19 @@ function JoinClubPage() {
             <h2 className="text-xl font-semibold text-on-surface">{club.name}</h2>
             <p className="text-sm text-on-surface-variant flex items-center gap-1">
               <Users className="w-4 h-4" />
-              {club.members_count} members
+              {club.members_count} <Trans>members</Trans>
             </p>
             {club.is_owner && (
               <p className="text-xs text-yellow-400 flex items-center gap-1">
                 <Crown className="w-3 h-3" />
-                You are the owner
+                <Trans>You are the owner</Trans>
               </p>
             )}
           </div>
         </div>
 
         <p className="text-on-surface-variant text-sm mb-4">
-          You've been invited to join this club. Click the button below to become a member.
+          <Trans>You've been invited to join this club. Click the button below to become a member.</Trans>
         </p>
 
         {club.is_member ? (
@@ -170,7 +172,7 @@ function JoinClubPage() {
             className="w-full bg-tertiary text-on-tertiary hover:bg-tertiary-fixed"
             onClick={() => navigate({ to: '/clubs/$clubId', params: { clubId: club.id } })}
           >
-            View Club
+            <Trans>View Club</Trans>
           </Button>
         ) : (
           <Button
@@ -181,10 +183,10 @@ function JoinClubPage() {
             {joinMutation.isPending ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Joining...
+                <Trans>Joining...</Trans>
               </>
             ) : (
-              'Join Club'
+              <Trans>Join Club</Trans>
             )}
           </Button>
         )}
@@ -195,7 +197,7 @@ function JoinClubPage() {
           onClick={() => navigate({ to: '/clubs' })}
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Clubs
+          <Trans>Back to Clubs</Trans>
         </Button>
       </Card>
     </div>
