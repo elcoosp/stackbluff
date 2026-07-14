@@ -5,6 +5,7 @@ import {
   ANALYTICS_COOKIE_CONSENT_ACCEPTED,
   ANALYTICS_COOKIE_CONSENT_DECLINED,
 } from '@/lib/consent/constants';
+import { Trans, t } from '@lingui/react/macro';
 
 /**
  * Cookie consent banner – bottom-fixed, non-dismissible except via Accept/Decline.
@@ -45,8 +46,7 @@ export function CookieConsentBanner() {
           id="cookie-consent-description"
           className="text-sm text-white flex-1 m-0"
         >
-          We use cookies for analytics and to improve your experience. By clicking
-          &ldquo;Accept&rdquo;, you consent to our use of cookies.
+          <Trans>We use cookies for analytics and to improve your experience. By clicking "Accept", you consent to our use of cookies.</Trans>
         </p>
         <div className="flex gap-2 flex-shrink-0">
           <button
@@ -55,7 +55,7 @@ export function CookieConsentBanner() {
             data-testid="cookie-consent-decline"
             className="px-4 py-2 rounded-md border border-white/30 bg-transparent text-white text-sm font-medium hover:bg-white/10 transition-colors"
           >
-            Decline
+            <Trans>Decline</Trans>
           </button>
           <button
             type="button"
@@ -63,7 +63,7 @@ export function CookieConsentBanner() {
             data-testid="cookie-consent-accept"
             className="px-4 py-2 rounded-md border-none bg-blue-500 text-white text-sm font-semibold hover:bg-blue-600 transition-colors"
           >
-            Accept
+            <Trans>Accept</Trans>
           </button>
         </div>
       </div>
