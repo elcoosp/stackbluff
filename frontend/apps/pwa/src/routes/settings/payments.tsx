@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { History, Coins, Calendar, FileText, Download, ArrowLeft } from 'lucide-react';
 import { requireAuth } from '@/lib/authGuard';
+import { Trans, t } from '@lingui/react/macro';
 
 export const Route = createFileRoute('/settings/payments')({
   component: PurchaseHistoryPage,
@@ -38,7 +39,6 @@ function PurchaseHistoryPage() {
     staleTime: 60_000,
   });
 
-
   if (isLoading) {
     return <PurchaseSkeleton />;
   }
@@ -47,9 +47,9 @@ function PurchaseHistoryPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-6">
         <Card className="max-w-md w-full p-6 text-center">
-          <h2 className="text-xl font-semibold text-red-400 mb-2">Error</h2>
-          <p className="text-on-surface-variant text-sm">Failed to load purchase history.</p>
-          <Button onClick={() => refetch()} className="mt-4">Retry</Button>
+          <h2 className="text-xl font-semibold text-red-400 mb-2"><Trans>Error</Trans></h2>
+          <p className="text-on-surface-variant text-sm"><Trans>Failed to load purchase history.</Trans></p>
+          <Button onClick={() => refetch()} className="mt-4"><Trans>Retry</Trans></Button>
         </Card>
       </div>
     );
@@ -64,15 +64,15 @@ function PurchaseHistoryPage() {
           </Link>
           <h1 className="font-display-lg text-2xl text-on-surface flex items-center gap-2">
             <History className="w-6 h-6 text-tertiary" />
-            Purchase History
+            <Trans>Purchase History</Trans>
           </h1>
         </div>
         <Card className="p-12 text-center">
           <Coins className="w-12 h-12 text-on-surface-variant/30 mx-auto mb-4" />
-          <p className="text-on-surface-variant">No purchases yet.</p>
-          <p className="text-on-surface-variant/60 text-sm mt-2">Visit the shop to buy chips or subscriptions.</p>
+          <p className="text-on-surface-variant"><Trans>No purchases yet.</Trans></p>
+          <p className="text-on-surface-variant/60 text-sm mt-2"><Trans>Visit the shop to buy chips or subscriptions.</Trans></p>
           <Link to="/shop" className="mt-4 inline-block">
-            <Button className="bg-tertiary text-on-tertiary hover:bg-tertiary/80">Go to Shop</Button>
+            <Button className="bg-tertiary text-on-tertiary hover:bg-tertiary/80"><Trans>Go to Shop</Trans></Button>
           </Link>
         </Card>
       </div>
@@ -87,9 +87,9 @@ function PurchaseHistoryPage() {
         </Link>
         <h1 className="font-display-lg text-2xl text-on-surface flex items-center gap-2">
           <History className="w-6 h-6 text-tertiary" />
-          Purchase History
+          <Trans>Purchase History</Trans>
         </h1>
-        <span className="text-sm text-on-surface-variant ml-auto">{purchases.length} purchases</span>
+        <span className="text-sm text-on-surface-variant ml-auto">{purchases.length} <Trans>purchases</Trans></span>
       </div>
 
       <div className="space-y-4">
@@ -126,7 +126,7 @@ function PurchaseHistoryPage() {
                       {purchase.amount} {purchase.currency}
                     </span>
                     <span className="flex items-center gap-1 text-[10px] text-on-surface-variant/50">
-                      ID: {purchase.payment_id.slice(0, 8)}
+                      <Trans>ID:</Trans> {purchase.payment_id.slice(0, 8)}
                     </span>
                   </div>
                 </div>
@@ -139,7 +139,7 @@ function PurchaseHistoryPage() {
                       className="text-tertiary hover:text-tertiary/80 text-sm flex items-center gap-1"
                     >
                       <FileText className="w-4 h-4" />
-                      Invoice
+                      <Trans>Invoice</Trans>
                     </a>
                   )}
                 </div>
