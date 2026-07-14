@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
 import { Trophy, Calendar, Users, Coins, Sparkles, ChevronRight, LogIn } from 'lucide-react';
 import type { TournamentResultEntry, TournamentSummary } from '@stackbluff/shared/types/tournament.types';
+import { Trans, t } from '@lingui/react/macro';
 
 export const Route = createFileRoute('/tournaments-history')({
   component: TournamentHistoryPage,
@@ -78,21 +79,23 @@ function TournamentHistoryPage() {
         >
           <div className="flex items-center gap-2 mb-1">
             <Sparkles className="w-4 h-4 text-orange-400" />
-            <span className="text-xs font-data-mono uppercase tracking-widest text-orange-400">Past Events</span>
+            <span className="text-xs font-data-mono uppercase tracking-widest text-orange-400">
+              <Trans>Past Events</Trans>
+            </span>
           </div>
-          <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface">Tournament History</h1>
+          <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface"><Trans>Tournament History</Trans></h1>
         </motion.div>
         <div className="flex flex-col items-center justify-center min-h-[40vh] p-6">
           <Card className="max-w-md w-full p-12 text-center bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl">
             <Trophy className="w-12 h-12 text-orange-400 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-on-surface mb-2">Sign In Required</h2>
+            <h2 className="text-xl font-semibold text-on-surface mb-2"><Trans>Sign In Required</Trans></h2>
             <p className="text-on-surface-variant text-sm mb-6">
-              Please sign in to view your tournament history.
+              <Trans>Please sign in to view your tournament history.</Trans>
             </p>
             <Link to="/login" className="inline-block">
               <Button className="flex items-center gap-2 px-4 py-2 bg-tertiary text-on-tertiary font-label-caps text-xs hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg shadow-emerald-500/10 rounded-lg">
                 <LogIn className="w-4 h-4" />
-                Sign In
+                <Trans>Sign In</Trans>
               </Button>
             </Link>
           </Card>
@@ -116,21 +119,23 @@ function TournamentHistoryPage() {
         >
           <div className="flex items-center gap-2 mb-1">
             <Sparkles className="w-4 h-4 text-red-400" />
-            <span className="text-xs font-data-mono uppercase tracking-widest text-red-400">Error</span>
+            <span className="text-xs font-data-mono uppercase tracking-widest text-red-400">
+              <Trans>Error</Trans>
+            </span>
           </div>
-          <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface">Tournament History</h1>
+          <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface"><Trans>Tournament History</Trans></h1>
         </motion.div>
         <div className="flex flex-col items-center justify-center min-h-[40vh] p-6">
           <Card className="max-w-md w-full p-12 text-center bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl">
-            <h2 className="text-xl font-semibold text-red-400 mb-2">Failed to Load</h2>
+            <h2 className="text-xl font-semibold text-red-400 mb-2"><Trans>Failed to Load</Trans></h2>
             <p className="text-on-surface-variant text-sm mb-6">
-              There was an error loading your tournament history.
+              <Trans>There was an error loading your tournament history.</Trans>
             </p>
             <Button
               onClick={() => window.location.reload()}
               className="flex items-center gap-2 px-4 py-2 bg-tertiary text-on-tertiary font-label-caps text-xs hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg shadow-emerald-500/10 rounded-lg"
             >
-              Retry
+              <Trans>Retry</Trans>
             </Button>
           </Card>
         </div>
@@ -153,14 +158,14 @@ function TournamentHistoryPage() {
         <div className="flex items-center gap-2 mb-1">
           <Sparkles className="w-4 h-4 text-orange-400" />
           <span className="text-xs font-data-mono uppercase tracking-widest text-orange-400">
-            Past Events
+            <Trans>Past Events</Trans>
           </span>
         </div>
         <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface flex items-center gap-3">
-          Tournament History
+          <Trans>Tournament History</Trans>
         </h1>
         <p className="text-on-surface-variant text-sm mt-1 max-w-md">
-          Review your past performance, winnings, and final standings.
+          <Trans>Review your past performance, winnings, and final standings.</Trans>
         </p>
       </motion.div>
 
@@ -172,11 +177,11 @@ function TournamentHistoryPage() {
         >
           <Card className="p-12 text-center bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl flex flex-col items-center">
             <Trophy className="w-12 h-12 text-on-surface-variant mx-auto mb-4" />
-            <p className="text-on-surface-variant">You haven't participated in any completed tournaments yet.</p>
+            <p className="text-on-surface-variant"><Trans>You haven't participated in any completed tournaments yet.</Trans></p>
             <Link to="/tournaments" className="mt-6 inline-block">
               <Button className="flex items-center gap-2 px-4 py-2 bg-tertiary text-on-tertiary font-label-caps text-xs hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg shadow-emerald-500/10 rounded-lg">
                 <Trophy className="w-4 h-4 mr-1" />
-                Browse Tournaments
+                <Trans>Browse Tournaments</Trans>
               </Button>
             </Link>
           </Card>
@@ -196,7 +201,7 @@ function TournamentHistoryPage() {
                     <h3 className="font-headline-md text-base text-on-surface flex items-center gap-2">
                       <span className="truncate">{tournament.name || tournament.tournament_type}</span>
                       <span className="text-xs bg-white/10 px-2 py-0.5 rounded-full text-on-surface-variant uppercase tracking-wider">
-                        {tournament.tournament_type === 'SitAndGo' ? 'Sit & Go' : 'MTT'}
+                        {tournament.tournament_type === 'SitAndGo' ? t`Sit & Go` : t`MTT`}
                       </span>
                     </h3>
                     <div className="flex flex-wrap gap-4 mt-2 text-xs text-on-surface-variant">
@@ -206,11 +211,11 @@ function TournamentHistoryPage() {
                       </span>
                       <span className="flex items-center gap-1.5">
                         <Users className="w-3.5 h-3.5 text-orange-400" />
-                        {tournament.results.length} participants
+                        {tournament.results.length} <Trans>participants</Trans>
                       </span>
                       <span className="flex items-center gap-1.5">
                         <Coins className="w-3.5 h-3.5 text-orange-400" />
-                        ${tournament.prize_pool.toLocaleString()} prize
+                        <Trans>${tournament.prize_pool.toLocaleString()} prize</Trans>
                       </span>
                     </div>
                   </div>
@@ -222,7 +227,7 @@ function TournamentHistoryPage() {
                       variant="outline"
                       className="flex items-center gap-1.5 px-4 py-2 border-outline-variant text-on-surface hover:border-tertiary hover:text-tertiary hover:bg-tertiary/10 font-label-caps text-[10px] uppercase tracking-wider rounded-lg"
                     >
-                      View Details
+                      <Trans>View Details</Trans>
                       <ChevronRight className="w-3.5 h-3.5" />
                     </Button>
                   </Link>
@@ -231,7 +236,7 @@ function TournamentHistoryPage() {
                 {tournament.results.length > 0 && (
                   <div className="mt-4 pt-4 border-t border-white/5">
                     <div className="text-[10px] text-on-surface-variant font-label-caps uppercase tracking-wider mb-3">
-                      Your Results
+                      <Trans>Your Results</Trans>
                     </div>
                     <div className="space-y-2">
                       {tournament.results.slice(0, 3).map((result) => (
@@ -248,7 +253,7 @@ function TournamentHistoryPage() {
                               <span className="text-on-surface-variant w-6 text-center font-mono">#{result.position}</span>
                             )}
                             <span className="text-on-surface font-medium">
-                              {result.display_name || 'You'}
+                              {result.display_name || t`You`}
                             </span>
                           </div>
                           <span className="text-tertiary font-data-mono font-bold">
@@ -258,7 +263,7 @@ function TournamentHistoryPage() {
                       ))}
                       {tournament.results.length > 3 && (
                         <div className="text-xs text-on-surface-variant text-center pt-1">
-                          +{tournament.results.length - 3} more...
+                          <Trans>+{tournament.results.length - 3} more...</Trans>
                         </div>
                       )}
                     </div>
