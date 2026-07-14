@@ -12,14 +12,15 @@ import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Trans, t } from '@lingui/react/macro';
 
 const resetPasswordSchema = z
   .object({
-    password: z.string().min(8, 'Password must be at least 8 characters'),
-    confirmPassword: z.string().min(8, 'Password must be at least 8 characters'),
+    password: z.string().min(8, t`Password must be at least 8 characters`),
+    confirmPassword: z.string().min(8, t`Password must be at least 8 characters`),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: 'Passwords do not match',
+    message: t`Passwords do not match`,
     path: ['confirmPassword'],
   });
 
@@ -44,10 +45,10 @@ function ResetPasswordPage() {
       authApi.resetPassword(data.token, data.new_password),
     onSuccess: () => {
       setSuccess(true);
-      toast.success('Password reset successfully!');
+      toast.success(t`Password reset successfully!`);
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to reset password');
+      toast.error(error.message || t`Failed to reset password`);
     },
   });
 
@@ -56,7 +57,7 @@ function ResetPasswordPage() {
     validators: { onChange: resetPasswordSchema },
     onSubmit: ({ value }) => {
       if (!token) {
-        toast.error('Invalid or missing reset token');
+        toast.error(t`Invalid or missing reset token`);
         return;
       }
       mutation.mutate({ token, new_password: value.password });
@@ -70,9 +71,9 @@ function ResetPasswordPage() {
         <div className="relative z-10 w-full max-w-md">
           <GlassPanel>
             <div className="text-center p-4">
-              <h2 className="text-lg font-semibold text-on-surface mb-2">Invalid Reset Link</h2>
+              <h2 className="text-lg font-semibold text-on-surface mb-2"><Trans>Invalid Reset Link</Trans></h2>
               <p className="text-on-surface-variant text-sm mb-4">
-                The password reset link is missing or invalid.
+                <Trans>The password reset link is missing or invalid.</Trans>
               </p>
               <LiquidMetalButton
                 type="button"
@@ -81,7 +82,7 @@ function ResetPasswordPage() {
                 onClick={() => navigate({ to: '/login' })}
               >
                 <ArrowLeft className="w-4 h-4 mr-2 inline" />
-                Back to Sign In
+                <Trans>Back to Sign In</Trans>
               </LiquidMetalButton>
             </div>
           </GlassPanel>
@@ -96,17 +97,17 @@ function ResetPasswordPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#1a1b1e_0%,_#0a0a0a_100%)]" />
         <div className="relative z-10 w-full max-w-md">
           <div className="text-center mb-8">
-            <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter">STACKBLUFF</h1>
-            <p className="font-data-mono text-xs text-outline mt-2 tracking-widest">PASSWORD RESET</p>
+            <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter"><Trans>STACKBLUFF</Trans></h1>
+            <p className="font-data-mono text-xs text-outline mt-2 tracking-widest"><Trans>PASSWORD RESET</Trans></p>
           </div>
           <GlassPanel>
             <div className="space-y-6 p-2 text-center">
               <div className="flex justify-center">
                 <CheckCircle className="w-16 h-16 text-tertiary" />
               </div>
-              <h2 className="text-lg font-semibold text-on-surface">Password Reset Successful</h2>
+              <h2 className="text-lg font-semibold text-on-surface"><Trans>Password Reset Successful</Trans></h2>
               <p className="text-on-surface-variant text-sm">
-                Your password has been updated. You can now sign in with your new password.
+                <Trans>Your password has been updated. You can now sign in with your new password.</Trans>
               </p>
               <LiquidMetalButton
                 type="button"
@@ -115,7 +116,7 @@ function ResetPasswordPage() {
                 onClick={() => navigate({ to: '/login' })}
               >
                 <ArrowLeft className="w-4 h-4 mr-2 inline" />
-                Back to Sign In
+                <Trans>Back to Sign In</Trans>
               </LiquidMetalButton>
             </div>
           </GlassPanel>
@@ -129,8 +130,8 @@ function ResetPasswordPage() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#1a1b1e_0%,_#0a0a0a_100%)]" />
       <div className="relative z-10 w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter">STACKBLUFF</h1>
-          <p className="font-data-mono text-xs text-outline mt-2 tracking-widest">RESET PASSWORD</p>
+          <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter"><Trans>STACKBLUFF</Trans></h1>
+          <p className="font-data-mono text-xs text-outline mt-2 tracking-widest"><Trans>RESET PASSWORD</Trans></p>
         </div>
         <GlassPanel>
           <form
@@ -147,7 +148,7 @@ function ResetPasswordPage() {
                     htmlFor="password"
                     className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase"
                   >
-                    New Password
+                    <Trans>New Password</Trans>
                   </Label>
                   <div className="relative mt-2">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -172,7 +173,7 @@ function ResetPasswordPage() {
                           className="text-xs font-data-mono text-red-400 mt-1"
                         >
                           {field.state.meta.errors.map((e) =>
-                            typeof e === 'string' ? e : e?.message || 'Invalid'
+                            typeof e === 'string' ? e : e?.message || t`Invalid`
                           ).join(', ')}
                         </motion.p>
                       )}
@@ -189,7 +190,7 @@ function ResetPasswordPage() {
                     htmlFor="confirmPassword"
                     className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase"
                   >
-                    Confirm Password
+                    <Trans>Confirm Password</Trans>
                   </Label>
                   <div className="relative mt-2">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -214,7 +215,7 @@ function ResetPasswordPage() {
                           className="text-xs font-data-mono text-red-400 mt-1"
                         >
                           {field.state.meta.errors.map((e) =>
-                            typeof e === 'string' ? e : e?.message || 'Invalid'
+                            typeof e === 'string' ? e : e?.message || t`Invalid`
                           ).join(', ')}
                         </motion.p>
                       )}
@@ -230,13 +231,13 @@ function ResetPasswordPage() {
               variant="silver"
               className="w-full"
             >
-              {mutation.isPending ? 'RESETTING...' : 'RESET PASSWORD'}
+              {mutation.isPending ? t`RESETTING...` : t`RESET PASSWORD`}
             </LiquidMetalButton>
 
             <div className="text-center pt-4">
               <Link to="/login" className="font-label-caps text-[10px] text-on-surface-variant hover:text-on-surface transition-all tracking-widest uppercase">
                 <ArrowLeft className="w-3 h-3 inline mr-1" />
-                BACK TO SIGN IN
+                <Trans>BACK TO SIGN IN</Trans>
               </Link>
             </div>
           </form>
