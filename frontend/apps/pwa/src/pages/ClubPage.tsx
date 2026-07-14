@@ -17,6 +17,7 @@ import { logger } from '../lib/logger';
 import { XCircle, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { trackClubView } from '@/lib/customAnalytics';
+import { Trans, t } from '@lingui/react/macro';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -72,15 +73,15 @@ export function ClubPage() {
           <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4">
             <XCircle className="w-8 h-8 text-red-400" />
           </div>
-          <h1 className="font-display-lg text-3xl text-on-surface mb-2">Failed to Load Club</h1>
+          <h1 className="font-display-lg text-3xl text-on-surface mb-2"><Trans>Failed to Load Club</Trans></h1>
           <p className="text-on-surface-variant text-sm mb-6">
-            {error instanceof Error ? error.message : 'An unexpected error occurred'}
+            {error instanceof Error ? error.message : t`An unexpected error occurred`}
           </p>
           <Button
             onClick={() => window.location.reload()}
             className="bg-tertiary text-on-tertiary hover:bg-tertiary/80 rounded-xl"
           >
-            <RotateCcw className="w-4 h-4 mr-2" /> Retry
+            <RotateCcw className="w-4 h-4 mr-2" /> <Trans>Retry</Trans>
           </Button>
         </motion.div>
       </div>
@@ -99,17 +100,17 @@ export function ClubPage() {
           <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-4">
             <XCircle className="w-8 h-8 text-on-surface-variant" />
           </div>
-          <h1 className="font-display-lg text-3xl text-on-surface mb-2">Club Not Found</h1>
-          <p className="text-on-surface-variant text-sm">The requested club does not exist.</p>
+          <h1 className="font-display-lg text-3xl text-on-surface mb-2"><Trans>Club Not Found</Trans></h1>
+          <p className="text-on-surface-variant text-sm"><Trans>The requested club does not exist.</Trans></p>
         </motion.div>
       </div>
     );
   }
 
   const tabs = [
-    { key: 'leaderboard' as const, label: 'Leaderboard', visible: true },
-    { key: 'tournaments' as const, label: 'Tournaments', visible: true },
-    { key: 'settings' as const, label: 'Settings', visible: club.is_owner },
+    { key: 'leaderboard' as const, label: t`Leaderboard`, visible: true },
+    { key: 'tournaments' as const, label: t`Tournaments`, visible: true },
+    { key: 'settings' as const, label: t`Settings`, visible: club.is_owner },
   ];
 
   return (
