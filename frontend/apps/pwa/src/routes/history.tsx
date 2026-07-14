@@ -26,6 +26,7 @@ import {
 import { useState, useMemo } from 'react';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { requireAuth } from '@/lib/authGuard';
+import { Trans, t } from '@lingui/react/macro';
 
 export const Route = createFileRoute('/history')({
   component: HistoryPage,
@@ -81,9 +82,9 @@ const itemVariants = {
 };
 
 const FILTERS: { value: FilterType; label: string; icon: typeof Layers }[] = [
-  { value: 'all', label: 'All', icon: Layers },
-  { value: 'wins', label: 'Wins', icon: Trophy },
-  { value: 'losses', label: 'Losses', icon: TrendingUp },
+  { value: 'all', label: t`All`, icon: Layers },
+  { value: 'wins', label: t`Wins`, icon: Trophy },
+  { value: 'losses', label: t`Losses`, icon: TrendingUp },
 ];
 
 // Helper to format card strings like "FourHearts" -> "4 ♥" (with colors)
@@ -146,14 +147,12 @@ function HistoryPage() {
     });
 
   // Fetch lobby tables to map table_id to table_name
-  // Using try/catch inside queryFn to gracefully handle failures without crashing the page
   const { data: tablesData } = useQuery<TableInfo[]>({
     queryKey: ['lobby-tables'],
     queryFn: async () => {
       try {
         return await apiClient<TableInfo[]>('/lobby');
       } catch (err) {
-        // If the endpoint fails, return an empty array to avoid unhandled errors
         return [];
       }
     },
@@ -171,7 +170,6 @@ function HistoryPage() {
     return map;
   }, [tablesData]);
 
-
   if (isLoading) {
     return <HistorySkeleton />;
   }
@@ -180,7 +178,7 @@ function HistoryPage() {
     return (
       <div className="relative max-w-5xl mx-auto p-4 md:p-8">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-red-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-        <ErrorState onRetry={() => refetch()} message="Failed to load hand history." />
+        <ErrorState onRetry={() => refetch()} message={t`Failed to load hand history.`} />
       </div>
     );
   }
@@ -226,14 +224,14 @@ function HistoryPage() {
         <div className="flex items-center gap-2 mb-1">
           <Sparkles className="w-4 h-4 text-blue-400" />
           <span className="text-xs font-data-mono uppercase tracking-widest text-blue-400">
-            Your Sessions
+            <Trans>Your Sessions</Trans>
           </span>
         </div>
         <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface flex items-center gap-3">
-          Hand History
+          <Trans>Hand History</Trans>
         </h1>
         <p className="text-on-surface-variant text-sm mt-1 max-w-md">
-          Review every hand you've played. Track wins, study decisions, and improve your game.
+          <Trans>Review every hand you've played. Track wins, study decisions, and improve your game.</Trans>
         </p>
       </motion.div>
 
@@ -247,26 +245,26 @@ function HistoryPage() {
         >
           <StatCard
             icon={Layers}
-            label="Total Hands"
+            label={t`Total Hands`}
             value={total.toLocaleString()}
             tint="blue"
           />
           <StatCard
             icon={Trophy}
-            label="Win Rate"
+            label={t`Win Rate`}
             value={`${winRate}%`}
             sub={`${wins}W / ${losses}L`}
             tint="tertiary"
           />
           <StatCard
             icon={Coins}
-            label="Winnings"
+            label={t`Winnings`}
             value={`$${totalWinnings.toLocaleString()}`}
             tint="yellow"
           />
           <StatCard
             icon={Crown}
-            label="Biggest Pot"
+            label={t`Biggest Pot`}
             value={`$${biggestPot.toLocaleString()}`}
             tint="purple"
           />
@@ -286,13 +284,13 @@ function HistoryPage() {
               <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto mb-4">
                 <Table className="w-8 h-8 text-blue-400" />
               </div>
-              <h3 className="font-headline-md text-lg text-on-surface mb-1">No hands played yet</h3>
+              <h3 className="font-headline-md text-lg text-on-surface mb-1"><Trans>No hands played yet</Trans></h3>
               <p className="text-on-surface-variant text-sm max-w-sm mx-auto">
-                Join a table and start playing to build your hand history. Every hand you play will appear here.
+                <Trans>Join a table and start playing to build your hand history. Every hand you play will appear here.</Trans>
               </p>
               <Link to="/lobby" className="mt-5 inline-block">
                 <Button className="bg-tertiary text-black hover:bg-tertiary/90">
-                  Find a Table
+                  <Trans>Find a Table</Trans>
                   <ArrowRight className="w-4 h-4 ml-1" />
                 </Button>
               </Link>
@@ -341,7 +339,7 @@ function HistoryPage() {
           {filtered.length === 0 ? (
             <Card className="p-10 text-center bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl">
               <p className="text-on-surface-variant text-sm">
-                No {filter === 'wins' ? 'wins' : 'losses'} in your loaded history.
+                <Trans>No {filter === 'wins' ? 'wins' : 'losses'} in your loaded history.</Trans>
               </p>
             </Card>
           ) : (
@@ -378,12 +376,12 @@ function HistoryPage() {
                     >
                       <Layers className="w-4 h-4 mr-2" />
                     </motion.span>
-                    Loading...
+                    <Trans>Loading...</Trans>
                   </>
                 ) : (
                   <>
                     <ChevronRight className="w-4 h-4 mr-1" />
-                    Load More Hands
+                    <Trans>Load More Hands</Trans>
                   </>
                 )}
               </Button>
@@ -460,9 +458,7 @@ function HandHistoryCard({
   };
 
   const handRank = winner?.hand_rank || 'Hand';
-
-  // Fallback to ID slice if the table name isn't fetched or found
-  const tableName = tableMap.get(hand.table_id) || `Table ${hand.table_id.slice(0, 6)}`;
+  const tableName = tableMap.get(hand.table_id) || t`Table ${hand.table_id.slice(0, 6)}`;
 
   return (
     <Card
@@ -507,10 +503,10 @@ function HandHistoryCard({
               {isWin ? (
                 <>
                   <Trophy className="w-3 h-3 mr-1" />
-                  {isSplit ? 'Split Win' : 'Win'}
+                  {isSplit ? t`Split Win` : t`Win`}
                 </>
               ) : (
-                'Loss'
+                t`Loss`
               )}
             </Badge>
             <span
@@ -542,7 +538,7 @@ function HandHistoryCard({
             </span>
             <span className="flex items-center gap-1">
               <Users className="w-3 h-3" />
-              {hand.winners.length} winner{hand.winners.length > 1 ? 's' : ''}
+              {hand.winners.length} <Trans>winner{hand.winners.length > 1 ? 's' : ''}</Trans>
             </span>
           </div>
 
@@ -570,7 +566,7 @@ function HandHistoryCard({
             className="text-on-surface-variant hover:text-on-surface hover:bg-white/10 rounded-xl group/btn"
           >
             <Eye className="w-4 h-4 mr-1.5 transition-transform group-hover/btn:scale-110" />
-            <span className="hidden sm:inline">View</span>
+            <span className="hidden sm:inline"><Trans>View</Trans></span>
             <ChevronRight className="w-3.5 h-3.5 ml-0.5 transition-transform group-hover/btn:translate-x-0.5" />
           </Button>
         </div>
