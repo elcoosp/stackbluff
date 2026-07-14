@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { useState } from 'react';
 import { requireAuth } from '@/lib/authGuard';
+import { Trans, t } from '@lingui/react/macro';
 
 export const Route = createFileRoute('/settings/account')({
   component: AccountSettingsPage,
@@ -31,11 +32,11 @@ function AccountSettingsPage() {
       });
     },
     onSuccess: () => {
-      toast.success('Profile updated successfully!');
+      toast.success(t`Profile updated successfully!`);
       setIsUpdating(false);
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'Failed to update profile');
+      toast.error(error instanceof Error ? error.message : t`Failed to update profile`);
       setIsUpdating(false);
     },
   });
@@ -50,25 +51,24 @@ function AccountSettingsPage() {
     }
     if (password) {
       if (password.length < 8) {
-        toast.error('Password must be at least 8 characters');
+        toast.error(t`Password must be at least 8 characters`);
         setIsUpdating(false);
         return;
       }
       if (password !== confirmPassword) {
-        toast.error('Passwords do not match');
+        toast.error(t`Passwords do not match`);
         setIsUpdating(false);
         return;
       }
       data.password = password;
     }
     if (Object.keys(data).length === 0) {
-      toast.info('No changes to save');
+      toast.info(t`No changes to save`);
       setIsUpdating(false);
       return;
     }
     updateProfileMutation.mutate(data);
   };
-
 
   return (
     <div className="max-w-2xl mx-auto p-6">
@@ -76,19 +76,19 @@ function AccountSettingsPage() {
         <Link to="/settings" className="p-2 rounded-lg hover:bg-white/5 transition-colors">
           <ArrowLeft className="w-5 h-5 text-on-surface-variant" />
         </Link>
-        <h1 className="font-display-lg text-2xl text-on-surface">Account Settings</h1>
+        <h1 className="font-display-lg text-2xl text-on-surface"><Trans>Account Settings</Trans></h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-semibold text-on-surface">Display Name</CardTitle>
+            <CardTitle className="text-sm font-semibold text-on-surface"><Trans>Display Name</Trans></CardTitle>
           </CardHeader>
           <CardContent>
             <Input
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Your display name"
+              placeholder={t`Your display name`}
               className="bg-surface-container-high border-outline-variant/50 text-on-surface"
             />
           </CardContent>
@@ -96,32 +96,32 @@ function AccountSettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-semibold text-on-surface">Change Password</CardTitle>
+            <CardTitle className="text-sm font-semibold text-on-surface"><Trans>Change Password</Trans></CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="new-password" className="text-on-surface-variant text-xs">
-                New Password
+                <Trans>New Password</Trans>
               </Label>
               <Input
                 id="new-password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Leave blank to keep current"
+                placeholder={t`Leave blank to keep current`}
                 className="bg-surface-container-high border-outline-variant/50 text-on-surface"
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirm-password" className="text-on-surface-variant text-xs">
-                Confirm New Password
+                <Trans>Confirm New Password</Trans>
               </Label>
               <Input
                 id="confirm-password"
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirm new password"
+                placeholder={t`Confirm new password`}
                 className="bg-surface-container-high border-outline-variant/50 text-on-surface"
               />
             </div>
@@ -136,10 +136,10 @@ function AccountSettingsPage() {
           {isUpdating ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Saving...
+              <Trans>Saving...</Trans>
             </>
           ) : (
-            'Save Changes'
+            <Trans>Save Changes</Trans>
           )}
         </Button>
       </form>
