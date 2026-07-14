@@ -1,4 +1,6 @@
 import { useUserBadges } from '../../hooks/useBadges';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 // Define the expected shape of a badge – adjust to match your actual type
 interface Badge {
@@ -38,7 +40,7 @@ export function PlayerSpotBadge({
 
   return (
     <span
-      title="Founding Member – Referred 10 friends who played 5+ hands"
+      title={t`Founding Member – Referred 10 friends who played 5+ hands`}
       className="ml-1 text-xs"
     >
       👑
