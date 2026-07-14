@@ -2,6 +2,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
 import { Minimize2, Maximize2 } from 'lucide-react';
 import { useHasActiveSeasonPass } from '../../hooks/useEntitlements';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 const glassPanel: React.CSSProperties = {
   background: 'rgba(10, 10, 10, 0.75)',
@@ -72,7 +74,7 @@ export const TacticalOracle = ({
     >
         {useHasActiveSeasonPass() && (
           <span className="ml-2 inline-flex items-center rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-medium text-amber-400">
-            Unlimited
+            <Trans>Unlimited</Trans>
           </span>
         )}
       <div style={glassPanel} className="rounded-xl px-4 py-3 min-w-[180px] flex flex-col">
@@ -85,7 +87,7 @@ export const TacticalOracle = ({
             </div>
           ) : (
             <span className="text-[9px] font-mono tracking-[0.2em] text-on-surface-variant uppercase">
-              Tactical Oracle
+              <Trans>Tactical Oracle</Trans>
             </span>
           )}
           <button
@@ -107,12 +109,12 @@ export const TacticalOracle = ({
             >
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-mono font-bold text-tertiary tabular-nums">{displayWinProb}</span>
-                <span className="text-xs font-mono text-tertiary/60">win%</span>
+                <span className="text-xs font-mono text-tertiary/60"><Trans>win%</Trans></span>
               </div>
               <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent origin-left" />
               <div className="flex items-baseline gap-2">
                 <span className="text-lg font-mono font-bold text-on-surface tabular-nums">{displayPotOdds}</span>
-                <span className="text-xs font-mono text-on-surface-variant">:1 odds</span>
+                <span className="text-xs font-mono text-on-surface-variant"><Trans>:1 odds</Trans></span>
               </div>
             </motion.div>
           )}
@@ -154,7 +156,7 @@ export const HandStrength = ({
             </div>
           ) : (
             <span className="text-[9px] font-mono tracking-[0.2em] text-on-surface-variant uppercase">
-              Hand Strength
+              <Trans>Hand Strength</Trans>
             </span>
           )}
           <button
@@ -181,7 +183,7 @@ export const HandStrength = ({
               <div className="space-y-1">
                 <div className="flex items-baseline justify-between">
                   <span className={`text-2xl font-mono font-bold tabular-nums ${strengthColor}`}>{displayStrength}</span>
-                  <span className="text-xs font-mono text-on-surface-variant">/ 100</span>
+                  <span className="text-xs font-mono text-on-surface-variant"><Trans>/ 100</Trans></span>
                 </div>
                 <div className="h-1 w-full rounded-full bg-white/5 overflow-hidden">
                   <motion.div
@@ -246,7 +248,7 @@ export const MobileAnalyticsStrip = ({
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.25, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
         >
-          <div className="text-[9px] font-mono tracking-[0.15em] text-on-surface-variant uppercase">Win%</div>
+          <div className="text-[9px] font-mono tracking-[0.15em] text-on-surface-variant uppercase"><Trans>Win%</Trans></div>
           <div className="text-sm font-mono font-bold text-tertiary tabular-nums">{displayWinProb}%</div>
         </motion.div>
         <div className="h-5 w-px bg-white/10" />
@@ -256,7 +258,7 @@ export const MobileAnalyticsStrip = ({
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.3, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
         >
-          <div className="text-[9px] font-mono tracking-[0.15em] text-on-surface-variant uppercase">Odds</div>
+          <div className="text-[9px] font-mono tracking-[0.15em] text-on-surface-variant uppercase"><Trans>Odds</Trans></div>
           <div className="text-sm font-mono font-bold text-on-surface tabular-nums">{displayPotOdds}:1</div>
         </motion.div>
         <div className="h-5 w-px bg-white/10" />
@@ -266,7 +268,7 @@ export const MobileAnalyticsStrip = ({
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.35, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
         >
-          <div className="text-[9px] font-mono tracking-[0.15em] text-on-surface-variant uppercase">Hand</div>
+          <div className="text-[9px] font-mono tracking-[0.15em] text-on-surface-variant uppercase"><Trans>Hand</Trans></div>
           <div className="text-[11px] font-mono font-bold text-on-surface uppercase">{bestHand}</div>
         </motion.div>
         <div className="h-5 w-px bg-white/10" />
@@ -276,7 +278,7 @@ export const MobileAnalyticsStrip = ({
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.4, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
         >
-          <div className="text-[9px] font-mono tracking-[0.15em] text-on-surface-variant uppercase">Str</div>
+          <div className="text-[9px] font-mono tracking-[0.15em] text-on-surface-variant uppercase"><Trans>Str</Trans></div>
           <div className={`text-sm font-mono font-bold tabular-nums ${strengthColor}`}>{displayStrength}</div>
         </motion.div>
       </div>
