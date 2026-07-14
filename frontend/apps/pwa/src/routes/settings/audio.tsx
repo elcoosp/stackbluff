@@ -7,6 +7,7 @@ import { ArrowLeft, Volume2, VolumeX, Music, Play } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { requireAuth } from '@/lib/authGuard';
+import { Trans, t } from '@lingui/react/macro';
 
 export const Route = createFileRoute('/settings/audio')({
   component: AudioSettingsPage,
@@ -20,9 +21,8 @@ function AudioSettingsPage() {
   const [hapticsEnabled, setHapticsEnabled] = useState(true);
 
   const handleTestSound = () => {
-    toast.info('🔊 Test sound played');
+    toast.info(t`🔊 Test sound played`);
   };
-
 
   return (
     <div className="max-w-2xl mx-auto p-6">
@@ -30,7 +30,7 @@ function AudioSettingsPage() {
         <Link to="/settings" className="p-2 rounded-lg hover:bg-white/5 transition-colors">
           <ArrowLeft className="w-5 h-5 text-on-surface-variant" />
         </Link>
-        <h1 className="font-display-lg text-2xl text-on-surface">Audio Settings</h1>
+        <h1 className="font-display-lg text-2xl text-on-surface"><Trans>Audio Settings</Trans></h1>
       </div>
 
       <div className="space-y-6">
@@ -38,7 +38,7 @@ function AudioSettingsPage() {
           <CardHeader>
             <CardTitle className="text-sm font-semibold text-on-surface flex items-center gap-2">
               <Volume2 className="w-4 h-4 text-tertiary" />
-              Master Volume
+              <Trans>Master Volume</Trans>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -61,7 +61,7 @@ function AudioSettingsPage() {
           <CardHeader>
             <CardTitle className="text-sm font-semibold text-on-surface flex items-center gap-2">
               <Play className="w-4 h-4 text-tertiary" />
-              Sound Effects
+              <Trans>Sound Effects</Trans>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -84,7 +84,7 @@ function AudioSettingsPage() {
               className="mt-4 border-white/10 text-on-surface-variant hover:text-on-surface"
             >
               <Play className="w-4 h-4 mr-2" />
-              Test Sound
+              <Trans>Test Sound</Trans>
             </Button>
           </CardContent>
         </Card>
@@ -93,7 +93,7 @@ function AudioSettingsPage() {
           <CardHeader>
             <CardTitle className="text-sm font-semibold text-on-surface flex items-center gap-2">
               <Music className="w-4 h-4 text-tertiary" />
-              Background Music
+              <Trans>Background Music</Trans>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -114,11 +114,11 @@ function AudioSettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-semibold text-on-surface">Haptics</CardTitle>
+            <CardTitle className="text-sm font-semibold text-on-surface"><Trans>Haptics</Trans></CardTitle>
           </CardHeader>
           <CardContent>
             <label className="flex items-center justify-between cursor-pointer">
-              <span className="text-sm text-on-surface-variant">Enable haptic feedback</span>
+              <span className="text-sm text-on-surface-variant"><Trans>Enable haptic feedback</Trans></span>
               <button
                 type="button"
                 onClick={() => setHapticsEnabled(!hapticsEnabled)}
