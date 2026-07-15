@@ -13,6 +13,7 @@ use uuid::Uuid;
 use crate::AppState;
 
 const MAX_FILE_SIZE: usize = 10 * 1024 * 1024; // 10MB
+const ALLOWED_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "gif", "webp", "svg"];
 
 pub async fn upload_file(
     State(state): State<Arc<AppState>>,
@@ -29,7 +30,7 @@ pub async fn upload_file(
             let data = field.bytes().await
                 .map_err(|e| (StatusCode::BAD_REQUEST, format!("Failed to read file: {}", e)))?;
             if data.len() > MAX_FILE_SIZE {
-                return Err((StatusCode::BAD_REQUEST, "File too large (max 10MB)".to_string()));
+                return Err((StatusCode::BAD_REQUEST, format!("File too large: max {} bytes", MAX_FILE_SIZE)));
             }
             file_data = Some(data.to_vec());
             break;
@@ -38,12 +39,18 @@ pub async fn upload_file(
 
     let data = file_data.ok_or((StatusCode::BAD_REQUEST, "No file provided".to_string()))?;
 
-    // Determine content type from file extension
+    // Validate file extension
     let ext = std::path::Path::new(&file_name)
         .extension()
         .and_then(|e| e.to_str())
-        .unwrap_or("bin");
-    let content_type = match ext.to_lowercase().as_str() {
+        .map(|s| s.to_lowercase())
+        .unwrap_or_default();
+    if !ALLOWED_EXTENSIONS.contains(&ext.as_str()) {
+        return Err((StatusCode::BAD_REQUEST, format!("Unsupported file type: {}", ext)));
+    }
+
+    // Determine content type from extension
+    let content_type = match ext.as_str() {
         "png" => "image/png",
         "jpg" | "jpeg" => "image/jpeg",
         "gif" => "image/gif",
@@ -52,7 +59,7 @@ pub async fn upload_file(
         _ => "application/octet-stream",
     };
 
-    // Generate a unique key (including a timestamp prefix for good measure)
+    // Generate a unique key
     let key = format!("uploads/{}/{}", Uuid::new_v4(), file_name);
 
     // Upload to R2 using the adapter

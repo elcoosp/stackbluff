@@ -463,6 +463,8 @@ async fn run_app() {
     let r2_contract: Arc<dyn sb_contracts::r2_storage::R2Storage + Send + Sync> =
         Arc::new(R2Adapter::new(r2.clone()));
 
+        Arc::new(R2Adapter::new(r2.clone()));
+
 let app_state = Arc::new(AppState {
         table_service: table_service.clone(),
         table_repo: table_repo.clone(),
@@ -526,7 +528,6 @@ let app_state = Arc::new(AppState {
         db: db.clone(),
         r2: r2.clone(),
     });
-    let r2_contract: Arc<dyn sb_contracts::r2_storage::R2Storage> = Arc::new(R2Adapter::new(r2.clone()));
 
     let metrics_route = axum::Router::new().route("/metrics", axum::routing::get(metrics_handler));
 
