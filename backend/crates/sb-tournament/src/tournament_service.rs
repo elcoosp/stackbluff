@@ -440,6 +440,12 @@ impl TournamentService for TournamentServiceImpl {
         let records = self.repo.list_tournaments(type_filter, status_filter).await?;
         let mut summaries = Vec::new();
         for r in records {
+            let starts_in_seconds: Option<u32> = r.config.scheduled_start
+                .and_then(|start| {
+                    let now = chrono::Utc::now();
+                    let diff = (start - now).num_seconds();
+                    if diff > 0 { Some(diff as u32) } else { Some(0) }
+                });
             summaries.push(TournamentSummary {
                 id: r.id,
                 name: r.name.clone(),
@@ -451,6 +457,7 @@ impl TournamentService for TournamentServiceImpl {
                 prize_pool: r.prize_pool,
                 current_blind_level: None,
                 started_at: r.started_at,
+                starts_in_seconds,
             });
         }
         Ok(summaries)

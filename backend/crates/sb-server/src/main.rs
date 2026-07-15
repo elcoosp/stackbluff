@@ -291,9 +291,9 @@ async fn run_app() {
         user_svc.clone(),
         payment_config,
     ));
-    let puzzle_repo: Arc<dyn sb_contracts::puzzle_repo::PuzzleRepo + Send + Sync> =
+    let _puzzle_repo: Arc<dyn sb_contracts::puzzle_repo::PuzzleRepo + Send + Sync> =
         Arc::new(PuzzleRepoImpl::new(db.clone()));
-    let puzzle_repo: Arc<dyn sb_contracts::puzzle_repo::PuzzleRepo + Send + Sync> =
+    let _puzzle_repo: Arc<dyn sb_contracts::puzzle_repo::PuzzleRepo + Send + Sync> =
         Arc::new(PuzzleRepoImpl::new(db.clone()));
     let event_rx = registry.event_sender().subscribe();
     spawn_history_recorder(event_rx, hand_history_repo.clone());
@@ -462,7 +462,7 @@ async fn run_app() {
         gdpr_repo: gdpr_repo.clone(),
         product_repo: product_repo.clone(),
         payment_service: payment_service.clone(),
-        puzzle_repo: puzzle_repo.clone(),
+        puzzle_repo: _puzzle_repo.clone(),
         notification_service: notification_service.clone(),
         tournament_service: tournament_service.clone(),
         mission_service: mission_service.clone(),

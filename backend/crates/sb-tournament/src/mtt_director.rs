@@ -802,6 +802,16 @@ impl MttDirector {
     }
 
     fn build_summary(&self) -> sb_contracts::tournament_api::TournamentSummary {
+        let starts_in_seconds: Option<u32> = self.config.scheduled_start
+            .and_then(|start| {
+                let now = chrono::Utc::now();
+                let diff = (start - now).num_seconds();
+                if diff > 0 {
+                    Some(diff as u32)
+                } else {
+                    Some(0)
+                }
+            });
         sb_contracts::tournament_api::TournamentSummary {
             id: self.tournament_id,
             name: self.name.clone(),
@@ -816,6 +826,7 @@ impl MttDirector {
             prize_pool: self.prize_pool,
             current_blind_level: self.blind_scheduler.as_ref().map(|s| s.current_level().0),
             started_at: self.started_at,
+            starts_in_seconds,
         }
     }
 }

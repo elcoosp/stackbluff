@@ -74,6 +74,7 @@ pub struct TournamentSummary {
     pub prize_pool: ChipAmount,
     pub current_blind_level: Option<u32>,
     pub started_at: Option<DateTime<Utc>>,
+    pub starts_in_seconds: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
