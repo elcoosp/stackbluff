@@ -222,7 +222,6 @@ async fn run_app() {
     let auth_impl = Arc::new(
         AuthServiceImpl::new(user_repo.clone(), auth_config).with_email_support(email_queue),
     );
-    auth_impl.spawn_rate_limiter_cleanup(300);
     let auth_service: SharedAuthService = auth_impl.clone();
     let auth_authenticator: Arc<dyn Authenticator + Send + Sync> = auth_impl;
 
@@ -523,7 +522,10 @@ let app_state = Arc::new(AppState {
         .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
         .allow_headers([header::CONTENT_TYPE, header::COOKIE, header::AUTHORIZATION])
         .max_age(Duration::from_secs(86400));
+    // Rate limiting configuration
 
+    // Rate limiting configuration
+    // Rate limiting configuration
     let archive_state = Arc::new(hand_archive::ArchiveState {
         db: db.clone(),
         r2: r2.clone(),
@@ -566,6 +568,7 @@ let app_state = Arc::new(AppState {
         )
         .layer(axum::extract::DefaultBodyLimit::max(1024 * 1024 * 10))
         .layer(middleware::from_fn(request_context_middleware))
+                // Apply rate limiting to all routes (except WebSocket, which is handled separately)
         .layer(Extension(auth_service.clone()))
         .layer(cors)
         .layer(CookieManagerLayer::new());
@@ -604,7 +607,7 @@ let app_state = Arc::new(AppState {
 
     spawn_gdpr_scheduler(app_state);
 
-    axum::serve(listener, app).await.expect("server error");
+        axum::serve(listener, app).await.expect("server error");
 }
 
 async fn load_existing_tournaments(

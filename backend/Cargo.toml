@@ -106,3 +106,5 @@ sb-db-entities = { path = "crates/sb-db-entities" }
 # Sentry error tracking
 sentry = { version = "0.48.2", features = ["tower-axum-matched-path", "tracing", "anyhow"] }
 sentry-tracing = { version = "0.48.2" }
+axum-governor = "2"
+governor = "0.10"

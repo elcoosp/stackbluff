@@ -5,7 +5,6 @@ pub mod handlers;
 pub mod leaderboard;
 pub mod oracle_routes;
 pub mod player_stats;
-pub mod rate_limit;
 pub mod referral_routes;
 pub mod replay_routes;
 pub mod routes;
@@ -37,7 +36,6 @@ use uuid::Uuid;
 
 pub use gdpr_routes::gdpr_routes;
 pub use oracle_routes::oracle_routes;
-pub use rate_limit::rate_limit_middleware;
 
 #[derive(Clone)]
 pub struct AppState {
