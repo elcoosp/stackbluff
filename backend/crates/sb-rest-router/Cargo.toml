@@ -43,3 +43,4 @@ mockall = "0.14.0"
 tokio = { workspace = true, features = ["rt", "macros"] }
 jsonwebtoken = { workspace = true }
 tracing-subscriber = "0.3.23"
+
