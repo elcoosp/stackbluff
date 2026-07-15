@@ -79,6 +79,8 @@ use test_utils::table_service::InMemoryTableService;
 #[cfg(feature = "test-stubs")]
 use test_utils::user_resolution_service::InMemoryUserResolutionService;
 mod hand_archive;
+mod r2_adapter;
+use crate::r2_adapter::R2Adapter;
 mod r2_storage;
 mod season_card_generator;
 
@@ -293,8 +295,6 @@ async fn run_app() {
     ));
     let _puzzle_repo: Arc<dyn sb_contracts::puzzle_repo::PuzzleRepo + Send + Sync> =
         Arc::new(PuzzleRepoImpl::new(db.clone()));
-    let _puzzle_repo: Arc<dyn sb_contracts::puzzle_repo::PuzzleRepo + Send + Sync> =
-        Arc::new(PuzzleRepoImpl::new(db.clone()));
     let event_rx = registry.event_sender().subscribe();
     spawn_history_recorder(event_rx, hand_history_repo.clone());
 
@@ -449,7 +449,21 @@ async fn run_app() {
         Arc::new(db.clone()),
         user_svc.clone(),
     ));
-    let app_state = Arc::new(AppState {
+    let r2_config = aws_config::defaults(aws_config::BehaviorVersion::latest())
+        .endpoint_url(std::env::var("R2_ENDPOINT").expect("R2_ENDPOINT not set"))
+        .load()
+        .await;
+    let r2_client = aws_sdk_s3::Client::new(&r2_config);
+    let r2: std::sync::Arc<dyn hand_archive::R2Storage> =
+        std::sync::Arc::new(hand_archive::RealR2::new(
+            r2_client,
+            std::env::var("R2_BUCKET").expect("R2_BUCKET not set"),
+        ));
+    // Wrap in the contract adapter
+    let r2_contract: Arc<dyn sb_contracts::r2_storage::R2Storage + Send + Sync> =
+        Arc::new(R2Adapter::new(r2.clone()));
+
+let app_state = Arc::new(AppState {
         table_service: table_service.clone(),
         table_repo: table_repo.clone(),
         registry: registry.clone(),
@@ -463,6 +477,7 @@ async fn run_app() {
         product_repo: product_repo.clone(),
         payment_service: payment_service.clone(),
         puzzle_repo: _puzzle_repo.clone(),
+        r2: r2_contract.clone(),
         notification_service: notification_service.clone(),
         tournament_service: tournament_service.clone(),
         mission_service: mission_service.clone(),
@@ -507,20 +522,11 @@ async fn run_app() {
         .allow_headers([header::CONTENT_TYPE, header::COOKIE, header::AUTHORIZATION])
         .max_age(Duration::from_secs(86400));
 
-    let r2_config = aws_config::defaults(aws_config::BehaviorVersion::latest())
-        .endpoint_url(std::env::var("R2_ENDPOINT").expect("R2_ENDPOINT not set"))
-        .load()
-        .await;
-    let r2_client = aws_sdk_s3::Client::new(&r2_config);
-    let r2: std::sync::Arc<dyn hand_archive::R2Storage> =
-        std::sync::Arc::new(hand_archive::RealR2::new(
-            r2_client,
-            std::env::var("R2_BUCKET").expect("R2_BUCKET not set"),
-        ));
     let archive_state = Arc::new(hand_archive::ArchiveState {
         db: db.clone(),
         r2: r2.clone(),
     });
+    let r2_contract: Arc<dyn sb_contracts::r2_storage::R2Storage> = Arc::new(R2Adapter::new(r2.clone()));
 
     let metrics_route = axum::Router::new().route("/metrics", axum::routing::get(metrics_handler));
 

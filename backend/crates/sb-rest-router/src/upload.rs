@@ -15,7 +15,7 @@ use crate::AppState;
 const MAX_FILE_SIZE: usize = 10 * 1024 * 1024; // 10MB
 
 pub async fn upload_file(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     _auth_user: AuthUser,
     mut multipart: Multipart,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
@@ -36,12 +36,31 @@ pub async fn upload_file(
         }
     }
 
-    let _data = file_data.ok_or((StatusCode::BAD_REQUEST, "No file provided".to_string()))?;
+    let data = file_data.ok_or((StatusCode::BAD_REQUEST, "No file provided".to_string()))?;
 
-    // For now, return a dummy URL. Real R2 integration will be added later.
-    let dummy_url = format!("https://cdn.stackbluff.com/uploads/{}/{}.bin", Uuid::new_v4(), file_name);
+    // Determine content type from file extension
+    let ext = std::path::Path::new(&file_name)
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("bin");
+    let content_type = match ext.to_lowercase().as_str() {
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "gif" => "image/gif",
+        "webp" => "image/webp",
+        "svg" => "image/svg+xml",
+        _ => "application/octet-stream",
+    };
 
-    Ok(Json(json!({ "url": dummy_url })))
+    // Generate a unique key (including a timestamp prefix for good measure)
+    let key = format!("uploads/{}/{}", Uuid::new_v4(), file_name);
+
+    // Upload to R2 using the adapter
+    let url = state.r2.put_object("uploads", &key, data, content_type)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(json!({ "url": url })))
 }
 
 pub fn router() -> Router<Arc<AppState>> {

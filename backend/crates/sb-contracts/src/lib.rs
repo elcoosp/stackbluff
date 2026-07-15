@@ -72,3 +72,4 @@ pub enum TableCommand {
         table_id: sb_shared_types::TableId,
     },
 }
+pub mod r2_storage;

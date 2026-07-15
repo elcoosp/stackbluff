@@ -58,6 +58,7 @@ pub struct AppState {
     pub product_repo: Arc<dyn sb_contracts::product_api::ProductRepo + Send + Sync>,
     pub payment_service: Arc<dyn sb_contracts::service_api::PaymentService + Send + Sync>,
     pub puzzle_repo: Arc<dyn sb_contracts::puzzle_repo::PuzzleRepo + Send + Sync>,
+    pub r2: Arc<dyn sb_contracts::r2_storage::R2Storage + Send + Sync>,
     pub db: sea_orm::DatabaseConnection,
 }
 
