@@ -1,12 +1,18 @@
-use axum::{extract::State, http::StatusCode, response::IntoResponse, Json, Extension};
-use sb_contracts::puzzle_repo::PuzzleRepo;
+use axum::{
+    Router,
+    extract::{Extension, State},
+    response::IntoResponse,
+    routing::{get, post},
+    Json,
+    http::StatusCode,
+};
 use sb_shared_types::request_context::RequestContext;
 use sb_viral::puzzle::models::SubmitRequest;
 use sb_viral::puzzle::service;
 use serde_json::json;
 use std::sync::Arc;
 
-pub struct AppState { pub puzzle_repo: Arc<dyn PuzzleRepo> }
+use crate::AppState;
 
 pub async fn get_today_puzzle() -> impl IntoResponse {
     match service::get_today_puzzle_response() {
@@ -33,4 +39,10 @@ pub async fn submit_puzzle(
             (StatusCode::BAD_REQUEST, Json(json!({"error": "Invalid action"}))).into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
     }
+}
+
+pub fn router() -> Router<Arc<AppState>> {
+    Router::new()
+        .route("/puzzle/today", get(get_today_puzzle))
+        .route("/puzzle/submit", post(submit_puzzle))
 }

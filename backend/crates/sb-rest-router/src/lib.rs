@@ -57,6 +57,7 @@ pub struct AppState {
     pub gdpr_repo: Arc<dyn GdprRepo + Send + Sync>,
     pub product_repo: Arc<dyn sb_contracts::product_api::ProductRepo + Send + Sync>,
     pub payment_service: Arc<dyn sb_contracts::service_api::PaymentService + Send + Sync>,
+    pub puzzle_repo: Arc<dyn sb_contracts::puzzle_repo::PuzzleRepo + Send + Sync>,
     pub db: sea_orm::DatabaseConnection,
 }
 
@@ -82,6 +83,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .merge(shop_routes::shop_routes())
         .merge(referral_routes::referral_routes())
         .merge(replay_routes::replay_routes())
+        .merge(routes::puzzle::router())
         .with_state(state)
 }
 

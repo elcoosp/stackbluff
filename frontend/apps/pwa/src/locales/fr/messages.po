@@ -13,31 +13,4166 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
+#: src/components/game/AnalyticsPanel.tsx:117
+msgid ":1 odds"
+msgstr ":1 cotes"
+
+#. placeholder {0}: hand.winners.length
+#: src/components/game/HistoryDialog.tsx:215
+msgid "{0, plural, one {# winner} other {# winners}}"
+msgstr "{0, plural, one {# gagnant} other {# gagnants}}"
+
+#. placeholder {0}: tournament.max_players - tournament.registered
+#: src/routes/tournaments/$tournamentId.tsx:252
+msgid "{0} spots left"
+msgstr "{0} places restantes"
+
+#. placeholder {0}: upcomingTournaments.length
+#. placeholder {1}: upcomingTournaments.length !== 1 ? 's' : ''
+#: src/components/club/ClubTournamentsTab.tsx:232
+msgid "{0} upcoming tournament{1}"
+msgstr "{0} tournoi{1} à venir"
+
+#: src/components/badges/FoundingMemberProgress.tsx:16
+msgid "{completed}/{required} referrals completed"
+msgstr "{completed}/{required} parrainages effectués"
+
+#: src/components/shop/SeasonPassTimer.tsx:40
+msgid "{days}d {hours}h remaining"
+msgstr "{days}j {hours}h restant"
+
+#: src/components/club/ClubLeaderboardTab.tsx:107
+msgid "{total_members} total members • Division {currentDivision} of {total_divisions}"
+msgstr "{total_members} membres au total • Division {currentDivision} sur {total_divisions}"
+
+#: src/components/game/HistoryDialog.tsx:125
+msgid "{total} hands"
+msgstr "{total} mains"
+
+#: src/components/tournament/TableOverviewPanel.tsx:55
+msgid "{totalPlayers} players"
+msgstr "{totalPlayers} joueurs"
+
+#: src/components/tournament/TournamentHUD.tsx:212
+msgid "* Based on prize pool"
+msgstr "* Basé sur la cagnotte"
+
+#: src/components/game/AnalyticsPanel.tsx:186
+msgid "/ 100"
+msgstr "/ 100"
+
+#. placeholder {0}: tournament.results.length - 3
+#: src/routes/tournaments-history.tsx:267
+msgid "+{0} more..."
+msgstr "+{0} de plus..."
+
+#: src/components/settings/notifications/BlockedHelp.tsx:6
+msgid "<0>How to enable:</0><1/>Click the lock/info icon in your browser's address bar → Site settings → Notifications → Allow"
+msgstr "<0>Comment activer :</0><1/>Cliquez sur l'icône de verrou/info dans la barre d'adresse de votre navigateur → Paramètres du site → Notifications → Autoriser"
+
+#: src/components/game/BuyInDialog.tsx:102
+msgid "⚠️ Tournament mode: no rebuys allowed"
+msgstr "⚠️ Mode tournoi : pas de rachat autorisé"
+
+#: src/routes/settings/audio.tsx:25
+msgid "🔊 Test sound played"
+msgstr "🔊 Son de test joué"
+
+#: src/components/consent/NotificationPrompt.tsx:107
+msgid "🔔 Stay in the game"
+msgstr "🔔 Restez dans le jeu"
+
+#. placeholder {0}: tournament.prize_pool.toLocaleString()
+#: src/routes/tournaments-history.tsx:219
+msgid "${0} prize"
+msgstr "Prix de ${0}"
+
+#: src/routes/legal/terms.tsx:26
+msgid "1. Acceptance of Terms"
+msgstr "1. Acceptation des conditions"
+
+#: src/routes/legal/privacy.tsx:26
+msgid "1. Information We Collect"
+msgstr "1. Informations que nous collectons"
+
+#: src/components/settings/NotificationPreferences.tsx:150
+msgid "10-minute tournament reminder"
+msgstr "Rappel de tournoi 10 minutes"
+
+#: src/routes/legal/terms.tsx:37
+msgid "2. Eligibility"
+msgstr "2. Éligibilité"
+
+#: src/routes/legal/privacy.tsx:37
+msgid "2. How We Use Your Information"
+msgstr "2. Comment nous utilisons vos informations"
+
+#: src/routes/guide.tsx:53
+msgid "3-bet"
+msgstr "3-bet"
+
+#: src/routes/guide.tsx:258
+msgid "3-bet with strong hands, 4-bet with premiums"
+msgstr "3-bet avec des mains fortes, 4-bet avec des mains premium"
+
+#: src/routes/legal/terms.tsx:48
+msgid "3. Account Responsibility"
+msgstr "3. Responsabilité du compte"
+
+#: src/routes/legal/privacy.tsx:51
+msgid "3. Data Retention"
+msgstr "3. Conservation des données"
+
+#: src/routes/legal/privacy.tsx:62
+msgid "4. Cookies and Tracking"
+msgstr "4. Cookies et suivi"
+
+#: src/routes/legal/terms.tsx:59
+msgid "4. Prohibited Conduct"
+msgstr "4. Comportement interdit"
+
+#: src/routes/legal/privacy.tsx:73
+msgid "5. Data Sharing"
+msgstr "5. Partage de données"
+
+#: src/routes/legal/terms.tsx:74
+msgid "5. Intellectual Property"
+msgstr "5. Propriété intellectuelle"
+
+#: src/components/game/BuyInDialog.tsx:53
+msgid "50%"
+msgstr "50%"
+
+#: src/routes/legal/terms.tsx:85
+msgid "6. Limitation of Liability"
+msgstr "6. Limitation de responsabilité"
+
+#: src/routes/legal/privacy.tsx:84
+msgid "6. Your Rights"
+msgstr "6. Vos droits"
+
+#: src/components/settings/NotificationPreferences.tsx:144
+msgid "60-minute tournament reminder"
+msgstr "Rappel de tournoi 60 minutes"
+
+#: src/routes/legal/terms.tsx:96
+msgid "7. Changes to Terms"
+msgstr "7. Modifications des conditions"
+
+#: src/routes/legal/privacy.tsx:101
+msgid "7. Security"
+msgstr "7. Sécurité"
+
+#: src/components/game/BuyInDialog.tsx:54
+msgid "75%"
+msgstr "75%"
+
+#: src/routes/legal/privacy.tsx:112
+msgid "8. Changes to This Policy"
+msgstr "8. Modifications de cette politique"
+
+#: src/routes/legal/terms.tsx:107
+msgid "8. Governing Law"
+msgstr "8. Droit applicable"
+
+#: src/routes/legal/privacy.tsx:123
+msgid "9. Contact Us"
+msgstr "9. Nous contacter"
+
+#: src/routes/guide.tsx:53
+msgid "A re-raise preflop"
+msgstr "Une relance préflop"
+
+#: src/components/consent/CookieConsentBanner.tsx:67
+msgid "Accept"
+msgstr "Accepter"
+
+#: src/routes/legal/privacy.tsx:88
+msgid "Access, correct, or delete your data"
+msgstr "Accéder, corriger ou supprimer vos données"
+
+#: src/routes/settings.tsx:62
+#: src/routes/settings/index.tsx:29
+msgid "Account"
+msgstr "Compte"
+
+#: src/components/settings/AccountSettings.tsx:89
+msgid "Account ID:"
+msgstr "ID du compte :"
+
+#: src/routes/login.tsx:217
+msgid "Account locked. Try again in {lockoutSeconds} seconds."
+msgstr "Compte verrouillé. Réessayez dans {lockoutSeconds} secondes."
+
+#: src/components/settings/AccountSettings.tsx:36
+#: src/routes/settings/account.tsx:80
+msgid "Account Settings"
+msgstr "Paramètres du compte"
+
+#: src/routes/guide.tsx:28
+msgid "Ace, King, Queen, Jack, 10, all same suit"
+msgstr "As, Roi, Dame, Valet, 10, tous de la même couleur"
+
+#: src/routes/lobby.tsx:287
+msgid "Action"
+msgstr "Action"
+
+#: src/routes/guide.tsx:311
+msgid "Adjust to increasing blinds and antes"
+msgstr "S'adapter à l'augmentation des blinds et des antes"
+
+#: src/routes/responsible-gaming.tsx:110
+msgid "Age Verification"
+msgstr "Vérification de l'âge"
+
+#: src/routes/profile.tsx:206
+msgid "Aggression Factor"
+msgstr "Facteur d'agression"
+
+#: src/components/game/RaiseSlider.tsx:91
+#: src/components/game/RaiseSlider.tsx:103
+#: src/routes/history.tsx:86
+msgid "All"
+msgstr "Tous"
+
+#: src/routes/legal/terms.tsx:78
+msgid "All content on the Service, including logos, trademarks, and software, is the property of StackBluff or its licensors. You may not reproduce, distribute, or create derivative works without explicit permission."
+msgstr "Tout contenu du Service, y compris les logos, marques commerciales et logiciels, est la propriété de StackBluff ou de ses concédants. Vous ne pouvez pas reproduire, distribuer ou créer des œuvres dérivées sans autorisation explicite."
+
+#: src/pages/ShopPage.tsx:17
+msgid "All Products"
+msgstr "Tous les produits"
+
+#: src/routes/tournaments.tsx:271
+msgid "All Status"
+msgstr "Tous les statuts"
+
+#: src/routes/leaderboard.tsx:84
+msgid "All Time"
+msgstr "Tous les temps"
+
+#: src/routes/tournaments.tsx:255
+msgid "All Types"
+msgstr "Tous les types"
+
+#: src/components/game/ActionBar.tsx:643
+#: src/components/game/ActionBar.tsx:742
+msgid "All-in"
+msgstr "Tapis"
+
+#. placeholder {0}: formatCurrency(heroStack)
+#: src/components/game/ActionBar.tsx:524
+#: src/components/game/ActionBar.tsx:695
+msgid "All-in {0}"
+msgstr "Tapis {0}"
+
+#: src/routes/profile.tsx:222
+msgid "All-Ins"
+msgstr "Tapis"
+
+#: src/components/consent/NotificationPrompt.tsx:122
+msgid "Allow"
+msgstr "Autoriser"
+
+#: src/routes/register.tsx:242
+msgid "ALREADY HAVE AN ACCOUNT? <0>SIGN IN</0>"
+msgstr "DÉJÀ UN COMPTE ? <0>SE CONNECTER</0>"
+
+#: src/components/settings/NotificationsSettings.tsx:115
+msgid "An error occurred while syncing."
+msgstr "Une erreur est survenue lors de la synchronisation."
+
+#: src/components/settings/NotificationsSettings.tsx:95
+msgid "An error occurred. Please try again."
+msgstr "Une erreur est survenue. Veuillez réessayer."
+
+#: src/pages/ClubPage.tsx:79
+msgid "An unexpected error occurred"
+msgstr "Une erreur inattendue est survenue"
+
+#: src/routes/puzzle.tsx:256
+msgid "Analyze the scenario and pick the optimal action. Sharpen your instincts one hand at a time."
+msgstr "Analysez le scénario et choisissez l'action optimale. Affinez vos instincts main après main."
+
+#: src/components/tournament/BlindSchedulePreview.tsx:36
+msgid "Ante"
+msgstr "Ante"
+
+#: src/routes/settings.tsx:80
+#: src/routes/settings/index.tsx:41
+msgid "Appearance"
+msgstr "Apparence"
+
+#: src/routes/settings/appearance.tsx:38
+msgid "Appearance Settings"
+msgstr "Paramètres d'apparence"
+
+#: src/routes/guide.tsx:309
+msgid "Apply pressure on the bubble"
+msgstr "Mettre la pression sur la bulle"
+
+#: src/routes/settings/privacy.tsx:201
+msgid "Are you sure you want to delete your account? This will permanently remove all your data, including chips, statistics, and tournament history."
+msgstr "Êtes-vous sûr de vouloir supprimer votre compte ? Cela supprimera définitivement toutes vos données, y compris les chips, les statistiques et l'historique des tournois."
+
+#: src/components/club/ClubSettingsTab.tsx:230
+msgid "Assets"
+msgstr "Actifs"
+
+#: src/routes/help.tsx:139
+msgid "Assistance"
+msgstr "Assistance"
+
+#: src/routes/help.tsx:43
+msgid "At the table, click the \"Sit Out\" button (moon icon) to be dealt out of hands. You will remain at the table but will not be dealt cards until you click \"Sit In\" (sun icon)."
+msgstr "À la table, cliquez sur le bouton \"Se mettre en pause\" (icône lune) pour ne pas être distribué. Vous resterez à la table mais ne recevrez pas de cartes jusqu'à ce que vous cliquiez sur \"Reprendre\" (icône soleil)."
+
+#: src/routes/legal/terms.tsx:67
+msgid "Attempting to bypass security measures"
+msgstr "Tentative de contournement des mesures de sécurité"
+
+#: src/routes/settings.tsx:89
+#: src/routes/settings/index.tsx:47
+msgid "Audio"
+msgstr "Audio"
+
+#: src/routes/settings/audio.tsx:34
+msgid "Audio Settings"
+msgstr "Paramètres audio"
+
+#: src/routes/login.tsx:120
+#: src/routes/login.tsx:227
+msgid "AUTHENTICATING..."
+msgstr "AUTHENTIFICATION..."
+
+#: src/components/game/ActionBar.tsx:548
+#: src/components/game/ActionBar.tsx:842
+msgid "Auto"
+msgstr "Auto"
+
+#: src/components/game/ActionBar.tsx:341
+msgid "Auto {actionText}"
+msgstr "Auto {actionText}"
+
+#. placeholder {0}: getPreActionText()
+#: src/components/game/ActionBar.tsx:842
+msgid "Auto: {0}"
+msgstr "Auto : {0}"
+
+#: src/components/game/ActionBar.tsx:550
+msgid "Auto: {label}"
+msgstr "Auto : {label}"
+
+#: src/components/game/BuyInDialog.tsx:125
+msgid "Available Balance"
+msgstr "Solde disponible"
+
+#: src/components/settings/AvatarUpload.tsx:60
+msgid "Avatar updated successfully!"
+msgstr "Avatar mis à jour avec succès !"
+
+#: src/routes/referrals.tsx:217
+msgid "Awaiting hands played"
+msgstr "En attente de mains jouées"
+
+#: src/routes/referrals.tsx:362
+msgid "Awarded"
+msgstr "Attribué"
+
+#: src/routes/register.tsx:213
+msgid "BACK"
+msgstr "RETOUR"
+
+#: src/components/pwa/OfflineIndicator.tsx:77
+msgid "Back online! Reconnecting..."
+msgstr "De retour en ligne ! Reconnexion..."
+
+#: src/routes/clubs/join.tsx:88
+#: src/routes/clubs/join.tsx:114
+#: src/routes/clubs/join.tsx:200
+msgid "Back to Clubs"
+msgstr "Retour aux clubs"
+
+#: src/routes/settings.tsx:158
+msgid "Back to Profile"
+msgstr "Retour au profil"
+
+#: src/routes/forgot-password.tsx:70
+#: src/routes/reset-password.tsx:86
+#: src/routes/reset-password.tsx:120
+#: src/routes/verify-email.tsx:127
+msgid "Back to Sign In"
+msgstr "Retour à la connexion"
+
+#: src/routes/forgot-password.tsx:149
+#: src/routes/reset-password.tsx:241
+msgid "BACK TO SIGN IN"
+msgstr "RETOUR À LA CONNEXION"
+
+#: src/routes/tournaments/$tournamentId.tsx:125
+#: src/routes/tournaments/$tournamentId.tsx:166
+msgid "Back to Tournaments"
+msgstr "Retour aux tournois"
+
+#: src/routes/settings/audio.tsx:97
+msgid "Background Music"
+msgstr "Musique de fond"
+
+#: src/routes/guide.tsx:47
+msgid "Bad position, but get a discount"
+msgstr "Mauvaise position, mais bénéficiez d'une réduction"
+
+#: src/routes/guide.tsx:46
+msgid "Bad position, defend carefully"
+msgstr "Mauvaise position, défendez prudemment"
+
+#: src/routes/profile.tsx:235
+msgid "Badges"
+msgstr "Badges"
+
+#: src/components/club/ClubSettingsTab.tsx:292
+msgid "Banner Image"
+msgstr "Image de bannière"
+
+#: src/components/club/ClubSettingsTab.tsx:132
+msgid "Banner must be less than 10MB"
+msgstr "La bannière doit faire moins de 10 Mo"
+
+#: src/components/club/ClubSettingsTab.tsx:298
+#: src/components/club/SettingsTab.tsx:71
+msgid "Banner preview"
+msgstr "Aperçu de la bannière"
+
+#: src/components/club/ClubSettingsTab.tsx:141
+msgid "Banner uploaded"
+msgstr "Bannière téléchargée"
+
+#: src/components/club/ClubSettingsTab.tsx:189
+msgid "Basic Information"
+msgstr "Informations de base"
+
+#: src/components/game/RaiseSlider.tsx:232
+msgid "BB"
+msgstr "BB"
+
+#: src/routes/guide.tsx:45
+msgid "Best position, play the widest range"
+msgstr "Meilleure position, jouez la plus large gamme"
+
+#: src/routes/guide.tsx:284
+msgid "Bet for value with strong hands, bluff with weak ones"
+msgstr "Miser pour la valeur avec des mains fortes, bluffer avec des faibles"
+
+#: src/routes/guide.tsx:55
+msgid "Betting with a strong hand to get called"
+msgstr "Miser avec une main forte pour être suivi"
+
+#: src/routes/guide.tsx:54
+msgid "Betting with a weak hand to force folds"
+msgstr "Miser avec une main faible pour forcer les folds"
+
+#: src/components/tournament/BlindSchedulePreview.tsx:35
+msgid "Big"
+msgstr "Grosse"
+
+#: src/routes/guide.tsx:47
+msgid "Big Blind"
+msgstr "Grosse blind"
+
+#: src/routes/history.tsx:268
+#: src/routes/profile.tsx:190
+#: src/routes/replays.tsx:233
+msgid "Biggest Pot"
+msgstr "Plus gros pot"
+
+#. placeholder {0}: notification.level
+#: src/components/tournament/BlindLevelNotification.tsx:42
+msgid "Blind Level {0}"
+msgstr "Niveau de blind {0}"
+
+#: src/components/club/ScheduleTournamentDialog.tsx:243
+#: src/components/tournament/AdminCreateTournament.tsx:304
+#: src/components/tournament/BlindSchedulePreview.tsx:26
+msgid "Blind Schedule"
+msgstr "Calendrier des blinds"
+
+#: src/components/settings/notifications/StatusBadge.tsx:11
+msgid "Blocked"
+msgstr "Bloqué"
+
+#: src/routes/guide.tsx:54
+msgid "Bluff"
+msgstr "Bluff"
+
+#: src/routes/replays.tsx:436
+msgid "Board"
+msgstr "Board"
+
+#: src/routes/referrals.tsx:198
+msgid "Bonus Earned"
+msgstr "Bonus gagné"
+
+#: src/components/club/ClubSettingsTab.tsx:231
+msgid "Branding"
+msgstr "Marque"
+
+#: src/components/game/RankTierBadge.tsx:8
+msgid "Brick"
+msgstr "Brick"
+
+#: src/components/game/RankTierBadge.tsx:9
+msgid "Bronze"
+msgstr "Bronze"
+
+#: src/routes/index.tsx:143
+msgid "BROWSE"
+msgstr "PARCOURIR"
+
+#: src/routes/tournaments-history.tsx:185
+msgid "Browse Tournaments"
+msgstr "Parcourir les tournois"
+
+#: src/routes/guide.tsx:45
+msgid "Button"
+msgstr "Bouton"
+
+#: src/routes/index.tsx:136
+msgid "Buy chips, season passes, and club upgrades."
+msgstr "Achetez des chips, des passes saison et des améliorations de club."
+
+#: src/components/game/BuyInDialog.tsx:99
+#: src/routes/lobby.tsx:376
+msgid "Buy In"
+msgstr "Buy-in"
+
+#: src/components/shop/ProductCard.tsx:129
+msgid "Buy Now"
+msgstr "Acheter maintenant"
+
+#: src/components/club/ClubTournamentsTab.tsx:84
+#: src/components/tournament/TournamentBuyInDialog.tsx:47
+msgid "Buy-in"
+msgstr "Buy-in"
+
+#: src/components/club/ScheduleTournamentDialog.tsx:195
+#: src/components/tournament/AdminCreateTournament.tsx:226
+msgid "Buy-in (chips)"
+msgstr "Buy-in (chips)"
+
+#. placeholder {0}: formatCurrency(buy_in)
+#: src/components/tournament/TournamentCard.tsx:152
+msgid "Buy-in {0}"
+msgstr "Buy-in {0}"
+
+#: src/components/club/ScheduleTournamentDialog.tsx:27
+#: src/components/tournament/AdminCreateTournament.tsx:117
+msgid "Buy-in must be 0 or more"
+msgstr "Le buy-in doit être 0 ou plus"
+
+#. placeholder {0}: tournament.buy_in.toLocaleString()
+#: src/routes/tournaments/$tournamentId.tsx:192
+msgid "Buy-in: ${0}"
+msgstr "Buy-in : ${0}"
+
+#: src/routes/legal/terms.tsx:30
+msgid "By using StackBluff (\"the Service\"), you agree to be bound by these Terms of Service (\"Terms\"). If you do not agree to these Terms, please do not use the Service."
+msgstr "En utilisant StackBluff (\"le Service\"), vous acceptez d'être lié par ces Conditions d'utilisation (\"Conditions\"). Si vous n'acceptez pas ces Conditions, veuillez ne pas utiliser le Service."
+
+#: src/routes/guide.tsx:52
+msgid "C-bet"
+msgstr "C-bet"
+
+#: src/routes/guide.tsx:282
+msgid "C-bet frequently when you were the aggressor"
+msgstr "C-bet fréquemment lorsque vous étiez l'agresseur"
+
+#: src/components/game/PotBadge.tsx:193
+msgid "CALL "
+msgstr "SUIVRE "
+
+#. placeholder {0}: formatCurrency(toCall)
+#: src/components/game/ActionBar.tsx:525
+#: src/components/game/ActionBar.tsx:696
+msgid "Call {0}"
+msgstr "Suivre {0}"
+
+#: src/components/game/ActionBar.tsx:413
+msgid "Call ≤ $"
+msgstr "Suivre ≤ $"
+
+#: src/components/game/ActionBar.tsx:451
+msgid "Call ≤ $…"
+msgstr "Suivre ≤ $…"
+
+#. placeholder {0}: (preAction as { type: 'call_up_to'; amount: number }).amount
+#: src/components/game/ActionBar.tsx:450
+msgid "Call ≤ ${0}"
+msgstr "Suivre ≤ ${0}"
+
+#: src/components/game/ActionBar.tsx:157
+#: src/components/game/ActionBar.tsx:157
+msgid "Call Any"
+msgstr "Suivre tout"
+
+#: src/components/club/CreateClubModal.tsx:127
+#: src/components/club/ScheduleTournamentDialog.tsx:280
+#: src/components/CreateTableModal.tsx:135
+#: src/components/game/BuyInDialog.tsx:319
+#: src/components/game/KickVoteDialog.tsx:151
+#: src/components/shop/PurchaseDialog.tsx:58
+#: src/components/tournament/AdminCreateTournament.tsx:336
+#: src/components/tournament/TournamentBuyInDialog.tsx:73
+#: src/routes/settings/privacy.tsx:211
+msgid "Cancel"
+msgstr "Annuler"
+
+#: src/routes/settings/privacy.tsx:172
+msgid "Cancel Deletion"
+msgstr "Annuler la suppression"
+
+#: src/routes/settings/privacy.tsx:172
+msgid "Cancelling..."
+msgstr "Annulation..."
+
+#: src/components/lobby/LobbyTabs.tsx:7
+msgid "Cash Games"
+msgstr "Jeux d'argent"
+
+#: src/routes/guide.tsx:58
+msgid "Chance that your opponent folds to your bet"
+msgstr "Chance que votre adversaire se couche face à votre mise"
+
+#: src/routes/settings/account.tsx:100
+msgid "Change Password"
+msgstr "Changer le mot de passe"
+
+#: src/routes/legal/terms.tsx:63
+msgid "Cheating, collusion, or use of automated tools (bots)"
+msgstr "Tricherie, collusion ou utilisation d'outils automatisés (bots)"
+
+#: src/components/game/ActionBar.tsx:522
+#: src/components/game/ActionBar.tsx:693
+msgid "Check"
+msgstr "Vérifier"
+
+#: src/components/game/ActionBar.tsx:156
+msgid "Check / Fold"
+msgstr "Vérifier / Se coucher"
+
+#: src/routes/puzzle.tsx:216
+msgid "Check back tomorrow for a fresh challenge!"
+msgstr "Revenez demain pour un nouveau défi !"
+
+#: src/routes/replays.tsx:357
+msgid "Check out my poker hand!"
+msgstr "Regardez ma main de poker !"
+
 #: src/App.tsx:47
 msgid "Check out StackBluff"
-msgstr ""
+msgstr "Découvrez StackBluff"
+
+#: src/routes/forgot-password.tsx:58
+msgid "Check your email"
+msgstr "Vérifiez vos e-mails"
+
+#: src/components/club/SettingsTab.tsx:76
+msgid "Chip Design"
+msgstr "Design des chips"
+
+#: src/components/club/ClubSettingsTab.tsx:336
+msgid "Chip Design Preset"
+msgstr "Préréglage de design des chips"
+
+#: src/components/club/ClubTournamentsTab.tsx:87
+#: src/routes/profile.tsx:147
+msgid "chips"
+msgstr "chips"
+
+#: src/components/shop/ProductCard.tsx:43
+#: src/pages/ShopPage.tsx:18
+msgid "Chips"
+msgstr "Chips"
+
+#: src/routes/referrals.tsx:204
+msgid "Chips distributed"
+msgstr "Chips distribués"
+
+#: src/routes/leaderboard.tsx:296
+msgid "Chips Won"
+msgstr "Chips gagnés"
+
+#: src/components/game/ActionBar.tsx:156
+msgid "Chk/Fld"
+msgstr "Vérif/Couch"
+
+#: src/components/settings/NotificationPreferences.tsx:139
+msgid "Choose which notifications you receive. Changes are saved to your account."
+msgstr "Choisissez les notifications que vous recevez. Les modifications sont enregistrées sur votre compte."
+
+#: src/routes/puzzle.tsx:331
+msgid "Choose Your Move"
+msgstr "Choisissez votre action"
+
+#: src/routes/missions.tsx:182
+msgid "Claim All"
+msgstr "Tout réclamer"
+
+#. placeholder {0}: data.chips_awarded
+#: src/routes/missions.tsx:96
+msgid "Claimed {0} chips!"
+msgstr "{0} chips réclamés !"
+
+#: src/routes/missions.tsx:182
+msgid "Claiming..."
+msgstr "Réclamation..."
+
+#: src/components/club/ClubSettingsTab.tsx:23
+msgid "Classic Red & Blue"
+msgstr "Rouge et bleu classique"
+
+#: src/components/club/ClubTournamentsTab.tsx:251
+msgid "Click \"Schedule Tournament\" to create one!"
+msgstr "Cliquez sur \"Planifier un tournoi\" pour en créer un !"
+
+#: src/components/game/ActionBar.tsx:640
+#: src/components/game/ActionBar.tsx:737
+#: src/components/game/HistoryDialog.tsx:276
+msgid "Close"
+msgstr "Fermer"
+
+#: src/components/settings/NotificationPreferences.tsx:162
+msgid "Club announcements"
+msgstr "Annonces du club"
+
+#: src/components/club/SettingsTab.tsx:69
+msgid "Club Banner"
+msgstr "Bannière du club"
+
+#: src/components/club/CreateClubModal.tsx:35
+msgid "Club created successfully!"
+msgstr "Club créé avec succès !"
+
+#: src/components/club/ClubLeaderboardTab.tsx:105
+msgid "Club Leaderboard"
+msgstr "Classement du club"
+
+#: src/components/club/ClubSettingsTab.tsx:195
+#: src/components/club/CreateClubModal.tsx:85
+msgid "Club Name *"
+msgstr "Nom du club *"
+
+#: src/components/club/ClubSettingsTab.tsx:152
+#: src/components/club/CreateClubModal.tsx:47
+msgid "Club name is required"
+msgstr "Le nom du club est requis"
+
+#: src/pages/ClubPage.tsx:104
+msgid "Club Not Found"
+msgstr "Club non trouvé"
+
+#: src/components/shop/ProductCard.tsx:45
+#: src/pages/ShopPage.tsx:20
+msgid "Club Pro"
+msgstr "Club Pro"
+
+#: src/components/club/ClubCustomizer.tsx:12
+#: src/components/club/ClubSettingsTab.tsx:285
+msgid "Club Pro Customization"
+msgstr "Personnalisation Club Pro"
+
+#: src/components/club/SettingsTab.tsx:57
+msgid "Club Pro Required"
+msgstr "Club Pro requis"
+
+#: src/components/club/ClubSettingsTab.tsx:90
+msgid "Club settings updated successfully"
+msgstr "Paramètres du club mis à jour avec succès"
+
+#: src/components/lobby/LobbyTabs.tsx:9
+#: src/routes/lobby.tsx:158
+#: src/routes/profile.tsx:171
+msgid "Clubs"
+msgstr "Clubs"
+
+#: src/routes/help.tsx:183
+msgid "Community"
+msgstr "Communauté"
+
+#: src/components/club/ClubHeader.tsx:17
+#: src/routes/clubs/index.tsx:96
+msgid "Community & Play"
+msgstr "Communauté et jeu"
+
+#: src/routes/puzzle.tsx:306
+msgid "Community Cards"
+msgstr "Cartes communes"
+
+#: src/routes/tournaments.tsx:213
+msgid "Compete & Win"
+msgstr "Compétition et victoire"
+
+#: src/routes/leaderboard.tsx:137
+msgid "Compete globally and climb the ranks to earn exclusive rewards."
+msgstr "Compétitionnez à l'échelle mondiale et gravissez les échelons pour gagner des récompenses exclusives."
+
+#: src/routes/missions.tsx:161
+msgid "Complete missions to earn chips and build your streak."
+msgstr "Terminez des missions pour gagner des chips et construire votre série."
+
+#: src/components/club/ClubTournamentsTab.tsx:294
+#: src/components/tournament/TournamentCard.tsx:39
+#: src/routes/missions.tsx:213
+#: src/routes/tournaments/$tournamentId.tsx:181
+#: src/routes/tournaments/$tournamentId.tsx:279
+msgid "Completed"
+msgstr "Terminé"
+
+#: src/components/club/ClubSettingsTab.tsx:188
+#: src/routes/settings.tsx:143
+msgid "Configuration"
+msgstr "Configuration"
+
+#: src/components/shop/PurchaseDialog.tsx:71
+msgid "Confirm"
+msgstr "Confirmer"
+
+#: src/routes/settings/privacy.tsx:199
+msgid "Confirm Account Deletion"
+msgstr "Confirmer la suppression du compte"
+
+#: src/routes/settings/account.tsx:125
+msgid "Confirm new password"
+msgstr "Confirmer le nouveau mot de passe"
+
+#: src/routes/settings/account.tsx:118
+msgid "Confirm New Password"
+msgstr "Confirmer le nouveau mot de passe"
+
+#: src/routes/reset-password.tsx:194
+msgid "Confirm Password"
+msgstr "Confirmer le mot de passe"
+
+#: src/components/shop/PurchaseDialog.tsx:42
+msgid "Confirm Purchase"
+msgstr "Confirmer l'achat"
+
+#: src/components/game/RaiseSlider.tsx:447
+msgid "Confirm Raise"
+msgstr "Confirmer la relance"
+
+#: src/components/tournament/TournamentBuyInDialog.tsx:38
+msgid "Confirm Registration"
+msgstr "Confirmer l'inscription"
+
+#: src/routes/guide.tsx:283
+msgid "Consider your opponent's range, not just your hand"
+msgstr "Considérez la range de votre adversaire, pas seulement votre main"
+
+#: src/routes/help.tsx:276
+msgid "Contact Support"
+msgstr "Contacter le support"
+
+#: src/routes/guide.tsx:52
+msgid "Continuation bet – betting on the flop after raising preflop"
+msgstr "Mise de continuation – miser au flop après avoir relancé préflop"
+
+#: src/routes/register.tsx:224
+msgid "CONTINUE"
+msgstr "CONTINUER"
+
+#: src/routes/verify-email.tsx:92
+msgid "Continue to Lobby"
+msgstr "Continuer vers le Lobby"
+
+#: src/routes/replays.tsx:547
+msgid "Copied"
+msgstr "Copié"
+
+#: src/routes/referrals.tsx:293
+#: src/routes/replays.tsx:550
+msgid "Copy"
+msgstr "Copier"
+
+#: src/routes/puzzle.tsx:474
+msgid "Correct Action"
+msgstr "Action correcte"
+
+#: src/routes/puzzle.tsx:439
+msgid "Correct!"
+msgstr "Correct !"
+
+#: src/routes/puzzle.tsx:136
+msgid "Correct! 🎉"
+msgstr "Correct ! 🎉"
+
+#: src/routes/clubs/index.tsx:158
+msgid "Create a club or join one with an invite."
+msgstr "Créez un club ou rejoignez-en un avec une invitation."
+
+#: src/components/tournament/AdminCreateTournament.tsx:143
+msgid "Create a global tournament for all players"
+msgstr "Créer un tournoi global pour tous les joueurs"
+
+#: src/components/club/ScheduleTournamentDialog.tsx:91
+msgid "Create a new tournament for your club"
+msgstr "Créer un nouveau tournoi pour votre club"
+
+#: src/routes/register.tsx:69
+#: src/routes/register.tsx:233
+msgid "CREATE ACCOUNT"
+msgstr "CRÉER UN COMPTE"
+
+#: src/components/club/CreateClubModal.tsx:142
+#: src/routes/clubs/index.tsx:111
+msgid "Create Club"
+msgstr "Créer un club"
+
+#: src/components/club/CreateClubModal.tsx:72
+msgid "Create New Club"
+msgstr "Créer un nouveau club"
+
+#: src/components/CreateTableModal.tsx:69
+msgid "Create New Table"
+msgstr "Créer une nouvelle table"
+
+#: src/components/CreateTableModal.tsx:138
+msgid "Create Table"
+msgstr "Créer une table"
+
+#: src/components/tournament/AdminCreateTournament.tsx:140
+#: src/components/tournament/AdminCreateTournament.tsx:351
+msgid "Create Tournament"
+msgstr "Créer un tournoi"
+
+#: src/routes/clubs/index.tsx:165
+msgid "Create Your First Club"
+msgstr "Créez votre premier club"
+
+#: src/routes/clubs/index.tsx:103
+msgid "Create your private club or join an exclusive community."
+msgstr "Créez votre club privé ou rejoignez une communauté exclusive."
+
+#: src/components/club/CreateClubModal.tsx:137
+#: src/components/CreateTableModal.tsx:138
+#: src/components/tournament/AdminCreateTournament.tsx:346
+msgid "Creating..."
+msgstr "Création..."
+
+#: src/routes/settings/appearance.tsx:60
+msgid "Custom color (hex)"
+msgstr "Couleur personnalisée (hex)"
+
+#: src/components/club/ClubCustomizer.tsx:14
+msgid "Customise Club"
+msgstr "Personnaliser le club"
+
+#: src/routes/guide.tsx:44
+msgid "Cutoff"
+msgstr "Cutoff"
+
+#: src/components/game/PlayerSpot.tsx:407
+msgid "D"
+msgstr "D"
+
+#: src/routes/puzzle.tsx:252
+msgid "Daily"
+msgstr "Quotidien"
+
+#: src/routes/puzzle.tsx:241
+msgid "Daily Challenge"
+msgstr "Défi quotidien"
+
+#: src/routes/missions.tsx:154
+msgid "Daily Objectives"
+msgstr "Objectifs quotidiens"
+
+#: src/routes/settings/privacy.tsx:76
+msgid "Data export request submitted. You will receive a download link by email within 72 hours."
+msgstr "Demande d'exportation des données soumise. Vous recevrez un lien de téléchargement par e-mail sous 72 heures."
+
+#: src/routes/legal/privacy.tsx:90
+msgid "Data portability"
+msgstr "Portabilité des données"
+
+#: src/components/club/ClubTournamentsTab.tsx:71
+msgid "Date & Time"
+msgstr "Date et heure"
+
+#: src/routes/missions.tsx:232
+msgid "days"
+msgstr "jours"
+
+#: src/components/consent/CookieConsentBanner.tsx:59
+msgid "Decline"
+msgstr "Refuser"
+
+#: src/routes/settings/privacy.tsx:148
+msgid "Delete Account"
+msgstr "Supprimer le compte"
+
+#: src/routes/settings/privacy.tsx:137
+msgid "Deletion pending – export may be limited."
+msgstr "Suppression en attente – l'exportation peut être limitée."
+
+#: src/routes/settings/privacy.tsx:62
+msgid "Deletion request cancelled."
+msgstr "Demande de suppression annulée."
+
+#: src/routes/settings/privacy.tsx:47
+msgid "Deletion request submitted. Your account will be deleted in 30 days."
+msgstr "Demande de suppression soumise. Votre compte sera supprimé dans 30 jours."
+
+#: src/routes/responsible-gaming.tsx:19
+msgid "Deposit limit request submitted. We will review and update your account."
+msgstr "Demande de limite de dépôt soumise. Nous examinerons et mettrons à jour votre compte."
+
+#: src/routes/responsible-gaming.tsx:66
+msgid "Deposit Limits"
+msgstr "Limites de dépôt"
+
+#: src/routes/help.tsx:318
+msgid "Describe your issue or question..."
+msgstr "Décrivez votre problème ou question..."
+
+#: src/components/game/RankTierBadge.tsx:13
+msgid "Diamond"
+msgstr "Diamant"
+
+#: src/components/settings/notifications/ToggleButton.tsx:20
+msgid "Disable Notifications"
+msgstr "Désactiver les notifications"
+
+#: src/routes/settings/account.tsx:86
+msgid "Display Name"
+msgstr "Nom affiché"
+
+#: src/components/club/ClubLeaderboardTab.tsx:192
+msgid "Division {currentDivision} / {total_divisions}"
+msgstr "Division {currentDivision} / {total_divisions}"
+
+#: src/routes/missions.tsx:339
+msgid "Done"
+msgstr "Terminé"
+
+#: src/components/tournament/BlindSchedulePreview.tsx:37
+msgid "Duration"
+msgstr "Durée"
+
+#: src/components/club/ClubSettingsTab.tsx:214
+#: src/components/club/CreateClubModal.tsx:109
+msgid "e.g., -1001234567890"
+msgstr "ex. : -1001234567890"
+
+#: src/components/CreateTableModal.tsx:85
+msgid "e.g., My Private Table"
+msgstr "ex. : Ma table privée"
+
+#: src/components/club/CreateClubModal.tsx:91
+msgid "e.g., Poker Legends"
+msgstr "ex. : Légendes du poker"
+
+#: src/components/club/ScheduleTournamentDialog.tsx:108
+#: src/components/tournament/AdminCreateTournament.tsx:158
+msgid "e.g., Sunday Special"
+msgstr "ex. : Spécial dimanche"
+
+#: src/routes/profile.tsx:158
+msgid "Edit Profile"
+msgstr "Modifier le profil"
+
+#: src/routes/forgot-password.tsx:102
+#: src/routes/help.tsx:297
+#: src/routes/login.tsx:142
+#: src/routes/register.tsx:122
+msgid "Email Address"
+msgstr "Adresse e-mail"
+
+#: src/routes/forgot-password.tsx:19
+#: src/routes/login.tsx:23
+msgid "Email is required"
+msgstr "L'e-mail est requis"
+
+#: src/components/settings/AccountSettings.tsx:43
+msgid "Email Verification"
+msgstr "Vérification de l'e-mail"
+
+#: src/routes/verify-email.tsx:75
+msgid "EMAIL VERIFIED"
+msgstr "E-MAIL VÉRIFIÉ"
+
+#: src/routes/verify-email.tsx:39
+msgid "Email verified successfully!"
+msgstr "E-mail vérifié avec succès !"
+
+#: src/routes/verify-email.tsx:82
+msgid "Email Verified!"
+msgstr "E-mail vérifié !"
+
+#: src/components/club/ClubSettingsTab.tsx:25
+msgid "Emerald Green"
+msgstr "Vert émeraude"
+
+#: src/routes/settings/audio.tsx:122
+msgid "Enable haptic feedback"
+msgstr "Activer le retour haptique"
+
+#: src/components/settings/notifications/ToggleButton.tsx:22
+msgid "Enable in Browser Settings"
+msgstr "Activer dans les paramètres du navigateur"
+
+#: src/components/settings/notifications/ToggleButton.tsx:23
+msgid "Enable Notifications"
+msgstr "Activer les notifications"
+
+#: src/components/settings/notifications/StatusBadge.tsx:10
+msgid "Enabled"
+msgstr "Activé"
+
+#: src/components/CreateTableModal.tsx:71
+msgid "Enter a name and choose the stakes."
+msgstr "Entrez un nom et choisissez les mises."
+
+#: src/components/club/ClubSettingsTab.tsx:201
+msgid "Enter club name"
+msgstr "Entrez le nom du club"
+
+#: src/routes/clubs/index.tsx:124
+msgid "Enter invite code"
+msgstr "Entrez le code d'invitation"
+
+#: src/routes/guide.tsx:57
+msgid "Equity"
+msgstr "Equité"
+
+#: src/components/ui/ErrorState.tsx:17
+#: src/routes/settings/payments.tsx:51
+#: src/routes/tournaments-history.tsx:124
+msgid "Error"
+msgstr "Erreur"
+
+#: src/components/club/ClubTournamentsTab.tsx:206
+msgid "Error Loading Tournaments"
+msgstr "Erreur de chargement des tournois"
+
+#. placeholder {0}: (error as Error).message
+#: src/routes/lobby.tsx:133
+msgid "Error: {0}"
+msgstr "Erreur : {0}"
+
+#: src/components/club/ClubTournamentsTab.tsx:227
+msgid "Events"
+msgstr "Événements"
+
+#: src/components/shop/SeasonPassTimer.tsx:32
+msgid "Expired"
+msgstr "Expiré"
+
+#: src/routes/puzzle.tsx:448
+msgid "Explanation"
+msgstr "Explication"
+
+#: src/routes/settings/privacy.tsx:109
+msgid "Export Your Data"
+msgstr "Exporter vos données"
+
+#: src/routes/replays.tsx:338
+msgid "Facebook"
+msgstr "Facebook"
+
+#: src/routes/settings/privacy.tsx:66
+msgid "Failed to cancel deletion"
+msgstr "Échec de l'annulation de la suppression"
+
+#: src/routes/missions.tsx:104
+msgid "Failed to claim reward"
+msgstr "Échec de la réclamation de la récompense"
+
+#: src/routes/referrals.tsx:100
+#: src/routes/replays.tsx:351
+msgid "Failed to copy link"
+msgstr "Échec de la copie du lien"
+
+#: src/components/club/CreateClubModal.tsx:40
+msgid "Failed to create club"
+msgstr "Échec de la création du club"
+
+#: src/components/tournament/AdminCreateTournament.tsx:102
+msgid "Failed to create tournament"
+msgstr "Échec de la création du tournoi"
+
+#: src/components/settings/NotificationsSettings.tsx:71
+msgid "Failed to disable notifications."
+msgstr "Échec de la désactivation des notifications."
+
+#: src/components/settings/NotificationsSettings.tsx:89
+msgid "Failed to enable notifications. Permission may have been denied."
+msgstr "Échec de l'activation des notifications. L'autorisation a peut-être été refusée."
+
+#: src/routes/tournaments.tsx:182
+msgid "Failed to get table. Please try again."
+msgstr "Échec de l'obtention de la table. Veuillez réessayer."
+
+#: src/routes/clubs/join.tsx:68
+msgid "Failed to join club"
+msgstr "Échec de l'adhésion au club"
+
+#: src/routes/puzzle.tsx:187
+#: src/routes/tournaments-history.tsx:131
+msgid "Failed to Load"
+msgstr "Échec du chargement"
+
+#: src/pages/ClubPage.tsx:77
+msgid "Failed to Load Club"
+msgstr "Échec du chargement du club"
+
+#: src/routes/clubs/index.tsx:76
+msgid "Failed to load clubs"
+msgstr "Échec du chargement des clubs"
+
+#: src/components/ui/ErrorState.tsx:19
+msgid "Failed to load data."
+msgstr "Échec du chargement des données."
+
+#: src/routes/history.tsx:182
+msgid "Failed to load hand history."
+msgstr "Échec du chargement de l'historique des mains."
+
+#: src/components/game/HistoryDialog.tsx:154
+msgid "Failed to load history."
+msgstr "Échec du chargement de l'historique."
+
+#: src/components/club/ClubLeaderboardTab.tsx:71
+msgid "Failed to load leaderboard"
+msgstr "Échec du chargement du classement"
+
+#. placeholder {0}: (error as Error).message
+#: src/routes/leaderboard.tsx:64
+msgid "Failed to load leaderboard: {0}"
+msgstr "Échec du chargement du classement : {0}"
+
+#: src/components/Leaderboard.tsx:53
+msgid "Failed to load leaderboard. Retrying automatically…"
+msgstr "Échec du chargement du classement. Nouvel essai automatique…"
+
+#: src/routes/missions.tsx:128
+msgid "Failed to load missions."
+msgstr "Échec du chargement des missions."
+
+#: src/routes/settings/payments.tsx:52
+msgid "Failed to load purchase history."
+msgstr "Échec du chargement de l'historique des achats."
+
+#: src/routes/referrals.tsx:141
+msgid "Failed to load referral data."
+msgstr "Échec du chargement des données de parrainage."
+
+#: src/routes/replays.tsx:188
+msgid "Failed to load replay cards."
+msgstr "Échec du chargement des cartes de replay."
+
+#: src/components/profile/SeasonCardDisplay.tsx:34
+msgid "Failed to load season cards."
+msgstr "Échec du chargement des cartes de saison."
+
+#: src/components/club/ClubTournamentsTab.tsx:208
+msgid "Failed to load tournaments"
+msgstr "Échec du chargement des tournois"
+
+#: src/routes/tournaments.tsx:286
+msgid "Failed to load tournaments. Retrying..."
+msgstr "Échec du chargement des tournois. Nouvel essai..."
+
+#: src/components/club/ClubTournamentsTab.tsx:182
+msgid "Failed to register"
+msgstr "Échec de l'inscription"
+
+#: src/routes/settings/privacy.tsx:80
+msgid "Failed to request data export"
+msgstr "Échec de la demande d'exportation des données"
+
+#: src/routes/settings/privacy.tsx:52
+msgid "Failed to request deletion"
+msgstr "Échec de la demande de suppression"
+
+#: src/routes/missions.tsx:119
+msgid "Failed to reroll mission"
+msgstr "Échec du relancement de la mission"
+
+#: src/routes/reset-password.tsx:52
+msgid "Failed to reset password"
+msgstr "Échec de la réinitialisation du mot de passe"
+
+#: src/components/settings/NotificationPreferences.tsx:93
+msgid "Failed to save preferences"
+msgstr "Échec de l'enregistrement des préférences"
+
+#: src/components/club/ScheduleTournamentDialog.tsx:66
+msgid "Failed to schedule tournament"
+msgstr "Échec de la planification du tournoi"
+
+#: src/routes/help.tsx:118
+msgid "Failed to send message. Please try again later."
+msgstr "Échec de l'envoi du message. Veuillez réessayer plus tard."
+
+#: src/components/settings/AccountSettings.tsx:27
+msgid "Failed to send verification email."
+msgstr "Échec de l'envoi de l'e-mail de vérification."
+
+#: src/components/settings/NotificationsSettings.tsx:111
+msgid "Failed to sync subscription."
+msgstr "Échec de la synchronisation de l'abonnement."
+
+#: src/components/club/ClubTournamentsTab.tsx:191
+msgid "Failed to unregister"
+msgstr "Échec de la désinscription"
+
+#: src/components/club/ClubSettingsTab.tsx:93
+msgid "Failed to update club settings"
+msgstr "Échec de la mise à jour des paramètres du club"
+
+#: src/routes/settings/account.tsx:40
+msgid "Failed to update profile"
+msgstr "Échec de la mise à jour du profil"
+
+#: src/components/club/ClubSettingsTab.tsx:143
+msgid "Failed to upload banner"
+msgstr "Échec du téléchargement de la bannière"
+
+#: src/components/club/ClubSettingsTab.tsx:117
+msgid "Failed to upload logo"
+msgstr "Échec du téléchargement du logo"
+
+#. placeholder {0}: update.error?.message
+#: src/components/club/SettingsTab.tsx:108
+msgid "Failed: {0}"
+msgstr "Échec : {0}"
+
+#: src/components/club/ClubSettingsTab.tsx:354
+#: src/routes/settings/appearance.tsx:43
+msgid "Felt Color"
+msgstr "Couleur du tapis"
+
+#: src/routes/settings/appearance.tsx:29
+msgid "Felt color preview updated"
+msgstr "Aperçu de la couleur du tapis mis à jour"
+
+#: src/components/club/SettingsTab.tsx:88
+msgid "Felt Colour"
+msgstr "Couleur du tapis"
+
+#: src/routes/settings/appearance.tsx:75
+msgid "Felt preview"
+msgstr "Aperçu du tapis"
+
+#: src/routes/tournaments/$tournamentId.tsx:311
+msgid "Final Results"
+msgstr "Résultats finaux"
+
+#: src/components/tournament/FinalTableBanner.tsx:22
+msgid "FINAL TABLE"
+msgstr "TABLE FINALE"
+
+#: src/routes/history.tsx:294
+#: src/routes/replays.tsx:256
+msgid "Find a Table"
+msgstr "Trouver une table"
+
+#: src/routes/help.tsx:146
+msgid "Find answers to common questions or reach out to our support team."
+msgstr "Trouvez des réponses aux questions courantes ou contactez notre équipe de support."
+
+#: src/routes/guide.tsx:42
+msgid "First to act preflop, tightest range"
+msgstr "Premier à agir préflop, range la plus serrée"
+
+#: src/routes/guide.tsx:32
+msgid "Five cards, all same suit"
+msgstr "Cinq cartes, toutes de la même couleur"
+
+#: src/routes/guide.tsx:33
+msgid "Five consecutive cards"
+msgstr "Cinq cartes consécutives"
+
+#: src/routes/guide.tsx:29
+msgid "Five consecutive cards, all same suit"
+msgstr "Cinq cartes consécutives, toutes de la même couleur"
+
+#: src/routes/guide.tsx:32
+msgid "Flush"
+msgstr "Couleur"
+
+#: src/components/game/ActionBar.tsx:155
+#: src/components/game/ActionBar.tsx:155
+#: src/components/game/ActionBar.tsx:634
+#: src/components/game/ActionBar.tsx:727
+msgid "Fold"
+msgstr "Se coucher"
+
+#: src/routes/guide.tsx:58
+msgid "Fold Equity"
+msgstr "Equité de fold"
+
+#: src/routes/login.tsx:234
+msgid "FORGOT PASSWORD?"
+msgstr "MOT DE PASSE OUBLIÉ ?"
+
+#: src/components/BadgeDisplay.tsx:26
+#: src/components/badges/BadgeIcon.tsx:13
+#: src/routes/profile.tsx:132
+msgid "Founding Member"
+msgstr "Membre fondateur"
+
+#: src/components/BadgeDisplay.tsx:24
+#: src/components/BadgeIcon.tsx:19
+#: src/components/game/PlayerSpotBadge.tsx:43
+msgid "Founding Member – Referred 10 friends who played 5+ hands"
+msgstr "Membre fondateur – A parrainé 10 amis qui ont joué 5+ mains"
+
+#: src/components/badges/BadgeIcon.tsx:14
+msgid "Founding Member – Referred 10 friends who played 5+ hands."
+msgstr "Membre fondateur – A parrainé 10 amis qui ont joué 5+ mains."
+
+#: src/routes/referrals.tsx:244
+msgid "Founding Member Badge"
+msgstr "Badge Membre fondateur"
+
+#: src/routes/guide.tsx:30
+msgid "Four cards of the same rank"
+msgstr "Quatre cartes du même rang"
+
+#: src/routes/guide.tsx:30
+msgid "Four of a Kind"
+msgstr "Carré"
+
+#: src/routes/legal/terms.tsx:65
+msgid "Fraudulent activities or impersonation"
+msgstr "Activités frauduleuses ou usurpation d'identité"
+
+#: src/routes/tournaments/$tournamentId.tsx:267
+msgid "Free entry"
+msgstr "Entrée gratuite"
+
+#: src/routes/help.tsx:221
+msgid "Frequently Asked Questions"
+msgstr "Questions fréquemment posées"
+
+#: src/components/settings/NotificationPreferences.tsx:168
+msgid "Friend activity"
+msgstr "Activité des amis"
+
+#: src/routes/referrals.tsx:191
+msgid "Friends invited"
+msgstr "Amis invités"
+
+#: src/components/tournament/TournamentCard.tsx:201
+msgid "Full"
+msgstr "Complet"
+
+#: src/routes/guide.tsx:31
+msgid "Full House"
+msgstr "Full"
+
+#: src/routes/responsible-gaming.tsx:142
+msgid "Gambling Help Online (AU)"
+msgstr "Aide en ligne pour les jeux d'argent (AU)"
+
+#: src/routes/responsible-gaming.tsx:138
+msgid "GamCare (UK)"
+msgstr "GamCare (Royaume-Uni)"
+
+#: src/routes/lobby.tsx:245
+msgid "Game Lobby"
+msgstr "Lobby de jeu"
+
+#: src/routes/settings.tsx:99
+msgid "GDPR and account deletion"
+msgstr "RGPD et suppression de compte"
+
+#: src/routes/settings/index.tsx:54
+msgid "GDPR, data export, and account deletion"
+msgstr "RGPD, exportation de données et suppression de compte"
+
+#: src/components/settings/NotificationPreferences.tsx:145
+msgid "Get notified 1 hour before a tournament starts"
+msgstr "Recevoir une notification 1 heure avant le début d'un tournoi"
+
+#: src/components/settings/NotificationPreferences.tsx:151
+msgid "Get notified 10 minutes before a tournament starts"
+msgstr "Recevoir une notification 10 minutes avant le début d'un tournoi"
+
+#: src/components/settings/NotificationPreferences.tsx:169
+msgid "Get notified when friends are online or play hands"
+msgstr "Recevoir une notification lorsque les amis sont en ligne ou jouent des mains"
+
+#: src/components/settings/NotificationPreferences.tsx:157
+msgid "Get notified when tournaments you played in finish"
+msgstr "Recevoir une notification lorsque les tournois auxquels vous avez participé se terminent"
+
+#: src/components/pwa/InstallPrompt.tsx:158
+msgid "Get the app for a faster, smoother experience with offline support."
+msgstr "Obtenez l'application pour une expérience plus rapide et plus fluide avec prise en charge hors ligne."
+
+#: src/components/consent/NotificationPrompt.tsx:110
+msgid "Get tournament reminders and streak alerts. Allow notifications?"
+msgstr "Recevoir des rappels de tournoi et des alertes de série. Autoriser les notifications ?"
+
+#: src/components/Leaderboard.tsx:52
+#: src/components/Leaderboard.tsx:61
+msgid "Global Leaderboard"
+msgstr "Classement mondial"
+
+#: src/routes/settings/payments.tsx:76
+msgid "Go to Shop"
+msgstr "Aller à la boutique"
+
+#: src/components/tournament/TableChangeAlert.tsx:59
+msgid "Go to Table"
+msgstr "Aller à la table"
+
+#: src/routes/help.tsx:31
+msgid "Go to the Lobby, click \"Create Table\", choose the stake level and number of players, then click \"Create\". Your table will appear in the lobby list."
+msgstr "Allez dans le Lobby, cliquez sur \"Créer une table\", choisissez le niveau de mise et le nombre de joueurs, puis cliquez sur \"Créer\". Votre table apparaîtra dans la liste du lobby."
+
+#: src/routes/help.tsx:51
+msgid "Go to the Referrals page to get your unique referral link. Share it with friends, and you'll earn bonuses when they play 5+ hands."
+msgstr "Allez sur la page Parrainages pour obtenir votre lien de parrainage unique. Partagez-le avec vos amis, et vous gagnerez des bonus lorsqu'ils joueront 5+ mains."
+
+#: src/components/game/RankTierBadge.tsx:11
+msgid "Gold"
+msgstr "Or"
+
+#: src/components/club/ClubSettingsTab.tsx:24
+msgid "Gold & Black"
+msgstr "Or et noir"
+
+#: src/routes/help.tsx:166
+#: src/routes/lobby.tsx:188
+msgid "Guide"
+msgstr "Guide"
+
+#: src/routes/index.tsx:167
+msgid "GUIDE"
+msgstr "GUIDE"
+
+#: src/components/game/AnalyticsPanel.tsx:271
+msgid "Hand"
+msgstr "Main"
+
+#: src/components/game/HistoryDialog.tsx:123
+#: src/routes/history.tsx:232
+#: src/routes/lobby.tsx:183
+msgid "Hand History"
+msgstr "Historique des mains"
+
+#: src/components/game/LeaveTableDialog.tsx:42
+msgid "Hand in progress."
+msgstr "Main en cours."
+
+#: src/routes/guide.tsx:117
+msgid "Hand Ranks"
+msgstr "Rangs des mains"
+
+#: src/components/game/AnalyticsPanel.tsx:159
+msgid "Hand Strength"
+msgstr "Force de la main"
+
+#: src/routes/referrals.tsx:355
+msgid "hands played"
+msgstr "mains jouées"
+
+#: src/routes/profile.tsx:187
+msgid "Hands Played"
+msgstr "Mains jouées"
+
+#: src/routes/settings/audio.tsx:118
+msgid "Haptics"
+msgstr "Haptique"
+
+#: src/routes/legal/terms.tsx:64
+msgid "Harassment, abusive language, or inappropriate behavior"
+msgstr "Harcèlement, langage abusif ou comportement inapproprié"
+
+#: src/routes/help.tsx:143
+#: src/routes/lobby.tsx:192
+msgid "Help & Support"
+msgstr "Aide et support"
+
+#: src/routes/help.tsx:204
+msgid "Help us improve"
+msgstr "Aidez-nous à nous améliorer"
+
+#: src/components/tournament/TournamentCard.tsx:48
+msgid "High"
+msgstr "Élevé"
+
+#: src/components/CreateTableModal.tsx:103
+msgid "High ($2/$4)"
+msgstr "Élevé (2$/4$)"
+
+#: src/routes/guide.tsx:37
+msgid "High Card"
+msgstr "Carte haute"
+
+#: src/routes/index.tsx:56
+msgid "High Stakes Poker"
+msgstr "Poker à enjeux élevés"
+
+#: src/routes/guide.tsx:37
+msgid "Highest card wins when no other hand is made"
+msgstr "La carte la plus haute gagne lorsqu'aucune autre main n'est réalisée"
+
+#: src/routes/guide.tsx:43
+msgid "Hijack"
+msgstr "Hijack"
+
+#: src/routes/profile.tsx:167
+#: src/routes/tournaments.tsx:232
+msgid "History"
+msgstr "Historique"
+
+#: src/routes/replays.tsx:419
+msgid "Hole"
+msgstr "Privées"
+
+#: src/routes/puzzle.tsx:291
+msgid "Hole Cards"
+msgstr "Cartes privées"
+
+#: src/routes/help.tsx:58
+msgid "How do I contact support?"
+msgstr "Comment contacter le support ?"
+
+#: src/routes/help.tsx:30
+msgid "How do I create a table?"
+msgstr "Comment créer une table ?"
+
+#: src/routes/help.tsx:50
+msgid "How do I invite friends?"
+msgstr "Comment inviter des amis ?"
+
+#: src/routes/help.tsx:34
+msgid "How do I join a tournament?"
+msgstr "Comment rejoindre un tournoi ?"
+
+#: src/routes/help.tsx:42
+msgid "How do I sit out?"
+msgstr "Comment se mettre en pause ?"
+
+#. placeholder {0}: replay.hand_description
+#. placeholder {1}: replay.pot
+#: src/routes/replays.tsx:331
+msgid "I won a {0} pot of ${1} on Stackbluff Poker! 🃏"
+msgstr "J'ai gagné un pot de {0} de ${1} sur Stackbluff Poker ! 🃏"
+
+#: src/routes/guide.tsx:59
+msgid "ICM"
+msgstr "ICM"
+
+#: src/routes/settings/payments.tsx:130
+msgid "ID:"
+msgstr "ID :"
+
+#: src/routes/forgot-password.tsx:60
+msgid "If the email exists, we've sent a password reset link."
+msgstr "Si l'e-mail existe, nous avons envoyé un lien de réinitialisation du mot de passe."
+
+#: src/routes/verify-email.tsx:130
+msgid "If you didn't receive a verification email, you can request a new one from your account settings."
+msgstr "Si vous n'avez pas reçu d'e-mail de vérification, vous pouvez en demander un nouveau depuis les paramètres de votre compte."
+
+#: src/routes/legal/privacy.tsx:127
+msgid "If you have questions about this Privacy Policy, please contact us at privacy@stackbluff.com."
+msgstr "Si vous avez des questions concernant cette politique de confidentialité, veuillez nous contacter à privacy@stackbluff.com."
+
+#: src/routes/responsible-gaming.tsx:130
+msgid "If you or someone you know needs help with gambling-related issues, these organizations provide support:"
+msgstr "Si vous ou quelqu'un que vous connaissez avez besoin d'aide concernant des problèmes de jeu, ces organisations offrent du soutien :"
+
+#: src/components/settings/AvatarUpload.tsx:80
+msgid "Image must be less than 2MB"
+msgstr "L'image doit faire moins de 2 Mo"
+
+#: src/routes/puzzle.tsx:439
+msgid "Incorrect"
+msgstr "Incorrect"
+
+#: src/routes/guide.tsx:59
+msgid "Independent Chip Model – used in tournaments"
+msgstr "Modèle de chips indépendant – utilisé dans les tournois"
+
+#: src/routes/register.tsx:233
+msgid "INITIALIZING..."
+msgstr "INITIALISATION..."
+
+#: src/components/pwa/InstallPrompt.tsx:186
+msgid "Install App"
+msgstr "Installer l'application"
+
+#: src/components/pwa/InstallPrompt.tsx:155
+msgid "Install StackBluff"
+msgstr "Installer StackBluff"
+
+#: src/pages/ShopPage.tsx:128
+msgid "Instant Delivery"
+msgstr "Livraison instantanée"
+
+#. placeholder {0}: minBuyIn.toLocaleString()
+#: src/components/game/BuyInDialog.tsx:139
+msgid "Insufficient balance. Minimum buy-in is ${0}."
+msgstr "Solde insuffisant. Le buy-in minimum est de ${0}."
+
+#. placeholder {0}: formatCurrency(buyIn - currentBalance)
+#: src/components/tournament/TournamentBuyInDialog.tsx:60
+msgid "Insufficient balance. You need {0} more."
+msgstr "Solde insuffisant. Il vous manque {0}."
+
+#: src/routes/reset-password.tsx:177
+#: src/routes/reset-password.tsx:219
+msgid "Invalid"
+msgstr "Invalide"
+
+#: src/routes/login.tsx:67
+msgid "Invalid credentials"
+msgstr "Identifiants invalides"
+
+#: src/components/club/ScheduleTournamentDialog.tsx:28
+msgid "Invalid date/time"
+msgstr "Date/heure invalide"
+
+#: src/routes/forgot-password.tsx:19
+#: src/routes/login.tsx:23
+#: src/routes/register.tsx:22
+msgid "Invalid email address"
+msgstr "Adresse e-mail invalide"
+
+#: src/routes/clubs/join.tsx:108
+msgid "Invalid Invite"
+msgstr "Invitation invalide"
+
+#: src/routes/reset-password.tsx:61
+msgid "Invalid or missing reset token"
+msgstr "Jeton de réinitialisation invalide ou manquant"
+
+#: src/routes/reset-password.tsx:75
+msgid "Invalid Reset Link"
+msgstr "Lien de réinitialisation invalide"
+
+#: src/routes/referrals.tsx:170
+msgid "Invite friends to StackBluff. Earn chips and unlock exclusive badges."
+msgstr "Invitez des amis sur StackBluff. Gagnez des chips et débloquez des badges exclusifs."
+
+#: src/routes/settings/payments.tsx:143
+msgid "Invoice"
+msgstr "Facture"
+
+#: src/routes/help.tsx:290
+msgid "John Doe"
+msgstr "Jean Dupont"
+
+#: src/routes/help.tsx:304
+msgid "john@example.com"
+msgstr "jean@exemple.com"
+
+#: src/routes/history.tsx:290
+msgid "Join a table and start playing to build your hand history. Every hand you play will appear here."
+msgstr "Rejoignez une table et commencez à jouer pour construire votre historique de mains. Chaque main que vous jouerez apparaîtra ici."
+
+#: src/routes/index.tsx:91
+msgid "Join a table and test your skills against other players."
+msgstr "Rejoignez une table et testez vos compétences contre d'autres joueurs."
+
+#: src/routes/clubs/index.tsx:142
+#: src/routes/clubs/join.tsx:189
+msgid "Join Club"
+msgstr "Rejoindre le club"
+
+#: src/routes/lobby.tsx:248
+msgid "Join high-stakes rooms or competitive tournaments. Precision poker for the sophisticated player."
+msgstr "Rejoignez des salles à enjeux élevés ou des tournois compétitifs. Poker de précision pour le joueur sophistiqué."
+
+#: src/routes/referrals.tsx:114
+msgid "Join me on StackBluff! Use my referral link: {referralLink}"
+msgstr "Rejoignez-moi sur StackBluff ! Utilisez mon lien de parrainage : {referralLink}"
+
+#: src/routes/help.tsx:184
+msgid "Join our Discord"
+msgstr "Rejoignez notre Discord"
+
+#: src/routes/index.tsx:95
+msgid "JOIN TABLE"
+msgstr "REJOINDRE LA TABLE"
+
+#: src/routes/clubs/join.tsx:186
+msgid "Joining..."
+msgstr "Adhésion..."
+
+#: src/components/settings/AvatarUpload.tsx:180
+msgid "JPEG, PNG, GIF. Max 2MB."
+msgstr "JPEG, PNG, GIF. Max 2 Mo."
+
+#: src/routes/guide.tsx:44
+msgid "Just before button, steal blinds"
+msgstr "Juste avant le bouton, voler les blinds"
+
+#: src/routes/missions.tsx:235
+msgid "Keep it up!"
+msgstr "Continuez comme ça !"
+
+#: src/routes/guide.tsx:129
+msgid "Key Terms"
+msgstr "Termes clés"
+
+#: src/components/game/PlayerSpot.tsx:680
+msgid "Kick player"
+msgstr "Expulser le joueur"
+
+#: src/components/game/KickVoteDialog.tsx:95
+msgid "Kick Vote"
+msgstr "Vote d'expulsion"
+
+#: src/pages/ClubPage.tsx:112
+#: src/routes/index.tsx:107
+#: src/routes/leaderboard.tsx:134
+#: src/routes/lobby.tsx:162
+msgid "Leaderboard"
+msgstr "Classement"
+
+#: src/routes/index.tsx:155
+msgid "Learn"
+msgstr "Apprendre"
+
+#: src/routes/guide.tsx:99
+msgid "Learn & Master"
+msgstr "Apprendre et maîtriser"
+
+#: src/routes/help.tsx:167
+msgid "Learn the rules"
+msgstr "Apprendre les règles"
+
+#: src/components/game/LeaveTableDialog.tsx:67
+msgid "Leave"
+msgstr "Quitter"
+
+#: src/routes/settings/account.tsx:112
+msgid "Leave blank to keep current"
+msgstr "Laisser vide pour conserver la valeur actuelle"
+
+#: src/components/game/LeaveTableDialog.tsx:25
+msgid "Leave Table"
+msgstr "Quitter la table"
+
+#: src/routes/referrals.tsx:370
+msgid "left"
+msgstr "restant"
+
+#: src/components/game/RankTierBadge.tsx:15
+msgid "Legend"
+msgstr "Légende"
+
+#: src/components/tournament/BlindSchedulePreview.tsx:33
+msgid "Level"
+msgstr "Niveau"
+
+#. placeholder {0}: blind_level || '?'
+#: src/components/tournament/TournamentHUD.tsx:88
+#: src/components/tournament/TournamentHUD.tsx:130
+msgid "Level {0}"
+msgstr "Niveau {0}"
+
+#: src/components/tournament/TournamentCard.tsx:161
+msgid "Level {current_blind_level}"
+msgstr "Niveau {current_blind_level}"
+
+#: src/routes/settings.tsx:117
+msgid "Link account for notifications"
+msgstr "Lier le compte pour les notifications"
+
+#: src/routes/replays.tsx:348
+msgid "Link copied to clipboard!"
+msgstr "Lien copié dans le presse-papiers !"
+
+#: src/routes/settings/telegram.tsx:62
+msgid "Link Telegram Account"
+msgstr "Lier le compte Telegram"
+
+#: src/components/club/ClubSettingsTab.tsx:218
+#: src/components/club/CreateClubModal.tsx:113
+msgid "Link your club to a Telegram group for notifications."
+msgstr "Liez votre club à un groupe Telegram pour les notifications."
+
+#: src/routes/settings/index.tsx:66
+msgid "Link your Telegram account for notifications"
+msgstr "Liez votre compte Telegram pour les notifications"
+
+#: src/routes/settings/telegram.tsx:55
+msgid "Link your Telegram account to receive notifications, tournament reminders, and more."
+msgstr "Liez votre compte Telegram pour recevoir des notifications, des rappels de tournoi et plus encore."
+
+#: src/components/tournament/TournamentCard.tsx:38
+#: src/routes/tournaments/$tournamentId.tsx:181
+#: src/routes/tournaments/$tournamentId.tsx:279
+msgid "Live"
+msgstr "En direct"
+
+#: src/components/club/SettingsTab.tsx:98
+msgid "Live Preview"
+msgstr "Aperçu en direct"
+
+#: src/routes/history.tsx:385
+msgid "Load More Hands"
+msgstr "Charger plus de mains"
+
+#: src/routes/clubs/join.tsx:99
+msgid "Loading club details..."
+msgstr "Chargement des détails du club..."
+
+#: src/routes/clubs/index.tsx:70
+msgid "Loading clubs..."
+msgstr "Chargement des clubs..."
+
+#: src/components/game/HistoryDialog.tsx:185
+msgid "Loading more..."
+msgstr "Chargement en cours..."
+
+#: src/components/tournament/TournamentHUD.tsx:209
+msgid "Loading payouts..."
+msgstr "Chargement des paiements..."
+
+#: src/components/club/TournamentResultsDisplay.tsx:53
+msgid "Loading results..."
+msgstr "Chargement des résultats..."
+
+#: src/pages/ShopPage.tsx:95
+msgid "Loading Shop..."
+msgstr "Chargement de la boutique..."
+
+#: src/routes/lobby.tsx:129
+msgid "Loading tables..."
+msgstr "Chargement des tables..."
+
+#: src/components/club/ClubTournamentsTab.tsx:198
+#: src/routes/tournaments.tsx:284
+msgid "Loading tournaments..."
+msgstr "Chargement des tournois..."
 
 #: src/App.tsx:38
 msgid "Loading user..."
-msgstr ""
+msgstr "Chargement de l'utilisateur..."
+
+#: src/components/club/ScheduleTournamentDialog.tsx:250
+#: src/components/game/HistoryDialog.tsx:151
+#: src/components/tournament/AdminCreateTournament.tsx:311
+#: src/routes/history.tsx:380
+msgid "Loading..."
+msgstr "Chargement..."
+
+#: src/routes/lobby.tsx:150
+msgid "Lobby"
+msgstr "Lobby"
+
+#: src/routes/login.tsx:120
+msgid "LOGIN WITH TELEGRAM"
+msgstr "SE CONNECTER AVEC TELEGRAM"
+
+#: src/components/club/ClubSettingsTab.tsx:106
+msgid "Logo must be less than 5MB"
+msgstr "Le logo doit faire moins de 5 Mo"
+
+#: src/components/club/ClubSettingsTab.tsx:239
+msgid "Logo preview"
+msgstr "Aperçu du logo"
+
+#: src/components/club/ClubSettingsTab.tsx:115
+msgid "Logo uploaded"
+msgstr "Logo téléchargé"
+
+#: src/routes/lobby.tsx:216
+msgid "Logout"
+msgstr "Se déconnecter"
+
+#: src/routes/history.tsx:510
+msgid "Loss"
+msgstr "Défaite"
+
+#: src/routes/history.tsx:88
+msgid "Losses"
+msgstr "Défaites"
+
+#: src/components/tournament/TournamentCard.tsx:46
+msgid "Low"
+msgstr "Bas"
+
+#: src/components/CreateTableModal.tsx:101
+msgid "Low ($0.10/$0.25)"
+msgstr "Bas (0,10$/0,25$)"
+
+#: src/components/game/RankTierBadge.tsx:14
+msgid "Maestro"
+msgstr "Maestro"
+
+#: src/routes/settings/privacy.tsx:102
+msgid "Manage your account data and privacy settings."
+msgstr "Gérez les données de votre compte et vos paramètres de confidentialité."
+
+#: src/routes/settings.tsx:150
+msgid "Manage your account, preferences, and platform integrations."
+msgstr "Gérez votre compte, vos préférences et les intégrations de plateformes."
+
+#: src/routes/settings/index.tsx:30
+msgid "Manage your profile, password, and email"
+msgstr "Gérez votre profil, votre mot de passe et votre e-mail"
+
+#: src/routes/guide.tsx:106
+msgid "Master the rules, positions, and strategies to dominate the table."
+msgstr "Maîtrisez les règles, les positions et les stratégies pour dominer la table."
+
+#: src/routes/settings/audio.tsx:42
+msgid "Master Volume"
+msgstr "Volume principal"
+
+#: src/components/game/BuyInDialog.tsx:55
+msgid "MAX"
+msgstr "MAX"
+
+#. placeholder {0}: effectiveMax.toLocaleString()
+#: src/components/game/BuyInDialog.tsx:306
+msgid "MAX ${0}"
+msgstr "MAX ${0}"
+
+#. placeholder {0}: field.state.value
+#. placeholder {0}: form.max_players
+#: src/components/club/ScheduleTournamentDialog.tsx:168
+#: src/components/tournament/AdminCreateTournament.tsx:206
+msgid "Max Players: {0}"
+msgstr "Joueurs max : {0}"
+
+#: src/components/CreateTableModal.tsx:111
+msgid "Max Players: {maxPlayers}"
+msgstr "Joueurs max : {maxPlayers}"
+
+#: src/components/club/ScheduleTournamentDialog.tsx:26
+msgid "Maximum 500 players"
+msgstr "Maximum 500 joueurs"
+
+#: src/components/consent/NotificationPrompt.tsx:142
+msgid "Maybe later"
+msgstr "Peut-être plus tard"
+
+#: src/components/pwa/InstallPrompt.tsx:178
+msgid "Maybe Later"
+msgstr "Peut-être plus tard"
+
+#: src/components/tournament/TournamentCard.tsx:47
+msgid "Medium"
+msgstr "Moyen"
+
+#: src/components/CreateTableModal.tsx:102
+msgid "Medium ($0.50/$1.00)"
+msgstr "Moyen (0,50$/1,00$)"
+
+#. placeholder {0}: new Date().toLocaleDateString()
+#: src/routes/profile.tsx:141
+msgid "Member since {0}"
+msgstr "Membre depuis {0}"
+
+#: src/components/club/ClubHeader.tsx:37
+#: src/routes/clubs/index.tsx:206
+#: src/routes/clubs/join.tsx:155
+msgid "members"
+msgstr "membres"
+
+#: src/routes/help.tsx:312
+msgid "Message"
+msgstr "Message"
+
+#: src/routes/help.tsx:113
+msgid "Message sent! We'll get back to you within 24 hours."
+msgstr "Message envoyé ! Nous vous répondrons sous 24 heures."
+
+#: src/components/tournament/TournamentCard.tsx:45
+msgid "Micro"
+msgstr "Micro"
+
+#: src/components/CreateTableModal.tsx:100
+msgid "Micro ($0.02/$0.05)"
+msgstr "Micro (0,02$/0,05$)"
+
+#: src/routes/help.tsx:39
+msgid "Micro ($0.02/$0.05), Low ($0.10/$0.25), Medium ($0.50/$1.00), High ($2/$4), Very High ($5/$10). The stakes determine the minimum and maximum buy-in amounts."
+msgstr "Micro (0,02$/0,05$), Bas (0,10$/0,25$), Moyen (0,50$/1,00$), Élevé (2$/4$), Très élevé (5$/10$). Les mises déterminent les montants minimum et maximum du buy-in."
+
+#: src/routes/guide.tsx:43
+msgid "Middle position, can open wider"
+msgstr "Position du milieu, peut ouvrir plus large"
+
+#: src/components/game/RaiseSlider.tsx:82
+msgid "Min"
+msgstr "Min"
+
+#: src/components/game/BuyInDialog.tsx:52
+msgid "MIN"
+msgstr "MIN"
+
+#. placeholder {0}: minBuyIn.toLocaleString()
+#: src/components/game/BuyInDialog.tsx:305
+msgid "MIN ${0}"
+msgstr "MIN ${0}"
+
+#. placeholder {0}: form.min_players_to_start
+#: src/components/tournament/AdminCreateTournament.tsx:284
+msgid "Min Players to Start: {0}"
+msgstr "Joueurs min pour démarrer : {0}"
+
+#: src/components/club/ScheduleTournamentDialog.tsx:26
+msgid "Minimum 10 players"
+msgstr "Minimum 10 joueurs"
+
+#: src/components/tournament/AdminCreateTournament.tsx:121
+msgid "Minimum 2 players required"
+msgstr "Minimum 2 joueurs requis"
+
+#: src/routes/puzzle.tsx:431
+msgid "Missed It"
+msgstr "Manqué"
+
+#: src/routes/missions.tsx:115
+msgid "Mission rerolled!"
+msgstr "Mission relancée !"
+
+#: src/routes/lobby.tsx:171
+#: src/routes/missions.tsx:158
+#: src/routes/profile.tsx:169
+msgid "Missions"
+msgstr "Missions"
+
+#: src/routes/missions.tsx:372
+msgid "Missions reset in <0>14h 32m</0>"
+msgstr "Réinitialisation des missions dans <0>14h 32m</0>"
+
+#: src/routes/replays.tsx:563
+msgid "More Options"
+msgstr "Plus d'options"
+
+#: src/components/club/ScheduleTournamentDialog.tsx:156
+#: src/components/tournament/AdminCreateTournament.tsx:198
+#: src/components/tournament/TournamentCard.tsx:146
+#: src/routes/tournaments-history.tsx:205
+#: src/routes/tournaments.tsx:255
+#: src/routes/tournaments/$tournamentId.tsx:184
+msgid "MTT"
+msgstr "MTT"
+
+#: src/components/game/HistoryDialog.tsx:136
+msgid "My hands only"
+msgstr "Mes mains uniquement"
+
+#: src/components/club/ScheduleTournamentDialog.tsx:25
+msgid "Name must be at least 3 characters"
+msgstr "Le nom doit comporter au moins 3 caractères"
+
+#: src/routes/responsible-gaming.tsx:134
+msgid "National Council on Problem Gambling"
+msgstr "Conseil national sur les jeux d'argent problématiques"
+
+#: src/routes/help.tsx:35
+msgid "Navigate to the Tournaments page, find a tournament that is in the \"Registering\" state, and click \"Register\". You will need to have enough chips for the buy-in."
+msgstr "Accédez à la page Tournois, trouvez un tournoi dont le statut est \"Inscriptions en cours\", et cliquez sur \"S'inscrire\". Vous devrez avoir suffisamment de chips pour le buy-in."
+
+#: src/components/game/KickVoteDialog.tsx:111
+msgid "needed"
+msgstr "nécessaires"
+
+#. placeholder {0}: min_players_to_start - registered
+#. placeholder {1}: min_players_to_start - registered > 1 ? 's' : ''
+#: src/components/tournament/TournamentCard.tsx:185
+msgid "Needs {0} more player{1}"
+msgstr "A besoin de {0} joueur{1} supplémentaire{1}"
+
+#: src/components/club/ClubSettingsTab.tsx:27
+msgid "Neon Blue"
+msgstr "Bleu néon"
+
+#: src/routes/profile.tsx:189
+msgid "Net Profit"
+msgstr "Bénéfice net"
+
+#: src/routes/reset-password.tsx:152
+#: src/routes/settings/account.tsx:105
+msgid "New Password"
+msgstr "Nouveau mot de passe"
+
+#: src/routes/lobby.tsx:205
+msgid "New Table"
+msgstr "Nouvelle table"
+
+#: src/routes/index.tsx:160
+msgid "New to poker? Start with the basics."
+msgstr "Nouveau au poker ? Commencez par les bases."
+
+#: src/routes/login.tsx:240
+msgid "NEW TO STACKBLUFF? <0>CREATE ACCOUNT</0>"
+msgstr "NOUVEAU SUR STACKBLUFF ? <0>CRÉER UN COMPTE</0>"
+
+#: src/components/club/ClubLeaderboardTab.tsx:200
+msgid "Next"
+msgstr "Suivant"
+
+#: src/routes/puzzle.tsx:431
+msgid "Nice Play"
+msgstr "Belle action"
+
+#. placeholder {0}: filter === 'wins' ? 'wins' : 'losses'
+#: src/routes/history.tsx:343
+msgid "No {0} in your loaded history."
+msgstr "Aucun(e) {0} dans votre historique chargé."
+
+#: src/routes/profile.tsx:247
+msgid "No badges yet. Keep playing to earn them!"
+msgstr "Pas encore de badges. Continuez à jouer pour en gagner !"
+
+#: src/components/club/ClubSettingsTab.tsx:303
+msgid "No banner uploaded"
+msgstr "Aucune bannière téléchargée"
+
+#: src/routes/settings/account.tsx:67
+msgid "No changes to save"
+msgstr "Aucune modification à enregistrer"
+
+#: src/routes/history.tsx:288
+msgid "No hands played yet"
+msgstr "Aucune main jouée pour l'instant"
+
+#: src/components/game/HistoryDialog.tsx:157
+msgid "No hands played yet."
+msgstr "Aucune main jouée pour l'instant."
+
+#: src/routes/clubs/join.tsx:84
+msgid "No Invite Code"
+msgstr "Pas de code d'invitation"
+
+#: src/routes/clubs/join.tsx:74
+msgid "No invite code provided"
+msgstr "Aucun code d'invitation fourni"
+
+#: src/routes/leaderboard.tsx:72
+msgid "No leaderboard data available yet."
+msgstr "Aucune donnée de classement disponible pour l'instant."
+
+#: src/components/Leaderboard.tsx:73
+msgid "No leaderboard data yet. Play some hands to see rankings!"
+msgstr "Pas encore de données de classement. Jouez quelques mains pour voir les classements !"
+
+#: src/routes/lobby.tsx:327
+msgid "NO LIMIT HOLD'EM"
+msgstr "NO LIMIT HOLD'EM"
+
+#: src/pages/ShopPage.tsx:158
+msgid "No products available in this category."
+msgstr "Aucun produit disponible dans cette catégorie."
+
+#: src/routes/settings/payments.tsx:73
+msgid "No purchases yet."
+msgstr "Aucun achat pour l'instant."
+
+#: src/routes/puzzle.tsx:214
+msgid "No Puzzle Today"
+msgstr "Pas de puzzle aujourd'hui"
+
+#: src/routes/referrals.tsx:382
+msgid "No referrals yet"
+msgstr "Aucun parrainage pour l'instant"
+
+#: src/routes/replays.tsx:250
+msgid "No replay cards yet"
+msgstr "Pas encore de cartes de replay"
+
+#: src/components/profile/SeasonCardDisplay.tsx:41
+msgid "No season cards yet. Play more to earn them!"
+msgstr "Pas encore de cartes de saison. Jouez plus pour en gagner !"
+
+#: src/components/club/ScheduleTournamentDialog.tsx:259
+#: src/components/tournament/AdminCreateTournament.tsx:320
+msgid "No templates available"
+msgstr "Aucun modèle disponible"
+
+#: src/components/consent/NotificationPrompt.tsx:132
+msgid "No thanks"
+msgstr "Non merci"
+
+#: src/components/club/ClubLeaderboardTab.tsx:85
+msgid "No tournament results yet."
+msgstr "Aucun résultat de tournoi pour l'instant."
+
+#: src/routes/tournaments.tsx:288
+msgid "No tournaments match the current filters."
+msgstr "Aucun tournoi ne correspond aux filtres actuels."
+
+#: src/components/club/ClubTournamentsTab.tsx:248
+msgid "No upcoming tournaments scheduled"
+msgstr "Aucun tournoi à venir planifié"
+
+#: src/routes/verify-email.tsx:117
+msgid "No verification token provided."
+msgstr "Aucun jeton de vérification fourni."
+
+#: src/components/settings/AccountSettings.tsx:89
+msgid "Not logged in"
+msgstr "Non connecté"
+
+#: src/routes/puzzle.tsx:138
+msgid "Not quite. Try again tomorrow!"
+msgstr "Pas tout à fait. Réessayez demain !"
+
+#: src/components/settings/notifications/StatusBadge.tsx:12
+msgid "Not set"
+msgstr "Non défini"
+
+#: src/routes/tournaments/$tournamentId.tsx:282
+msgid "Not started yet"
+msgstr "Pas encore commencé"
+
+#: src/components/settings/notifications/StatusBadge.tsx:13
+msgid "Not supported"
+msgstr "Non pris en charge"
+
+#: src/components/settings/AccountSettings.tsx:53
+msgid "Not verified"
+msgstr "Non vérifié"
+
+#: src/components/settings/NotificationPreferences.tsx:121
+#: src/components/settings/NotificationPreferences.tsx:136
+msgid "Notification Preferences"
+msgstr "Préférences de notifications"
+
+#: src/components/settings/NotificationPreferences.tsx:89
+msgid "Notification preferences saved"
+msgstr "Préférences de notifications enregistrées"
+
+#: src/routes/settings/notifications.tsx:26
+msgid "Notification Settings"
+msgstr "Paramètres de notifications"
+
+#: src/components/settings/NotificationsSettings.tsx:125
+#: src/routes/settings.tsx:71
+#: src/routes/settings/index.tsx:35
+msgid "Notifications"
+msgstr "Notifications"
+
+#: src/components/settings/NotificationsSettings.tsx:77
+msgid "Notifications are blocked in your browser settings. Please enable them in your browser and try again."
+msgstr "Les notifications sont bloquées dans les paramètres de votre navigateur. Veuillez les activer dans votre navigateur et réessayer."
+
+#: src/components/settings/NotificationsSettings.tsx:69
+msgid "Notifications disabled."
+msgstr "Notifications désactivées."
+
+#: src/components/settings/NotificationsSettings.tsx:84
+msgid "Notifications enabled!"
+msgstr "Notifications activées !"
+
+#: src/routes/lobby.tsx:370
+msgid "Observe"
+msgstr "Observer"
+
+#: src/components/game/AnalyticsPanel.tsx:261
+msgid "Odds"
+msgstr "Cotes"
+
+#: src/components/club/ClubLeaderboardTab.tsx:87
+msgid "Once tournaments are completed, the leaderboard will appear here."
+msgstr "Une fois les tournois terminés, le classement apparaîtra ici."
+
+#: src/routes/guide.tsx:36
+msgid "One Pair"
+msgstr "Une paire"
+
+#: src/routes/settings/telegram.tsx:24
+msgid "Opening Telegram... Please follow the instructions in the bot."
+msgstr "Ouverture de Telegram... Veuillez suivre les instructions du bot."
+
+#: src/routes/legal/privacy.tsx:91
+msgid "Opt out of marketing communications"
+msgstr "Se désabonner des communications marketing"
+
+#: src/routes/login.tsx:127
+msgid "or"
+msgstr "ou"
+
+#: src/routes/missions.tsx:198
+msgid "Overall Progress"
+msgstr "Progression globale"
+
+#: src/routes/clubs/index.tsx:201
+msgid "Owner"
+msgstr "Propriétaire"
+
+#: src/routes/tournaments-history.tsx:215
+msgid "participants"
+msgstr "participants"
+
+#: src/routes/login.tsx:182
+#: src/routes/register.tsx:161
+msgid "Password"
+msgstr "Mot de passe"
+
+#: src/routes/login.tsx:24
+msgid "Password is required"
+msgstr "Le mot de passe est requis"
+
+#: src/routes/register.tsx:23
+#: src/routes/reset-password.tsx:20
+#: src/routes/reset-password.tsx:21
+#: src/routes/settings/account.tsx:55
+msgid "Password must be at least 8 characters"
+msgstr "Le mot de passe doit comporter au moins 8 caractères"
+
+#: src/routes/forgot-password.tsx:53
+#: src/routes/reset-password.tsx:102
+msgid "PASSWORD RESET"
+msgstr "RÉINITIALISATION DU MOT DE PASSE"
+
+#: src/routes/reset-password.tsx:109
+msgid "Password Reset Successful"
+msgstr "Réinitialisation du mot de passe réussie"
+
+#: src/routes/reset-password.tsx:49
+msgid "Password reset successfully!"
+msgstr "Mot de passe réinitialisé avec succès !"
+
+#: src/routes/reset-password.tsx:24
+#: src/routes/settings/account.tsx:60
+msgid "Passwords do not match"
+msgstr "Les mots de passe ne correspondent pas"
+
+#: src/routes/tournaments-history.tsx:84
+#: src/routes/tournaments-history.tsx:162
+msgid "Past Events"
+msgstr "Événements passés"
+
+#: src/components/club/ClubTournamentsTab.tsx:279
+msgid "Past Tournaments"
+msgstr "Tournois passés"
+
+#: src/routes/settings.tsx:107
+#: src/routes/settings/index.tsx:59
+msgid "Payments"
+msgstr "Paiements"
+
+#: src/components/tournament/PayoutStructurePreview.tsx:43
+#: src/components/tournament/TournamentHUD.tsx:195
+msgid "Payout Structure"
+msgstr "Structure des paiements"
+
+#: src/routes/referrals.tsx:366
+msgid "Pending"
+msgstr "En attente"
+
+#: src/routes/referrals.tsx:211
+msgid "Pending Bonus"
+msgstr "Bonus en attente"
+
+#: src/routes/settings/privacy.tsx:178
+msgid "Permanently delete your account and all associated data. This action is irreversible and cannot be undone."
+msgstr "Supprimer définitivement votre compte et toutes les données associées. Cette action est irréversible et ne peut pas être annulée."
+
+#: src/routes/profile.tsx:205
+msgid "PFR"
+msgstr "PFR"
+
+#: src/components/settings/AccountSettings.tsx:91
+msgid "Platform:"
+msgstr "Plateforme :"
 
 #: src/App.tsx:42
 msgid "Platform: PWA"
-msgstr ""
+msgstr "Plateforme : PWA"
+
+#: src/components/game/RankTierBadge.tsx:12
+msgid "Platinum"
+msgstr "Platine"
+
+#: src/components/tournament/TournamentCard.tsx:222
+#: src/routes/tournaments/$tournamentId.tsx:226
+msgid "Play"
+msgstr "Jouer"
+
+#: src/routes/lobby.tsx:241
+msgid "Play & Profit"
+msgstr "Jouer et gagner"
+
+#: src/routes/replays.tsx:252
+msgid "Play more hands to unlock replay cards. Your biggest wins will appear here to be shared."
+msgstr "Jouez plus de mains pour débloquer des cartes de replay. Vos plus grandes victoires apparaîtront ici pour être partagées."
+
+#: src/routes/index.tsx:62
+#: src/routes/index.tsx:86
+msgid "Play Now"
+msgstr "Jouer maintenant"
+
+#: src/routes/responsible-gaming.tsx:37
+msgid "Play Responsibly"
+msgstr "Jouez de manière responsable"
+
+#: src/routes/guide.tsx:256
+msgid "Play tight in early positions, wider in late positions"
+msgstr "Jouez serré en position précoce, plus large en position tardive"
+
+#: src/components/game/PlayerSpot.tsx:328
+#: src/routes/profile.tsx:94
+msgid "Player"
+msgstr "Joueur"
+
+#. placeholder {0}: ref.referred_id.slice(0, 8)
+#: src/routes/referrals.tsx:352
+msgid "Player {0}"
+msgstr "Joueur {0}"
+
+#: src/routes/profile.tsx:125
+msgid "Player Profile"
+msgstr "Profil du joueur"
+
+#: src/routes/register.tsx:93
+msgid "PLAYER_01"
+msgstr "JOUEUR_01"
+
+#: src/components/club/ClubTournamentsTab.tsx:97
+#: src/routes/lobby.tsx:268
+#: src/routes/lobby.tsx:285
+msgid "Players"
+msgstr "Joueurs"
+
+#: src/components/tournament/TournamentHUD.tsx:162
+msgid "Players Left"
+msgstr "Joueurs restants"
+
+#: src/routes/help.tsx:102
+msgid "Please enter a valid email address"
+msgstr "Veuillez entrer une adresse e-mail valide"
+
+#: src/routes/clubs/index.tsx:136
+msgid "Please enter an invite code"
+msgstr "Veuillez entrer un code d'invitation"
+
+#: src/routes/help.tsx:98
+msgid "Please fill in all fields"
+msgstr "Veuillez remplir tous les champs"
+
+#: src/routes/tournaments.tsx:134
+msgid "Please log in first"
+msgstr "Veuillez vous connecter d'abord"
+
+#: src/components/tournament/AdminCreateTournament.tsx:113
+msgid "Please select a start date and time"
+msgstr "Veuillez sélectionner une date et une heure de début"
+
+#: src/routes/tournaments-history.tsx:94
+msgid "Please sign in to view your tournament history."
+msgstr "Veuillez vous connecter pour voir votre historique de tournois."
+
+#: src/components/club/ClubSettingsTab.tsx:102
+#: src/components/club/ClubSettingsTab.tsx:128
+#: src/components/settings/AvatarUpload.tsx:74
+msgid "Please upload an image file"
+msgstr "Veuillez télécharger un fichier image"
+
+#: src/routes/verify-email.tsx:60
+msgid "Please wait while we verify your email."
+msgstr "Veuillez patienter pendant la vérification de votre e-mail."
+
+#: src/routes/clubs/index.tsx:100
+msgid "Poker Clubs"
+msgstr "Clubs de poker"
+
+#: src/routes/guide.tsx:103
+msgid "Poker Guide"
+msgstr "Guide de poker"
+
+#: src/routes/guide.tsx:123
+msgid "Positions"
+msgstr "Positions"
+
+#: src/routes/guide.tsx:278
+msgid "Postflop Fundamentals"
+msgstr "Fondamentaux postflop"
+
+#: src/components/game/RaiseSlider.tsx:300
+msgid "Pot"
+msgstr "Pot"
+
+#: src/components/game/PotBadge.tsx:177
+msgid "POT "
+msgstr "POT "
+
+#: src/components/game/RaiseSlider.tsx:244
+msgid "Pot %"
+msgstr "% du pot"
+
+#: src/routes/guide.tsx:56
+msgid "Pot Odds"
+msgstr "Cotes du pot"
+
+#: src/pages/ShopPage.tsx:120
+msgid "Power up your game with premium chips, passes, and exclusive features."
+msgstr "Boostez votre jeu avec des chips premium, des passes et des fonctionnalités exclusives."
+
+#: src/routes/profile.tsx:201
+msgid "Preflop Aggression"
+msgstr "Agression préflop"
+
+#: src/routes/guide.tsx:252
+msgid "Preflop Basics"
+msgstr "Bases préflop"
+
+#: src/components/club/ClubSettingsTab.tsx:284
+msgid "Premium"
+msgstr "Premium"
+
+#: src/components/tournament/TournamentCountdownOverlay.tsx:91
+msgid "Preparing your table..."
+msgstr "Préparation de votre table..."
+
+#: src/routes/guide.tsx:308
+msgid "Preserve your stack – avoid marginal all-ins early"
+msgstr "Préservez votre stack – évitez les tapis marginaux tôt"
+
+#: src/components/club/ClubLeaderboardTab.tsx:189
+msgid "Prev"
+msgstr "Précédent"
+
+#: src/routes/settings.tsx:98
+#: src/routes/settings/index.tsx:53
+#: src/routes/settings/privacy.tsx:99
+msgid "Privacy & Data"
+msgstr "Confidentialité et données"
+
+#: src/routes/help.tsx:360
+#: src/routes/legal/privacy.tsx:20
+#: src/routes/lobby.tsx:388
+#: src/routes/login.tsx:249
+#: src/routes/register.tsx:251
+#: src/routes/settings/privacy.tsx:237
+msgid "Privacy Policy"
+msgstr "Politique de confidentialité"
+
+#: src/components/tournament/TournamentHUD.tsx:182
+#: src/routes/tournaments/$tournamentId.tsx:260
+msgid "Prize Pool"
+msgstr "Cagnotte"
+
+#. placeholder {0}: tournament.prize_pool.toLocaleString()
+#: src/routes/tournaments/$tournamentId.tsx:195
+msgid "Prize: ${0}"
+msgstr "Prix : ${0}"
+
+#: src/components/consent/NotificationPrompt.tsx:122
+#: src/components/settings/notifications/ToggleButton.tsx:18
+#: src/components/shop/PurchaseDialog.tsx:68
+msgid "Processing..."
+msgstr "Traitement..."
+
+#: src/pages/ProfilePage.tsx:7
+#: src/routes/settings/index.tsx:80
+msgid "Profile"
+msgstr "Profil"
+
+#: src/components/settings/AvatarUpload.tsx:150
+msgid "Profile Picture"
+msgstr "Photo de profil"
+
+#: src/routes/settings/account.tsx:36
+msgid "Profile updated successfully!"
+msgstr "Profil mis à jour avec succès !"
+
+#: src/routes/settings.tsx:63
+msgid "Profile, password, and email"
+msgstr "Profil, mot de passe et e-mail"
+
+#: src/components/settings/NotificationPreferences.tsx:174
+msgid "Promotional"
+msgstr "Promotionnel"
+
+#: src/routes/settings/payments.tsx:68
+#: src/routes/settings/payments.tsx:91
+msgid "Purchase History"
+msgstr "Historique des achats"
+
+#: src/routes/settings.tsx:108
+#: src/routes/settings/index.tsx:60
+msgid "Purchase history and invoices"
+msgstr "Historique des achats et factures"
+
+#: src/routes/settings/payments.tsx:93
+msgid "purchases"
+msgstr "achats"
+
+#: src/routes/settings.tsx:72
+msgid "Push alerts and preferences"
+msgstr "Alertes push et préférences"
+
+#: src/routes/settings/index.tsx:36
+msgid "Push notifications and alert preferences"
+msgstr "Notifications push et préférences d'alerte"
+
+#: src/components/settings/notifications/UnsupportedMessage.tsx:6
+msgid "Push notifications are not supported in this browser. Try using Chrome, Firefox, or Safari 16.4+."
+msgstr "Les notifications push ne sont pas prises en charge dans ce navigateur. Essayez d'utiliser Chrome, Firefox ou Safari 16.4+."
+
+#: src/routes/puzzle.tsx:246
+msgid "Puzzle of the Day"
+msgstr "Puzzle du jour"
+
+#: src/components/game/ActionBar.tsx:470
+msgid "Queued"
+msgstr "En file d'attente"
+
+#: src/components/game/ActionBar.tsx:640
+#: src/components/game/ActionBar.tsx:737
+msgid "Raise"
+msgstr "Relancer"
+
+#: src/components/game/RaiseSlider.tsx:217
+msgid "Raise Amount"
+msgstr "Montant de la relance"
+
+#: src/routes/guide.tsx:257
+msgid "Raise or fold – avoid limping (just calling)"
+msgstr "Relancez ou couchez-vous – évitez de suivre passivement"
+
+#: src/components/club/ClubLeaderboardTab.tsx:102
+msgid "Rankings"
+msgstr "Classements"
+
+#: src/routes/guide.tsx:56
+msgid "Ratio of pot to call; used to decide if a call is profitable"
+msgstr "Rapport entre le pot et la mise à suivre ; utilisé pour décider si suivre est rentable"
+
+#: src/components/settings/notifications/ResyncButton.tsx:20
+msgid "Re-sync Subscription"
+msgstr "Resynchroniser l'abonnement"
+
+#: src/routes/puzzle.tsx:278
+msgid "Read the Situation"
+msgstr "Lisez la situation"
+
+#: src/routes/missions.tsx:216
+msgid "Ready to claim!"
+msgstr "Prêt à réclamer !"
+
+#: src/routes/responsible-gaming.tsx:49
+msgid "Reality Check"
+msgstr "Vérification de la réalité"
+
+#: src/components/game/BuyInDialog.tsx:99
+#: src/components/game/BuyInDialog.tsx:335
+msgid "Rebuy"
+msgstr "Rachat"
+
+#: src/components/settings/NotificationPreferences.tsx:163
+msgid "Receive club tournament and event announcements"
+msgstr "Recevoir les annonces de tournois et d'événements du club"
+
+#: src/components/settings/NotificationPreferences.tsx:175
+msgid "Receive special offers and updates about new features"
+msgstr "Recevoir des offres spéciales et des mises à jour sur les nouvelles fonctionnalités"
+
+#: src/components/settings/NotificationsSettings.tsx:128
+msgid "Receive tournament reminders, streak alerts, and game updates."
+msgstr "Recevoir des rappels de tournoi, des alertes de série et des mises à jour du jeu."
+
+#: src/components/club/ClubSettingsTab.tsx:328
+msgid "Recommended: 1200x300px, max 10MB"
+msgstr "Recommandé : 1200x300px, max 10 Mo"
+
+#: src/components/club/ClubSettingsTab.tsx:270
+msgid "Recommended: 200x200px, max 5MB"
+msgstr "Recommandé : 200x200px, max 5 Mo"
+
+#: src/routes/replays.tsx:339
+msgid "Reddit"
+msgstr "Reddit"
+
+#: src/routes/clubs/join.tsx:130
+msgid "Redirecting to club page..."
+msgstr "Redirection vers la page du club..."
+
+#: src/routes/referrals.tsx:257
+msgid "Refer 10 friends who play at least 5 hands to permanently unlock this exclusive badge."
+msgstr "Parrainez 10 amis qui jouent au moins 5 mains pour débloquer définitivement ce badge exclusif."
+
+#: src/routes/referrals.tsx:98
+#: src/routes/referrals.tsx:109
+msgid "Referral link copied!"
+msgstr "Lien de parrainage copié !"
+
+#: src/components/badges/FoundingMemberProgress.tsx:14
+msgid "Referral progress"
+msgstr "Progression du parrainage"
+
+#: src/components/BadgeDisplay.tsx:34
+msgid "Referral progress: {referralCount}/10"
+msgstr "Progression du parrainage : {referralCount}/10"
+
+#: src/routes/lobby.tsx:175
+#: src/routes/profile.tsx:170
+#: src/routes/referrals.tsx:167
+msgid "Referrals"
+msgstr "Parrainages"
+
+#: src/routes/referrals.tsx:252
+msgid "referrals needed"
+msgstr "parrainages nécessaires"
+
+#: src/routes/referrals.tsx:333
+msgid "Referred Friends"
+msgstr "Amis parrainés"
+
+#: src/components/club/ClubLeaderboardTab.tsx:117
+msgid "Refresh"
+msgstr "Actualiser"
+
+#: src/components/club/ClubLeaderboardTab.tsx:117
+msgid "Refreshing"
+msgstr "Actualisation"
+
+#: src/components/tournament/TournamentBuyInDialog.tsx:90
+#: src/components/tournament/TournamentCard.tsx:201
+#: src/routes/tournaments/$tournamentId.tsx:209
+msgid "Register"
+msgstr "S'inscrire"
+
+#: src/components/club/ClubTournamentsTab.tsx:154
+msgid "Register ({spotsLeft} left)"
+msgstr "S'inscrire ({spotsLeft} places restantes)"
+
+#: src/components/tournament/TournamentCard.tsx:251
+#: src/routes/tournaments/$tournamentId.tsx:236
+msgid "Registered"
+msgstr "Inscrit"
+
+#: src/components/club/ClubTournamentsTab.tsx:180
+msgid "Registered for \"{tournamentName}\""
+msgstr "Inscrit au tournoi \"{tournamentName}\""
+
+#: src/routes/tournaments.tsx:98
+#: src/routes/tournaments/$tournamentId.tsx:81
+msgid "Registered successfully!"
+msgstr "Inscription réussie !"
+
+#: src/components/club/ClubTournamentsTab.tsx:147
+#: src/components/tournament/TournamentCard.tsx:37
+#: src/routes/tournaments/$tournamentId.tsx:181
+#: src/routes/tournaments/$tournamentId.tsx:279
+msgid "Registering"
+msgstr "Inscriptions en cours"
+
+#: src/components/tournament/TournamentBuyInDialog.tsx:90
+#: src/components/tournament/TournamentCard.tsx:201
+#: src/routes/tournaments/$tournamentId.tsx:209
+msgid "Registering..."
+msgstr "Inscription..."
+
+#: src/routes/register.tsx:42
+#: src/routes/tournaments.tsx:106
+#: src/routes/tournaments/$tournamentId.tsx:89
+msgid "Registration failed"
+msgstr "Échec de l'inscription"
+
+#: src/routes/tournaments/$tournamentId.tsx:246
+msgid "Registrations"
+msgstr "Inscriptions"
+
+#: src/routes/replays.tsx:219
+msgid "Relive your most significant hands and share your victories with friends."
+msgstr "Revivez vos mains les plus significatives et partagez vos victoires avec vos amis."
+
+#: src/components/settings/AvatarUpload.tsx:175
+msgid "Remove"
+msgstr "Supprimer"
+
+#: src/components/settings/AvatarUpload.tsx:113
+msgid "Remove your avatar?"
+msgstr "Supprimer votre avatar ?"
+
+#: src/routes/replays.tsx:216
+msgid "Replay Cards"
+msgstr "Cartes de replay"
+
+#: src/routes/lobby.tsx:179
+#: src/routes/profile.tsx:168
+msgid "Replays"
+msgstr "Replays"
+
+#: src/routes/help.tsx:203
+msgid "Report Bug"
+msgstr "Signaler un bug"
+
+#: src/routes/responsible-gaming.tsx:118
+msgid "Report Concern"
+msgstr "Signaler un problème"
+
+#: src/routes/settings/privacy.tsx:114
+msgid "Request a copy of all your personal data. You'll receive a download link by email within 72 hours."
+msgstr "Demandez une copie de toutes vos données personnelles. Vous recevrez un lien de téléchargement par e-mail sous 72 heures."
+
+#: src/routes/settings/privacy.tsx:188
+msgid "Request Account Deletion"
+msgstr "Demander la suppression du compte"
+
+#: src/routes/settings/privacy.tsx:130
+msgid "Request Data Export"
+msgstr "Demander l'exportation des données"
+
+#: src/routes/responsible-gaming.tsx:101
+msgid "Request Exclusion"
+msgstr "Demander l'exclusion"
+
+#. placeholder {0}: new Date(deletionStatus.requested_at!).toLocaleDateString()
+#: src/routes/settings/privacy.tsx:163
+msgid "Requested on: {0}"
+msgstr "Demandé le : {0}"
+
+#: src/routes/settings/privacy.tsx:125
+msgid "Requesting..."
+msgstr "Demande en cours..."
+
+#: src/routes/missions.tsx:349
+msgid "Reroll Mission"
+msgstr "Relancer la mission"
+
+#: src/components/settings/AccountSettings.tsx:73
+msgid "Resend Verification"
+msgstr "Renvoyer la vérification"
+
+#: src/routes/forgot-password.tsx:85
+#: src/routes/reset-password.tsx:135
+#: src/routes/reset-password.tsx:235
+msgid "RESET PASSWORD"
+msgstr "RÉINITIALISER LE MOT DE PASSE"
+
+#: src/components/settings/NotificationPreferences.tsx:202
+msgid "Reset to Defaults"
+msgstr "Rétablir les valeurs par défaut"
+
+#: src/routes/reset-password.tsx:235
+msgid "RESETTING..."
+msgstr "RÉINITIALISATION..."
+
+#: src/routes/responsible-gaming.tsx:126
+msgid "Resources"
+msgstr "Ressources"
+
+#: src/routes/help.tsx:364
+#: src/routes/lobby.tsx:390
+#: src/routes/login.tsx:251
+#: src/routes/register.tsx:253
+#: src/routes/responsible-gaming.tsx:30
+#: src/routes/settings/privacy.tsx:239
+msgid "Responsible Gaming"
+msgstr "Jeu responsable"
+
+#: src/components/tournament/TournamentCard.tsx:243
+msgid "Results"
+msgstr "Résultats"
+
+#: src/components/club/TournamentResultsDisplay.tsx:73
+msgid "Results: {tournamentName}"
+msgstr "Résultats : {tournamentName}"
+
+#: src/components/club/ClubLeaderboardTab.tsx:76
+#: src/components/ui/ErrorState.tsx:22
+#: src/pages/ClubPage.tsx:85
+#: src/routes/puzzle.tsx:195
+#: src/routes/settings/payments.tsx:53
+#: src/routes/tournaments-history.tsx:139
+msgid "Retry"
+msgstr "Réessayer"
+
+#: src/components/tournament/TournamentResultsModal.tsx:131
+msgid "Return to Lobby"
+msgstr "Retour au Lobby"
+
+#: src/components/game/LeaveTableDialog.tsx:31
+msgid "Returning to balance"
+msgstr "Retour au solde"
+
+#: src/routes/history.tsx:235
+msgid "Review every hand you've played. Track wins, study decisions, and improve your game."
+msgstr "Examinez chaque main que vous avez jouée. Suivez les victoires, étudiez les décisions et améliorez votre jeu."
+
+#: src/routes/tournaments-history.tsx:169
+msgid "Review your past performance, winnings, and final standings."
+msgstr "Examinez vos performances passées, vos gains et vos classements finaux."
+
+#: src/routes/lobby.tsx:274
+msgid "Room Name"
+msgstr "Nom de la salle"
+
+#: src/routes/guide.tsx:28
+msgid "Royal Flush"
+msgstr "Quinte flush royale"
+
+#: src/components/club/ClubSettingsTab.tsx:26
+msgid "Royal Purple"
+msgstr "Pourpre royal"
+
+#: src/components/tournament/TournamentCard.tsx:146
+msgid "S&G"
+msgstr "S&G"
+
+#: src/components/club/ClubSettingsTab.tsx:402
+#: src/components/club/SettingsTab.tsx:106
+#: src/routes/settings/account.tsx:143
+msgid "Save Changes"
+msgstr "Enregistrer les modifications"
+
+#: src/components/settings/NotificationPreferences.tsx:193
+msgid "Save Preferences"
+msgstr "Enregistrer les préférences"
+
+#: src/components/club/ClubSettingsTab.tsx:397
+msgid "Saving Changes..."
+msgstr "Enregistrement des modifications..."
+
+#: src/components/club/SettingsTab.tsx:106
+#: src/components/settings/NotificationPreferences.tsx:190
+#: src/routes/settings/account.tsx:140
+msgid "Saving..."
+msgstr "Enregistrement..."
+
+#: src/routes/puzzle.tsx:276
+msgid "Scenario"
+msgstr "Scénario"
+
+#: src/components/club/ClubTournamentsTab.tsx:241
+#: src/components/club/ScheduleTournamentDialog.tsx:89
+#: src/components/club/ScheduleTournamentDialog.tsx:293
+msgid "Schedule Tournament"
+msgstr "Planifier un tournoi"
+
+#: src/components/club/ScheduleTournamentDialog.tsx:290
+msgid "Scheduling..."
+msgstr "Planification..."
+
+#. placeholder {0}: card.season
+#: src/components/profile/SeasonCardDisplay.tsx:49
+#: src/components/profile/SeasonCardDisplay.tsx:51
+msgid "Season {0}"
+msgstr "Saison {0}"
+
+#: src/routes/profile.tsx:259
+msgid "Season Cards"
+msgstr "Cartes de saison"
+
+#: src/components/shop/ProductCard.tsx:44
+#: src/pages/ShopPage.tsx:19
+msgid "Season Pass"
+msgstr "Pass Saison"
+
+#. placeholder {0}: newSeat + 1
+#: src/components/tournament/TableChangeAlert.tsx:53
+msgid "Seat {0}"
+msgstr "Siège {0}"
+
+#: src/routes/lobby.tsx:333
+msgid "seated"
+msgstr "assis"
+
+#: src/routes/login.tsx:107
+msgid "SECURE LOGIN"
+msgstr "CONNEXION SÉCURISÉE"
+
+#: src/pages/ShopPage.tsx:125
+msgid "Secure Payments"
+msgstr "Paiements sécurisés"
+
+#: src/routes/index.tsx:112
+msgid "See who's on top. Rankings update in real-time."
+msgstr "Voyez qui est en tête. Les classements se mettent à jour en temps réel."
+
+#: src/components/club/SettingsTab.tsx:93
+msgid "Select {c}"
+msgstr "Sélectionner {c}"
+
+#: src/components/club/ClubSettingsTab.tsx:369
+#: src/routes/settings/appearance.tsx:55
+msgid "Select {color}"
+msgstr "Sélectionner {color}"
+
+#: src/components/club/ScheduleTournamentDialog.tsx:250
+#: src/components/tournament/AdminCreateTournament.tsx:311
+msgid "Select a template"
+msgstr "Sélectionner un modèle"
+
+#: src/routes/responsible-gaming.tsx:88
+msgid "Self-Exclusion"
+msgstr "Auto-exclusion"
+
+#: src/routes/responsible-gaming.tsx:15
+msgid "Self-exclusion request submitted. We will contact you shortly."
+msgstr "Demande d'auto-exclusion soumise. Nous vous contacterons sous peu."
+
+#: src/routes/help.tsx:337
+msgid "Send Message"
+msgstr "Envoyer le message"
+
+#: src/routes/forgot-password.tsx:143
+msgid "SEND RESET LINK"
+msgstr "ENVOYER LE LIEN DE RÉINITIALISATION"
+
+#: src/components/settings/AccountSettings.tsx:68
+#: src/routes/help.tsx:332
+msgid "Sending..."
+msgstr "Envoi en cours..."
+
+#: src/routes/forgot-password.tsx:143
+msgid "SENDING..."
+msgstr "ENVOI EN COURS..."
+
+#: src/routes/responsible-gaming.tsx:54
+msgid "Set a timer to receive periodic reminders of your play session duration. Take breaks regularly to maintain perspective."
+msgstr "Définissez une minuterie pour recevoir des rappels périodiques de la durée de votre session de jeu. Faites des pauses régulières pour garder du recul."
+
+#: src/routes/responsible-gaming.tsx:71
+msgid "Set daily, weekly, or monthly deposit limits to control your spending. Limits can be adjusted in your account settings."
+msgstr "Définissez des limites de dépôt quotidiennes, hebdomadaires ou mensuelles pour contrôler vos dépenses. Les limites peuvent être ajustées dans les paramètres de votre compte."
+
+#: src/routes/responsible-gaming.tsx:79
+msgid "Set Limit"
+msgstr "Définir la limite"
+
+#: src/routes/responsible-gaming.tsx:57
+msgid "Set Reminder"
+msgstr "Définir le rappel"
+
+#: src/pages/ClubPage.tsx:114
+#: src/routes/lobby.tsx:196
+#: src/routes/profile.tsx:172
+#: src/routes/settings.tsx:147
+#: src/routes/settings/index.tsx:76
+msgid "Settings"
+msgstr "Paramètres"
 
 #: src/App.tsx:53
+#: src/components/badges/BadgeUnlockToast.tsx:46
 msgid "Share"
-msgstr ""
+msgstr "Partager"
+
+#: src/routes/referrals.tsx:309
+msgid "Share on Telegram"
+msgstr "Partager sur Telegram"
+
+#: src/routes/referrals.tsx:318
+msgid "Share on WhatsApp"
+msgstr "Partager sur WhatsApp"
+
+#: src/routes/referrals.tsx:300
+msgid "Share on X"
+msgstr "Partager sur X"
+
+#: src/components/badges/BadgeUnlockToast.tsx:40
+msgid "Share your achievement with friends."
+msgstr "Partagez votre accomplissement avec vos amis."
+
+#: src/routes/replays.tsx:506
+msgid "Share Your Hand"
+msgstr "Partagez votre main"
+
+#: src/routes/referrals.tsx:383
+msgid "Share your link above to start earning chips!"
+msgstr "Partagez votre lien ci-dessus pour commencer à gagner des chips !"
+
+#: src/pages/ShopPage.tsx:118
+#: src/routes/index.tsx:68
+#: src/routes/index.tsx:131
+#: src/routes/lobby.tsx:166
+msgid "Shop"
+msgstr "Boutique"
+
+#. placeholder {0}: replay.hand_description
+#: src/routes/replays.tsx:508
+msgid "Show off your {0} to the world!"
+msgstr "Montrez votre {0} au monde entier !"
+
+#: src/components/game/PlayerSpot.tsx:599
+msgid "Show stats for {display_name}"
+msgstr "Afficher les statistiques de {display_name}"
+
+#: src/routes/profile.tsx:220
+msgid "Showdown Win Rate"
+msgstr "Taux de victoire à l'abattage"
+
+#: src/routes/profile.tsx:217
+msgid "Showdowns"
+msgstr "Abattages"
+
+#: src/routes/tournaments-history.tsx:99
+msgid "Sign In"
+msgstr "Se connecter"
+
+#: src/routes/login.tsx:227
+msgid "SIGN IN"
+msgstr "SE CONNECTER"
+
+#: src/routes/tournaments-history.tsx:92
+msgid "Sign In Required"
+msgstr "Connexion requise"
+
+#: src/components/settings/NotificationPreferences.tsx:208
+msgid "Sign in to sync your preferences across devices."
+msgstr "Connectez-vous pour synchroniser vos préférences sur tous vos appareils."
+
+#: src/routes/settings/telegram.tsx:48
+msgid "Signed in with Telegram"
+msgstr "Connecté avec Telegram"
+
+#: src/components/game/RankTierBadge.tsx:10
+#: src/routes/profile.tsx:137
+msgid "Silver"
+msgstr "Argent"
+
+#: src/components/club/ScheduleTournamentDialog.tsx:140
+#: src/components/tournament/AdminCreateTournament.tsx:183
+#: src/components/tournament/TournamentCountdownOverlay.tsx:80
+#: src/routes/tournaments-history.tsx:205
+#: src/routes/tournaments.tsx:255
+#: src/routes/tournaments/$tournamentId.tsx:184
+msgid "Sit & Go"
+msgstr "Sit & Go"
+
+#: src/routes/tournaments.tsx:220
+msgid "Sit & Go and Multi-Table Tournaments. Register now and compete for the prize pool."
+msgstr "Tournois Sit & Go et Multi-Table. Inscrivez-vous maintenant et disputez la cagnotte."
+
+#: src/components/game/SitOutButton.tsx:54
+msgid "Sit In"
+msgstr "Reprendre"
+
+#: src/components/game/SitOutButton.tsx:54
+msgid "Sit Out"
+msgstr "Se mettre en pause"
+
+#: src/components/tournament/BlindSchedulePreview.tsx:34
+msgid "Small"
+msgstr "Petite"
+
+#: src/routes/guide.tsx:46
+msgid "Small Blind"
+msgstr "Petite blind"
 
 #: src/App.tsx:34
+#: src/routes/forgot-password.tsx:36
 msgid "Something went wrong"
-msgstr ""
+msgstr "Quelque chose s'est mal passé"
+
+#: src/routes/settings/audio.tsx:65
+msgid "Sound Effects"
+msgstr "Effets sonores"
+
+#: src/routes/settings.tsx:90
+msgid "Sound effects and haptics"
+msgstr "Effets sonores et haptique"
+
+#: src/routes/settings/index.tsx:48
+msgid "Sound effects, music, and haptics"
+msgstr "Effets sonores, musique et haptique"
+
+#: src/components/tournament/TournamentCard.tsx:233
+#: src/routes/tournaments/$tournamentId.tsx:232
+msgid "Spectate"
+msgstr "Regarder"
+
+#: src/routes/history.tsx:507
+msgid "Split Win"
+msgstr "Partage"
+
+#: src/routes/forgot-password.tsx:52
+#: src/routes/forgot-password.tsx:84
+#: src/routes/index.tsx:53
+#: src/routes/login.tsx:106
+#: src/routes/register.tsx:68
+#: src/routes/reset-password.tsx:101
+#: src/routes/reset-password.tsx:134
+#: src/routes/verify-email.tsx:74
+#: src/routes/verify-email.tsx:107
+msgid "STACKBLUFF"
+msgstr "STACKBLUFF"
+
+#: src/routes/lobby.tsx:142
+msgid "StackBluff Elite"
+msgstr "StackBluff Elite"
+
+#: src/routes/responsible-gaming.tsx:39
+msgid "StackBluff is committed to providing a safe and enjoyable gaming environment. We encourage all players to maintain control and play responsibly."
+msgstr "StackBluff s'engage à fournir un environnement de jeu sûr et agréable. Nous encourageons tous les joueurs à garder le contrôle et à jouer de manière responsable."
 
 #: src/App.tsx:37
 msgid "StackBluff PWA"
-msgstr ""
+msgstr "StackBluff PWA"
+
+#: src/components/CreateTableModal.tsx:93
+msgid "Stake Level"
+msgstr "Niveau de mise"
+
+#: src/routes/lobby.tsx:262
+#: src/routes/lobby.tsx:279
+msgid "Stakes"
+msgstr "Mises"
+
+#: src/components/club/ScheduleTournamentDialog.tsx:218
+#: src/components/tournament/AdminCreateTournament.tsx:245
+msgid "Start Date & Time *"
+msgstr "Date et heure de début *"
+
+#. placeholder {0}: form.start_delay_seconds
+#: src/components/tournament/AdminCreateTournament.tsx:264
+msgid "Start Delay: {0}s"
+msgstr "Délai de démarrage : {0}s"
+
+#: src/components/club/CreateClubModal.tsx:75
+msgid "Start your own community and invite players."
+msgstr "Créez votre propre communauté et invitez des joueurs."
+
+#. placeholder {0}: new Date(tournament.started_at).toLocaleString()
+#: src/routes/tournaments/$tournamentId.tsx:282
+msgid "Started {0}"
+msgstr "Commencé le {0}"
+
+#: src/components/tournament/TournamentCard.tsx:189
+msgid "Starting soon…"
+msgstr "Démarrage prochain…"
+
+#: src/components/club/ClubTournamentsTab.tsx:114
+#: src/routes/tournaments/$tournamentId.tsx:275
+msgid "Status"
+msgstr "Statut"
+
+#: src/components/settings/NotificationsSettings.tsx:133
+msgid "Status:"
+msgstr "Statut :"
+
+#: src/components/game/LeaveTableDialog.tsx:57
+msgid "Stay"
+msgstr "Rester"
+
+#: src/components/game/AnalyticsPanel.tsx:281
+msgid "Str"
+msgstr "Force"
+
+#: src/routes/guide.tsx:33
+msgid "Straight"
+msgstr "Quinte"
+
+#: src/routes/guide.tsx:29
+msgid "Straight Flush"
+msgstr "Quinte flush"
+
+#: src/routes/guide.tsx:135
+msgid "Strategy"
+msgstr "Stratégie"
+
+#: src/routes/missions.tsx:226
+msgid "Streak"
+msgstr "Série"
+
+#: src/routes/puzzle.tsx:143
+msgid "Submission failed"
+msgstr "Échec de l'envoi"
+
+#: src/routes/puzzle.tsx:382
+msgid "Submit Answer"
+msgstr "Soumettre la réponse"
+
+#: src/routes/puzzle.tsx:378
+#: src/routes/settings/privacy.tsx:222
+msgid "Submitting..."
+msgstr "Soumission..."
+
+#: src/components/settings/NotificationsSettings.tsx:109
+msgid "Subscription synced successfully."
+msgstr "Abonnement synchronisé avec succès."
+
+#: src/routes/clubs/join.tsx:59
+msgid "Successfully joined the club!"
+msgstr "Adhésion au club réussie !"
+
+#: src/routes/guide.tsx:259
+msgid "Suited connectors and high cards play well in position"
+msgstr "Les connecteurs assortis et les cartes hautes jouent bien en position"
+
+#. placeholder {0}: hand.table_id.slice(0, 6)
+#. placeholder {0}: newRoomId.slice(0, 6)
+#. placeholder {0}: replay.table_id.slice(0, 6)
+#: src/components/tournament/TableChangeAlert.tsx:51
+#: src/components/tournament/TableOverviewPanel.tsx:92
+#: src/routes/history.tsx:462
+#: src/routes/replays.tsx:366
+msgid "Table {0}"
+msgstr "Table {0}"
+
+#: src/components/tournament/TableChangeAlert.tsx:45
+msgid "Table Change"
+msgstr "Changement de table"
+
+#: src/components/CreateTableModal.tsx:80
+msgid "Table Name"
+msgstr "Nom de la table"
+
+#: src/components/CreateTableModal.tsx:53
+msgid "Table name is required"
+msgstr "Le nom de la table est requis"
+
+#. placeholder {0}: tableEntries.length
+#: src/components/tournament/TableOverviewPanel.tsx:52
+msgid "Tables ({0})"
+msgstr "Tables ({0})"
+
+#: src/components/game/AnalyticsPanel.tsx:90
+msgid "Tactical Oracle"
+msgstr "Oracle tactique"
+
+#: src/routes/responsible-gaming.tsx:93
+msgid "Take a break from gaming by excluding yourself for a chosen period. During this time, you will not be able to play or deposit."
+msgstr "Faites une pause dans le jeu en vous excluant pour une période choisie. Pendant ce temps, vous ne pourrez ni jouer ni déposer."
+
+#: src/components/game/BuyInDialog.tsx:335
+msgid "Take Seat"
+msgstr "Prendre place"
+
+#: src/routes/replays.tsx:340
+#: src/routes/settings.tsx:116
+#: src/routes/settings/index.tsx:65
+msgid "Telegram"
+msgstr "Telegram"
+
+#: src/routes/settings/telegram.tsx:40
+msgid "Telegram Account"
+msgstr "Compte Telegram"
+
+#: src/routes/login.tsx:80
+msgid "Telegram authentication failed"
+msgstr "Échec de l'authentification Telegram"
+
+#: src/routes/login.tsx:93
+msgid "Telegram environment not detected or initData missing"
+msgstr "Environnement Telegram non détecté ou initData manquant"
+
+#: src/components/club/ClubSettingsTab.tsx:208
+msgid "Telegram Group ID"
+msgstr "ID du groupe Telegram"
+
+#: src/components/club/CreateClubModal.tsx:103
+msgid "Telegram Group ID (optional)"
+msgstr "ID du groupe Telegram (optionnel)"
+
+#: src/routes/settings/telegram.tsx:33
+msgid "Telegram Settings"
+msgstr "Paramètres Telegram"
+
+#: src/routes/help.tsx:356
+#: src/routes/legal/terms.tsx:20
+#: src/routes/lobby.tsx:386
+#: src/routes/login.tsx:247
+#: src/routes/register.tsx:249
+#: src/routes/settings/privacy.tsx:235
+msgid "Terms of Service"
+msgstr "Conditions d'utilisation"
+
+#: src/routes/settings/audio.tsx:88
+msgid "Test Sound"
+msgstr "Tester le son"
+
+#: src/routes/help.tsx:55
+msgid "The Founding Member badge is awarded to players who refer 10 friends who each play at least 5 hands. It is a one-time exclusive badge."
+msgstr "Le badge Membre fondateur est décerné aux joueurs qui parrainent 10 amis qui jouent chacun au moins 5 mains. Il s'agit d'un badge exclusif unique."
+
+#: src/routes/help.tsx:47
+msgid "The Oracle is our hand analysis tool. It provides real-time advice on your actions using Monte Carlo simulations. Free users get 3 analyses per session; Season Pass holders get unlimited access."
+msgstr "L'Oracle est notre outil d'analyse de main. Il fournit des conseils en temps réel sur vos actions à l'aide de simulations Monte Carlo. Les utilisateurs gratuits bénéficient de 3 analyses par session ; les détenteurs du Pass Saison ont un accès illimité."
+
+#: src/routes/reset-password.tsx:77
+msgid "The password reset link is missing or invalid."
+msgstr "Le lien de réinitialisation du mot de passe est manquant ou invalide."
+
+#: src/pages/ClubPage.tsx:105
+msgid "The requested club does not exist."
+msgstr "Le club demandé n'existe pas."
+
+#: src/routes/legal/terms.tsx:89
+msgid "The Service is provided \"as is\" without warranties of any kind. StackBluff is not liable for any damages arising from the use of the Service, including loss of chips, data, or profits."
+msgstr "Le Service est fourni \"en l'état\" sans aucune garantie. StackBluff n'est pas responsable des dommages découlant de l'utilisation du Service, y compris la perte de chips, de données ou de bénéfices."
+
+#: src/routes/tournaments/$tournamentId.tsx:121
+msgid "The tournament you're looking for doesn't exist or has been removed."
+msgstr "Le tournoi que vous recherchez n'existe pas ou a été supprimé."
+
+#: src/routes/verify-email.tsx:117
+msgid "The verification link is invalid or has expired."
+msgstr "Le lien de vérification est invalide ou a expiré."
+
+#: src/routes/settings.tsx:81
+msgid "Theme and visual preferences"
+msgstr "Thème et préférences visuelles"
+
+#: src/routes/settings/index.tsx:42
+msgid "Theme, felt color, and visual preferences"
+msgstr "Thème, couleur du tapis et préférences visuelles"
+
+#: src/routes/tournaments-history.tsx:133
+msgid "There was an error loading your tournament history."
+msgstr "Une erreur est survenue lors du chargement de votre historique de tournois."
+
+#: src/routes/legal/terms.tsx:111
+msgid "These Terms are governed by the laws of [Your Jurisdiction]. Any disputes shall be resolved in the courts of [Your Jurisdiction]."
+msgstr "Ces Conditions sont régies par les lois de [Votre Juridiction]. Tout litige sera résolu par les tribunaux de [Votre Juridiction]."
+
+#: src/routes/settings/privacy.tsx:203
+msgid "This action cannot be undone."
+msgstr "Cette action est irréversible."
+
+#: src/routes/clubs/join.tsx:110
+msgid "This invite link is invalid or has expired."
+msgstr "Ce lien d'invitation est invalide ou a expiré."
+
+#: src/routes/leaderboard.tsx:86
+msgid "This Month"
+msgstr "Ce mois-ci"
+
+#: src/routes/clubs/join.tsx:85
+msgid "This page requires an invite code."
+msgstr "Cette page nécessite un code d'invitation."
+
+#: src/routes/leaderboard.tsx:85
+msgid "This Week"
+msgstr "Cette semaine"
+
+#: src/routes/guide.tsx:34
+msgid "Three cards of the same rank"
+msgstr "Trois cartes du même rang"
+
+#: src/routes/guide.tsx:34
+msgid "Three of a Kind"
+msgstr "Brelan"
+
+#: src/routes/guide.tsx:31
+msgid "Three of a kind + a pair"
+msgstr "Brelan + une paire"
+
+#: src/routes/lobby.tsx:143
+msgid "Tier: Obsidian"
+msgstr "Niveau : Obsidienne"
+
+#: src/routes/legal/privacy.tsx:43
+msgid "To communicate with you about updates, promotions, and support"
+msgstr "Pour vous communiquer des mises à jour, des promotions et du support"
+
+#: src/routes/legal/privacy.tsx:94
+msgid "To exercise these rights, visit your account Privacy settings or contact us."
+msgstr "Pour exercer ces droits, consultez les paramètres de confidentialité de votre compte ou contactez-nous."
+
+#: src/components/pwa/InstallPrompt.tsx:94
+msgid "To install StackBluff on your device: tap the share button and select \"Add to Home Screen\"."
+msgstr "Pour installer StackBluff sur votre appareil : appuyez sur le bouton de partage et sélectionnez \"Ajouter à l'écran d'accueil\"."
+
+#: src/components/pwa/InstallPrompt.tsx:96
+msgid "To install StackBluff: click the install icon in your browser address bar."
+msgstr "Pour installer StackBluff : cliquez sur l'icône d'installation dans la barre d'adresse de votre navigateur."
+
+#: src/routes/legal/privacy.tsx:44
+msgid "To prevent fraud and ensure security"
+msgstr "Pour prévenir la fraude et assurer la sécurité"
+
+#: src/routes/legal/privacy.tsx:42
+msgid "To process transactions and send related information"
+msgstr "Pour traiter les transactions et envoyer les informations associées"
+
+#: src/routes/legal/privacy.tsx:41
+msgid "To provide, maintain, and improve the Service"
+msgstr "Pour fournir, maintenir et améliorer le Service"
+
+#: src/routes/guide.tsx:174
+msgid "Top"
+msgstr "Haut"
+
+#: src/routes/leaderboard.tsx:130
+msgid "Top Players"
+msgstr "Meilleurs joueurs"
+
+#: src/routes/history.tsx:249
+msgid "Total Hands"
+msgstr "Total de mains"
+
+#: src/routes/referrals.tsx:185
+msgid "Total Referrals"
+msgstr "Total de parrainages"
+
+#: src/routes/replays.tsx:231
+msgid "Total Replays"
+msgstr "Total de replays"
+
+#: src/routes/profile.tsx:221
+msgid "Total Showdowns"
+msgstr "Total d'abattages"
+
+#: src/routes/replays.tsx:232
+msgid "Total Won"
+msgstr "Total gagné"
+
+#: src/components/tournament/TournamentHUD.tsx:125
+msgid "Tournament"
+msgstr "Tournoi"
+
+#: src/components/tournament/TournamentResultsModal.tsx:56
+msgid "Tournament Complete"
+msgstr "Tournoi terminé"
+
+#: src/components/tournament/AdminCreateTournament.tsx:96
+msgid "Tournament created successfully!"
+msgstr "Tournoi créé avec succès !"
+
+#: src/components/club/ClubTournamentsTab.tsx:150
+msgid "Tournament Full"
+msgstr "Tournoi complet"
+
+#: src/routes/tournaments-history.tsx:87
+#: src/routes/tournaments-history.tsx:127
+#: src/routes/tournaments-history.tsx:166
+msgid "Tournament History"
+msgstr "Historique des tournois"
+
+#: src/components/club/ScheduleTournamentDialog.tsx:102
+#: src/components/tournament/AdminCreateTournament.tsx:152
+msgid "Tournament Name *"
+msgstr "Nom du tournoi *"
+
+#: src/components/tournament/AdminCreateTournament.tsx:109
+msgid "Tournament name is required"
+msgstr "Le nom du tournoi est requis"
+
+#: src/routes/tournaments/$tournamentId.tsx:119
+msgid "Tournament Not Found"
+msgstr "Tournoi non trouvé"
+
+#: src/components/settings/NotificationPreferences.tsx:156
+msgid "Tournament results"
+msgstr "Résultats des tournois"
+
+#: src/components/club/ScheduleTournamentDialog.tsx:61
+msgid "Tournament scheduled successfully!"
+msgstr "Tournoi planifié avec succès !"
+
+#: src/components/tournament/TournamentCountdownOverlay.tsx:77
+msgid "Tournament Starting"
+msgstr "Début du tournoi"
+
+#: src/routes/guide.tsx:304
+msgid "Tournament Strategy"
+msgstr "Stratégie de tournoi"
+
+#: src/components/club/ScheduleTournamentDialog.tsx:123
+#: src/components/tournament/AdminCreateTournament.tsx:167
+msgid "Tournament Type"
+msgstr "Type de tournoi"
+
+#: src/components/club/ClubTournamentsTab.tsx:230
+#: src/components/lobby/LobbyTabs.tsx:8
+#: src/pages/ClubPage.tsx:113
+#: src/routes/lobby.tsx:154
+#: src/routes/tournaments.tsx:217
+msgid "Tournaments"
+msgstr "Tournois"
+
+#: src/routes/referrals.tsx:335
+msgid "Track progress of players you've invited"
+msgstr "Suivez la progression des joueurs que vous avez invités"
+
+#: src/routes/puzzle.tsx:491
+msgid "Try Another"
+msgstr "Essayer un autre"
+
+#: src/routes/replays.tsx:337
+msgid "Twitter"
+msgstr "Twitter"
+
+#: src/routes/guide.tsx:36
+msgid "Two cards of the same rank"
+msgstr "Deux cartes du même rang"
+
+#: src/routes/guide.tsx:35
+msgid "Two different pairs"
+msgstr "Deux paires différentes"
+
+#: src/routes/guide.tsx:35
+msgid "Two Pair"
+msgstr "Deux paires"
+
+#: src/routes/guide.tsx:42
+msgid "Under the Gun"
+msgstr "Under the Gun"
+
+#: src/routes/guide.tsx:310
+msgid "Understand ICM – chip values change as payouts approach"
+msgstr "Comprenez l'ICM – la valeur des chips change à l'approche des paiements"
+
+#: src/components/settings/AccountSettings.tsx:91
+msgid "Unknown"
+msgstr "Inconnu"
+
+#: src/components/game/AnalyticsPanel.tsx:77
+msgid "Unlimited"
+msgstr "Illimité"
+
+#: src/routes/referrals.tsx:248
+msgid "Unlocked"
+msgstr "Débloqué"
+
+#: src/components/club/ClubTournamentsTab.tsx:136
+#: src/components/tournament/TournamentCard.tsx:212
+#: src/routes/tournaments/$tournamentId.tsx:220
+msgid "Unregister"
+msgstr "Se désinscrire"
+
+#: src/components/club/ClubTournamentsTab.tsx:189
+msgid "Unregistered from \"{tournamentName}\""
+msgstr "Désinscrit du tournoi \"{tournamentName}\""
+
+#: src/routes/tournaments.tsx:120
+#: src/routes/tournaments/$tournamentId.tsx:97
+msgid "Unregistered successfully"
+msgstr "Désinscription réussie"
+
+#: src/components/club/ClubTournamentsTab.tsx:136
+msgid "Unregistering"
+msgstr "Désinscription en cours"
+
+#: src/routes/tournaments.tsx:127
+#: src/routes/tournaments/$tournamentId.tsx:105
+msgid "Unregistration failed"
+msgstr "Échec de la désinscription"
+
+#: src/components/Leaderboard.tsx:63
+msgid "Updating…"
+msgstr "Mise à jour…"
+
+#: src/components/club/SettingsTab.tsx:60
+msgid "Upgrade to Club Pro"
+msgstr "Passer à Club Pro"
+
+#: src/components/club/SettingsTab.tsx:58
+msgid "Upgrade to Club Pro to customise your club."
+msgstr "Passez à Club Pro pour personnaliser votre club."
+
+#: src/components/settings/AvatarUpload.tsx:164
+msgid "Upload"
+msgstr "Télécharger"
+
+#: src/components/club/ClubSettingsTab.tsx:325
+msgid "Upload Banner"
+msgstr "Télécharger la bannière"
+
+#: src/components/settings/AvatarUpload.tsx:100
+msgid "Upload failed"
+msgstr "Échec du téléchargement"
+
+#: src/components/club/ClubSettingsTab.tsx:267
+msgid "Upload Logo"
+msgstr "Télécharger le logo"
+
+#: src/routes/guide.tsx:285
+msgid "Use pot odds to decide if calling is profitable"
+msgstr "Utilisez les cotes du pot pour décider si suivre est rentable"
+
+#: src/routes/help.tsx:59
+msgid "Use the contact form below, or join our Telegram support group: https://t.me/StackBluffSupport"
+msgstr "Utilisez le formulaire de contact ci-dessous, ou rejoignez notre groupe de support Telegram : https://t.me/StackBluffSupport"
+
+#: src/routes/forgot-password.tsx:112
+#: src/routes/login.tsx:152
+#: src/routes/register.tsx:132
+msgid "user@stackbluff.com"
+msgstr "utilisateur@stackbluff.com"
+
+#: src/routes/register.tsx:83
+msgid "Username"
+msgstr "Nom d'utilisateur"
+
+#: src/routes/register.tsx:21
+msgid "Username must be at least 3 characters"
+msgstr "Le nom d'utilisateur doit comporter au moins 3 caractères"
+
+#: src/routes/register.tsx:60
+msgid "Validation error"
+msgstr "Erreur de validation"
+
+#: src/routes/guide.tsx:55
+msgid "Value Bet"
+msgstr "Mise de valeur"
+
+#: src/components/settings/AccountSettings.tsx:25
+msgid "Verification email sent! Please check your inbox."
+msgstr "E-mail de vérification envoyé ! Veuillez vérifier votre boîte de réception."
+
+#: src/routes/verify-email.tsx:42
+msgid "Verification failed"
+msgstr "Échec de la vérification"
+
+#: src/routes/verify-email.tsx:115
+msgid "Verification Failed"
+msgstr "Échec de la vérification"
+
+#: src/routes/verify-email.tsx:108
+msgid "VERIFICATION FAILED"
+msgstr "ÉCHEC DE LA VÉRIFICATION"
+
+#: src/components/settings/AccountSettings.tsx:48
+msgid "Verified"
+msgstr "Vérifié"
+
+#: src/components/settings/AccountSettings.tsx:81
+msgid "Verify your email to unlock full account features and secure your account."
+msgstr "Vérifiez votre e-mail pour débloquer toutes les fonctionnalités du compte et sécuriser votre compte."
+
+#: src/routes/verify-email.tsx:59
+msgid "Verifying..."
+msgstr "Vérification..."
+
+#: src/components/tournament/TournamentCard.tsx:49
+msgid "Very High"
+msgstr "Très élevé"
+
+#: src/components/CreateTableModal.tsx:104
+msgid "Very High ($5/$10)"
+msgstr "Très élevé (5$/10$)"
+
+#: src/components/game/HistoryDialog.tsx:256
+#: src/routes/history.tsx:570
+msgid "View"
+msgstr "Voir"
+
+#: src/routes/clubs/join.tsx:175
+msgid "View Club"
+msgstr "Voir le club"
+
+#: src/routes/tournaments-history.tsx:231
+msgid "View Details"
+msgstr "Voir les détails"
+
+#: src/routes/replays.tsx:466
+msgid "View Hand"
+msgstr "Voir la main"
+
+#: src/routes/index.tsx:119
+msgid "VIEW RANKS"
+msgstr "VOIR LES RANGS"
+
+#: src/routes/legal/terms.tsx:66
+msgid "Violation of any applicable laws or regulations"
+msgstr "Violation de toute loi ou réglementation applicable"
+
+#: src/routes/referrals.tsx:163
+msgid "Viral Rewards"
+msgstr "Récompenses virales"
+
+#: src/routes/settings/payments.tsx:74
+msgid "Visit the shop to buy chips or subscriptions."
+msgstr "Visitez la boutique pour acheter des chips ou des abonnements."
+
+#: src/components/game/KickVoteDialog.tsx:126
+msgid "Vote passed! Player will be removed."
+msgstr "Vote adopté ! Le joueur sera retiré."
+
+#: src/components/game/KickVoteDialog.tsx:131
+msgid "Vote timed out. Player stays."
+msgstr "Vote expiré. Le joueur reste."
+
+#: src/components/game/KickVoteDialog.tsx:104
+msgid "Vote to remove <0>{targetName}</0> from the table."
+msgstr "Votez pour retirer <0>{targetName}</0> de la table."
+
+#: src/components/game/KickVoteDialog.tsx:145
+msgid "Vote Yes"
+msgstr "Voter pour"
+
+#: src/components/game/KickVoteDialog.tsx:145
+msgid "Voted ✓"
+msgstr "Voté ✓"
+
+#: src/components/game/KickVoteDialog.tsx:110
+msgid "votes"
+msgstr "votes"
+
+#: src/components/game/KickVoteDialog.tsx:105
+msgid "votes needed."
+msgstr "votes nécessaires."
+
+#: src/routes/profile.tsx:204
+msgid "VPIP"
+msgstr "VPIP"
+
+#: src/routes/legal/privacy.tsx:30
+msgid "We collect information you provide directly, such as your name, email address, and payment information. We also collect usage data, device information, and cookies for analytics and security."
+msgstr "Nous collectons les informations que vous fournissez directement, telles que votre nom, votre adresse e-mail et vos informations de paiement. Nous collectons également des données d'utilisation, des informations sur l'appareil et des cookies à des fins d'analyse et de sécurité."
+
+#: src/routes/puzzle.tsx:189
+msgid "We couldn't load today's puzzle. Please try again."
+msgstr "Nous n'avons pas pu charger le puzzle d'aujourd'hui. Veuillez réessayer."
+
+#: src/routes/legal/privacy.tsx:77
+msgid "We do not sell or share your personal information with third parties except as necessary to provide the Service (e.g., payment processors, hosting providers) or as required by law."
+msgstr "Nous ne vendons ni ne partageons vos informations personnelles avec des tiers, sauf si nécessaire pour fournir le Service (par exemple, processeurs de paiement, hébergeurs) ou si la loi l'exige."
+
+#: src/routes/legal/privacy.tsx:105
+msgid "We implement industry-standard security measures to protect your data, including encryption and regular security audits."
+msgstr "Nous mettons en œuvre des mesures de sécurité conformes aux normes de l'industrie pour protéger vos données, y compris le chiffrement et des audits de sécurité réguliers."
+
+#: src/routes/legal/terms.tsx:100
+msgid "We may update these Terms from time to time. Continued use of the Service after changes constitutes acceptance of the new Terms."
+msgstr "Nous pouvons mettre à jour ces Conditions de temps à autre. L'utilisation continue du Service après les modifications constitue une acceptation des nouvelles Conditions."
+
+#: src/routes/legal/privacy.tsx:116
+msgid "We may update this policy from time to time. Continued use of the Service constitutes acceptance of the updated policy."
+msgstr "Nous pouvons mettre à jour cette politique de temps à autre. L'utilisation continue du Service constitue une acceptation de la politique mise à jour."
+
+#: src/routes/legal/privacy.tsx:55
+msgid "We retain your data for as long as your account is active, or as needed to provide the Service. You may request deletion of your data at any time via the Privacy settings."
+msgstr "Nous conservons vos données tant que votre compte est actif, ou aussi longtemps que nécessaire pour fournir le Service. Vous pouvez demander la suppression de vos données à tout moment via les paramètres de confidentialité."
+
+#: src/routes/help.tsx:342
+msgid "We typically respond within 24 hours."
+msgstr "Nous répondons généralement sous 24 heures."
+
+#: src/routes/legal/privacy.tsx:66
+msgid "We use cookies and similar technologies to enhance your experience, analyze usage, and for fraud prevention. You can manage your cookie preferences in your browser settings."
+msgstr "Nous utilisons des cookies et des technologies similaires pour améliorer votre expérience, analyser l'utilisation et pour la prévention de la fraude. Vous pouvez gérer vos préférences en matière de cookies dans les paramètres de votre navigateur."
+
+#: src/components/consent/CookieConsentBanner.tsx:50
+msgid "We use cookies for analytics and to improve your experience. By clicking \"Accept\", you consent to our use of cookies."
+msgstr "Nous utilisons des cookies à des fins d'analyse et pour améliorer votre expérience. En cliquant sur \"Accepter\", vous consentez à notre utilisation des cookies."
+
+#: src/routes/missions.tsx:98
+msgid "Weekly bonus unlocked! +10,000 chips"
+msgstr "Bonus hebdomadaire débloqué ! +10 000 chips"
 
 #. placeholder {0}: user.name
 #: src/App.tsx:41
 msgid "Welcome, {0}!"
-msgstr ""
+msgstr "Bienvenue, {0} !"
+
+#: src/routes/help.tsx:38
+msgid "What are the different stake levels?"
+msgstr "Quels sont les différents niveaux de mise ?"
+
+#: src/routes/help.tsx:54
+msgid "What are the founding member badges?"
+msgstr "Que sont les badges de membre fondateur ?"
+
+#: src/routes/help.tsx:46
+msgid "What is the Oracle?"
+msgstr "Qu'est-ce que l'Oracle ?"
+
+#: src/routes/history.tsx:507
+msgid "Win"
+msgstr "Victoire"
+
+#: src/routes/history.tsx:255
+#: src/routes/profile.tsx:188
+msgid "Win Rate"
+msgstr "Taux de victoire"
+
+#: src/components/game/AnalyticsPanel.tsx:112
+msgid "win%"
+msgstr "% de victoire"
+
+#: src/components/game/AnalyticsPanel.tsx:251
+msgid "Win%"
+msgstr "% de victoire"
+
+#: src/components/tournament/TournamentResultsModal.tsx:72
+msgid "Winner"
+msgstr "Gagnant"
+
+#: src/components/game/HistoryDialog.tsx:246
+msgid "Winner:"
+msgstr "Gagnant :"
+
+#. placeholder {0}: hand.winners.length > 1 ? 's' : ''
+#: src/routes/history.tsx:542
+msgid "winner{0}"
+msgstr "gagnant{0}"
+
+#: src/routes/history.tsx:262
+msgid "Winnings"
+msgstr "Gains"
+
+#: src/routes/history.tsx:87
+msgid "Wins"
+msgstr "Victoires"
+
+#: src/routes/legal/privacy.tsx:89
+msgid "Withdraw consent for data processing"
+msgstr "Retirer le consentement au traitement des données"
+
+#. placeholder {0}: isMe ? 'You' : replay.winner_name
+#: src/routes/replays.tsx:387
+msgid "Won by <0>{0}</0>"
+msgstr "Gagné par <0>{0}</0>"
+
+#: src/components/club/ClubLeaderboardTab.tsx:175
+msgid "XP this week"
+msgstr "XP cette semaine"
+
+#: src/routes/settings/privacy.tsx:225
+msgid "Yes, Delete My Account"
+msgstr "Oui, supprimer mon compte"
+
+#: src/components/game/HistoryDialog.tsx:248
+#: src/routes/leaderboard.tsx:254
+#: src/routes/tournaments-history.tsx:257
+msgid "You"
+msgstr "Vous"
+
+#. placeholder {0}: productName || 'this item'
+#. placeholder {1}: priceDisplay && <span className="text-tertiary font-mono ml-1">for {priceDisplay}</span>
+#: src/components/shop/PurchaseDialog.tsx:47
+msgid "You are about to purchase <0>{0}</0>{1}."
+msgstr "Vous êtes sur le point d'acheter <0>{0}</0>{1}."
+
+#: src/routes/tournaments.tsx:138
+msgid "You are already registered for this tournament"
+msgstr "Vous êtes déjà inscrit à ce tournoi"
+
+#: src/routes/tournaments.tsx:179
+msgid "You are not seated yet. Wait for the tournament to start."
+msgstr "Vous n'êtes pas encore assis. Attendez le début du tournoi."
+
+#: src/components/pwa/OfflineIndicator.tsx:64
+msgid "You are offline. Some features may be unavailable."
+msgstr "Vous êtes hors ligne. Certaines fonctionnalités peuvent être indisponibles."
+
+#: src/routes/legal/terms.tsx:52
+msgid "You are responsible for maintaining the security of your account and for all activities that occur under your account. You agree to notify us immediately of any unauthorized use of your account."
+msgstr "Vous êtes responsable de la sécurité de votre compte et de toutes les activités qui s'y déroulent. Vous acceptez de nous informer immédiatement de toute utilisation non autorisée de votre compte."
+
+#: src/routes/clubs/join.tsx:160
+msgid "You are the owner"
+msgstr "Vous êtes le propriétaire"
+
+#: src/components/tournament/TableChangeAlert.tsx:47
+msgid "You have been moved to a new table."
+msgstr "Vous avez été déplacé vers une nouvelle table."
+
+#. placeholder {0}: club.name
+#: src/routes/clubs/join.tsx:128
+msgid "You have successfully joined <0>{0}</0>."
+msgstr "Vous avez rejoint avec succès <0>{0}</0>."
+
+#: src/routes/clubs/index.tsx:156
+msgid "You haven't joined any clubs yet."
+msgstr "Vous n'avez encore rejoint aucun club."
+
+#: src/routes/tournaments-history.tsx:181
+msgid "You haven't participated in any completed tournaments yet."
+msgstr "Vous n'avez encore participé à aucun tournoi terminé."
+
+#: src/routes/responsible-gaming.tsx:115
+msgid "You must be 18+ to use StackBluff. We verify age to protect minors. If you believe a minor is using the service, please report it."
+msgstr "Vous devez avoir 18 ans ou plus pour utiliser StackBluff. Nous vérifions l'âge pour protéger les mineurs. Si vous pensez qu'un mineur utilise le service, veuillez le signaler."
+
+#: src/routes/legal/terms.tsx:41
+msgid "You must be at least 18 years old to use the Service. By using the Service, you represent and warrant that you are at least 18 years old."
+msgstr "Vous devez avoir au moins 18 ans pour utiliser le Service. En utilisant le Service, vous déclarez et garantissez que vous avez au moins 18 ans."
+
+#: src/components/settings/AccountSettings.tsx:19
+msgid "You must be logged in to request verification."
+msgstr "Vous devez être connecté pour demander la vérification."
+
+#: src/routes/settings/telegram.tsx:65
+msgid "You will be redirected to Telegram. Follow the instructions in the bot to complete linking."
+msgstr "Vous serez redirigé vers Telegram. Suivez les instructions du bot pour terminer la liaison."
+
+#: src/components/game/LeaveTableDialog.tsx:43
+msgid "You will be seated out and your chips returned after the hand completes."
+msgstr "Vous serez mis en pause et vos chips vous seront rendus après la fin de la main."
+
+#: src/routes/settings/privacy.tsx:180
+msgid "You will have 30 days to cancel this request."
+msgstr "Vous aurez 30 jours pour annuler cette demande."
+
+#: src/routes/clubs/join.tsx:126
+msgid "You're a Member!"
+msgstr "Vous êtes membre !"
+
+#: src/routes/clubs/join.tsx:167
+msgid "You've been invited to join this club. Click the button below to become a member."
+msgstr "Vous avez été invité à rejoindre ce club. Cliquez sur le bouton ci-dessous pour devenir membre."
+
+#: src/components/badges/BadgeUnlockToast.tsx:37
+msgid "You've unlocked the Founding Member badge!"
+msgstr "Vous avez débloqué le badge Membre fondateur !"
+
+#: src/routes/settings/privacy.tsx:160
+msgid "Your account deletion is pending. It will be permanently deleted in 30 days."
+msgstr "La suppression de votre compte est en attente. Il sera définitivement supprimé dans 30 jours."
+
+#: src/routes/settings/privacy.tsx:155
+msgid "Your account has been deleted."
+msgstr "Votre compte a été supprimé."
+
+#: src/routes/settings/telegram.tsx:49
+msgid "Your account is linked to Telegram."
+msgstr "Votre compte est lié à Telegram."
+
+#: src/routes/puzzle.tsx:459
+msgid "Your Action"
+msgstr "Votre action"
+
+#: src/components/tournament/TournamentBuyInDialog.tsx:52
+msgid "Your Balance"
+msgstr "Votre solde"
+
+#: src/routes/settings/account.tsx:92
+msgid "Your display name"
+msgstr "Votre nom affiché"
+
+#: src/routes/verify-email.tsx:84
+msgid "Your email has been successfully verified. You can now access all features."
+msgstr "Votre e-mail a été vérifié avec succès. Vous pouvez désormais accéder à toutes les fonctionnalités."
+
+#: src/routes/replays.tsx:212
+msgid "Your Highlights"
+msgstr "Vos moments forts"
+
+#: src/routes/help.tsx:284
+msgid "Your Name"
+msgstr "Votre nom"
+
+#: src/routes/reset-password.tsx:111
+msgid "Your password has been updated. You can now sign in with your new password."
+msgstr "Votre mot de passe a été mis à jour. Vous pouvez maintenant vous connecter avec votre nouveau mot de passe."
+
+#: src/routes/leaderboard.tsx:291
+msgid "Your Rank"
+msgstr "Votre classement"
+
+#: src/routes/referrals.tsx:281
+msgid "Your Referral Link"
+msgstr "Votre lien de parrainage"
+
+#: src/routes/tournaments-history.tsx:240
+msgid "Your Results"
+msgstr "Vos résultats"
+
+#: src/routes/tournaments.tsx:146
+msgid "Your session has expired. Please log in again."
+msgstr "Votre session a expiré. Veuillez vous reconnecter."
+
+#: src/routes/history.tsx:228
+msgid "Your Sessions"
+msgstr "Vos sessions"
+
+#: src/routes/guide.tsx:57
+msgid "Your share of the pot based on your chance to win"
+msgstr "Votre part du pot en fonction de votre probabilité de gagner"
+
+#: src/components/tournament/TournamentHUD.tsx:222
+msgid "Your Stack"
+msgstr "Votre stack"
