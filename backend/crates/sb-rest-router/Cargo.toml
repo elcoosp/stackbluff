@@ -45,3 +45,5 @@ jsonwebtoken = { workspace = true }
 tracing-subscriber = "0.3.23"
 
 
+once_cell = { workspace = true }
+futures = { workspace = true }

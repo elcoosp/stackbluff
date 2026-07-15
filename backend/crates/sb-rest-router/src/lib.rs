@@ -329,3 +329,4 @@ pub fn register_metrics(registry: &prometheus::Registry) {
 }
 pub mod analytics_routes;
 pub mod notification_routes;
+pub mod rate_limit;

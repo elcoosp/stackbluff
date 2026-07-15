@@ -53,10 +53,16 @@ use sb_db_repos::user_repo::UserRepoImpl;
 use sb_mission::service::MissionServiceImpl;
 use sb_payment::RealPaymentService;
 use sb_rest_router::notification_routes::notification_routes;
+
 use sb_rest_router::player_stats::player_stats_routes;
+
 use sb_rest_router::season_card;
+
 use sb_rest_router::tournament_routes::{self, TournamentState};
+
 use sb_rest_router::{AppState, create_router};
+use sb_rest_router::rate_limit::rate_limit_layer;
+
 use sb_shared_types::request_context::RequestContext;
 use sb_shared_types::{GameVariant, StakeLevel, TableConfig, TournamentId, UserId};
 use sb_table_registry::buy_in_limits_for_stake;
@@ -522,10 +528,7 @@ let app_state = Arc::new(AppState {
         .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
         .allow_headers([header::CONTENT_TYPE, header::COOKIE, header::AUTHORIZATION])
         .max_age(Duration::from_secs(86400));
-    // Rate limiting configuration
 
-    // Rate limiting configuration
-    // Rate limiting configuration
     let archive_state = Arc::new(hand_archive::ArchiveState {
         db: db.clone(),
         r2: r2.clone(),
@@ -568,7 +571,6 @@ let app_state = Arc::new(AppState {
         )
         .layer(axum::extract::DefaultBodyLimit::max(1024 * 1024 * 10))
         .layer(middleware::from_fn(request_context_middleware))
-                // Apply rate limiting to all routes (except WebSocket, which is handled separately)
         .layer(Extension(auth_service.clone()))
         .layer(cors)
         .layer(CookieManagerLayer::new());
@@ -607,7 +609,8 @@ let app_state = Arc::new(AppState {
 
     spawn_gdpr_scheduler(app_state);
 
-        axum::serve(listener, app).await.expect("server error");
+    let app = app.layer(rate_limit_layer());
+    axum::serve(listener, app).await.expect("server error");
 }
 
 async fn load_existing_tournaments(
