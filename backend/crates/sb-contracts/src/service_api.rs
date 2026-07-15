@@ -224,6 +224,13 @@ pub trait ClubService: Send + Sync {
         ctx: &sb_shared_types::RequestContext,
         user_id: sb_shared_types::UserId,
     ) -> Result<Vec<sb_shared_types::ClubId>, ClubError>;
+
+    async fn broadcast_club_updated(&self, club_id: sb_shared_types::ClubId);
+    async fn broadcast_tournament_created(
+        &self,
+        club_id: sb_shared_types::ClubId,
+        tournament_id: sb_shared_types::TournamentId,
+    );
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

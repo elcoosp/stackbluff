@@ -170,6 +170,15 @@ pub enum RoomMessage {
         chip_preset_id: Option<i32>,
         felt_color: Option<String>,
     },
+    ClubUpdated {
+        club_id: sb_shared_types::ClubId,
+        data: serde_json::Value,
+    },
+    TournamentCreated {
+        club_id: sb_shared_types::ClubId,
+        tournament_id: sb_shared_types::TournamentId,
+        data: serde_json::Value,
+    },
     KickVoteUpdate {
         room_id: TableId,
         kick_vote_id: Uuid,

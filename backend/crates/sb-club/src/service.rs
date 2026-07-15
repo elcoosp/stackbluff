@@ -6,6 +6,7 @@ use sb_contracts::{ClubError, ClubRepo, ClubService, LeaderboardPage};
 use sb_shared_types::{ClubId, RequestContext, UserId};
 use sb_table_registry::connection_broker::ConnectionBroker;
 use sb_table_registry::game_room::RoomMessage;
+use sb_shared_types::{TableId, TournamentId};
 use std::sync::Arc;
 use std::sync::OnceLock;
 
@@ -219,6 +220,26 @@ impl ClubService for ClubServiceImpl {
         }
 
         Ok(merged)
+    }
+
+    /// Broadcast a club.updated event to all subscribers of the club room.
+    async fn broadcast_club_updated(&self, club_id: ClubId) {
+        let msg = RoomMessage::ClubUpdated {
+            club_id,
+            data: serde_json::json!({ "timestamp": chrono::Utc::now() }),
+        };
+        // Broadcast to the club's room (using the club_id as the room identifier)
+        self.broker.broadcast_to_room(TableId::new(club_id.as_uuid()), msg);
+    }
+
+    /// Broadcast a tournament.created event to all subscribers of the club room.
+    async fn broadcast_tournament_created(&self, club_id: ClubId, tournament_id: TournamentId) {
+        let msg = RoomMessage::TournamentCreated {
+            club_id,
+            tournament_id,
+            data: serde_json::json!({ "timestamp": chrono::Utc::now() }),
+        };
+        self.broker.broadcast_to_room(TableId::new(club_id.as_uuid()), msg);
     }
 
     async fn get_pro_settings(
