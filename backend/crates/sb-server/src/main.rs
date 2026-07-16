@@ -184,18 +184,18 @@ async fn reschedule_tournament_reminders(
     match repo.list_tournaments(None, None).await {
         Ok(tournaments) => {
             for t in tournaments {
-                if let Some(start) = t.config.scheduled_start {
-                    if start > chrono::Utc::now() {
-                        sb_tournament::reminders::schedule_reminders(
-                            t.id,
-                            start,
-                            repo.clone(),
-                            notification_service.clone(),
-                            bot_handler.clone(),
-                            app_base_url.clone(),
-                        );
-                        tracing::info!(tournament_id = %t.id, "Rescheduled tournament reminders");
-                    }
+                if let Some(start) = t.config.scheduled_start
+                    && start > chrono::Utc::now()
+                {
+                    sb_tournament::reminders::schedule_reminders(
+                        t.id,
+                        start,
+                        repo.clone(),
+                        notification_service.clone(),
+                        bot_handler.clone(),
+                        app_base_url.clone(),
+                    );
+                    tracing::info!(tournament_id = %t.id, "Rescheduled tournament reminders");
                 }
             }
         }
@@ -709,7 +709,6 @@ pub fn spawn_gdpr_scheduler(state: std::sync::Arc<AppState>) {
 }
 
 use prometheus::{Encoder, TextEncoder};
-use sentry;
 use sentry::integrations::tower::{NewSentryLayer, SentryHttpLayer};
 
 async fn metrics_handler() -> String {

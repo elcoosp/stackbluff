@@ -12,7 +12,7 @@ type BoxFuture<T> = Pin<Box<dyn Future<Output = T> + Send>>;
 static LIMITER: OnceLock<RateLimiter> = OnceLock::new();
 
 fn get_limiter() -> &'static RateLimiter {
-    LIMITER.get_or_init(|| RateLimiter::new())
+    LIMITER.get_or_init(RateLimiter::new)
 }
 
 /// A tower service that applies rate limiting.

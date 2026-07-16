@@ -441,10 +441,10 @@ impl TournamentService for TournamentServiceImpl {
         let mut summaries = Vec::new();
         for r in records {
             let starts_in_seconds: Option<u32> = r.config.scheduled_start
-                .and_then(|start| {
+                .map(|start| {
                     let now = chrono::Utc::now();
                     let diff = (start - now).num_seconds();
-                    if diff > 0 { Some(diff as u32) } else { Some(0) }
+                    if diff > 0 { diff as u32 } else { 0 }
                 });
             summaries.push(TournamentSummary {
                 id: r.id,

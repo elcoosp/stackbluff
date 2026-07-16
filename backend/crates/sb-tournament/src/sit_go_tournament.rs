@@ -434,23 +434,23 @@ impl SitGoTournament {
             return;
         }
 
-        if let Some(scheduler) = &mut self.blind_scheduler {
-            if let Some((level, sb, bb, ante)) = scheduler.on_hand_completed() {
-                if let Some(cmd_tx) = &self.table_cmd_tx {
-                    let _ = cmd_tx
-                        .send(TableCommand::SetBlinds { small: sb, big: bb })
-                        .await;
-                }
-                let msg = sb_table_registry::game_room::RoomMessage::TournamentBlindLevel {
-                    tournament_id: self.tournament_id,
-                    level,
-                    small_blind: sb.as_i64(),
-                    big_blind: bb.as_i64(),
-                    ante,
-                };
-                self.broker
-                    .broadcast_to_room(TableId::new(self.tournament_id.as_uuid()), msg);
+        if let Some(scheduler) = &mut self.blind_scheduler
+            && let Some((level, sb, bb, ante)) = scheduler.on_hand_completed()
+        {
+            if let Some(cmd_tx) = &self.table_cmd_tx {
+                let _ = cmd_tx
+                    .send(TableCommand::SetBlinds { small: sb, big: bb })
+                    .await;
             }
+            let msg = sb_table_registry::game_room::RoomMessage::TournamentBlindLevel {
+                tournament_id: self.tournament_id,
+                level,
+                small_blind: sb.as_i64(),
+                big_blind: bb.as_i64(),
+                ante,
+            };
+            self.broker
+                .broadcast_to_room(TableId::new(self.tournament_id.as_uuid()), msg);
         }
 
         if let Some(cmd_tx) = &self.table_cmd_tx {
@@ -581,13 +581,13 @@ impl SitGoTournament {
 
     fn build_summary(&self) -> sb_contracts::tournament_api::TournamentSummary {
         let starts_in_seconds: Option<u32> = self.config.scheduled_start
-            .and_then(|start| {
+            .map(|start| {
                 let now = chrono::Utc::now();
                 let diff = (start - now).num_seconds();
                 if diff > 0 {
-                    Some(diff as u32)
+                    diff as u32
                 } else {
-                    Some(0)
+                    0
                 }
             });
         sb_contracts::tournament_api::TournamentSummary {

@@ -27,8 +27,7 @@ pub fn spawn_viral_observer(
         loop {
             match rx.recv().await {
                 Ok(TableEvent::HandCompleted(event)) => {
-                    let event = event;
-                    let hc_observer = hand_count_observer.clone();
+                                        let hc_observer = hand_count_observer.clone();
                     let rp_observer = replay_observer.clone();
                     let mission_svc = mission_service.clone();
 
@@ -66,28 +65,27 @@ pub fn spawn_viral_observer(
                     }
 
                     // Notify replay observer (for significant hands)
-                    if let Some(winner) = event.result.winners.first() {
-                        if let Some(user_id) = event
+                    if let Some(winner) = event.result.winners.first()
+                        && let Some(user_id) = event
                             .players
                             .seats
                             .iter()
                             .find(|p| p.player_id == winner.player_id)
                             .and_then(|p| p.user_id)
-                        {
-                            let hand_result = HandResult {
-                                hero_raised_preflop: event.players.seats.iter().find(|p| p.user_id == Some(user_id)).map_or(false, |p| p.raised_preflop),
-                                went_to_showdown: true,
-                                hero_went_allin: false,
-                            };
-                            let observer = rp_observer.clone();
-                            let table_id = event.table_id;
-                            let winner_id = user_id;
-                            tokio::spawn(async move {
-                                observer
-                                    .on_significant_hand(&hand_result, winner_id, table_id)
-                                    .await;
-                            });
-                        }
+                    {
+                        let hand_result = HandResult {
+                            hero_raised_preflop: event.players.seats.iter().find(|p| p.user_id == Some(user_id)).is_some_and(|p| p.raised_preflop),
+                            went_to_showdown: true,
+                            hero_went_allin: false,
+                        };
+                        let observer = rp_observer.clone();
+                        let table_id = event.table_id;
+                        let winner_id = user_id;
+                        tokio::spawn(async move {
+                            observer
+                                .on_significant_hand(&hand_result, winner_id, table_id)
+                                .await;
+                        });
                     }
                 }
                 Ok(TableEvent::TableClosed(_)) => {

@@ -41,7 +41,7 @@ async fn get_products(
         .product_repo
         .list_products()
         .await
-        .map_err(|e| internal_error(e))?;
+        .map_err(internal_error)?;
 
     let response: Vec<ProductResponse> = products
         .into_iter()
@@ -77,10 +77,10 @@ async fn purchase_product(
         .payment_service
         .create_product_purchase(user_id, req.product_id, provider, serde_json::json!({}))
         .await
-        .map_err(|e| internal_error(e))?;
+        .map_err(internal_error)?;
 
     let json_result: serde_json::Value =
-        serde_json::from_str(&result).map_err(|e| internal_error(e))?;
+        serde_json::from_str(&result).map_err(internal_error)?;
 
     Ok(Json(json_result))
 }

@@ -359,20 +359,20 @@ async fn handle_client_message(
                 }
             };
 
-            if let Some(cfg) = state.registry.get_table_config(table_id).await {
-                if stack < cfg.min_buy_in || stack > cfg.max_buy_in {
-                    let err = serde_json::json!({
-                        "type": "Error",
-                        "room_id": null,
-                        "message": format!(
-                            "Buy-in of {} is outside the allowed range ({}–{}).",
-                            stack.as_i64(),
-                            cfg.min_buy_in.as_i64(),
-                            cfg.max_buy_in.as_i64()
-                        )
-                    });
-                    return send_json_to_client(client_tx, err);
-                }
+            if let Some(cfg) = state.registry.get_table_config(table_id).await
+                && (stack < cfg.min_buy_in || stack > cfg.max_buy_in)
+            {
+                let err = serde_json::json!({
+                    "type": "Error",
+                    "room_id": null,
+                    "message": format!(
+                        "Buy-in of {} is outside the allowed range ({}–{}).",
+                        stack.as_i64(),
+                        cfg.min_buy_in.as_i64(),
+                        cfg.max_buy_in.as_i64()
+                    )
+                });
+                return send_json_to_client(client_tx, err);
             }
 
             let ctx = RequestContext::new(Uuid::new_v4(), Some(*user_id));
@@ -778,21 +778,21 @@ async fn handle_client_message(
                     let client_tx = client_tx.clone();
                     let user_repo = state.user_repo.clone();
                     tokio::spawn(async move {
-                        if let Ok(refund) = refund_rx.await {
-                            if refund > ChipAmount::new(0).unwrap() {
-                                let ctx = RequestContext::new(Uuid::new_v4(), Some(user_id));
-                                if let Ok(new_balance) = user_repo
-                                    .update_chip_balance(ctx, user_id, refund.as_i64())
-                                    .await
-                                {
-                                    let balance_msg = serde_json::json!({
-                                        "type": "BalanceUpdated",
-                                        "balance": new_balance
-                                    });
-                                    let _ = client_tx.send(axum::extract::ws::Message::Text(
-                                        balance_msg.to_string().into(),
-                                    ));
-                                }
+                        if let Ok(refund) = refund_rx.await
+                            && refund > ChipAmount::new(0).unwrap()
+                        {
+                            let ctx = RequestContext::new(Uuid::new_v4(), Some(user_id));
+                            if let Ok(new_balance) = user_repo
+                                .update_chip_balance(ctx, user_id, refund.as_i64())
+                                .await
+                            {
+                                let balance_msg = serde_json::json!({
+                                    "type": "BalanceUpdated",
+                                    "balance": new_balance
+                                });
+                                let _ = client_tx.send(axum::extract::ws::Message::Text(
+                                    balance_msg.to_string().into(),
+                                ));
                             }
                         }
                     });

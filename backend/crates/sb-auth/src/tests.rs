@@ -1,5 +1,3 @@
-#[cfg(test)]
-mod tests {
     use crate::config::AuthConfig;
     use crate::email_error::EmailError;
     use crate::jwt::{create_reset_token, create_verification_token, verify_verification_token};
@@ -12,7 +10,8 @@ mod tests {
     use uuid::Uuid;
 
     // Mock UserRepo for testing
-    struct MockUserRepo {
+    #[allow(clippy::type_complexity)]
+struct MockUserRepo {
         users: std::sync::Mutex<std::collections::HashMap<UserId, (String, Option<String>, String)>>,
     }
 
@@ -432,4 +431,4 @@ mod tests {
         };
         assert!(format!("{}", err).contains("401"));
     }
-}
+

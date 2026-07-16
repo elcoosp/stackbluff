@@ -5,7 +5,6 @@ use sb_shared_types::AppError;
 
 /// On server startup, resolve any tournaments that were in `Running` state
 /// during a crash. Refunds remaining players and marks tournament as Cancelled.
-
 pub async fn settle_crashed_tournaments(
     repo: &dyn TournamentRepo,
     user_repo: &dyn sb_contracts::repo_api::UserRepo,

@@ -143,7 +143,7 @@ impl Registry {
 
         let (cmd_tx, _) = spawn_table_actor(TableActorConfig {
             room_id: new_room_id,
-            table_id: table_id,
+            table_id,
             config: config.clone(),
             event_tx: self.event_tx.clone(),
             stats_repo: self.stats_repo.clone(),

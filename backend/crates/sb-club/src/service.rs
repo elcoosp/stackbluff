@@ -198,7 +198,7 @@ impl ClubService for ClubServiceImpl {
         let theme_msg = RoomMessage::ClubThemeUpdated {
             club_id,
             banner_url: merged.banner_url.clone(),
-            chip_preset_id: merged.chip_preset_id.map(|id| id as i32),
+            chip_preset_id: merged.chip_preset_id,
             felt_color: merged.felt_color.clone(),
         };
         for table_id in tables {

@@ -324,10 +324,10 @@ impl HandHistoryRepository for HandHistoryRepoImpl {
             let players: HandPlayers = m.players_json.clone();
             let result: HandResult = m.result_json.clone();
             for w in &result.winners {
-                if let Some(player) = players.seats.iter().find(|p| p.player_id == w.player_id) {
-                    if let Some(uid) = player.user_id {
-                        winner_ids.insert(uid.0);
-                    }
+                if let Some(player) = players.seats.iter().find(|p| p.player_id == w.player_id)
+                    && let Some(uid) = player.user_id
+                {
+                    winner_ids.insert(uid.0);
                 }
             }
         }

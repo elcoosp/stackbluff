@@ -478,24 +478,24 @@ impl MttDirector {
             }
         }
 
-        if let Some(scheduler) = &mut self.blind_scheduler {
-            if let Some((level, sb, bb, ante)) = scheduler.on_hand_completed() {
-                for table in &self.tables {
-                    let _ = table
-                        .cmd_tx
-                        .send(TableCommand::SetBlinds { small: sb, big: bb })
-                        .await;
-                }
-                let msg = sb_table_registry::game_room::RoomMessage::TournamentBlindLevel {
-                    tournament_id: self.tournament_id,
-                    level,
-                    small_blind: sb.as_i64(),
-                    big_blind: bb.as_i64(),
-                    ante,
-                };
-                self.broker
-                    .broadcast_to_room(TableId::new(self.tournament_id.as_uuid()), msg);
+        if let Some(scheduler) = &mut self.blind_scheduler
+            && let Some((level, sb, bb, ante)) = scheduler.on_hand_completed()
+        {
+            for table in &self.tables {
+                let _ = table
+                    .cmd_tx
+                    .send(TableCommand::SetBlinds { small: sb, big: bb })
+                    .await;
             }
+            let msg = sb_table_registry::game_room::RoomMessage::TournamentBlindLevel {
+                tournament_id: self.tournament_id,
+                level,
+                small_blind: sb.as_i64(),
+                big_blind: bb.as_i64(),
+                ante,
+            };
+            self.broker
+                .broadcast_to_room(TableId::new(self.tournament_id.as_uuid()), msg);
         }
 
         for table in &self.tables {
@@ -576,18 +576,18 @@ impl MttDirector {
                         respond_to: tx,
                     })
                     .await;
-                if let Ok(seat_result) = rx.await {
-                    if let Ok(seat) = seat_result {
-                        let msg =
-                            sb_table_registry::game_room::RoomMessage::TournamentTableChanged {
-                                tournament_id: self.tournament_id,
-                                new_room_id: to_table.table_id, // FIXED: Use actual to_table.table_id
-                                new_seat: seat,
-                            };
-                        self.broker.send_to_user(m.user_id, msg);
-                        self.user_to_table.insert(m.user_id, to_table.table_id);
-                        self.player_assignments.insert(m.user_id, m.to_table_idx);
-                    }
+                if let Ok(seat_result) = rx.await
+                    && let Ok(seat) = seat_result
+                {
+                    let msg =
+                        sb_table_registry::game_room::RoomMessage::TournamentTableChanged {
+                            tournament_id: self.tournament_id,
+                            new_room_id: to_table.table_id, // FIXED: Use actual to_table.table_id
+                            new_seat: seat,
+                        };
+                    self.broker.send_to_user(m.user_id, msg);
+                    self.user_to_table.insert(m.user_id, to_table.table_id);
+                    self.player_assignments.insert(m.user_id, m.to_table_idx);
                 }
             }
         }
@@ -663,18 +663,18 @@ impl MttDirector {
                         respond_to: tx,
                     })
                     .await;
-                if let Ok(seat_result) = rx.await {
-                    if let Ok(seat) = seat_result {
-                        let msg =
-                            sb_table_registry::game_room::RoomMessage::TournamentTableChanged {
-                                tournament_id: self.tournament_id,
-                                new_room_id: to_table.table_id, // FIXED: Use actual to_table.table_id
-                                new_seat: seat,
-                            };
-                        self.broker.send_to_user(m.user_id, msg);
-                        self.user_to_table.insert(m.user_id, to_table.table_id);
-                        self.player_assignments.insert(m.user_id, m.to_table_idx);
-                    }
+                if let Ok(seat_result) = rx.await
+                    && let Ok(seat) = seat_result
+                {
+                    let msg =
+                        sb_table_registry::game_room::RoomMessage::TournamentTableChanged {
+                            tournament_id: self.tournament_id,
+                            new_room_id: to_table.table_id, // FIXED: Use actual to_table.table_id
+                            new_seat: seat,
+                        };
+                    self.broker.send_to_user(m.user_id, msg);
+                    self.user_to_table.insert(m.user_id, to_table.table_id);
+                    self.player_assignments.insert(m.user_id, m.to_table_idx);
                 }
             }
         }
@@ -803,13 +803,13 @@ impl MttDirector {
 
     fn build_summary(&self) -> sb_contracts::tournament_api::TournamentSummary {
         let starts_in_seconds: Option<u32> = self.config.scheduled_start
-            .and_then(|start| {
+            .map(|start| {
                 let now = chrono::Utc::now();
                 let diff = (start - now).num_seconds();
                 if diff > 0 {
-                    Some(diff as u32)
+                    diff as u32
                 } else {
-                    Some(0)
+                    0
                 }
             });
         sb_contracts::tournament_api::TournamentSummary {

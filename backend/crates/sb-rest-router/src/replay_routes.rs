@@ -45,7 +45,7 @@ async fn get_replays(
         .hand_history_repo
         .list_user_replays(ctx, user_id)
         .await
-        .map_err(|e| internal_error(e))?;
+        .map_err(internal_error)?;
 
     // Convert to response type.
     let response: Vec<ReplayCardResponse> = replays

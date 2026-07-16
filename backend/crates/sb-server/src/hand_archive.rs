@@ -194,12 +194,11 @@ pub async fn get_hand(
         json["result"] = result_json;
     }
     // Remove the old nested fields to keep the response clean
-    json.as_object_mut().and_then(|obj| {
+    if let Some(obj) = json.as_object_mut() {
         obj.remove("players_json");
         obj.remove("actions_json");
         obj.remove("result_json");
-        Some(())
-    });
+    }
 
     Ok(Json(json))
 }
