@@ -1,6 +1,5 @@
 mod anti_cheat_routes;
 mod leaderboard_refresh;
-#[cfg(feature = "test-stubs")]
 mod test_utils;
 mod user_service;
 mod viral_observer;
@@ -22,6 +21,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tower_cookies::CookieManagerLayer;
 use tower_http::cors::CorsLayer;
+use tower_http::compression::CompressionLayer;
 use uuid::Uuid;
 
 use sb_auth::middleware::auth_middleware_with_context;
@@ -76,14 +76,9 @@ use sb_tournament::{
 };
 use sb_viral::ViralServiceImpl;
 use sb_ws_handler::ws_route;
-use user_service::UserServiceImpl;
+use user_service::{UserResolutionServiceImpl, UserServiceImpl};
 
-#[cfg(feature = "test-stubs")]
 use test_utils::notification_service::InMemoryNotificationService;
-#[cfg(feature = "test-stubs")]
-use test_utils::table_service::InMemoryTableService;
-#[cfg(feature = "test-stubs")]
-use test_utils::user_resolution_service::InMemoryUserResolutionService;
 mod hand_archive;
 mod r2_adapter;
 use crate::r2_adapter::R2Adapter;
@@ -93,6 +88,7 @@ mod season_card_generator;
 fn main() {
     dotenvy::dotenv().expect("Failed to load .env");
     tracing_subscriber::fmt()
+        .json()
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .init();
     // Initialize Sentry
@@ -180,11 +176,31 @@ async fn request_context_middleware(mut req: Request, next: Next) -> Response {
 }
 
 async fn reschedule_tournament_reminders(
-    _repo: std::sync::Arc<dyn sb_contracts::tournament_api::TournamentRepo>,
-    _notification_service: std::sync::Arc<dyn sb_contracts::notification_api::NotificationService>,
-    _bot_handler: Option<std::sync::Arc<dyn sb_contracts::notification_api::ClubNotifier>>,
-    _app_base_url: String,
+    repo: std::sync::Arc<dyn sb_contracts::tournament_api::TournamentRepo>,
+    notification_service: std::sync::Arc<dyn sb_contracts::notification_api::NotificationService>,
+    bot_handler: Option<std::sync::Arc<dyn sb_contracts::notification_api::ClubNotifier>>,
+    app_base_url: String,
 ) {
+    match repo.list_tournaments(None, None).await {
+        Ok(tournaments) => {
+            for t in tournaments {
+                if let Some(start) = t.config.scheduled_start {
+                    if start > chrono::Utc::now() {
+                        sb_tournament::reminders::schedule_reminders(
+                            t.id,
+                            start,
+                            repo.clone(),
+                            notification_service.clone(),
+                            bot_handler.clone(),
+                            app_base_url.clone(),
+                        );
+                        tracing::info!(tournament_id = %t.id, "Rescheduled tournament reminders");
+                    }
+                }
+            }
+        }
+        Err(e) => tracing::error!(error = ?e, "Failed to fetch tournaments for reminder rescheduling"),
+    }
 }
 
 async fn run_app() {
@@ -331,7 +347,6 @@ async fn run_app() {
 
     let badge_repo = Arc::new(BadgeRepoImpl::new(db.clone()));
 
-    #[cfg(feature = "test-stubs")]
     let (notification_service, bot_handler) = {
         let notif = Arc::new(InMemoryNotificationService::new());
         let notification_service =
@@ -340,54 +355,6 @@ async fn run_app() {
         (notification_service, bot_handler)
     };
 
-    #[cfg(not(feature = "test-stubs"))]
-    let (notification_service, bot_handler) = {
-        use sb_notification::TelegramNotificationService;
-        use sb_notification::config::WebPushConfig;
-        use sb_notification::web_push::WebPushSender;
-        use sb_notification::multi_channel::MultiChannelNotifier;
-        use sb_db_repos::push_subscription_repo::PushSubscriptionRepoImpl;
-
-        let bot_token = std::env::var("TELEGRAM_BOT_TOKEN")
-            .expect("TELEGRAM_BOT_TOKEN must be set in production");
-        let telegram_notif = Arc::new(
-            TelegramNotificationService::new(bot_token)
-                .with_user_repo(user_repo.clone())
-                .with_club_repo(club_repo.clone()),
-        );
-
-        let web_push_cfg = WebPushConfig::from_env().expect("WebPush config");
-        let web_push_sender = Arc::new(
-            WebPushSender::new(web_push_cfg.private_key_pem, web_push_cfg.subject)
-                .expect("WebPushSender init"),
-        );
-        let push_repo = Arc::new(PushSubscriptionRepoImpl { db: db.clone() });
-
-        let multi_notifier = Arc::new(MultiChannelNotifier::new(
-            telegram_notif.clone(),
-            web_push_sender,
-            push_repo,
-        ));
-
-        let notification_service =
-            multi_notifier.clone() as Arc<dyn sb_contracts::notification_api::NotificationService>;
-        let bot_handler = Some(telegram_notif as Arc<dyn sb_contracts::notification_api::ClubNotifier>);
-        (notification_service, bot_handler)
-    };
-
-    #[cfg(feature = "test-stubs")]
-    let bot_state = {
-        use sb_bot_handler::BotState;
-        Arc::new(BotState::new(
-            Arc::new(InMemoryTableService::new()),
-            Arc::new(InMemoryNotificationService::new()),
-            Arc::new(InMemoryUserResolutionService::new()),
-            std::env::var("TELEGRAM_BOT_TOKEN").unwrap_or_default(),
-            std::env::var("MINI_APP_URL").unwrap_or_else(|_| "http://localhost:5173/".to_string()),
-        ))
-    };
-
-    #[cfg(not(feature = "test-stubs"))]
     let bot_state = {
         use sb_bot_handler::BotState;
         let user_resolution_service = Arc::new(UserResolutionServiceImpl::new(user_repo.clone()));
@@ -466,8 +433,6 @@ async fn run_app() {
         ));
     // Wrap in the contract adapter
     let r2_contract: Arc<dyn sb_contracts::r2_storage::R2Storage + Send + Sync> =
-        Arc::new(R2Adapter::new(r2.clone()));
-
         Arc::new(R2Adapter::new(r2.clone()));
 
 let app_state = Arc::new(AppState {
@@ -575,9 +540,11 @@ let app_state = Arc::new(AppState {
         .layer(cors)
         .layer(CookieManagerLayer::new());
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
+    let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
+    let bind_addr = format!("0.0.0.0:{}", port);
+    let listener = tokio::net::TcpListener::bind(&bind_addr)
         .await
-        .expect("failed to bind port 3000");
+        .expect("failed to bind port");
 
     tracing::info!("server listening on {}", listener.local_addr().unwrap());
     let scheduler_state = archive_state.clone();
@@ -609,7 +576,7 @@ let app_state = Arc::new(AppState {
 
     spawn_gdpr_scheduler(app_state);
 
-    let app = app.layer(rate_limit_layer());
+    let app = app.layer(CompressionLayer::new()).layer(rate_limit_layer());
     axum::serve(listener, app).await.expect("server error");
 }
 

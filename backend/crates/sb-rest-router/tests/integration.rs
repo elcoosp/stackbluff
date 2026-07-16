@@ -1,3 +1,13 @@
+
+// Helper to ensure JWT_SECRET is set for tests
+fn ensure_jwt_secret() {
+    if std::env::var("JWT_SECRET").is_err() {
+        unsafe { std::env::set_var("JWT_SECRET", "test-secret-key-for-integration-tests"); }
+    }
+}
+use chrono::NaiveDate;
+use sb_contracts::puzzle_repo::PuzzleError;
+use sb_shared_types::puzzle::PuzzleSubmissionRecord;
 use axum::http::StatusCode;
 use axum_test::TestServer;
 use sb_contracts::CreateTableInput;
@@ -11,7 +21,6 @@ use sb_shared_types::{AppError, RequestContext, StakeLevel, TableId, UserId};
 use uuid::Uuid;
 use sb_table_registry::Registry;
 use std::sync::Arc;
-use sea_orm::Database;
 
 // Dummy implementations for repos and services.
 
@@ -371,6 +380,7 @@ impl sb_contracts::repo_api::ClubRepo for DummyClubRepo {
 
 #[tokio::test]
 async fn test_unauthenticated_returns_401() {
+    ensure_jwt_secret();
     let mock_service = MockTableService::new();
     let mock_repo = MockTableRepo::new();
 
@@ -399,6 +409,8 @@ async fn test_unauthenticated_returns_401() {
 
         let db = sea_orm::Database::connect("sqlite::memory:").await.unwrap();
 let state = Arc::new(sb_rest_router::AppState {
+        puzzle_repo: std::sync::Arc::new(DummyPuzzleRepo),
+        r2: std::sync::Arc::new(DummyR2),
         notification_service: notification_service,
         tournament_service: tournament_service,
         mission_service: mission_service,
@@ -432,4 +444,17 @@ let state = Arc::new(sb_rest_router::AppState {
     let server = TestServer::new(app);
     let resp = server.get("/lobby").await;
     assert_eq!(resp.status_code(), StatusCode::UNAUTHORIZED);
+}
+
+struct DummyPuzzleRepo;
+#[async_trait::async_trait]
+impl sb_contracts::puzzle_repo::PuzzleRepo for DummyPuzzleRepo {
+    async fn find_submission(&self, _user_id: Uuid, _date: NaiveDate) -> Result<Option<PuzzleSubmissionRecord>, PuzzleError> { todo!() }
+    async fn save_submission(&self, _record: PuzzleSubmissionRecord) -> Result<(), PuzzleError> { todo!() }
+}
+
+struct DummyR2;
+#[async_trait::async_trait]
+impl sb_contracts::r2_storage::R2Storage for DummyR2 {
+    async fn put_object( &self, _bucket: &str, _key: &str, _data: Vec<u8>, _content_type: &str, ) -> Result<String, AppError> { todo!() }
 }

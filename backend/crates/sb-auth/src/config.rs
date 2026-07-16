@@ -27,7 +27,7 @@ impl AuthConfig {
     pub fn from_env() -> Self {
         Self {
             jwt_secret: SecretString::from(
-                std::env::var("JWT_SECRET").unwrap_or_else(|_| "change-me".into()),
+                std::env::var("JWT_SECRET").expect("JWT_SECRET must be set"),
             ),
             bot_token: SecretString::from(
                 std::env::var("TELEGRAM_BOT_TOKEN").unwrap_or_else(|_| "".into()),

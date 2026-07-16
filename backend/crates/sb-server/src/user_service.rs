@@ -1,9 +1,39 @@
 use async_trait::async_trait;
 use sb_contracts::repo_api::{UserProfile, UserRepo};
 use sb_contracts::service_api::UserService;
+use sb_contracts::user_resolution::{UserResolutionError, UserResolutionService};
 use sb_shared_types::{AppError, ChipAmount, RequestContext, UserId};
 use std::sync::Arc;
 use uuid::Uuid;
+
+pub struct UserResolutionServiceImpl {
+    user_repo: Arc<dyn UserRepo>,
+}
+
+impl UserResolutionServiceImpl {
+    pub fn new(user_repo: Arc<dyn UserRepo>) -> Self {
+        Self { user_repo }
+    }
+}
+
+#[async_trait]
+impl UserResolutionService for UserResolutionServiceImpl {
+    async fn resolve_telegram_user(
+        &self,
+        telegram_id: &str,
+    ) -> Result<UserId, UserResolutionError> {
+        let ctx = RequestContext::new(uuid::Uuid::new_v4(), None);
+        let tg_id: i64 = telegram_id
+            .parse()
+            .map_err(|_| UserResolutionError::TelegramNotLinked)?;
+        let user_id = self
+            .user_repo
+            .find_or_create_by_telegram(ctx, tg_id)
+            .await
+            .map_err(|_| UserResolutionError::TelegramNotLinked)?;
+        Ok(user_id)
+    }
+}
 
 pub struct UserServiceImpl {
     user_repo: Arc<dyn UserRepo>,

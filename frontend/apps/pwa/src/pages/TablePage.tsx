@@ -31,7 +31,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
-import { Settings, LogOut, History, Plus } from 'lucide-react';
+import { Settings, LogOut, History, Plus, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from '@tanstack/react-router';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
@@ -520,25 +520,40 @@ export function TablePage() {
 
   const isHeroSeated = Object.values(seatsWithShowdown).some((s: any) => s.user_id === myUserId);
 
+  // ─── Handle notSeated error ──────────────────────────────────────────
   useEffect(() => {
     if (notSeated && !isJoining) {
       setHasJoined(false);
       setShowRebuyDialog(false);
       if (!isObserving) {
         useGameStore.setState({ rooms: {}, activeRoomId: null });
-        setShowRebuyDialog(true);
+        // Only show buy-in dialog for cash games, not tournaments
+        if (!isTournament) {
+          setShowRebuyDialog(true);
+        }
+        // For tournaments, we just wait for the table assignment via polling/events
       }
     }
-  }, [notSeated, isJoining, isObserving]);
+  }, [notSeated, isJoining, isObserving, isTournament]);
 
+  // ─── Handle joining / seating ──────────────────────────────────────
   useEffect(() => {
     if (connectionStatus !== 'connected') return;
 
+    // Observing mode: just mark as joined, no buy-in
     if (isObserving && !isHeroSeated && !hasJoined) {
       setHasJoined(true);
       return;
     }
 
+    // Tournament: never call sendJoin; wait for TournamentTableChanged
+    if (isTournament && !isHeroSeated && !hasJoined) {
+      setHasJoined(true);
+      setShowRebuyDialog(false);
+      return;
+    }
+
+    // Cash game: join with buy-in if provided, or show dialog
     if (!isHeroSeated && !hasJoined) {
       if (urlBuyIn && urlBuyIn > 0) {
         sendJoin(urlBuyIn);
@@ -557,16 +572,14 @@ export function TablePage() {
     if (isHeroSeated && showRebuyDialog && !isAddingTable) {
       setShowRebuyDialog(false);
     }
-  }, [connectionStatus, isHeroSeated, isObserving, hasJoined, urlBuyIn, sendJoin, showRebuyDialog, isAddingTable]);
+  }, [connectionStatus, isHeroSeated, isObserving, hasJoined, urlBuyIn, sendJoin, showRebuyDialog, isAddingTable, isTournament]);
 
-  // ─── FIXED REBUY DIALOG LOGIC ──────────────────────────────────────────
+  // ─── Rebuy logic ────────────────────────────────────────────────────
   useEffect(() => {
-    // Reset joining flag when stack is positive
     if (isJoining && heroStack > 0) {
       setIsJoining(false);
     }
 
-    // Check if hero is currently involved in an active hand (has hole cards)
     const isHeroInActiveHand = game.handInProgress && (heroHoleCards?.length ?? 0) > 0;
 
     const shouldShow =
@@ -575,13 +588,12 @@ export function TablePage() {
       !isJoining &&
       connectionStatus === 'connected' &&
       !isObserving &&
-      !isTournament &&
-      !isHeroInActiveHand; // <-- Replaced !game.handInProgress
+      !isTournament &&   // <-- Disable rebuy for tournaments
+      !isHeroInActiveHand;
 
     if (shouldShow) {
       setShowRebuyDialog(true);
     } else if (heroStack > 0 && !isAddingTable) {
-      // Close dialog when stack becomes > 0 (e.g., after rebuy)
       setShowRebuyDialog(false);
     }
   }, [
@@ -590,7 +602,7 @@ export function TablePage() {
     hasJoined,
     isJoining,
     game.handInProgress,
-    heroHoleCards, // <-- Added heroHoleCards to dependency array
+    heroHoleCards,
     isObserving,
     isAddingTable,
     isTournament,
@@ -760,6 +772,7 @@ export function TablePage() {
 
   const headerActionsEl = typeof document !== 'undefined' ? document.getElementById('header-portal-actions') : null;
 
+  // ─── Render ──────────────────────────────────────────────────────────
   return (
     <ErrorBoundary FallbackComponent={Fallback}>
       <div
@@ -1013,14 +1026,22 @@ export function TablePage() {
           </>
         )}
 
+        {/* ─── Bottom bar: either "Take a Seat" for cash observers, or waiting for tournament ─── */}
         {isObserving && !isHeroSeated ? (
           <div className="absolute bottom-0 left-0 right-0 z-[450] pb-[env(safe-area-inset-bottom)] flex justify-center">
-            <button
-              onClick={() => setShowRebuyDialog(true)}
-              className="mb-4 px-8 py-3 md:py-4 bg-tertiary text-on-tertiary font-label-caps text-xs md:text-sm hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg rounded-lg transition-colors"
-            >
-              Take a Seat
-            </button>
+            {isTournament ? (
+              <div className="mb-4 px-8 py-3 md:py-4 bg-white/10 border border-white/20 rounded-lg flex items-center gap-3 text-on-surface">
+                <Loader2 className="w-5 h-5 animate-spin text-tertiary" />
+                <span className="font-label-caps text-sm uppercase tracking-wider">Waiting for tournament to start...</span>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowRebuyDialog(true)}
+                className="mb-4 px-8 py-3 md:py-4 bg-tertiary text-on-tertiary font-label-caps text-xs md:text-sm hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg rounded-lg transition-colors"
+              >
+                Take a Seat
+              </button>
+            )}
           </div>
         ) : (
           <div className="absolute bottom-0 left-0 right-0 z-[450] pb-[env(safe-area-inset-bottom)]">
@@ -1050,9 +1071,6 @@ export function TablePage() {
         )}
       </div>
 
-
-
-
       <KickVoteDialog
         open={!!kickVoteDialog}
         onClose={() => setKickVoteDialog(null)}
@@ -1072,5 +1090,6 @@ export function TablePage() {
         }}
         onTimeout={() => setKickVoteDialog(null)}
       />
-    </ErrorBoundary>);
+    </ErrorBoundary>
+  );
 }

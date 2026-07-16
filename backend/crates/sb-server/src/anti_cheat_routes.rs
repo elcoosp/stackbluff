@@ -42,7 +42,8 @@ pub async fn record_fingerprint(
         .upsert(user_id, payload.fingerprint_hash, ctx.ip)
         .await
         .map_err(|e| {
-            (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to save fingerprint: {}", e))
+            tracing::error!("Failed to save fingerprint: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to save fingerprint".to_string())
         })?;
 
     Ok(StatusCode::OK)

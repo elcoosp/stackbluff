@@ -166,13 +166,13 @@ pub fn spawn_stats_aggregator(
 
                             if folded_players.contains(pid) {
                                 delta.preflop_fold_count = 1;
+                            }
 
                             if vpip_players.contains(pid) {
                                 delta.vpip_hands = 1;
                             }
                             if pfr_players.contains(pid) {
                                 delta.pfr_hands = 1;
-                            }
                             }
 
                             if is_showdown {
