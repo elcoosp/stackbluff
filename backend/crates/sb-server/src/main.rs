@@ -80,8 +80,6 @@ use user_service::{UserResolutionServiceImpl, UserServiceImpl};
 
 use test_utils::notification_service::InMemoryNotificationService;
 mod hand_archive;
-mod r2_adapter;
-use crate::r2_adapter::R2Adapter;
 mod r2_storage;
 mod season_card_generator;
 
@@ -127,7 +125,9 @@ async fn request_context_middleware(mut req: Request, next: Next) -> Response {
         .headers()
         .get("x-forwarded-for")
         .and_then(|v| v.to_str().ok())
-        .map(|s| s.to_string())
+        .and_then(|s| s.split(',').next())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "0.0.0.0".to_string());
 
     let mut user_id = None;
@@ -433,7 +433,7 @@ async fn run_app() {
         ));
     // Wrap in the contract adapter
     let r2_contract: Arc<dyn sb_contracts::r2_storage::R2Storage + Send + Sync> =
-        Arc::new(R2Adapter::new(r2.clone()));
+        Arc::new(r2_storage::R2StorageAdapter::new(r2.clone()));
 
 let app_state = Arc::new(AppState {
         table_service: table_service.clone(),

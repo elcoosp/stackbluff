@@ -4,7 +4,7 @@
 use chrono::{Duration, Utc};
 use sb_db_entities::{enums::Platform, enums::RankTier, player_rank, season, user};
 use sb_server::season_card_generator::SeasonCardGenerator;
-use sb_server::r2_storage::R2Storage;
+use sb_contracts::r2_storage::R2Storage;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, Database, EntityTrait, QueryFilter, Set,
 };

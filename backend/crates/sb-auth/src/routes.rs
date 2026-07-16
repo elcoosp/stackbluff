@@ -101,9 +101,15 @@ fn set_auth_cookie(cookies: &Cookies, jwt: &str) {
 }
 
 fn error_response(e: AppError) -> axum::response::Response {
+    let status = app_error_to_status(&e);
+    let message = if status.is_server_error() {
+        "Internal Server Error".to_string()
+    } else {
+        e.to_string()
+    };
     (
-        app_error_to_status(&e),
-        Json(serde_json::json!({"error": e.to_string()})),
+        status,
+        Json(serde_json::json!({"error": message})),
     )
         .into_response()
 }

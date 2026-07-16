@@ -6,7 +6,7 @@ use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, QueryOrde
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::r2_storage::R2Storage;
+use sb_contracts::r2_storage::R2Storage;
 
 pub struct SeasonCardGenerator {
     db: sea_orm::DatabaseConnection,

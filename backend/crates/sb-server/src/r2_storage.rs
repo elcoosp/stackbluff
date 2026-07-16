@@ -1,16 +1,7 @@
 use sb_shared_types::errors::AppError;
 use std::sync::Arc;
 
-#[async_trait::async_trait]
-pub trait R2Storage: Send + Sync {
-    async fn put_object(
-        &self,
-        bucket: &str,
-        key: &str,
-        data: Vec<u8>,
-        content_type: &str,
-    ) -> Result<String, AppError>;
-}
+use sb_contracts::r2_storage::R2Storage;
 
 pub struct R2StorageAdapter {
     inner: Arc<dyn crate::hand_archive::R2Storage>,
