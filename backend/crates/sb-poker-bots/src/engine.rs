@@ -72,7 +72,7 @@ mod tests {
     use super::*;
     use rand::rngs::StdRng;
     use rand::SeedableRng;
-    use sb_shared_types::{Card, ChipAmount, Rank, Suit};
+    use sb_shared_types::ChipAmount;
 
     fn state(can_check: bool, pot_odds: f32) -> BotViewState {
         BotViewState {
