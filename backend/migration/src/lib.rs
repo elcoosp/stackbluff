@@ -35,6 +35,7 @@ mod m20260710_000001_add_hand_count_to_referral;
 mod m20260614_145806_add_referrals_and_counters;
 mod m20260711_000001_create_device_fingerprints;
 mod m20260712_000001_create_analytics_events;
+mod m20260716_bot_system;
 
 use sea_orm_migration::prelude::*;
 
@@ -85,6 +86,8 @@ impl MigratorTrait for Migrator {
             Box::new(m20260712_000001_create_analytics_events::Migration),
             // 8. Device Fingerprints table
             Box::new(m20260711_000001_create_device_fingerprints::Migration),
+            // 9. Bot system
+            Box::new(m20260716_bot_system::Migration),
         ]
     }
 }
