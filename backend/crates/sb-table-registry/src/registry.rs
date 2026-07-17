@@ -186,6 +186,7 @@ impl Registry {
         seat: Option<u8>,
         stack: ChipAmount,
         msg_tx: mpsc::UnboundedSender<RoomMessage>,
+        is_bot: bool,
     ) -> Result<bool, TableError> {
         let table_id = {
             let guard = self.rooms.read().await;
@@ -207,6 +208,7 @@ impl Registry {
             seat,
             stack,
             msg_tx,
+            is_bot,
             respond_to: tx,
         };
 
@@ -494,6 +496,7 @@ impl Registry {
                                 None,
                                 stack,
                                 msg_tx,
+                                false,
                             )
                             .await;
                         let _ = reply_to.send(Ok(()));

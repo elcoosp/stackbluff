@@ -35,6 +35,7 @@ pub struct PlayerStateInfo {
     pub is_folded: bool,
     pub is_leaving: bool,
     pub sitting_out: bool, // CHANGED: Added to show "Away" state
+    pub is_bot: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub position_badge: Option<String>,
     pub last_action: Option<ActionInfo>,

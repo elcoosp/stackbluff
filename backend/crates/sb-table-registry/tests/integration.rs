@@ -70,6 +70,7 @@ async fn test_registry_creates_table_and_joins_player() {
             None,
             stack,
             msg_tx,
+            false,
         )
         .await;
 
