@@ -530,7 +530,7 @@ let app_state = Arc::new(AppState {
     ));
 
     let bm_clone = bot_manager.clone();
-    bm_clone.spawn_auto_fill_task(bot_client.clone(), registry.clone(), 2, sb_shared_types::ChipAmount::new(1000).unwrap());
+    bm_clone.spawn_auto_fill_task(registry.clone());
     // --- End Bot System Initialization ---
 
     let viral_event_rx = registry.event_sender().subscribe();
