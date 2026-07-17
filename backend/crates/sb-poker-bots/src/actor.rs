@@ -3,8 +3,8 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use rand::rngs::ThreadRng;
-use rand::RngExt;
+use rand::rngs::StdRng;
+use rand::{Rng, RngExt, SeedableRng};
 use tokio::sync::mpsc;
 use tracing::{info, warn};
 
@@ -46,7 +46,7 @@ pub struct BotActor {
     hole_cards: Vec<Card>,
     community_cards: Vec<Card>,
 
-    rng: ThreadRng,
+    rng: StdRng,
 }
 
 impl BotActor {
@@ -69,7 +69,7 @@ impl BotActor {
             hand_just_ended: false,
             hole_cards: Vec::new(),
             community_cards: Vec::new(),
-            rng: rand::rng(),
+            rng: StdRng::from_rng(&mut rand::rng()),
         }
     }
 

@@ -9,7 +9,7 @@ pub struct Decision {
     pub confidence: f32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BotProfile {
     pub aggression: f32,
     pub bluff_frequency: f32,
