@@ -67,4 +67,16 @@ impl TableClient for BotTableClient {
             .set_sitting_out(room_id, user_id, sitting_out)
             .await
     }
+
+    async fn get_table_config(&self, room_id: TableId) -> Result<sb_shared_types::TableConfig, AppError> {
+        self.registry
+            .get_table_config(room_id)
+            .await
+            .ok_or_else(|| AppError::NotFound("Table config not found".to_string()))
+    }
+
+    async fn get_player_count(&self, room_id: TableId) -> Result<u8, AppError> {
+        let count = self.registry.get_total_active_players(room_id).await;
+        Ok(count as u8)
+    }
 }

@@ -64,6 +64,12 @@ pub trait TableClient: Send + Sync {
         user_id: UserId,
         sitting_out: bool,
     ) -> Result<(), AppError>;
+
+    /// Get the table configuration (blinds, buy-in limits, etc.)
+    async fn get_table_config(&self, room_id: TableId) -> Result<sb_shared_types::TableConfig, AppError>;
+
+    /// Get the current number of active players at the table.
+    async fn get_player_count(&self, room_id: TableId) -> Result<u8, AppError>;
 }
 
 pub struct BotManager {
@@ -89,14 +95,24 @@ impl BotManager {
         }
     }
 
-    pub async fn fill_table(
-        &self,
-        table_id: TableId,
-        stack: ChipAmount,
-    ) -> Result<(), AppError> {
+    pub async fn fill_table(&self, table_id: TableId) -> Result<(), AppError> {
+        let config = self.table_client.get_table_config(table_id).await?;
+        let count = self.table_client.get_player_count(table_id).await?;
+
+        if count >= config.max_players {
+            return Ok(());
+        }
+
+        if count >= 2 {
+            return Ok(()); // Only fill if empty or 1 player
+        }
+
         if let Some(entry) = self.bot_pool.iter().next() {
             let bot_id = *entry.key();
             let profile = entry.value().clone();
+
+            // Use min buy-in for simplicity
+            let stack = config.min_buy_in;
 
             // 1. Reserve bankroll
             self.bankroll_manager
@@ -131,20 +147,17 @@ impl BotManager {
 
     pub fn spawn_auto_fill_task(
         self: Arc<Self>,
-        _table_client: Arc<dyn TableClient>,
         registry: Arc<sb_table_registry::Registry>,
-        _min_players: u8,
-        stack: ChipAmount,
     ) {
         tokio::spawn(async move {
             loop {
                 let tables = registry.list_active_tables().await;
                 for table_info in tables {
                     if !self.bot_pool.is_empty() {
-                        let _ = self.fill_table(table_info.table_id, stack).await;
+                        let _ = self.fill_table(table_info.table_id).await;
                     }
                 }
-                tokio::time::sleep(tokio::time::Duration::from_secs(30)).await;
+                tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
             }
         });
     }
