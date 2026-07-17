@@ -13,6 +13,8 @@ pub struct HandPlayer {
     pub stack_after: i64,
     pub is_dealer: bool,
     #[serde(default)]
+    pub is_bot: bool,
+    #[serde(default)]
     pub raised_preflop: bool,
     #[serde(default)]
     pub went_to_showdown: bool,
