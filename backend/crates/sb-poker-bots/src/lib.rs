@@ -135,6 +135,7 @@ impl BotManager {
                     table_id,
                     profile,
                     self.table_client.clone(),
+                    self.bankroll_manager.clone(),
                     stack,
                 );
                 tokio::spawn(actor.run(msg_rx));

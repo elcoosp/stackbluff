@@ -489,6 +489,11 @@ let app_state = Arc::new(AppState {
         let profiles = vec![
             ("FishBot1", BotProfile { aggression: 0.2, bluff_frequency: 0.05 }),
             ("TagBot1", BotProfile { aggression: 0.6, bluff_frequency: 0.15 }),
+            ("RockBot1", BotProfile { aggression: 0.3, bluff_frequency: 0.02 }),
+            ("NitBot1", BotProfile { aggression: 0.1, bluff_frequency: 0.01 }),
+            ("LagBot1", BotProfile { aggression: 0.8, bluff_frequency: 0.25 }),
+            ("ManiacBot1", BotProfile { aggression: 0.95, bluff_frequency: 0.4 }),
+            ("ProBot1", BotProfile { aggression: 0.5, bluff_frequency: 0.1 }),
         ];
 
         for (name, profile) in profiles {
@@ -502,7 +507,7 @@ let app_state = Arc::new(AppState {
                 platform: sea_orm::Set(sb_db_entities::enums::Platform::Pwa),
                 chip_balance: sea_orm::Set(0),
                 is_bot: sea_orm::Set(true),
-                bot_profile: sea_orm::Set(Some("fish".to_string())), // Simplified
+                bot_profile: sea_orm::Set(Some(name.to_lowercase().replace("bot1", ""))),
                 bot_bankroll: sea_orm::Set(Some(100000)),
                 ..Default::default()
             };
@@ -516,7 +521,12 @@ let app_state = Arc::new(AppState {
         for bot in existing_bots {
             let profile = match bot.bot_profile.as_deref() {
                 Some("tag") => BotProfile { aggression: 0.6, bluff_frequency: 0.15 },
-                _ => BotProfile { aggression: 0.2, bluff_frequency: 0.05 },
+                Some("rock") => BotProfile { aggression: 0.3, bluff_frequency: 0.02 },
+                Some("nit") => BotProfile { aggression: 0.1, bluff_frequency: 0.01 },
+                Some("lag") => BotProfile { aggression: 0.8, bluff_frequency: 0.25 },
+                Some("maniac") => BotProfile { aggression: 0.95, bluff_frequency: 0.4 },
+                Some("pro") => BotProfile { aggression: 0.5, bluff_frequency: 0.1 },
+                _ => BotProfile { aggression: 0.2, bluff_frequency: 0.05 }, // Fish
             };
             bot_pool.push((sb_shared_types::UserId::new(bot.id), profile));
         }
