@@ -6038,6 +6038,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "sb-poker-bots"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "dashmap",
+ "metrics",
+ "rand 0.10.2",
+ "sb-contracts",
+ "sb-shared-types",
+ "sb-table-registry",
+ "sea-orm",
+ "serde",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "sb-rest-router"
 version = "0.1.0"
 dependencies = [
