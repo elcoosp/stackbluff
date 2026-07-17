@@ -14,6 +14,9 @@ pub struct Model {
     pub display_name: String,
     #[sea_orm(column_type = "BigInteger")]
     pub chip_balance: i64,
+    pub is_bot: bool,
+    pub bot_profile: Option<String>,
+    pub bot_bankroll: Option<i64>,
     pub streak_count: i32,
     pub created_at: DateTimeUtc,
     pub updated_at: DateTimeUtc,
