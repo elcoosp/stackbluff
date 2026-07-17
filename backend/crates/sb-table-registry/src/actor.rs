@@ -1437,7 +1437,7 @@ impl TableActor {
 
             if hand.current_player_user() != Some(user_id) {
                 let turn_user = hand.current_player_user();
-                drop(hand);
+                let _ = hand;
                 self.send_error_to(
                     &user_id,
                     &format!(
@@ -1453,7 +1453,7 @@ impl TableActor {
             let player_id = match hand.player_by_user_id.get(&user_id) {
                 Some(pid) => *pid,
                 None => {
-                    drop(hand);
+                    let _ = hand;
                     self.send_error_to(&user_id, "Not in hand");
                     return;
                 }
@@ -1468,7 +1468,7 @@ impl TableActor {
                 ActionType::Raise => {
                     let raise = amount.unwrap_or_else(zero);
                     if raise < min_raise_val {
-                        drop(hand);
+                        let _ = hand;
                         self.send_error_to(&user_id, &format!("Minimum raise is {}", min_raise_val));
                         return;
                     }
@@ -1660,7 +1660,7 @@ impl TableActor {
     }
 
     async fn handle_timeout(&mut self, user_id: UserId) {
-        let (pid, new_pot, next_user, action_req_opt) = {
+        let (_pid, new_pot, next_user, action_req_opt) = {
             let hand = match &mut self.current_hand {
                 Some(h) => h,
                 None => return,
