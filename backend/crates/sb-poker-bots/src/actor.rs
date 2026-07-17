@@ -15,6 +15,7 @@ use sb_table_registry::game_room::{
 
 use crate::engine::{decide, BotProfile, BotViewState};
 use crate::evaluator::fast_equity;
+use crate::economy::BankrollManager;
 use crate::TableClient;
 
 const RING_BUFFER_CAPACITY: usize = 5;
@@ -35,6 +36,7 @@ pub struct BotActor {
     pub state: BotState,
 
     table_client: Arc<dyn TableClient>,
+    bankroll_manager: Arc<BankrollManager>,
 
     // Local history for Tilt
     stack_deltas: Vec<ChipAmount>,
@@ -55,6 +57,7 @@ impl BotActor {
         table_id: TableId,
         profile: BotProfile,
         table_client: Arc<dyn TableClient>,
+        bankroll_manager: Arc<BankrollManager>,
         initial_stack: ChipAmount,
     ) -> Self {
         Self {
@@ -63,6 +66,7 @@ impl BotActor {
             profile,
             state: BotState::Idle,
             table_client,
+            bankroll_manager,
             stack_deltas: Vec::with_capacity(RING_BUFFER_CAPACITY),
             session_start_stack: initial_stack,
             last_known_stack: initial_stack,
@@ -94,12 +98,15 @@ impl BotActor {
                     self.handle_hand_result(&result).await;
                     if self.state == BotState::PendingLeave {
                         self.state = BotState::Leaving;
-                        if let Err(e) = self
-                            .table_client
-                            .leave_table(self.table_id, self.user_id, false)
-                            .await
-                        {
-                            warn!(bot_id = %self.user_id, error = %e, "Failed to leave table");
+                        match self.table_client.leave_table(self.table_id, self.user_id, false).await {
+                            Ok(refunded_stack) => {
+                                if let Err(e) = self.bankroll_manager.credit_bankroll(self.user_id, refunded_stack).await {
+                                    warn!(bot_id = %self.user_id, error = %e, "Failed to credit bankroll on leave");
+                                }
+                            }
+                            Err(e) => {
+                                warn!(bot_id = %self.user_id, error = %e, "Failed to leave table");
+                            }
                         }
                         break;
                     }

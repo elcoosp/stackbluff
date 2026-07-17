@@ -86,6 +86,27 @@ impl BankrollManager {
         }
     }
 
+    /// Credits chips back to the bot's bankroll in the DB (e.g. when leaving a table).
+    pub async fn credit_bankroll(
+        &self,
+        user_id: UserId,
+        amount: ChipAmount,
+    ) -> Result<(), BankrollError> {
+        let amount_i64 = amount.as_i64();
+        let uid = user_id.as_uuid();
+
+        user::Entity::update_many()
+            .col_expr(
+                user::Column::BotBankroll,
+                Expr::col(user::Column::BotBankroll).add(amount_i64),
+            )
+            .filter(user::Column::Id.eq(uid))
+            .exec(&self.db)
+            .await?;
+
+        Ok(())
+    }
+
     /// Records a chip flow in the in-memory ledger map.
     pub fn record_ledger(
         &self,
