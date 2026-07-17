@@ -4,7 +4,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use rand::rngs::StdRng;
-use rand::{Rng, RngExt, SeedableRng};
+use rand::{RngExt, SeedableRng};
 use tokio::sync::mpsc;
 use tracing::{info, warn};
 
@@ -179,6 +179,7 @@ impl BotActor {
             is_tilted,
         };
 
+        let start = std::time::Instant::now();
         let decision = decide(
             &mut self.rng,
             &self.profile,
@@ -186,6 +187,9 @@ impl BotActor {
             &self.hole_cards,
             equity,
         );
+        let elapsed = start.elapsed().as_micros() as f64;
+        metrics::histogram!("bot_decision_latency_microseconds").record(elapsed);
+        metrics::counter!("bot_action_distribution", "action" => format!("{:?}", decision.action_type)).increment(1);
 
         tracing::info!(
             target: "bot_decision",
