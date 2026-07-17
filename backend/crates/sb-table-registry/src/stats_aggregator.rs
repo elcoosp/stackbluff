@@ -15,6 +15,7 @@ use tracing::{error, info, warn};
 pub fn spawn_stats_aggregator(
     mut rx: broadcast::Receiver<TableEvent>,
     stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
+    is_bot_cache: moka::future::Cache<sb_shared_types::UserId, bool>,
 ) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
         info!("Player stats aggregator started");
@@ -43,6 +44,11 @@ pub fn spawn_stats_aggregator(
                     // 1. Initialize basic data for all participants
                     for player in &event.players.seats {
                         if let Some(user_id) = &player.user_id {
+                            // Skip bots from stats aggregation
+                            if is_bot_cache.get(user_id).await.unwrap_or(false) {
+                                continue;
+                            }
+
                             let uid_str = user_id.0.to_string();
                             player_to_user.insert(player.player_id, uid_str.clone());
 

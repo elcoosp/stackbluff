@@ -17,3 +17,4 @@ tokio = { workspace = true, features = ["rt", "time"] }
 anyhow = { workspace = true }
 uuid = { workspace = true }
 dashmap = { workspace = true }
+moka = { workspace = true }

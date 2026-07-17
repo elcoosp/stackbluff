@@ -14,6 +14,7 @@ sb-db-entities = { workspace = true }
 chrono = { workspace = true }
 tokio = { workspace = true }
 dashmap = { workspace = true }
+moka = { workspace = true }
 futures = { workspace = true }
 thiserror = { workspace = true }
 tracing.workspace = true
