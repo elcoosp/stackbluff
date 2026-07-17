@@ -4,6 +4,10 @@ mod test_utils;
 mod user_service;
 mod viral_observer;
 
+use sb_poker_bots::{BotManager, TableClient};
+use sb_poker_bots::engine::BotProfile;
+use sb_db_entities::user;
+use sea_orm::ActiveModelTrait;
 use axum::{
     Extension, Router,
     extract::Request,
@@ -79,6 +83,7 @@ use sb_ws_handler::ws_route;
 use user_service::{UserResolutionServiceImpl, UserServiceImpl};
 
 use test_utils::notification_service::InMemoryNotificationService;
+mod bot_system;
 mod hand_archive;
 mod r2_storage;
 mod season_card_generator;
@@ -275,7 +280,7 @@ async fn run_app() {
             variant: GameVariant::Holdem,
             min_buy_in,
             max_buy_in,
-            turn_time_limit_ms: 30_000,
+            turn_time_limit_ms: if std::env::var("BOT_FAST_MODE").map(|v| v == "1").unwrap_or(false) { 100 } else { 30_000 },
         };
         registry
             .register_existing_table(t.table_id, config, system_user, None)
@@ -467,6 +472,66 @@ let app_state = Arc::new(AppState {
 
     let hand_count_observer: Arc<dyn HandCountObserver + Send + Sync> = viral_service_arc.clone();
     let replay_observer: Arc<dyn ReplayCardObserver + Send + Sync> = viral_service_arc.clone();
+
+    // --- Bot System Initialization ---
+    let bot_client = Arc::new(bot_system::BotTableClient { registry: registry.clone() });
+    let bankroll_manager = sb_poker_bots::economy::BankrollManager::new(db.clone());
+
+    // Ensure bot users exist in DB
+    let mut bot_pool = Vec::new();
+    let existing_bots: Vec<sb_db_entities::user::Model> = sb_db_entities::user::Entity::find()
+        .filter(sb_db_entities::user::Column::IsBot.eq(true))
+        .all(&db)
+        .await
+        .unwrap_or_default();
+
+    if existing_bots.is_empty() {
+        tracing::info!("No bot users found, creating default bots...");
+        let profiles = vec![
+            ("FishBot1", BotProfile { aggression: 0.2, bluff_frequency: 0.05 }),
+            ("TagBot1", BotProfile { aggression: 0.6, bluff_frequency: 0.15 }),
+        ];
+
+        for (name, profile) in profiles {
+            let uid = uuid::Uuid::new_v4();
+            let now = chrono::Utc::now();
+            let active = sb_db_entities::user::ActiveModel {
+                id: sea_orm::Set(uid),
+                display_name: sea_orm::Set(name.to_string()),
+                created_at: sea_orm::Set(now),
+                updated_at: sea_orm::Set(now),
+                platform: sea_orm::Set(sb_db_entities::enums::Platform::Pwa),
+                chip_balance: sea_orm::Set(0),
+                is_bot: sea_orm::Set(true),
+                bot_profile: sea_orm::Set(Some("fish".to_string())), // Simplified
+                bot_bankroll: sea_orm::Set(Some(100000)),
+                ..Default::default()
+            };
+            if let Err(e) = active.insert(&db).await {
+                tracing::error!(error = ?e, "Failed to create bot user");
+            } else {
+                bot_pool.push((sb_shared_types::UserId::new(uid), profile));
+            }
+        }
+    } else {
+        for bot in existing_bots {
+            let profile = match bot.bot_profile.as_deref() {
+                Some("tag") => BotProfile { aggression: 0.6, bluff_frequency: 0.15 },
+                _ => BotProfile { aggression: 0.2, bluff_frequency: 0.05 },
+            };
+            bot_pool.push((sb_shared_types::UserId::new(bot.id), profile));
+        }
+    }
+
+    let bot_manager = Arc::new(BotManager::new(
+        bot_client.clone(),
+        bankroll_manager,
+        bot_pool,
+    ));
+
+    let bm_clone = bot_manager.clone();
+    bm_clone.spawn_auto_fill_task(bot_client.clone(), registry.clone(), 2, sb_shared_types::ChipAmount::new(1000).unwrap());
+    // --- End Bot System Initialization ---
 
     let viral_event_rx = registry.event_sender().subscribe();
     viral_observer::spawn_viral_observer(

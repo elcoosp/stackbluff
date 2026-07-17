@@ -10,6 +10,7 @@ sb-shared-types = { workspace = true }
 sb-contracts = { workspace = true }
 sb-table-registry = { path = "../sb-table-registry" }
 sb-db-entities = { workspace = true }
+futures = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros", "sync", "time"] }
 sea-orm = { workspace = true }
 dashmap = { workspace = true }

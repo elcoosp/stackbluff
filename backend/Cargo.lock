@@ -6045,6 +6045,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "dashmap",
+ "futures",
  "metrics",
  "rand 0.10.2",
  "sb-contracts",
