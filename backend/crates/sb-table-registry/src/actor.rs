@@ -1284,6 +1284,7 @@ impl TableActor {
             display_name: String,
             seat: u8,
             stack_before: ChipAmount,
+            is_bot: bool,
         }
 
         let mut player_infos: Vec<PlayerInfo> = self
@@ -1296,6 +1297,7 @@ impl TableActor {
                 display_name: p.display_name.clone(),
                 seat: p.seat,
                 stack_before: p.stack,
+                is_bot: p.is_bot,
             })
             .collect();
 
@@ -1362,6 +1364,7 @@ impl TableActor {
                     stack_before: p.stack_before.as_i64(),
                     stack_after: p.stack_before.as_i64(),
                     is_dealer: p.player_id == dealer_pid,
+                    is_bot: p.is_bot,
                     // Flags will be set in finalize_hand
                     raised_preflop: false,
                     went_to_showdown: false,
