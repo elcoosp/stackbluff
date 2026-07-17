@@ -472,15 +472,19 @@ fn broadcast_msg(
     room_id: TableId,
     user_senders: &HashMap<UserId, mpsc::UnboundedSender<RoomMessage>>,
     msg: RoomMessage,
-) {
+) -> Vec<UserId> {
+    let mut dead_users = Vec::new();
     if let Some(broker) = broker {
         let room = tournament_room_id.unwrap_or(room_id);
         broker.broadcast_to_room(room, msg);
     } else {
-        for tx in user_senders.values() {
-            let _: Result<_, _> = tx.send(msg.clone());
+        for (uid, tx) in user_senders.iter() {
+            if tx.send(msg.clone()).is_err() {
+                dead_users.push(*uid);
+            }
         }
     }
+    dead_users
 }
 
 fn send_to_player_msg(
@@ -488,11 +492,14 @@ fn send_to_player_msg(
     user_senders: &HashMap<UserId, mpsc::UnboundedSender<RoomMessage>>,
     user_id: &UserId,
     msg: RoomMessage,
-) {
+) -> bool {
     if let Some(broker) = broker {
         broker.send_to_user(*user_id, msg);
+        true
     } else if let Some(tx) = user_senders.get(user_id) {
-        let _: Result<_, _> = tx.send(msg);
+        tx.send(msg).is_ok()
+    } else {
+        true
     }
 }
 
@@ -597,17 +604,44 @@ impl TableActor {
     }
 
     fn broadcast(&self, msg: RoomMessage) {
-        broadcast_msg(
+        let dead_users = broadcast_msg(
             &self.broker,
             self.tournament_room_id,
             self.room_id,
             &self.user_senders,
             msg,
         );
+        for uid in dead_users {
+            let cmd_tx = self.cmd_tx.clone();
+            tokio::spawn(async move {
+                let (tx, _rx) = tokio::sync::oneshot::channel();
+                let _ = cmd_tx
+                    .send(InternalCommand::Leave {
+                        user_id: uid,
+                        respond_to: tx,
+                        force: true,
+                    })
+                    .await;
+            });
+        }
     }
 
     fn send_to_player(&self, user_id: &UserId, msg: RoomMessage) {
-        send_to_player_msg(&self.broker, &self.user_senders, user_id, msg);
+        let ok = send_to_player_msg(&self.broker, &self.user_senders, user_id, msg);
+        if !ok {
+            let cmd_tx = self.cmd_tx.clone();
+            let uid = *user_id;
+            tokio::spawn(async move {
+                let (tx, _rx) = tokio::sync::oneshot::channel();
+                let _ = cmd_tx
+                    .send(InternalCommand::Leave {
+                        user_id: uid,
+                        respond_to: tx,
+                        force: true,
+                    })
+                    .await;
+            });
+        }
     }
 
     pub async fn run(mut self, mut rx: mpsc::Receiver<InternalCommand>) {
@@ -1392,77 +1426,117 @@ impl TableActor {
         action_type: ActionType,
         amount: Option<ChipAmount>,
     ) {
-        let hand = match &mut self.current_hand {
-            Some(h) => h,
-            None => {
-                self.send_error_to(&user_id, "No active hand");
-                return;
-            }
-        };
-
-        if hand.current_player_user() != Some(user_id) {
-            let turn_user = hand.current_player_user();
-            self.send_error_to(
-                &user_id,
-                &format!(
-                    "Not your turn — it's {}'s turn",
-                    turn_user
-                        .map(|u| u.to_string())
-                        .unwrap_or_else(|| "unknown".into())
-                ),
-            );
-            return;
-        }
-
-        let player_id = match hand.player_by_user_id.get(&user_id) {
-            Some(pid) => *pid,
-            None => {
-                self.send_error_to(&user_id, "Not in hand");
-                return;
-            }
-        };
-
-        let engine_action = match action_type {
-            ActionType::Fold => Action::Fold,
-            ActionType::Check => Action::Check,
-            ActionType::Call => Action::Call,
-            ActionType::Raise => {
-                let raise = amount.unwrap_or_else(zero);
-                let min_raise = hand.state.min_raise_amount();
-                if raise < min_raise {
-                    self.send_error_to(&user_id, &format!("Minimum raise is {}", min_raise));
+        let (player_id, engine_action, prev_comm_cards_len, min_raise_val) = {
+            let hand = match &mut self.current_hand {
+                Some(h) => h,
+                None => {
+                    self.send_error_to(&user_id, "No active hand");
                     return;
                 }
-                Action::Raise(raise)
+            };
+
+            if hand.current_player_user() != Some(user_id) {
+                let turn_user = hand.current_player_user();
+                drop(hand);
+                self.send_error_to(
+                    &user_id,
+                    &format!(
+                        "Not your turn — it's {}'s turn",
+                        turn_user
+                            .map(|u| u.to_string())
+                            .unwrap_or_else(|| "unknown".into())
+                    ),
+                );
+                return;
             }
-            ActionType::AllIn => {
-                let stack = self
-                    .players
-                    .get(&user_id)
-                    .map(|p| p.stack)
-                    .unwrap_or_else(zero);
-                Action::Raise(stack)
-            }
-            ActionType::Bet => {
-                let bet = amount.unwrap_or_else(zero);
-                Action::Raise(bet)
-            }
+
+            let player_id = match hand.player_by_user_id.get(&user_id) {
+                Some(pid) => *pid,
+                None => {
+                    drop(hand);
+                    self.send_error_to(&user_id, "Not in hand");
+                    return;
+                }
+            };
+
+            let min_raise_val = hand.state.min_raise_amount();
+
+            let engine_action = match action_type {
+                ActionType::Fold => Action::Fold,
+                ActionType::Check => Action::Check,
+                ActionType::Call => Action::Call,
+                ActionType::Raise => {
+                    let raise = amount.unwrap_or_else(zero);
+                    if raise < min_raise_val {
+                        drop(hand);
+                        self.send_error_to(&user_id, &format!("Minimum raise is {}", min_raise_val));
+                        return;
+                    }
+                    Action::Raise(raise)
+                }
+                ActionType::AllIn => {
+                    let stack = self
+                        .players
+                        .get(&user_id)
+                        .map(|p| p.stack)
+                        .unwrap_or_else(zero);
+                    Action::Raise(stack)
+                }
+                ActionType::Bet => {
+                    let bet = amount.unwrap_or_else(zero);
+                    Action::Raise(bet)
+                }
+            };
+
+            let prev_comm_cards_len = hand.state.community_cards().len();
+            (player_id, engine_action, prev_comm_cards_len, min_raise_val)
         };
 
         info!(%user_id, action = ?action_type, ?amount, "Processing action");
-        let prev_comm_cards_len = hand.state.community_cards().len();
 
-        match hand.state.apply_action(player_id, engine_action) {
-            Ok(()) => {
+        let action_result;
+        let mut new_stack_opt = None;
+        let mut new_pot = zero();
+        let mut comm_cards_len = 0;
+        let mut next_user = None;
+        let mut action_req_opt = None;
+        let mut analytics_to_send = Vec::new();
+        let mut street_str = String::new();
+
+        {
+            let hand = match &mut self.current_hand {
+                Some(h) => h,
+                None => return,
+            };
+            action_result = hand.state.apply_action(player_id, engine_action);
+
+            if action_result.is_ok() {
                 hand.cancel_timeout();
-
-                if let Some(new_stack) = hand.player_stack(user_id)
-                    && let Some(player) = self.players.get_mut(&user_id)
-                {
-                    player.stack = new_stack;
+                new_stack_opt = hand.player_stack(user_id);
+                new_pot = hand.state.current_pot();
+                comm_cards_len = hand.state.community_cards().len();
+                next_user = hand.current_player_user();
+                street_str = street_name(&hand.state);
+                if let Some(next) = next_user {
+                    action_req_opt = Some(build_action_required(self.room_id, hand, next));
                 }
+                if comm_cards_len > prev_comm_cards_len {
+                    for player in self.players.values() {
+                        if let Some(analytics) = build_analytics(hand, player.user_id) {
+                            analytics_to_send.push((player.user_id, analytics));
+                        }
+                    }
+                }
+            }
+        }
 
-                let new_pot = hand.state.current_pot();
+        match action_result {
+            Ok(()) => {
+                if let Some(new_stack) = new_stack_opt {
+                    if let Some(player) = self.players.get_mut(&user_id) {
+                        player.stack = new_stack;
+                    }
+                }
 
                 let action_str_lower = format!("{:?}", action_type).to_lowercase();
                 let action_str_upper = match action_type {
@@ -1490,21 +1564,14 @@ impl TableActor {
                     },
                 );
 
-                broadcast_msg(
-                    &self.broker,
-                    self.tournament_room_id,
-                    self.room_id,
-                    &self.user_senders,
-                    RoomMessage::ActionBroadcast(ActionBroadcast {
-                        // FIXED: Use broadcast_msg
-                        room_id: self.room_id,
-                        player_id: user_id,
-                        action: action_str_lower,
-                        amount: amount_u64,
-                        new_stack: new_stack.as_i64() as u64,
-                        new_pot: new_pot.as_i64() as u64,
-                    }),
-                );
+                self.broadcast(RoomMessage::ActionBroadcast(ActionBroadcast {
+                    room_id: self.room_id,
+                    player_id: user_id,
+                    action: action_str_lower,
+                    amount: amount_u64,
+                    new_stack: new_stack.as_i64() as u64,
+                    new_pot: new_pot.as_i64() as u64,
+                }));
 
                 if let Some(started_at) = self.hand_started_at {
                     let elapsed_ms = (Utc::now() - started_at).num_milliseconds().max(0) as u64;
@@ -1513,11 +1580,11 @@ impl TableActor {
                         action_type: format!("{:?}", action_type).to_lowercase(),
                         amount: amount.map(|a| a.as_i64()),
                         timestamp_ms: elapsed_ms,
-                        street: street_name(&hand.state),
+                        street: street_str.clone(),
                     });
                 }
 
-                if hand.state.community_cards().len() > prev_comm_cards_len {
+                if comm_cards_len > prev_comm_cards_len {
                     let cmd_tx = self.cmd_tx.clone();
                     tokio::spawn(async move {
                         tokio::time::sleep(Duration::from_millis(1500)).await;
@@ -1525,7 +1592,7 @@ impl TableActor {
                     });
                 }
 
-                if let Some(next) = hand.current_player_user() {
+                if let Some(next) = next_user {
                     let is_leaving = self
                         .players
                         .get(&next)
@@ -1540,37 +1607,27 @@ impl TableActor {
                                 .await;
                         });
                     } else {
-                        hand.schedule_timeout(
-                            next,
-                            self.cmd_tx.clone(),
-                            self.config.turn_time_limit_ms,
-                        );
-                    }
-                    let action_req = build_action_required(self.room_id, hand, next);
-                    broadcast_msg(
-                        &self.broker,
-                        self.tournament_room_id,
-                        self.room_id,
-                        &self.user_senders,
-                        RoomMessage::ActionRequired(action_req),
-                    ); // FIXED: Use broadcast_msg
-
-                    if hand.state.community_cards().len() > prev_comm_cards_len {
-                        for player in self.players.values() {
-                            if let Some(analytics) = build_analytics(hand, player.user_id) {
-                                send_to_player_msg(
-                                    &self.broker,
-                                    &self.user_senders,
-                                    &player.user_id,
-                                    RoomMessage::PrivateMessage {
-                                        // FIXED: Use send_to_player_msg
-                                        room_id: self.room_id,
-                                        target_user_id: player.user_id,
-                                        payload: PrivatePayload::Analytics { analytics },
-                                    },
-                                );
-                            }
+                        if let Some(hand) = self.current_hand.as_mut() {
+                            hand.schedule_timeout(
+                                next,
+                                self.cmd_tx.clone(),
+                                self.config.turn_time_limit_ms,
+                            );
                         }
+                    }
+
+                    let action_req = action_req_opt.unwrap();
+                    self.broadcast(RoomMessage::ActionRequired(action_req));
+
+                    for (uid, analytics) in analytics_to_send {
+                        self.send_to_player(
+                            &uid,
+                            RoomMessage::PrivateMessage {
+                                room_id: self.room_id,
+                                target_user_id: uid,
+                                payload: PrivatePayload::Analytics { analytics },
+                            },
+                        );
                     }
                     self.broadcast_table_state();
                 } else {
@@ -1583,10 +1640,9 @@ impl TableActor {
                     ActionError::AlreadyFolded => "Already folded".into(),
                     ActionError::AlreadyAllIn => "Already all-in".into(),
                     ActionError::InvalidRaise { .. } => {
-                        let min = hand.state.min_raise_amount();
                         format!(
                             "Invalid action — if facing a bet, use 'call' instead of 'check'. Minimum raise is {}",
-                            min
+                            min_raise_val
                         )
                     }
                     ActionError::HandComplete => "Hand finished".into(),
@@ -1604,20 +1660,27 @@ impl TableActor {
     }
 
     async fn handle_timeout(&mut self, user_id: UserId) {
-        let hand = match &mut self.current_hand {
-            Some(h) => h,
-            None => return,
+        let (pid, new_pot, next_user, action_req_opt) = {
+            let hand = match &mut self.current_hand {
+                Some(h) => h,
+                None => return,
+            };
+            if hand.current_player_user() != Some(user_id) {
+                return;
+            }
+            info!(%user_id, "Auto-fold timeout");
+            let pid = match hand.player_by_user_id.get(&user_id) {
+                Some(p) => *p,
+                None => return,
+            };
+            let _ = hand.state.apply_action(pid, Action::Fold);
+            hand.cancel_timeout();
+
+            let new_pot = hand.state.current_pot().as_i64() as u64;
+            let next_user = hand.current_player_user();
+            let action_req_opt = next_user.map(|next| build_action_required(self.room_id, hand, next));
+            (pid, new_pot, next_user, action_req_opt)
         };
-        if hand.current_player_user() != Some(user_id) {
-            return;
-        }
-        info!(%user_id, "Auto-fold timeout");
-        let pid = match hand.player_by_user_id.get(&user_id) {
-            Some(p) => *p,
-            None => return,
-        };
-        let _ = hand.state.apply_action(pid, Action::Fold);
-        hand.cancel_timeout();
 
         let new_stack = self
             .players
@@ -1625,7 +1688,6 @@ impl TableActor {
             .map(|p| p.stack)
             .unwrap_or_else(zero)
             .as_i64() as u64;
-        let new_pot = hand.state.current_pot().as_i64() as u64;
 
         self.last_actions.insert(
             user_id,
@@ -1635,23 +1697,16 @@ impl TableActor {
             },
         );
 
-        broadcast_msg(
-            &self.broker,
-            self.tournament_room_id,
-            self.room_id,
-            &self.user_senders,
-            RoomMessage::ActionBroadcast(ActionBroadcast {
-                // FIXED: Use broadcast_msg
-                room_id: self.room_id,
-                player_id: user_id,
-                action: "fold".to_string(),
-                amount: None,
-                new_stack,
-                new_pot,
-            }),
-        );
+        self.broadcast(RoomMessage::ActionBroadcast(ActionBroadcast {
+            room_id: self.room_id,
+            player_id: user_id,
+            action: "fold".to_string(),
+            amount: None,
+            new_stack,
+            new_pot,
+        }));
 
-        if let Some(next) = hand.current_player_user() {
+        if let Some(next) = next_user {
             let is_leaving = self
                 .players
                 .get(&next)
@@ -1666,16 +1721,12 @@ impl TableActor {
                         .await;
                 });
             } else {
-                hand.schedule_timeout(next, self.cmd_tx.clone(), self.config.turn_time_limit_ms);
+                if let Some(hand) = self.current_hand.as_mut() {
+                    hand.schedule_timeout(next, self.cmd_tx.clone(), self.config.turn_time_limit_ms);
+                }
             }
-            let action_req = build_action_required(self.room_id, hand, next);
-            broadcast_msg(
-                &self.broker,
-                self.tournament_room_id,
-                self.room_id,
-                &self.user_senders,
-                RoomMessage::ActionRequired(action_req),
-            ); // FIXED: Use broadcast_msg
+            let action_req = action_req_opt.unwrap();
+            self.broadcast(RoomMessage::ActionRequired(action_req));
             self.broadcast_table_state();
         } else {
             self.check_hand_completion().await;
