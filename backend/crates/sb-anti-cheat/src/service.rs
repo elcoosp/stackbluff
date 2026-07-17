@@ -5,6 +5,7 @@ use async_trait::async_trait;
 use chrono::Utc;
 use dashmap::DashMap;
 use sb_db_entities::entities::{anti_cheat_events, device_fingerprints};
+use sb_db_entities::user;
 use sb_shared_types::{ChipAmount, RequestContext, UserId};
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, Set,
@@ -32,6 +33,7 @@ pub struct AntiCheatServiceImpl {
     pub fingerprint_tracker: Arc<DashMap<FingerprintKey, FingerprintEntry>>,
     // Cleanup interval and max age (24h)
     max_age_secs: u64,
+    pub is_bot_cache: moka::future::Cache<UserId, bool>,
 }
 
 impl AntiCheatServiceImpl {
@@ -92,6 +94,7 @@ impl AntiCheatServiceImpl {
             transfer_tracker,
             fingerprint_tracker: tracker,
             max_age_secs: max_age_secs as u64,
+            is_bot_cache: moka::future::Cache::new(10_000),
         }
     }
 
@@ -109,6 +112,23 @@ impl AntiCheatServiceImpl {
 
         let uid1 = user1.0;
         let uid2 = user2.0;
+
+        // Anti-Cheat Exemption: Short-circuit if either user is a bot
+        let is_bot1 = self.is_bot_cache.try_get_with(user1, async {
+            let u = user::Entity::find_by_id(uid1).one(db).await
+                .map_err(|e: sea_orm::DbErr| e.to_string())?;
+            Ok::<bool, String>(u.map(|m| m.is_bot).unwrap_or(false))
+        }).await.unwrap_or(false);
+
+        let is_bot2 = self.is_bot_cache.try_get_with(user2, async {
+            let u = user::Entity::find_by_id(uid2).one(db).await
+                .map_err(|e: sea_orm::DbErr| e.to_string())?;
+            Ok::<bool, String>(u.map(|m| m.is_bot).unwrap_or(false))
+        }).await.unwrap_or(false);
+
+        if is_bot1 || is_bot2 {
+            return Ok(());
+        }
 
         let fp1 = device_fingerprints::Entity::find()
             .filter(DfCol::UserId.eq(uid1))

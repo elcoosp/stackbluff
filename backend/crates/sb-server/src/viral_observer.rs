@@ -20,6 +20,7 @@ pub fn spawn_viral_observer(
     hand_count_observer: Arc<dyn HandCountObserver + Send + Sync>,
     replay_observer: Arc<dyn ReplayCardObserver + Send + Sync>,
     mission_service: Arc<dyn MissionApi + Send + Sync>,
+    is_bot_cache: moka::future::Cache<sb_shared_types::UserId, bool>,
 ) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
         info!("Viral observer started");
@@ -34,6 +35,11 @@ pub fn spawn_viral_observer(
                     // Notify hand count observer (for referrals) and mission service per player
                     for player in &event.players.seats {
                         if let Some(user_id) = player.user_id {
+                            // Skip bots from viral observer
+                            if is_bot_cache.get(&user_id).await.unwrap_or(false) {
+                                continue;
+                            }
+
                             // Build HandResult for this player using the stored flags
                             let hand_result = HandResult {
                                 hero_raised_preflop: player.raised_preflop,

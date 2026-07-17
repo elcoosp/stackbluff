@@ -342,7 +342,8 @@ async fn run_app() {
     });
 
     let stats_event_rx = registry.event_sender().subscribe();
-    spawn_stats_aggregator(stats_event_rx, stats_repo.clone());
+    let is_bot_cache: moka::future::Cache<sb_shared_types::UserId, bool> = moka::future::Cache::new(10_000);
+    spawn_stats_aggregator(stats_event_rx, stats_repo.clone(), is_bot_cache.clone());
 
     let club_repo: Arc<dyn sb_contracts::repo_api::ClubRepo + Send + Sync> =
         Arc::new(ClubRepoImpl::new(db.clone()));
@@ -551,6 +552,7 @@ async fn run_app() {
         hand_count_observer,
         replay_observer,
         mission_service,
+        is_bot_cache.clone(),
     );
 
     let ws_router = ws_route(
