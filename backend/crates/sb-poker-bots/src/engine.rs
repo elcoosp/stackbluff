@@ -66,3 +66,56 @@ pub fn decide(
         confidence: effective_equity,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rand::rngs::StdRng;
+    use rand::SeedableRng;
+    use sb_shared_types::{Card, ChipAmount, Rank, Suit};
+
+    fn state(can_check: bool, pot_odds: f32) -> BotViewState {
+        BotViewState {
+            street: "flop".to_string(),
+            pot_odds,
+            to_call: ChipAmount::new(0).unwrap(),
+            min_raise: ChipAmount::new(10).unwrap(),
+            can_check,
+            is_tilted: false,
+        }
+    }
+
+    #[test]
+    fn test_strong_hand_raises_or_calls() {
+        let mut rng = StdRng::from_rng(&mut rand::rng());
+        let profile = BotProfile { aggression: 1.0, bluff_frequency: 0.0 };
+        let st = state(false, 0.3);
+
+        let mut actions = Vec::new();
+        for _ in 0..10 {
+            let dec = decide(&mut rng, &profile, &st, &[], 0.9);
+            actions.push(dec.action_type);
+        }
+        assert!(actions.iter().all(|a| *a == ActionType::Raise));
+    }
+
+    #[test]
+    fn test_weak_hand_folds() {
+        let mut rng = StdRng::from_rng(&mut rand::rng());
+        let profile = BotProfile { aggression: 0.0, bluff_frequency: 0.0 };
+        let st = state(false, 0.3);
+
+        let dec = decide(&mut rng, &profile, &st, &[], 0.1);
+        assert_eq!(dec.action_type, ActionType::Fold);
+    }
+
+    #[test]
+    fn test_weak_hand_checks_if_possible() {
+        let mut rng = StdRng::from_rng(&mut rand::rng());
+        let profile = BotProfile { aggression: 0.0, bluff_frequency: 0.0 };
+        let st = state(true, 0.3);
+
+        let dec = decide(&mut rng, &profile, &st, &[], 0.1);
+        assert_eq!(dec.action_type, ActionType::Check);
+    }
+}

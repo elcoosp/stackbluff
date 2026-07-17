@@ -177,3 +177,55 @@ fn check_straight(rank_counts: &[u8]) -> bool {
     }
     false
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sb_shared_types::{Card, Rank, Suit};
+
+    fn c(suit: Suit, rank: Rank) -> Card {
+        Card { suit, rank }
+    }
+
+    #[test]
+    fn test_preflop_aces() {
+        let hole = [c(Suit::Hearts, Rank::Ace), c(Suit::Spades, Rank::Ace)];
+        let comm = [];
+        let equity = fast_equity(&hole, &comm);
+        assert!(equity > 0.8 && equity <= 1.0);
+    }
+
+    #[test]
+    fn test_preflop_seven_deuce() {
+        let hole = [c(Suit::Hearts, Rank::Two), c(Suit::Clubs, Rank::Seven)];
+        let comm = [];
+        let equity = fast_equity(&hole, &comm);
+        assert!(equity < 0.4);
+    }
+
+    #[test]
+    fn test_postflop_flush_draw() {
+        let hole = [c(Suit::Hearts, Rank::Ace), c(Suit::Hearts, Rank::King)];
+        let comm = [
+            c(Suit::Hearts, Rank::Two),
+            c(Suit::Hearts, Rank::Five),
+            c(Suit::Clubs, Rank::Nine),
+        ];
+        let equity = fast_equity(&hole, &comm);
+        // Rule of 2 and 4: 9 outs * 4 = 36%
+        assert!((equity - 0.36).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_postflop_made_hand() {
+        let hole = [c(Suit::Hearts, Rank::Ace), c(Suit::Spades, Rank::Ace)];
+        let comm = [
+            c(Suit::Clubs, Rank::Ace),
+            c(Suit::Diamonds, Rank::King),
+            c(Suit::Hearts, Rank::King),
+        ];
+        let equity = fast_equity(&hole, &comm);
+        // Full house, should be high
+        assert!(equity >= 0.9);
+    }
+}
