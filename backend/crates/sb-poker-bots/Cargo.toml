@@ -1,0 +1,21 @@
+[package]
+name = "sb-poker-bots"
+version = "0.1.0"
+edition = { workspace = true }
+rust-version = { workspace = true }
+
+[dependencies]
+async-trait = { workspace = true }
+sb-shared-types = { workspace = true }
+sb-contracts = { workspace = true }
+sb-table-registry = { path = "../sb-table-registry" }
+tokio = { workspace = true, features = ["rt", "macros", "sync"] }
+sea-orm = { workspace = true }
+dashmap = { workspace = true }
+rand = { workspace = true }
+tracing = { workspace = true }
+metrics = { workspace = true }
+chrono = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }

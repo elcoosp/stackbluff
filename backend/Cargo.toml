@@ -22,6 +22,7 @@ members = [
     "crates/sb-tournament",
     "crates/sb-notification",
     "crates/sb-bot-handler",
+    "crates/sb-poker-bots",
 ]
 
 [workspace.package]
@@ -58,6 +59,7 @@ futures = { version = "0.3.32", default-features = false, features = ["std", "as
 moka = { version = "0.12.5", features = ["sync", "future"] }
 parking_lot = "0.12.3"
 sb-bot-handler = { path = "crates/sb-bot-handler" }
+sb-poker-bots = { path = "crates/sb-poker-bots" }
 teloxide = { version = "0.17", features = ["webhooks", "axum"] }
 sb-rest-router = { path = "crates/sb-rest-router" }
 sb-oracle = { path = "crates/sb-oracle" }
