@@ -4,9 +4,8 @@ mod test_utils;
 mod user_service;
 mod viral_observer;
 
-use sb_poker_bots::{BotManager, TableClient};
+use sb_poker_bots::BotManager;
 use sb_poker_bots::engine::BotProfile;
-use sb_db_entities::user;
 use sea_orm::ActiveModelTrait;
 use axum::{
     Extension, Router,
