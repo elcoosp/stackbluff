@@ -128,4 +128,24 @@ impl BotManager {
             Err(AppError::Internal("No bots available in pool".to_string()))
         }
     }
+
+    pub fn spawn_auto_fill_task(
+        self: Arc<Self>,
+        _table_client: Arc<dyn TableClient>,
+        registry: Arc<sb_table_registry::Registry>,
+        _min_players: u8,
+        stack: ChipAmount,
+    ) {
+        tokio::spawn(async move {
+            loop {
+                let tables = registry.list_active_tables().await;
+                for table_info in tables {
+                    if !self.bot_pool.is_empty() {
+                        let _ = self.fill_table(table_info.table_id, stack).await;
+                    }
+                }
+                tokio::time::sleep(tokio::time::Duration::from_secs(30)).await;
+            }
+        });
+    }
 }
