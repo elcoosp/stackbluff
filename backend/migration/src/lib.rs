@@ -53,6 +53,8 @@ impl MigratorTrait for Migrator {
             // 2. Add columns to existing tables (MUST BE BEFORE SEEDING)
             Box::new(m20260617_add_table_name::Migration),
             Box::new(m20260615_add_password_hash_to_users::Migration),
+            // Bot system (must run before seeding and any user queries)
+            Box::new(m20260716_bot_system::Migration),
             Box::new(m20260626_000001_add_club_pro_expires_at_to_users::Migration),
             Box::new(m20260627_add_season_pass_columns::Migration),
             Box::new(m20260628_000001_gdpr_deletion::Migration), // Adds deleted_at
@@ -86,8 +88,6 @@ impl MigratorTrait for Migrator {
             Box::new(m20260712_000001_create_analytics_events::Migration),
             // 8. Device Fingerprints table
             Box::new(m20260711_000001_create_device_fingerprints::Migration),
-            // 9. Bot system
-            Box::new(m20260716_bot_system::Migration),
         ]
     }
 }

@@ -17,6 +17,7 @@ sb-ws-handler = { path = "../sb-ws-handler" }
 sb-table-registry = { path = "../sb-table-registry" }
 tower-cookies = "0.11"
 sb-anti-cheat = { path = "../sb-anti-cheat" }
+sb-poker-bots = { path = "../sb-poker-bots" }
 sb-bot-handler = { workspace = true }
 dotenvy = "0.15"
 tower = "0.5.3"

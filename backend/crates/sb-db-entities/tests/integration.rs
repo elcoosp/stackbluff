@@ -32,7 +32,10 @@ async fn test_migration_and_basic_ops() {
         // FIX: Added the missing club_pro_expires_at field
         club_pro_expires_at: sea_orm::ActiveValue::Set(None),
         push_subscription: sea_orm::ActiveValue::Set(None),
-    };
+                is_bot: Set(false),
+            bot_profile: Set(None),
+            bot_bankroll: Set(Some(0)),
+};
     let user = user_active.insert(&db).await.unwrap();
 
     let mut bad_user = user.clone().into_active_model();
