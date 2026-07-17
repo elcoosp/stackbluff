@@ -191,6 +191,7 @@ pub enum InternalCommand {
         seat: Option<u8>,
         stack: ChipAmount,
         msg_tx: mpsc::UnboundedSender<RoomMessage>,
+        is_bot: bool,
         respond_to: tokio::sync::oneshot::Sender<bool>,
     },
     Reconnect {
@@ -263,6 +264,7 @@ pub enum InternalCommand {
         stack: ChipAmount,
         seat: Option<u8>,
         display_name: String,
+        is_bot: bool,
         respond_to: tokio::sync::oneshot::Sender<Result<u8, AppError>>,
     },
     TransferPlayerOut {
@@ -296,12 +298,13 @@ struct Player {
     pub stats: Option<PlayerStatsDto>,
     pub is_leaving: bool,
     pub sitting_out: bool,
+    pub is_bot: bool,
     pub force_leave: bool,
     pub leave_responder: Option<tokio::sync::oneshot::Sender<LeaveResult>>,
 }
 
 impl Player {
-    fn new(user_id: UserId, display_name: String, seat: u8, stack: ChipAmount) -> Self {
+    fn new(user_id: UserId, display_name: String, seat: u8, stack: ChipAmount, is_bot: bool) -> Self {
         Self {
             user_id,
             display_name,
@@ -312,6 +315,7 @@ impl Player {
             stats: None,
             is_leaving: false,
             sitting_out: false,
+            is_bot,
             force_leave: false,
             leave_responder: None,
         }
@@ -669,9 +673,10 @@ impl TableActor {
                 seat,
                 stack,
                 msg_tx,
+                is_bot,
                 respond_to,
             } => {
-                self.join_player(user_id, display_name, seat, stack, msg_tx, respond_to)
+                self.join_player(user_id, display_name, seat, stack, msg_tx, is_bot, respond_to)
                     .await
             }
             InternalCommand::Reconnect {
@@ -785,6 +790,7 @@ impl TableActor {
                 stack,
                 seat,
                 display_name,
+                is_bot,
                 respond_to,
             } => {
                 let seat = match seat {
@@ -816,7 +822,7 @@ impl TableActor {
                         }
                     }
                 };
-                let player = Player::new(user_id, display_name, seat, stack);
+                let player = Player::new(user_id, display_name, seat, stack, is_bot);
                 self.players.insert(
                     user_id,
                     Player {
@@ -942,6 +948,7 @@ impl TableActor {
         seat: Option<u8>,
         stack: ChipAmount,
         msg_tx: mpsc::UnboundedSender<RoomMessage>,
+        is_bot: bool,
         respond_to: tokio::sync::oneshot::Sender<bool>,
     ) {
         debug!(%user_id, stack = stack.as_i64(), "Attempting to join player");
@@ -1039,7 +1046,7 @@ impl TableActor {
             return;
         }
 
-        let player = Player::new(user_id, display_name, seat, stack);
+        let player = Player::new(user_id, display_name, seat, stack, is_bot);
 
         let stats_repo = self.stats_repo.clone();
         let cmd_tx = self.cmd_tx.clone();
@@ -2201,6 +2208,7 @@ impl TableActor {
                         is_folded: folded,
                         is_leaving: player.is_leaving,
                         sitting_out: player.sitting_out,
+                        is_bot: player.is_bot,
                         position_badge: positions_map.get(&player.seat).cloned(),
                         last_action: self.last_actions.get(&uid).cloned(),
                         stats: player.stats.clone(),
@@ -2220,6 +2228,7 @@ impl TableActor {
                     is_folded: false,
                     is_leaving: player.is_leaving,
                     sitting_out: player.sitting_out,
+                    is_bot: player.is_bot,
                     position_badge: None,
                     last_action: None,
                     stats: player.stats.clone(),

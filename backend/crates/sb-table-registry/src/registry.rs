@@ -186,6 +186,7 @@ impl Registry {
         seat: Option<u8>,
         stack: ChipAmount,
         msg_tx: mpsc::UnboundedSender<RoomMessage>,
+        is_bot: bool,
     ) -> Result<bool, TableError> {
         let table_id = {
             let guard = self.rooms.read().await;
@@ -207,6 +208,7 @@ impl Registry {
             seat,
             stack,
             msg_tx,
+            is_bot,
             respond_to: tx,
         };
 
@@ -472,7 +474,7 @@ impl Registry {
                     Ok(room_id) => {
                         let (msg_tx, _) = tokio::sync::mpsc::unbounded_channel();
                         let stack = ChipAmount::new(1000).unwrap();
-                        let _ = self.join_room_full(room_id, user_id, "Player".to_string(), None, stack, msg_tx).await;
+                        let _ = self.join_room_full(room_id, user_id, "Player".to_string(), None, stack, msg_tx, false).await;
                         let _ = reply_to.send(Ok(()));
                     }
                     Err(e) => {

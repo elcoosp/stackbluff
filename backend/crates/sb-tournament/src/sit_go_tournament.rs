@@ -341,6 +341,7 @@ impl SitGoTournament {
                 seat: Some(seat as u8),
                 respond_to: tx,
                 display_name,
+                is_bot: false,
             };
             cmd_tx
                 .send(cmd)

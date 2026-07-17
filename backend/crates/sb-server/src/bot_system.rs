@@ -27,6 +27,7 @@ impl TableClient for BotTableClient {
                 None,
                 stack,
                 msg_tx,
+                true,
             )
             .await
             .map_err(|e| AppError::Internal(e.to_string()))

@@ -406,6 +406,7 @@ async fn handle_client_message(
                     seat_opt,
                     stack,
                     actor_msg_tx.clone(),
+                    false,
                 )
                 .await
             {

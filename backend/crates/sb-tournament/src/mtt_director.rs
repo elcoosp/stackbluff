@@ -378,6 +378,7 @@ impl MttDirector {
                 stack: player.buy_in,
                 seat: Some(seat),
                 display_name,
+                is_bot: false,
                 respond_to: tx,
             };
             table
@@ -573,6 +574,7 @@ impl MttDirector {
                         stack: transfer.stack,
                         seat: None,
                         display_name,
+                        is_bot: false,
                         respond_to: tx,
                     })
                     .await;
@@ -660,6 +662,7 @@ impl MttDirector {
                         stack: transfer.stack,
                         seat: None,
                         display_name,
+                        is_bot: false,
                         respond_to: tx,
                     })
                     .await;

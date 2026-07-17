@@ -62,6 +62,7 @@ async fn kick_vote_passes_and_refunds() {
             seat: None,
             stack: ChipAmount::new(stack).unwrap(),
             msg_tx,
+            is_bot: false,
             respond_to: respond_tx,
         })
         .await
