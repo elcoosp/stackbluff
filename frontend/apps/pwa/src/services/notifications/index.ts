@@ -1,17 +1,17 @@
-import { useConsentStore } from '@/stores/consentStore';
 import { trackEvent } from '@/lib/analytics';
-import { notificationLogger } from '@/lib/logger';
 import {
   ANALYTICS_NOTIFICATION_ALLOWED,
   ANALYTICS_NOTIFICATION_DENIED,
   ANALYTICS_NOTIFICATION_SUBSCRIBED,
   ANALYTICS_NOTIFICATION_UNSUBSCRIBED,
 } from '@/lib/consent/constants';
-import { isPushSupported, getPermissionStatus, requestPermission } from './permission';
+import { notificationLogger } from '@/lib/logger';
+import { useConsentStore } from '@/stores/consentStore';
+import { isPushSupported, requestPermission } from './permission';
 import { getPushSubscription, subscriptionToJSON, unsubscribeFromPush } from './subscription';
-import { sendSubscriptionToBackend, sendUnsubscribeToBackend } from './transport';
+import { sendSubscriptionToBackend } from './transport';
 
-export { isPushSupported, getPermissionStatus } from './permission';
+export { getPermissionStatus, isPushSupported } from './permission';
 
 /**
  * Complete flow: request permission, get subscription, send to backend.
