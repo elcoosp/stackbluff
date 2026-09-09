@@ -1,4 +1,4 @@
-import type { HapticPattern, FeedbackPreferences } from './types';
+import type { FeedbackPreferences, HapticPattern } from './types';
 
 /**
  * HapticEngine — wraps the Vibration API with intensity scaling,
@@ -40,7 +40,11 @@ export class HapticEngine {
 
   cancel(): void {
     if (this.supported) {
-      try { navigator.vibrate(0); } catch { /* noop */ }
+      try {
+        navigator.vibrate(0);
+      } catch {
+        /* noop */
+      }
     }
   }
 
@@ -67,7 +71,7 @@ export class HapticEngine {
 
   private isEmpty(pattern: HapticPattern): boolean {
     if (typeof pattern === 'number') return pattern <= 0;
-    return pattern.length === 0 || pattern.every(v => v === 0);
+    return pattern.length === 0 || pattern.every((v) => v === 0);
   }
 }
 
