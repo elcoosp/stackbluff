@@ -1,21 +1,21 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { useTournamentsQuery } from '../hooks/useTournamentsQuery';
-import { TournamentCard } from '../components/tournament/TournamentCard';
-import { TournamentBuyInDialog } from '../components/tournament/TournamentBuyInDialog';
-import { useState, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import { tournamentApi } from '@stackbluff/shared/api/tournamentApi';
-import { useTournamentStore } from '@stackbluff/shared/stores/tournamentStore';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
-import { toast } from 'sonner';
+import { useTournamentStore } from '@stackbluff/shared/stores/tournamentStore';
 import type { TournamentSummary } from '@stackbluff/shared/types/tournament.types';
-import { cn } from '@/lib/utils';
-import { History, Sparkles } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { motion } from 'framer-motion';
+import { History, Sparkles } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { LobbyTabs } from '@/components/lobby/LobbyTabs';
 import { trackTournamentRegistration } from '@/lib/customAnalytics';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
+import { cn } from '@/lib/utils';
+import { TournamentBuyInDialog } from '../components/tournament/TournamentBuyInDialog';
+import { TournamentCard } from '../components/tournament/TournamentCard';
+import { useTournamentsQuery } from '../hooks/useTournamentsQuery';
 
 export const Route = createFileRoute('/tournaments')({
   component: TournamentsPage,
@@ -53,7 +53,10 @@ function TournamentsPage() {
   const { tournaments: tournamentCache, registeredUsers, setRegistered } = useTournamentStore();
   const [registeringId, setRegisteringId] = useState<string | null>(null);
   const [unregisteringId, setUnregisteringId] = useState<string | null>(null);
-  const [buyInDialog, setBuyInDialog] = useState<{ open: boolean; tournament: TournamentSummary | null }>({
+  const [buyInDialog, setBuyInDialog] = useState<{
+    open: boolean;
+    tournament: TournamentSummary | null;
+  }>({
     open: false,
     tournament: null,
   });
@@ -150,7 +153,7 @@ function TournamentsPage() {
     trackTournamentRegistration(
       buyInDialog.tournament.id,
       buyInDialog.tournament.name || '',
-      buyInDialog.tournament.buy_in
+      buyInDialog.tournament.buy_in,
     );
     registerMutation.mutate({
       tournamentId: buyInDialog.tournament.id,
@@ -178,7 +181,7 @@ function TournamentsPage() {
       } else {
         toast.info(t`You are not seated yet. Wait for the tournament to start.`);
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error(t`Failed to get table. Please try again.`);
     }
   };
@@ -217,7 +220,9 @@ function TournamentsPage() {
             <Trans>Tournaments</Trans>
           </h1>
           <p className="text-on-surface-variant text-sm mt-1 max-w-md">
-            <Trans>Sit & Go and Multi-Table Tournaments. Register now and compete for the prize pool.</Trans>
+            <Trans>
+              Sit & Go and Multi-Table Tournaments. Register now and compete for the prize pool.
+            </Trans>
           </p>
         </div>
         <LobbyTabs />
@@ -249,7 +254,7 @@ function TournamentsPage() {
                 'px-4 py-2 text-xs font-medium rounded-lg transition-all flex-1',
                 typeFilter === type
                   ? 'bg-white/10 text-on-surface shadow-sm'
-                  : 'text-on-surface-variant hover:text-on-surface hover:bg-white/5'
+                  : 'text-on-surface-variant hover:text-on-surface hover:bg-white/5',
               )}
             >
               {type === 'All' ? t`All Types` : type === 'SitAndGo' ? t`Sit & Go` : t`MTT`}
@@ -265,7 +270,7 @@ function TournamentsPage() {
                 'px-4 py-2 text-xs font-medium rounded-lg transition-all flex-1',
                 statusFilter === status
                   ? 'bg-white/10 text-on-surface shadow-sm'
-                  : 'text-on-surface-variant hover:text-on-surface hover:bg-white/5'
+                  : 'text-on-surface-variant hover:text-on-surface hover:bg-white/5',
               )}
             >
               {status === 'All' ? t`All Status` : status}
@@ -281,16 +286,22 @@ function TournamentsPage() {
         className="flex flex-col gap-3"
       >
         {tournamentsQuery.isLoading ? (
-          <div className="text-center py-8 text-on-surface-variant text-sm"><Trans>Loading tournaments...</Trans></div>
+          <div className="text-center py-8 text-on-surface-variant text-sm">
+            <Trans>Loading tournaments...</Trans>
+          </div>
         ) : tournamentsQuery.error ? (
-          <div className="text-red-400 text-sm text-center py-8"><Trans>Failed to load tournaments. Retrying...</Trans></div>
+          <div className="text-red-400 text-sm text-center py-8">
+            <Trans>Failed to load tournaments. Retrying...</Trans>
+          </div>
         ) : filteredTournaments.length === 0 ? (
-          <div className="text-center py-8 text-on-surface-variant text-sm"><Trans>No tournaments match the current filters.</Trans></div>
+          <div className="text-center py-8 text-on-surface-variant text-sm">
+            <Trans>No tournaments match the current filters.</Trans>
+          </div>
         ) : (
           filteredTournaments.map((tournament) => {
             const cached = tournamentCache[tournament.id];
             const registered = cached?.registered ?? tournament.registered;
-            const isRegistered = userId ? !!(registeredUsers[tournament.id]?.[userId]) : false;
+            const isRegistered = userId ? !!registeredUsers[tournament.id]?.[userId] : false;
             return (
               <motion.div key={tournament.id} variants={itemVariants}>
                 <TournamentCard
