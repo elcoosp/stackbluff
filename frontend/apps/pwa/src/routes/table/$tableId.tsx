@@ -1,9 +1,8 @@
+import { getToken } from '@stackbluff/shared/auth/token';
 import { createFileRoute } from '@tanstack/react-router';
-import { TablePage } from '../../pages/TablePage';
 import { useEffect } from 'react';
 import { generateAndSubmitFingerprint } from '@/services/fingerprint';
-import { getToken } from '@stackbluff/shared/auth/token';
-import { requireAuth } from '@/lib/authGuard';
+import { TablePage } from '../../pages/TablePage';
 
 export const Route = createFileRoute('/table/$tableId')({
   component: TablePageWithFingerprint,
