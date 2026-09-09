@@ -1,4 +1,3 @@
-import { apiClient } from "../api/client";
 import { getToken } from './token';
 
 const API_BASE = '/api';
@@ -6,21 +5,43 @@ const API_BASE = '/api';
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   const token = getToken();
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers, credentials: 'include' });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({ message: res.statusText }))).message);
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers,
+    credentials: 'include',
+  });
+  if (!res.ok)
+    throw new Error((await res.json().catch(() => ({ message: res.statusText }))).message);
   return res.json();
 }
 
-export interface LoginCredentials { email: string; password: string; }
-export interface RegisterData { username: string; email: string; password: string; }
-export interface AuthResponse { token: string; user: { id: string; username: string; email: string; }; balance?: number; }
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+export interface RegisterData {
+  username: string;
+  email: string;
+  password: string;
+}
+export interface AuthResponse {
+  token: string;
+  user: { id: string; username: string; email: string };
+  balance?: number;
+}
 
 export const authApi = {
-  login: (creds: LoginCredentials) => request<AuthResponse>('/auth/login', { method: 'POST', body: JSON.stringify(creds) }),
-  register: (data: RegisterData) => request<AuthResponse>('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
+  login: (creds: LoginCredentials) =>
+    request<AuthResponse>('/auth/login', { method: 'POST', body: JSON.stringify(creds) }),
+  register: (data: RegisterData) =>
+    request<AuthResponse>('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
   forgotPassword: async (email: string) => {
-    const response = await fetch('/auth/forgot-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+    const response = await fetch('/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
     if (!response.ok) {
       throw new Error('Failed to send reset link');
     }
@@ -40,8 +61,8 @@ export const authApi = {
   verifyEmail: async (token: string) => {
     const response = await fetch(`/auth/verify-email?token=${encodeURIComponent(token)}`);
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: "Verification failed" }));
-      throw new Error(error.message || "Verification failed");
+      const error = await response.json().catch(() => ({ message: 'Verification failed' }));
+      throw new Error(error.message || 'Verification failed');
     }
     return response.json();
   },
@@ -51,8 +72,10 @@ export const authApi = {
       headers: { 'Content-Type': 'application/json' },
     });
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: "Failed to resend verification" }));
-      throw new Error(error.message || "Failed to resend verification");
+      const error = await response
+        .json()
+        .catch(() => ({ message: 'Failed to resend verification' }));
+      throw new Error(error.message || 'Failed to resend verification');
     }
     return response.json();
   },
@@ -63,8 +86,10 @@ export const authApi = {
       body: JSON.stringify({ init_data: initData }),
     });
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: "Telegram authentication failed" }));
-      throw new Error(error.message || "Telegram authentication failed");
+      const error = await response
+        .json()
+        .catch(() => ({ message: 'Telegram authentication failed' }));
+      throw new Error(error.message || 'Telegram authentication failed');
     }
     return response.json();
   },
