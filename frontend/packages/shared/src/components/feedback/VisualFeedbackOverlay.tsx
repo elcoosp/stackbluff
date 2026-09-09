@@ -1,5 +1,5 @@
+import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 
 interface VisualEffect {
   glow?: string;
@@ -38,9 +38,9 @@ export function VisualFeedbackOverlay() {
 
   const shakeAnimate = effect?.shake
     ? {
-      x: [0, -effect.shake, effect.shake, -effect.shake / 2, effect.shake / 2, 0],
-      y: [0, effect.shake / 2, -effect.shake / 2, effect.shake / 4, -effect.shake / 4, 0],
-    }
+        x: [0, -effect.shake, effect.shake, -effect.shake / 2, effect.shake / 2, 0],
+        y: [0, effect.shake / 2, -effect.shake / 2, effect.shake / 4, -effect.shake / 4, 0],
+      }
     : {};
 
   return (
