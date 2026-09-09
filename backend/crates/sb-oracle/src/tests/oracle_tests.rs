@@ -26,7 +26,7 @@ mock! {
         async fn is_email_verified(&self, ctx: RequestContext, user_id: UserId) -> Result<bool, PersistenceError>;
         async fn has_active_season_pass(&self, ctx: RequestContext, user_id: UserId) -> Result<bool, PersistenceError>;
         async fn find_by_telegram(&self, ctx: RequestContext, tg_id: i64) -> Result<Option<UserId>, PersistenceError>;
-    
+
 
         async fn extend_season_pass(
             &self,
