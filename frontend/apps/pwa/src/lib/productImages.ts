@@ -7,7 +7,7 @@ function slugify(name: string): string {
     .replace(/^-|-$/g, '');
 }
 
-export function getProductImageUrl(productId: string, productName: string): string {
+export function getProductImageUrl(_productId: string, productName: string): string {
   const slug = slugify(productName);
   return `/images/products/${slug}.png`;
 }
