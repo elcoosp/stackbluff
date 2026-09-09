@@ -1,7 +1,7 @@
+use base64::Engine;
 use openssl::ec::{EcGroup, EcKey};
 use openssl::nid::Nid;
 use openssl::pkey::PKey;
-use base64::Engine;
 
 fn main() {
     let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
