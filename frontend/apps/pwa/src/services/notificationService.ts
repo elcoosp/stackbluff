@@ -1,4 +1,4 @@
-import { useConsentStore, type NotificationConsent } from '@/stores/consentStore';
+import { type NotificationConsent, useConsentStore } from '@/stores/consentStore';
 
 /**
  * Service for handling Web Push notifications.
@@ -104,9 +104,7 @@ export function subscriptionToJSON(subscription: PushSubscription): PushSubscrip
  * Send the push subscription to the backend for storage.
  * This calls POST /notifications/subscribe (implemented in #021).
  */
-export async function sendSubscriptionToBackend(
-  subscription: PushSubscription
-): Promise<boolean> {
+export async function sendSubscriptionToBackend(subscription: PushSubscription): Promise<boolean> {
   try {
     const subscriptionJSON = subscriptionToJSON(subscription);
 
