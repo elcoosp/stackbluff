@@ -1,10 +1,9 @@
+import { Trans } from '@lingui/react/macro';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Trophy } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { TimerBar } from '@/components/game/TimerBar';
-import { Trophy } from 'lucide-react';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
 
 interface TournamentCountdownOverlayProps {
   tournamentId: string;
@@ -95,6 +94,6 @@ export function TournamentCountdownOverlay({
         </motion.div>
       )}
     </AnimatePresence>,
-    document.body
+    document.body,
   );
 }
