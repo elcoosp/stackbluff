@@ -43,9 +43,7 @@ function createSentryTransport(): LogTransport | null {
       try {
         if (entry.level === 'error') {
           Sentry.captureException(
-            entry.extra?.error instanceof Error
-              ? entry.extra.error
-              : new Error(entry.message),
+            entry.extra?.error instanceof Error ? entry.extra.error : new Error(entry.message),
             {
               contexts: {
                 log: {
@@ -54,7 +52,7 @@ function createSentryTransport(): LogTransport | null {
                   extra: entry.extra,
                 },
               },
-            }
+            },
           );
         } else if (entry.level === 'warn') {
           Sentry.captureMessage(entry.message, {
@@ -67,7 +65,7 @@ function createSentryTransport(): LogTransport | null {
             },
           });
         }
-      } catch (e) {
+      } catch (_e) {
         // Silently fail - don't let logging break the app
       }
     };
@@ -87,9 +85,8 @@ class Logger {
 
   private formatMessage(level: LogLevel, message: string, extra?: any): string {
     const timestamp = new Date().toISOString();
-    const contextStr = Object.keys(this.context).length > 0
-      ? ` [${JSON.stringify(this.context)}]`
-      : '';
+    const contextStr =
+      Object.keys(this.context).length > 0 ? ` [${JSON.stringify(this.context)}]` : '';
     const extraStr = extra ? ` ${this.safeStringify(extra)}` : '';
     return `${timestamp} [${level.toUpperCase()}]${contextStr} ${message}${extraStr}`;
   }
@@ -127,10 +124,18 @@ class Logger {
     } else {
       const formatted = this.formatMessage(level, message, extra);
       switch (level) {
-        case 'debug': console.debug(formatted); break;
-        case 'info': console.info(formatted); break;
-        case 'warn': console.warn(formatted); break;
-        case 'error': console.error(formatted); break;
+        case 'debug':
+          console.debug(formatted);
+          break;
+        case 'info':
+          console.info(formatted);
+          break;
+        case 'warn':
+          console.warn(formatted);
+          break;
+        case 'error':
+          console.error(formatted);
+          break;
       }
     }
 
@@ -157,9 +162,10 @@ class Logger {
   }
 
   error(message: string, error?: Error | any, extra?: any): void {
-    const errorInfo = error instanceof Error
-      ? { message: error.message, stack: error.stack, name: error.name }
-      : error;
+    const errorInfo =
+      error instanceof Error
+        ? { message: error.message, stack: error.stack, name: error.name }
+        : error;
     this.log('error', message, { ...extra, error: errorInfo });
   }
 
