@@ -122,7 +122,9 @@ async fn test_add_xp_not_member() {
     ensure_user(&db, non_member_id).await;
 
     // Attempt to add XP for the non-member
-    let result = svc.add_xp(&non_member_ctx, club_id, non_member_id, 100).await;
+    let result = svc
+        .add_xp(&non_member_ctx, club_id, non_member_id, 100)
+        .await;
     assert!(matches!(result, Err(ClubError::NotAMember)));
 }
 
@@ -426,7 +428,9 @@ async fn test_rebalance_requires_owner() {
     let non_owner_id = non_owner_ctx.user_id.unwrap();
     ensure_user(&db, non_owner_id).await;
 
-    let result = svc.rebalance_divisions(&non_owner_ctx, club_id, non_owner_id).await;
+    let result = svc
+        .rebalance_divisions(&non_owner_ctx, club_id, non_owner_id)
+        .await;
     assert!(
         matches!(result, Err(ClubError::PermissionDenied)),
         "Non-owner should get PermissionDenied"
@@ -488,7 +492,11 @@ async fn test_concurrent_joins_assign_correct_divisions() {
         .get_user_division(&member_501_ctx, club_id, member_501_id)
         .await
         .expect("get division 501");
-    assert_eq!(division_501, Some(2), "501st member should be in division 2");
+    assert_eq!(
+        division_501,
+        Some(2),
+        "501st member should be in division 2"
+    );
 }
 
 #[tokio::test]
