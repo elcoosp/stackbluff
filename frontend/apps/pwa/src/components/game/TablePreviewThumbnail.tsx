@@ -1,6 +1,6 @@
+import type { GameRoomState } from '@stackbluff/shared/stores/gameStore';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import type { GameRoomState } from '@stackbluff/shared/stores/gameStore';
 
 interface TablePreviewThumbnailProps {
   roomId: string;
@@ -9,7 +9,12 @@ interface TablePreviewThumbnailProps {
   onClick: () => void;
 }
 
-export function TablePreviewThumbnail({ roomId, room, isActive, onClick }: TablePreviewThumbnailProps) {
+export function TablePreviewThumbnail({
+  roomId,
+  room,
+  isActive,
+  onClick,
+}: TablePreviewThumbnailProps) {
   const playerCount = Object.keys(room.seats).length;
   const pot = room.pot || 0;
   const heroSeat = room.heroSeat;
@@ -26,7 +31,9 @@ export function TablePreviewThumbnail({ roomId, room, isActive, onClick }: Table
       onClick={onClick}
       className={cn(
         'relative w-12 h-12 rounded-lg border-2 transition-all duration-200 flex flex-col items-center justify-center bg-surface-container/80 backdrop-blur-sm',
-        isActive ? 'border-tertiary shadow-[0_0_10px_rgba(78,222,163,0.3)]' : 'border-white/10 hover:border-white/30'
+        isActive
+          ? 'border-tertiary shadow-[0_0_10px_rgba(78,222,163,0.3)]'
+          : 'border-white/10 hover:border-white/30',
       )}
     >
       {/* Player avatars mini grid */}
@@ -38,7 +45,9 @@ export function TablePreviewThumbnail({ roomId, room, isActive, onClick }: Table
               key={idx}
               className={cn(
                 'w-full aspect-square rounded-full border flex items-center justify-center text-[6px] font-bold transition-colors',
-                isHero ? 'border-tertiary bg-tertiary/20 text-tertiary' : 'border-white/20 bg-white/5 text-white/50'
+                isHero
+                  ? 'border-tertiary bg-tertiary/20 text-tertiary'
+                  : 'border-white/20 bg-white/5 text-white/50',
               )}
             >
               {isHero ? 'You' : seat.display_name?.charAt(0) || 'P'}
