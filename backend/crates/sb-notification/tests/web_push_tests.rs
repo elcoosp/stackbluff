@@ -1,19 +1,22 @@
-use wiremock::{matchers::method, Mock, MockServer, ResponseTemplate};
-use sb_notification::web_push::{WebPushSender, SendOutcome};
-use sb_db_entities::push_subscription::Model;
 use base64::Engine;
-use uuid::Uuid;
 use chrono::Utc;
 use openssl::bn::BigNumContext;
 use openssl::ec::{EcGroup, EcKey, PointConversionForm};
 use openssl::nid::Nid;
 use openssl::pkey::PKey;
+use sb_db_entities::push_subscription::Model;
+use sb_notification::web_push::{SendOutcome, WebPushSender};
+use uuid::Uuid;
+use wiremock::{Mock, MockServer, ResponseTemplate, matchers::method};
 
 fn create_test_subscription(endpoint: String) -> Model {
     let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
     let ec_key = EcKey::generate(&group).unwrap();
     let mut ctx = BigNumContext::new().unwrap();
-    let pub_key_bytes = ec_key.public_key().to_bytes(&group, PointConversionForm::UNCOMPRESSED, &mut ctx).unwrap();
+    let pub_key_bytes = ec_key
+        .public_key()
+        .to_bytes(&group, PointConversionForm::UNCOMPRESSED, &mut ctx)
+        .unwrap();
     let p256dh = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(&pub_key_bytes);
 
     let mut auth_bytes = [0u8; 16];
