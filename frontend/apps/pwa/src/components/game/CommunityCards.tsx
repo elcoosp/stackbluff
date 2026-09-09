@@ -1,7 +1,7 @@
-import { motion, AnimatePresence } from 'framer-motion';
-import { Card, CardBack } from './Card';
+import { AnimatePresence, motion } from 'framer-motion';
+import { memo, useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { useState, useEffect, useRef, memo } from 'react';
+import { Card, CardBack } from './Card';
 
 interface CommunityCardsProps {
   cards: any[];
@@ -28,7 +28,7 @@ const EmptySlot = memo(({ isNextStreet }: { isNextStreet: boolean }) => {
         'w-full h-full rounded-sm relative overflow-hidden transition-[width,height] duration-300 ease-in-out',
         isNextStreet
           ? 'border border-dashed border-tertiary/25 bg-tertiary/[0.02]'
-          : 'border border-dashed border-white/[0.05] bg-white/[0.008]'
+          : 'border border-dashed border-white/[0.05] bg-white/[0.008]',
       )}
       exit={{ scale: 0.85, opacity: 0, transition: { duration: 0.15, ease: 'easeIn' } }}
     >
@@ -106,7 +106,9 @@ export const CommunityCards = ({
     return winningCards.some((wc) => wc.rank === card.rank && wc.suit === card.suit);
   };
 
-  const realCardClass = cn(`${cardWidth} ${cardHeight} ${roundedClass} border-b-4 border-gray-200 transition-[width,height] duration-300 ease-in-out`);
+  const realCardClass = cn(
+    `${cardWidth} ${cardHeight} ${roundedClass} border-b-4 border-gray-200 transition-[width,height] duration-300 ease-in-out`,
+  );
 
   const prevRevealedCount = useRef(revealedCount);
   useEffect(() => {
@@ -141,16 +143,19 @@ export const CommunityCards = ({
     const numNewCards = Math.max(0, revealedCount - prevCount);
     const batchStart = Math.min(prevCount, revealedCount);
     const isInCurrentBatch = slotIndex >= batchStart && slotIndex < revealedCount;
-    const dealDelay = isInCurrentBatch && numNewCards > 1
-      ? (slotIndex - batchStart) * FLOP_STAGGER
-      : 0;
+    const dealDelay =
+      isInCurrentBatch && numNewCards > 1 ? (slotIndex - batchStart) * FLOP_STAGGER : 0;
 
     const flipDelay = dealDelay + SLIDE_DURATION + PAUSE;
 
     return (
       <div
         key={slotIndex}
-        className={cn('relative transition-[width,height] duration-300 ease-in-out', cardWidth, cardHeight)}
+        className={cn(
+          'relative transition-[width,height] duration-300 ease-in-out',
+          cardWidth,
+          cardHeight,
+        )}
         style={{ perspective: '700px' }}
       >
         <AnimatePresence>
@@ -177,7 +182,7 @@ export const CommunityCards = ({
                 opacity: 0,
                 scale: 0.8,
                 rotate: slotIndex % 2 === 0 ? 15 : -15,
-                transition: { duration: 0.4, ease: 'easeIn' }
+                transition: { duration: 0.4, ease: 'easeIn' },
               }}
               transition={{
                 delay: dealDelay,
@@ -200,7 +205,10 @@ export const CommunityCards = ({
                 }}
               >
                 {/* Front: Card Back */}
-                <div style={{ backfaceVisibility: 'hidden' }} className="transition-[width,height] duration-300 ease-in-out">
+                <div
+                  style={{ backfaceVisibility: 'hidden' }}
+                  className="transition-[width,height] duration-300 ease-in-out"
+                >
                   <CardBack
                     className={`${cardWidth} ${cardHeight} ${roundedClass} transition-[width,height] duration-300 ease-in-out`}
                     size={sizeProp}
