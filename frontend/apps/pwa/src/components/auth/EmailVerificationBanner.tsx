@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { authApi } from '@stackbluff/shared/auth/api';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { Link } from '@tanstack/react-router';
-import { X, Mail } from 'lucide-react';
-import { authApi } from '@stackbluff/shared/auth/api';
+import { Mail, X } from 'lucide-react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 
 export function EmailVerificationBanner() {
@@ -48,7 +48,6 @@ export function EmailVerificationBanner() {
           Please verify your email address to unlock all features.
         </span>
         <div>
-
           <button
             onClick={handleResend}
             disabled={isResending}
@@ -57,7 +56,10 @@ export function EmailVerificationBanner() {
             {isResending ? 'Sending...' : 'Resend verification email'}
           </button>
           <span className="text-yellow-200/60"> | </span>
-          <Link to="/settings" className="text-yellow-400 hover:text-yellow-300 underline-offset-2 underline">
+          <Link
+            to="/settings"
+            className="text-yellow-400 hover:text-yellow-300 underline-offset-2 underline"
+          >
             Settings
           </Link>
         </div>
