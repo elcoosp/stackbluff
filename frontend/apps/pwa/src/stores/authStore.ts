@@ -16,6 +16,6 @@ export const useAuthStore = create<AuthState>()(
       setBalance: (balance) => set({ balance }),
       updateBalance: (amount) => set((state) => ({ balance: state.balance + amount })),
     }),
-    { name: 'auth-store' }
-  )
+    { name: 'auth-store' },
+  ),
 );
