@@ -1,8 +1,15 @@
-import { cn } from '@/lib/utils';
-import { Trans } from '@lingui/react/macro';
 import { t } from '@lingui/core/macro';
+import { cn } from '@/lib/utils';
 
-export type RankTier = 'brick' | 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond' | 'maestro' | 'legend';
+export type RankTier =
+  | 'brick'
+  | 'bronze'
+  | 'silver'
+  | 'gold'
+  | 'platinum'
+  | 'diamond'
+  | 'maestro'
+  | 'legend';
 
 const RANK_CONFIG: Record<RankTier, { label: string; emoji: string; color: string }> = {
   brick: { label: t`Brick`, emoji: '🧱', color: 'text-amber-800' },
@@ -22,7 +29,12 @@ interface RankTierBadgeProps {
   showLabel?: boolean;
 }
 
-export function RankTierBadge({ tier, size = 'md', className, showLabel = true }: RankTierBadgeProps) {
+export function RankTierBadge({
+  tier,
+  size = 'md',
+  className,
+  showLabel = true,
+}: RankTierBadgeProps) {
   const normalized = tier?.toLowerCase() as RankTier;
   const config = RANK_CONFIG[normalized];
   if (!config) return null;
@@ -34,12 +46,14 @@ export function RankTierBadge({ tier, size = 'md', className, showLabel = true }
   };
 
   return (
-    <span className={cn(
-      'inline-flex items-center font-medium rounded-full border border-white/10 bg-white/5',
-      sizeClasses[size],
-      config.color,
-      className
-    )}>
+    <span
+      className={cn(
+        'inline-flex items-center font-medium rounded-full border border-white/10 bg-white/5',
+        sizeClasses[size],
+        config.color,
+        className,
+      )}
+    >
       <span className="text-base">{config.emoji}</span>
       {showLabel && <span>{config.label}</span>}
     </span>
