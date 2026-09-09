@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react';
-import { useActiveRoom } from '@stackbluff/shared/stores/gameStore';
-import { useGameWebSocket } from '@/hooks/useGameWebSocket';
-import { Moon, Sun } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { cn } from '@/lib/utils';
-import { Trans } from '@lingui/react/macro';
 import { t } from '@lingui/core/macro';
+import { useActiveRoom } from '@stackbluff/shared/stores/gameStore';
+import { motion } from 'framer-motion';
+import { Moon, Sun } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useGameWebSocket } from '@/hooks/useGameWebSocket';
+import { cn } from '@/lib/utils';
 
 interface SitOutButtonProps {
   roomId: string;
@@ -49,7 +48,7 @@ export function SitOutButton({ roomId, className }: SitOutButtonProps) {
         isSittingOut
           ? 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30'
           : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10',
-        className
+        className,
       )}
       title={isSittingOut ? t`Sit In` : t`Sit Out`}
     >
