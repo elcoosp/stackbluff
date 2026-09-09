@@ -1,15 +1,14 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, ChevronUp, Trophy, Users, Coins, Info, Timer, TrendingUp } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { TimerBar } from '@/components/game/TimerBar';
-import { useTournament } from '@stackbluff/shared/hooks/useTournament';
-import { tournamentApi } from '@stackbluff/shared/api/tournamentApi';
-import { useTournamentStore } from '@stackbluff/shared/stores/tournamentStore';
-import { useAuthStore } from '@stackbluff/shared/stores/authStore';
-import type { TournamentState } from '@stackbluff/shared/types/tournament.types';
-import { Trans, Plural } from '@lingui/react/macro';
 import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
+import { tournamentApi } from '@stackbluff/shared/api/tournamentApi';
+import { useTournament } from '@stackbluff/shared/hooks/useTournament';
+import { useAuthStore } from '@stackbluff/shared/stores/authStore';
+import { useTournamentStore } from '@stackbluff/shared/stores/tournamentStore';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ChevronDown, ChevronUp, Coins, Timer, Trophy } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { TimerBar } from '@/components/game/TimerBar';
+import { cn } from '@/lib/utils';
 
 interface TournamentHUDProps {
   tournamentId: string;
@@ -18,36 +17,47 @@ interface TournamentHUDProps {
 }
 
 function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount);
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(amount);
 }
 
-function getChipColor(value: number): string {
+function _getChipColor(value: number): string {
   if (value >= 70) return 'text-tertiary';
   if (value >= 40) return 'text-amber-400';
   return 'text-red-400';
 }
 
-export function TournamentHUD({ tournamentId, isMobile = false, heroStack = 0 }: TournamentHUDProps) {
+export function TournamentHUD({
+  tournamentId,
+  isMobile = false,
+  heroStack = 0,
+}: TournamentHUDProps) {
   const [expanded, setExpanded] = useState(!isMobile);
   const [showPayouts, setShowPayouts] = useState(false);
   const { state } = useTournament(tournamentId);
   const payouts = useTournamentStore((s) => s.payouts[tournamentId]);
   const setPayouts = useTournamentStore((s) => s.setPayouts);
-  const balance = useAuthStore((s) => s.balance);
+  const _balance = useAuthStore((s) => s.balance);
 
   // ── Fetch payout structure ──
   useEffect(() => {
     if (tournamentId && !payouts) {
-      tournamentApi.getPayoutStructure(tournamentId).then((p) => {
-        if (p && p.length > 0) setPayouts(tournamentId, p);
-      }).catch(() => {
-        // fallback to default structure
-        setPayouts(tournamentId, [
-          { position: 1, percentage: 0.5 },
-          { position: 2, percentage: 0.3 },
-          { position: 3, percentage: 0.2 },
-        ]);
-      });
+      tournamentApi
+        .getPayoutStructure(tournamentId)
+        .then((p) => {
+          if (p && p.length > 0) setPayouts(tournamentId, p);
+        })
+        .catch(() => {
+          // fallback to default structure
+          setPayouts(tournamentId, [
+            { position: 1, percentage: 0.5 },
+            { position: 2, percentage: 0.3 },
+            { position: 3, percentage: 0.2 },
+          ]);
+        });
     }
   }, [tournamentId, payouts, setPayouts]);
 
@@ -85,7 +95,9 @@ export function TournamentHUD({ tournamentId, isMobile = false, heroStack = 0 }:
     return () => window.removeEventListener('tournament:blind_level', handler as EventListener);
   }, [tournamentId]);
 
-  const blindText = blinds ? `${blinds.smallBlind}/${blinds.bigBlind}` : t`Level ${blind_level || '?'}`;
+  const blindText = blinds
+    ? `${blinds.smallBlind}/${blinds.bigBlind}`
+    : t`Level ${blind_level || '?'}`;
 
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   useEffect(() => {
@@ -110,7 +122,7 @@ export function TournamentHUD({ tournamentId, isMobile = false, heroStack = 0 }:
       transition={{ duration: 0.3 }}
       className={cn(
         'bg-surface-container/80 backdrop-blur-md border border-white/10 rounded-xl shadow-lg overflow-hidden',
-        isMobile ? 'w-full' : 'w-64'
+        isMobile ? 'w-full' : 'w-64',
       )}
     >
       {/* Header – click to expand/collapse */}
@@ -159,8 +171,12 @@ export function TournamentHUD({ tournamentId, isMobile = false, heroStack = 0 }:
               {/* Players remaining */}
               <div>
                 <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-on-surface-variant"><Trans>Players Left</Trans></span>
-                  <span className="font-data-mono text-on-surface font-bold">{playersLeft} / {totalPlayers}</span>
+                  <span className="text-on-surface-variant">
+                    <Trans>Players Left</Trans>
+                  </span>
+                  <span className="font-data-mono text-on-surface font-bold">
+                    {playersLeft} / {totalPlayers}
+                  </span>
                 </div>
                 <div className="mt-1 h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
                   <div
@@ -181,7 +197,9 @@ export function TournamentHUD({ tournamentId, isMobile = false, heroStack = 0 }:
                     <Coins className="w-3.5 h-3.5" />
                     <Trans>Prize Pool</Trans>
                   </span>
-                  <span className="font-data-mono text-tertiary font-bold">{formatCurrency(prize_pool)}</span>
+                  <span className="font-data-mono text-tertiary font-bold">
+                    {formatCurrency(prize_pool)}
+                  </span>
                 </button>
                 <AnimatePresence>
                   {showPayouts && (
@@ -197,16 +215,23 @@ export function TournamentHUD({ tournamentId, isMobile = false, heroStack = 0 }:
                       <div className="space-y-1 text-xs">
                         {payouts && payouts.length > 0 ? (
                           payouts.slice(0, 5).map((p) => (
-                            <div key={p.position} className="flex justify-between text-on-surface-variant">
+                            <div
+                              key={p.position}
+                              className="flex justify-between text-on-surface-variant"
+                            >
                               <span>
                                 {p.position}
                                 {p.position === 1 ? 'st' : p.position === 2 ? 'nd' : 'th'}:
                               </span>
-                              <span className="text-tertiary">{(p.percentage * 100).toFixed(0)}%</span>
+                              <span className="text-tertiary">
+                                {(p.percentage * 100).toFixed(0)}%
+                              </span>
                             </div>
                           ))
                         ) : (
-                          <div className="text-on-surface-variant text-[10px]"><Trans>Loading payouts...</Trans></div>
+                          <div className="text-on-surface-variant text-[10px]">
+                            <Trans>Loading payouts...</Trans>
+                          </div>
                         )}
                         <div className="text-[9px] text-on-surface-variant/50 mt-1">
                           <Trans>* Based on prize pool</Trans>
@@ -219,10 +244,11 @@ export function TournamentHUD({ tournamentId, isMobile = false, heroStack = 0 }:
 
               {/* Your stack - will be passed from TablePage */}
               <div className="flex items-center justify-between text-[11px] border-t border-white/5 pt-2">
-                <span className="text-on-surface-variant"><Trans>Your Stack</Trans></span>
+                <span className="text-on-surface-variant">
+                  <Trans>Your Stack</Trans>
+                </span>
                 <span className="font-data-mono text-tertiary font-bold">
-                  {/* Will be passed from TablePage via prop */}
-                  ${heroStack.toLocaleString()}
+                  {/* Will be passed from TablePage via prop */}${heroStack.toLocaleString()}
                 </span>
               </div>
             </div>
