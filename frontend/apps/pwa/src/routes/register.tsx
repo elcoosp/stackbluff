@@ -1,29 +1,34 @@
-import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
-import { useForm } from '@tanstack/react-form';
-import { useMutation } from '@tanstack/react-query';
-import { z } from 'zod';
-import { useState } from 'react';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import { authApi } from '@stackbluff/shared/auth/api';
 import { setToken } from '@stackbluff/shared/auth/token';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
-import { GlassPanel } from "@stackbluff/shared/ui/GlassPanel";
-import { LiquidMetalButton } from "@stackbluff/shared/ui/LiquidMetalButton";
-import { Link } from '@tanstack/react-router';
-import { User, Mail, Lock } from 'lucide-react';
+import { GlassPanel } from '@stackbluff/shared/ui/GlassPanel';
+import { LiquidMetalButton } from '@stackbluff/shared/ui/LiquidMetalButton';
+import { useForm } from '@tanstack/react-form';
+import { useMutation } from '@tanstack/react-query';
+import { createFileRoute, Link, redirect, useNavigate } from '@tanstack/react-router';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Lock, Mail, User } from 'lucide-react';
+import { useState } from 'react';
 import { toast } from 'sonner';
+import { z } from 'zod';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { motion, AnimatePresence } from 'framer-motion';
 import { trackGameEvent } from '@/lib/customAnalytics';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
 
-const step1Schema = z.object({ username: z.string().min(3, t`Username must be at least 3 characters`) });
+const step1Schema = z.object({
+  username: z.string().min(3, t`Username must be at least 3 characters`),
+});
 const step2Schema = z.object({ email: z.string().email(t`Invalid email address`) });
-const step3Schema = z.object({ password: z.string().min(8, t`Password must be at least 8 characters`) });
+const step3Schema = z.object({
+  password: z.string().min(8, t`Password must be at least 8 characters`),
+});
 
 export const Route = createFileRoute('/register')({
-  beforeLoad: () => { if (useAuthStore.getState().user) throw redirect({ to: '/' }); },
+  beforeLoad: () => {
+    if (useAuthStore.getState().user) throw redirect({ to: '/' });
+  },
   component: RegisterPage,
 });
 
@@ -39,7 +44,9 @@ function RegisterPage() {
       trackGameEvent('registration_success', { platform: 'email' });
       navigate({ to: '/' });
     },
-    onError: (error) => { toast.error(error.message || t`Registration failed`); },
+    onError: (error) => {
+      toast.error(error.message || t`Registration failed`);
+    },
   });
   const form = useForm({
     defaultValues: { username: '', email: '', password: '' },
@@ -65,21 +72,38 @@ function RegisterPage() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#1a1b1e_0%,_#0a0a0a_100%)]" />
       <div className="relative z-10 w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter"><Trans>STACKBLUFF</Trans></h1>
-          <p className="font-data-mono text-xs text-outline mt-2 tracking-widest"><Trans>CREATE ACCOUNT</Trans></p>
+          <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter">
+            <Trans>STACKBLUFF</Trans>
+          </h1>
+          <p className="font-data-mono text-xs text-outline mt-2 tracking-widest">
+            <Trans>CREATE ACCOUNT</Trans>
+          </p>
         </div>
         <GlassPanel>
           <div className="flex gap-2 mb-8">
             {[1, 2, 3].map((i) => (
-              <div key={i} className={`h-1 flex-1 rounded-full transition-all duration-500 ${i <= step ? 'bg-primary' : 'bg-outline-variant'}`} />
+              <div
+                key={i}
+                className={`h-1 flex-1 rounded-full transition-all duration-500 ${i <= step ? 'bg-primary' : 'bg-outline-variant'}`}
+              />
             ))}
           </div>
-          <form onSubmit={(e) => { e.preventDefault(); if (step === 3) form.handleSubmit(); else nextStep(); }} className="space-y-6">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (step === 3) form.handleSubmit();
+              else nextStep();
+            }}
+            className="space-y-6"
+          >
             {step === 1 && (
               <form.Field name="username">
                 {(field) => (
                   <div className="space-y-2">
-                    <Label htmlFor="username" className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+                    <Label
+                      htmlFor="username"
+                      className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase"
+                    >
                       <Trans>Username</Trans>
                     </Label>
                     <div className="relative mt-2">
@@ -118,7 +142,10 @@ function RegisterPage() {
               <form.Field name="email">
                 {(field) => (
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+                    <Label
+                      htmlFor="email"
+                      className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase"
+                    >
                       <Trans>Email Address</Trans>
                     </Label>
                     <div className="relative mt-2">
@@ -157,7 +184,10 @@ function RegisterPage() {
               <form.Field name="password">
                 {(field) => (
                   <div className="space-y-2">
-                    <Label htmlFor="password" className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+                    <Label
+                      htmlFor="password"
+                      className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase"
+                    >
                       <Trans>Password</Trans>
                     </Label>
                     <div className="relative mt-2">
@@ -192,16 +222,26 @@ function RegisterPage() {
               </form.Field>
             )}
 
-            <form.Subscribe selector={(state) => [state.values.username, state.values.email, state.values.password]}>
+            <form.Subscribe
+              selector={(state) => [
+                state.values.username,
+                state.values.email,
+                state.values.password,
+              ]}
+            >
               {([username, email, password]) => {
                 const current = step === 1 ? username : step === 2 ? email : password;
-                const currentSchema = step === 1 ? step1Schema : step === 2 ? step2Schema : step3Schema;
-                const canContinue = currentSchema.safeParse({ [step === 1 ? 'username' : step === 2 ? 'email' : 'password']: current }).success;
+                const currentSchema =
+                  step === 1 ? step1Schema : step === 2 ? step2Schema : step3Schema;
+                const canContinue = currentSchema.safeParse({
+                  [step === 1 ? 'username' : step === 2 ? 'email' : 'password']: current,
+                }).success;
 
                 return (
                   <div
-                    className={`flex items-center gap-2 pt-4 ${step > 1 ? 'justify-between' : 'justify-end'
-                      }`}
+                    className={`flex items-center gap-2 pt-4 ${
+                      step > 1 ? 'justify-between' : 'justify-end'
+                    }`}
                   >
                     {step > 1 && (
                       <LiquidMetalButton
@@ -219,7 +259,11 @@ function RegisterPage() {
                         onClick={nextStep}
                         disabled={!canContinue}
                         variant="silver"
-                        className={step > 1 ? 'flex-1 md:flex-none px-6 text-[10px] whitespace-nowrap' : 'px-6'}
+                        className={
+                          step > 1
+                            ? 'flex-1 md:flex-none px-6 text-[10px] whitespace-nowrap'
+                            : 'px-6'
+                        }
                       >
                         <Trans>CONTINUE</Trans>
                       </LiquidMetalButton>
@@ -238,20 +282,31 @@ function RegisterPage() {
               }}
             </form.Subscribe>
             <div className="text-center pt-4">
-              <Link to="/login" className="font-label-caps text-[10px] text-on-surface-variant hover:text-on-surface transition-all tracking-widest uppercase">
-                <Trans>ALREADY HAVE AN ACCOUNT? <span className="text-tertiary">SIGN IN</span></Trans>
+              <Link
+                to="/login"
+                className="font-label-caps text-[10px] text-on-surface-variant hover:text-on-surface transition-all tracking-widest uppercase"
+              >
+                <Trans>
+                  ALREADY HAVE AN ACCOUNT? <span className="text-tertiary">SIGN IN</span>
+                </Trans>
               </Link>
             </div>
           </form>
         </GlassPanel>
 
-      <div className="flex flex-wrap gap-4 justify-center text-sm text-on-surface-variant mt-6">
-        <Link to="/legal/terms" className="hover:text-tertiary transition-colors"><Trans>Terms of Service</Trans></Link>
-        <span className="text-white/20">|</span>
-        <Link to="/legal/privacy" className="hover:text-tertiary transition-colors"><Trans>Privacy Policy</Trans></Link>
-        <span className="text-white/20">|</span>
-        <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors"><Trans>Responsible Gaming</Trans></Link>
-      </div>
+        <div className="flex flex-wrap gap-4 justify-center text-sm text-on-surface-variant mt-6">
+          <Link to="/legal/terms" className="hover:text-tertiary transition-colors">
+            <Trans>Terms of Service</Trans>
+          </Link>
+          <span className="text-white/20">|</span>
+          <Link to="/legal/privacy" className="hover:text-tertiary transition-colors">
+            <Trans>Privacy Policy</Trans>
+          </Link>
+          <span className="text-white/20">|</span>
+          <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors">
+            <Trans>Responsible Gaming</Trans>
+          </Link>
+        </div>
       </div>
     </div>
   );
