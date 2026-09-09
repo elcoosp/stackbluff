@@ -1,6 +1,10 @@
 import { motion } from 'framer-motion';
 import { PlayerSpot } from './PlayerSpot';
-const desktopPositions: Record<number, { top: string; left: string; transform: string; right?: string }> = {
+
+const desktopPositions: Record<
+  number,
+  { top: string; left: string; transform: string; right?: string }
+> = {
   0: { top: '82%', left: '5%', transform: 'translate(-50%, -50%)' },
   1: { top: '40%', left: '2%', transform: 'translate(-50%, -50%)' },
   2: { top: '10%', left: '15%', transform: 'translate(-50%, -50%)' },
@@ -21,12 +25,29 @@ const mobilePositions: Record<number, { top: string; left: string; transform: st
   6: { top: '80%', left: '50%', transform: 'translate(-50%, -50%)' },
   7: { bottom: '20px', left: '50%', transform: 'translateX(-50%)' },
 };
-export const SeatGrid = ({ seats, heroSeat, isDesktop }: { seats: Record<number, any>; heroSeat: number; isDesktop: boolean }) => (
+export const SeatGrid = ({
+  seats,
+  heroSeat,
+  isDesktop,
+}: {
+  seats: Record<number, any>;
+  heroSeat: number;
+  isDesktop: boolean;
+}) => (
   <div className="relative w-full h-full">
     {Object.values(seats).map((seat) => {
       const pos = isDesktop ? desktopPositions[seat.seat_index] : mobilePositions[seat.seat_index];
       if (!pos) return null;
-      return <motion.div key={seat.seat_index} layout className="absolute" style={{ ...pos, zIndex: seat.seat_index === heroSeat ? 350 : 50 }}><PlayerSpot seat={seat} isHero={heroSeat === seat.seat_index} /></motion.div>;
+      return (
+        <motion.div
+          key={seat.seat_index}
+          layout
+          className="absolute"
+          style={{ ...pos, zIndex: seat.seat_index === heroSeat ? 350 : 50 }}
+        >
+          <PlayerSpot seat={seat} isHero={heroSeat === seat.seat_index} />
+        </motion.div>
+      );
     })}
   </div>
 );
