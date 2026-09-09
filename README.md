@@ -1,32 +1,37 @@
-# StackBluff — Social Poker, Built by AI Agents 🃏
+<p align="center">
+  <strong>A free‑to‑play, multi‑platform (Telegram Mini App + PWA) social poker platform</strong><br/>
+  with a <strong>sub‑10ms Rust/WebSocket engine</strong>, built end‑to‑end by <strong>5 parallel AI agents</strong> with zero merge conflicts. Ships real poker, clubs, tournaments, an AI coach ("The Oracle"), and a card‑compositor toolchain — all play‑money, GDPR‑compliant, on a €100 bootstrap budget.
+</p>
 
-> A free-to-play, multi-platform (Telegram Mini App + PWA) social poker platform with a **sub-10ms Rust/WebSocket engine**, built end-to-end by **5 parallel AI agents** with zero merge conflicts. Ships real poker, clubs, tournaments, an AI coach ("The Oracle"), and a card-compositor toolchain — all play-money, GDPR-compliant, on a €100 bootstrap budget.
-
-[![CI](https://img.shields.io/badge/CI-Build%20%26%20Verify-brightgreen?logo=githubactions)](https://github.com/elcoosp/stackbluff/actions)
-[![Rust](https://img.shields.io/badge/Rust-1.94%20%7C%202024-000000?logo=rust)](https://www.rust-lang.org/)
-[![Axum](https://img.shields.io/badge/Axum-0.8.9-000000?logo=rust)](https://github.com/tokio-rs/axum)
-[![React](https://img.shields.io/badge/React-19.2.7-61DAFB?logo=react)](https://react.dev/)
-[![Vite](https://img.shields.io/badge/Vite-8.0.8-646CFF?logo=vite)](https://vite.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-6.0-000000?logo=typescript)](https://www.typescriptlang.org/)
-[![Tailwind](https://img.shields.io/badge/Tailwind-4.3.1-06B6D4?logo=tailwindcss)](https://tailwindcss.com/)
-[![Biome](https://img.shields.io/badge/Biome-2.4.15-F7DF1E?logo=biome)](https://biomejs.dev/)
-[![pnpm](https://img.shields.io/badge/pnpm-10.8.1-F7044E?logo=pnpm)](https://pnpm.io/)
-[![SQLite](https://img.shields.io/badge/SQLite-WAL%20%7C%20SeaORM%202.0-003B57?logo=sqlite)](https://www.sqlite.org/)
-[![License](https://img.shields.io/badge/License-Proprietary%20%28launch%29-lightgrey)](LICENSE)
-[![Arch](https://img.shields.io/badge/Arch-Monorepo%20%2B%20Modular%20Rust%20Monolith-orange)](docs/spec/stackbluff-architecture.md)
-[![Agents](https://img.shields.io/badge/Built%20by-5%20AI%20Agents-blueviolet)](docs/spec/stackbluff-architecture.md#43-agent-ownership--zero-merge-conflict-design)
+<div style="display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; align-items: center;">
+  <img src="https://img.shields.io/badge/CI-Build%20%26%20Verify-brightgreen?style=flat-square&logo=githubactions" alt="CI">
+  <img src="https://img.shields.io/badge/Rust-1.94%20%7C%202024-000000?style=flat-square&logo=rust" alt="Rust">
+  <img src="https://img.shields.io/badge/Axum-0.8.9-000000?style=flat-square&logo=rust" alt="Axum">
+  <img src="https://img.shields.io/badge/React-19.2.7-61DAFB?style=flat-square&logo=react" alt="React">
+  <img src="https://img.shields.io/badge/Vite-8.0.8-646CFF?style=flat-square&logo=vite" alt="Vite">
+  <img src="https://img.shields.io/badge/TypeScript-6.0-000000?style=flat-square&logo=typescript" alt="TypeScript">
+  <img src="https://img.shields.io/badge/Tailwind-4.3.1-06B6D4?style=flat-square&logo=tailwindcss" alt="Tailwind">
+  <img src="https://img.shields.io/badge/Biome-2.4.15-F7DF1E?style=flat-square&logo=biome" alt="Biome">
+  <img src="https://img.shields.io/badge/pnpm-10.8.1-F7044E?style=flat-square&logo=pnpm" alt="pnpm">
+  <img src="https://img.shields.io/badge/SQLite-WAL%20%7C%20SeaORM%202.0-003B57?style=flat-square&logo=sqlite" alt="SQLite">
+  <img src="https://img.shields.io/badge/License-Proprietary%20%28launch%29-lightgrey?style=flat-square" alt="License">
+  <img src="https://img.shields.io/badge/Arch-Monorepo%20%2B%20Modular%20Rust%20Monolith-orange?style=flat-square" alt="Arch">
+  <img src="https://img.shields.io/badge/Built%20by-5%20AI%20Agents-blueviolet?style=flat-square" alt="Agents">
+</div>
 
 ---
 
 ## What & Why
 
-|**StackBluff** is a free-to-play social poker platform targeting France, then Europe, then the world, on a near-zero €100 bootstrap budget. It runs natively as a **Telegram Mini App** (`/poker` in any group → table in 10s) and as a **Progressive Web App**, backed by a Rust Axum server that processes game actions with **p99 ≤ 10ms latency** at 1,000 concurrent tables.
+StackBluff is a free-to-play social poker platform targeting France, then Europe, then the world, on a near-zero €100 bootstrap budget. It runs natively as a **Telegram Mini App** (`/poker` in any group → table in 10s) and as a **Progressive Web App**, backed by a Rust Axum server that processes game actions with **p99 ≤ 10ms latency** at 1,000 concurrent tables.
 
 The differentiators are performance and virality: every hand produces a shareable replay card, an AI Coach ("The Oracle") gives heuristic coaching at zero LLM cost, and a club + seasonal-ranking system turns friend groups into recurring poker clubs. There is **no real-money play, no pay-to-win** — monetisation is purely cosmetic (Season Pass, chip bundles, avatar items).
 
 **Key flows:** Telegram group `/poker` summoning → instant game → shareable replay card → referral attribution. Daily missions, 7-day streaks, club leaderboards, seasonal ranking (Brick → Legend), AI Coach post-hand analysis.
 
 This repository is the **primary product** of a solo founder + 5 AI agents working in parallel with a strict file-ownership contract that guarantees zero merge conflicts.
+
+---
 
 ## Tech Stack at a Glance
 
@@ -64,6 +69,8 @@ A **pnpm workspace** monorepo with shared packages:
 ### Tooling — `tools/`
 - **`sb-cards`** — Rust + React card-compositor renderer for shareable replay cards and universe assets (meme-arcana, tintin).
 - **`sbdc`** — A Clippy/Nextest-driven development toolkit with CLI, DTO, service, and entity sub-crates.
+
+---
 
 ## Repository Layout
 
@@ -114,6 +121,8 @@ stackbluff/
 └── dump.txt / dump-f.txt       # Debug dumps (gitignored artifacts)
 ```
 
+---
+
 ## Key Architectural Decisions
 
 - **ADR-001: React/Vite SPA over Rust/Leptos WASM** — Richer ecosystem, shadcn/ui, faster AI-assisted dev. (Rust stays on the server where performance matters.)
@@ -124,6 +133,8 @@ stackbluff/
 - **ADR-006: Biome over ESLint + Prettier** — 10× faster, single config, prevents formatting merge conflicts.
 
 Full ADRs: `docs/spec/stackbluff-architecture.md`
+
+---
 
 ## AI-Parallel Development Model
 
@@ -138,6 +149,8 @@ The entire codebase is built by **5 AI agents with strict file ownership** — e
 | **Agent 5** (QA/Ops) | `anti-cheat`, `scripts/`, `tests/` | `packages/shared/test-utils/` |
 
 Full model: `docs/spec/stackbluff-architecture.md#43-agent-ownership--zero-merge-conflict-design`
+
+---
 
 ## Development
 
@@ -167,6 +180,8 @@ pnpm dev
 
 **Patch script (`wr.sh`):** Automated workflow that patches shared `is_bot` fields across Rust structs, runs `cargo check`, runs `cargo-nextest`, and commits on green.
 
+---
+
 ## Testing
 
 - **Rust unit/integration:** `cargo nextest run --workspace` (fastest, parallel by default)
@@ -176,6 +191,8 @@ pnpm dev
 - **E2E:** `vitest --config e2e/vitest.config.e2e.ts` (Sit&Go + MTT flows against a live test DB)
 - **Security:** `cargo deny check advisories` (license + advisory gate, `deny.toml` configured)
 - **Load testing:** k6 script targeting 1,000 concurrent tables, p99 ≤ 10ms (`docs/spec/stackbluff-verification.md`)
+
+---
 
 ## Documentation
 
@@ -193,10 +210,14 @@ pnpm dev
 | `docs/grill.md` | — | Grill session notes |
 | `docs/brainstorm/` | — | Analytics, UI/UX, marketing, tracking |
 
+---
+
 ## License
 
 Proprietary — built for launch. All rights reserved by the founder. The play-money model means no gambling regulatory barriers (ANJ exemption for free-to-play), GDPR/CNIL compliant from day one.
 
 ---
 
-*Made by one founder + 5 AI agents. Built for speed, built for scale, built to ship.*
+<p align="center">
+  <em>Made by one founder + 5 AI agents. Built for speed, built for scale, built to ship.</em>
+</p>
