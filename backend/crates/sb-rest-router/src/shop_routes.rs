@@ -79,8 +79,7 @@ async fn purchase_product(
         .await
         .map_err(internal_error)?;
 
-    let json_result: serde_json::Value =
-        serde_json::from_str(&result).map_err(internal_error)?;
+    let json_result: serde_json::Value = serde_json::from_str(&result).map_err(internal_error)?;
 
     Ok(Json(json_result))
 }
