@@ -1,15 +1,15 @@
 use axum::{
+    Router,
     extract::{Extension, State},
     http::StatusCode,
     response::Json,
     routing::{get, post},
-    Router,
 };
-use serde::{Deserialize, Serialize};
 use sb_auth::middleware::AuthUser;
 use sb_db_repos::push_subscription_repo::{PushSubscriptionRepo, PushSubscriptionRepoImpl};
 use sb_shared_types::UserId;
 use sea_orm::DatabaseConnection;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing;
 
@@ -62,13 +62,18 @@ async fn subscribe(
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<SubscribeRequest>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    tracing::info!("Received push subscribe request for user {}", auth_user.user_id);
+    tracing::info!(
+        "Received push subscribe request for user {}",
+        auth_user.user_id
+    );
     let user_id = match uuid::Uuid::parse_str(&auth_user.user_id) {
         Ok(uid) => UserId::new(uid),
         Err(_) => return Err((StatusCode::BAD_REQUEST, "Invalid user ID".to_string())),
     };
 
-    let repo = PushSubscriptionRepoImpl { db: state.db.clone() };
+    let repo = PushSubscriptionRepoImpl {
+        db: state.db.clone(),
+    };
     repo.insert(
         user_id.0,
         req.endpoint,
@@ -86,8 +91,13 @@ async fn unsubscribe(
     State(state): State<Arc<NotificationState>>,
     Json(req): Json<UnsubscribeRequest>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    tracing::info!("Received push unsubscribe request for endpoint {}", req.endpoint);
-    let repo = PushSubscriptionRepoImpl { db: state.db.clone() };
+    tracing::info!(
+        "Received push unsubscribe request for endpoint {}",
+        req.endpoint
+    );
+    let repo = PushSubscriptionRepoImpl {
+        db: state.db.clone(),
+    };
     repo.delete_by_endpoint(req.endpoint)
         .await
         .map_err(|e: anyhow::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
