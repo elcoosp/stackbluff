@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import type { TournamentSummary, TournamentState, TournamentResult, PayoutEntry } from '../types/tournament.types';
+import type {
+  PayoutEntry,
+  TournamentResult,
+  TournamentState,
+  TournamentSummary,
+} from '../types/tournament.types';
 
 interface TournamentStore {
   tournaments: Record<string, TournamentSummary>;
@@ -75,6 +80,6 @@ export const useTournamentStore = create<TournamentStore>()(
           return { tournaments: rest };
         }),
     }),
-    { name: 'tournamentStore' }
-  )
+    { name: 'tournamentStore' },
+  ),
 );
