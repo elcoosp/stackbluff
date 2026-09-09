@@ -1,6 +1,6 @@
 use axum::{
     Json, Router,
-    extract::{Extension, Path, State, Query},
+    extract::{Extension, Path, Query, State},
     http::StatusCode,
     routing::{get, post},
 };
@@ -107,7 +107,6 @@ async fn create_tournament(
 
     Ok(Json(CreateTournamentResponse { tournament_id }))
 }
-
 
 #[derive(Deserialize)]
 pub struct ListTournamentsQuery {
