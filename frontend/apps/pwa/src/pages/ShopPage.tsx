@@ -1,15 +1,15 @@
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
+import { Loader2, ShieldCheck, ShoppingBag, Zap } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useShopProducts } from '../hooks/useShopProducts';
-import { usePurchaseFlow } from '../hooks/usePurchaseFlow';
-import { useShopStore } from '../stores/shopStore';
+import { trackProductView } from '@/lib/customAnalytics';
+import { cn } from '@/lib/utils';
 import { ProductCard } from '../components/shop/ProductCard';
 import { PurchaseDialog } from '../components/shop/PurchaseDialog';
 import { PurchaseToast } from '../components/shop/PurchaseToast';
-import { cn } from '@/lib/utils';
-import { ShieldCheck, Zap, Loader2, ShoppingBag } from 'lucide-react';
-import { trackProductView } from '@/lib/customAnalytics';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
+import { usePurchaseFlow } from '../hooks/usePurchaseFlow';
+import { useShopProducts } from '../hooks/useShopProducts';
+import { useShopStore } from '../stores/shopStore';
 
 type Category = 'all' | 'chips' | 'season_pass' | 'club_pro';
 
@@ -49,8 +49,14 @@ export default function ShopPage() {
 
   useEffect(() => {
     if (transformedProducts.length === 0) return;
-    const currentIds = shop.products.map(p => p.id).sort().join(',');
-    const newIds = transformedProducts.map(p => p.id).sort().join(',');
+    const currentIds = shop.products
+      .map((p) => p.id)
+      .sort()
+      .join(',');
+    const newIds = transformedProducts
+      .map((p) => p.id)
+      .sort()
+      .join(',');
     if (currentIds !== newIds) {
       shop.setProducts(transformedProducts);
       // Track product views
@@ -64,7 +70,7 @@ export default function ShopPage() {
       setDialogOpen(true);
       shop.selectProduct(product);
     },
-    [shop]
+    [shop],
   );
 
   const handleDialogClose = () => {
@@ -82,9 +88,8 @@ export default function ShopPage() {
   const isLoading = productsLoading;
   const products = shop.products;
 
-  const filteredProducts = category === 'all'
-    ? products
-    : products.filter((p) => p.type === category);
+  const filteredProducts =
+    category === 'all' ? products : products.filter((p) => p.type === category);
 
   if (isLoading && products.length === 0) {
     return (
@@ -102,22 +107,23 @@ export default function ShopPage() {
   return (
     <div className="relative min-h-screen w-full bg-[#131315] text-on-surface">
       <div className="mx-auto max-w-7xl px-4 md:px-8 py-8 md:py-12">
-
         {/* Luxury Hero Header with contained background */}
         <div className="relative w-full rounded-2xl overflow-hidden border border-white/10 mb-10 md:mb-12 group razor-highlight">
           <div
             className="absolute inset-0 w-full h-full bg-cover bg-center opacity-90 blur-sm scale-105 group-hover:scale-100 group-hover:blur-0 transition-all duration-700 ease-in-out z-0 pointer-events-none"
             style={{ backgroundImage: `url(/images/shop_bg.png)` }}
           />
-          <div
-            className="absolute inset-0 bg-gradient-to-r from-[#131315]/90 via-[#131315]/50 to-transparent z-0 pointer-events-none"
-          ></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-[#131315]/90 via-[#131315]/50 to-transparent z-0 pointer-events-none"></div>
 
           <div className="relative z-10 p-6 md:p-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div>
-              <h1 className="font-display-lg text-4xl md:text-5xl text-on-surface mb-2"><Trans>Shop</Trans></h1>
+              <h1 className="font-display-lg text-4xl md:text-5xl text-on-surface mb-2">
+                <Trans>Shop</Trans>
+              </h1>
               <p className="text-on-surface-variant max-w-md text-sm md:text-base">
-                <Trans>Power up your game with premium chips, passes, and exclusive features.</Trans>
+                <Trans>
+                  Power up your game with premium chips, passes, and exclusive features.
+                </Trans>
               </p>
             </div>
             <div className="flex items-center gap-6 text-[10px] font-label-caps uppercase tracking-widest text-outline">
@@ -141,7 +147,7 @@ export default function ShopPage() {
                 'px-5 py-2 rounded-lg text-sm font-label-caps uppercase tracking-wider transition-all duration-200',
                 category === cat
                   ? 'bg-tertiary text-on-tertiary shadow-lg shadow-emerald-500/20'
-                  : 'text-outline hover:text-on-surface hover:bg-white/5 border border-transparent hover:border-white/10'
+                  : 'text-outline hover:text-on-surface hover:bg-white/5 border border-transparent hover:border-white/10',
               )}
             >
               {CATEGORY_LABELS[cat]}
