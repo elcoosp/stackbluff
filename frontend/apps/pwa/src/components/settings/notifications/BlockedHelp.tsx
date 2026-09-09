@@ -1,4 +1,4 @@
-import { Trans } from "@lingui/react/macro";
+import { Trans } from '@lingui/react/macro';
 
 export function BlockedHelp() {
   return (
@@ -6,8 +6,8 @@ export function BlockedHelp() {
       <Trans>
         <strong>How to enable:</strong>
         <br />
-        Click the lock/info icon in your browser's address bar → Site settings →
-        Notifications → Allow
+        Click the lock/info icon in your browser's address bar → Site settings → Notifications →
+        Allow
       </Trans>
     </div>
   );
