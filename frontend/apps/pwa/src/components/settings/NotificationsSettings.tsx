@@ -1,23 +1,23 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useConsentStore } from '@/stores/consentStore';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
+import { Bell } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { notificationLogger } from '@/lib/logger';
 import {
-  isPushSupported,
   getPermissionStatus,
+  isPushSupported,
+  resyncSubscription,
   subscribeToPushNotifications,
   unsubscribeFromPushNotifications,
-  resyncSubscription,
 } from '@/services/notifications';
-import { notificationLogger } from '@/lib/logger';
+import { useConsentStore } from '@/stores/consentStore';
+import { BlockedHelp } from './notifications/BlockedHelp';
+import { MessageFeedback } from './notifications/MessageFeedback';
+import { ResyncButton } from './notifications/ResyncButton';
 import { StatusBadge } from './notifications/StatusBadge';
 import { ToggleButton } from './notifications/ToggleButton';
-import { ResyncButton } from './notifications/ResyncButton';
-import { BlockedHelp } from './notifications/BlockedHelp';
-import { UnsupportedMessage } from './notifications/UnsupportedMessage';
-import { MessageFeedback } from './notifications/MessageFeedback';
 import type { PermissionDisplay } from './notifications/types';
-import { Bell } from 'lucide-react';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
+import { UnsupportedMessage } from './notifications/UnsupportedMessage';
 
 const logger = notificationLogger.child({ component: 'NotificationsSettings' });
 
@@ -38,19 +38,17 @@ function getPermissionDisplay(): PermissionDisplay {
  */
 export function NotificationsSettings() {
   const [permissionDisplay, setPermissionDisplay] = useState<PermissionDisplay>(
-    getPermissionDisplay()
+    getPermissionDisplay(),
   );
   const [isProcessing, setIsProcessing] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(
-    null
-  );
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  const notificationConsent = useConsentStore((s) => s.notificationConsent);
+  const _notificationConsent = useConsentStore((s) => s.notificationConsent);
 
   // Refresh status when consent changes
   useEffect(() => {
     setPermissionDisplay(getPermissionDisplay());
-  }, [notificationConsent]);
+  }, []);
 
   const isEnabled = permissionDisplay === 'enabled';
   const isBlocked = permissionDisplay === 'blocked';
@@ -130,21 +128,17 @@ export function NotificationsSettings() {
 
       {/* Status */}
       <div className="flex items-center justify-between mb-4">
-        <span className="text-sm"><Trans>Status:</Trans></span>
+        <span className="text-sm">
+          <Trans>Status:</Trans>
+        </span>
         <StatusBadge status={permissionDisplay} />
       </div>
 
       {/* Toggle */}
-      <ToggleButton
-        status={permissionDisplay}
-        isProcessing={isProcessing}
-        onClick={handleToggle}
-      />
+      <ToggleButton status={permissionDisplay} isProcessing={isProcessing} onClick={handleToggle} />
 
       {/* Resync (only if enabled) */}
-      {isEnabled && (
-        <ResyncButton isProcessing={isProcessing} onClick={handleResync} />
-      )}
+      {isEnabled && <ResyncButton isProcessing={isProcessing} onClick={handleResync} />}
 
       {/* Contextual help */}
       {isBlocked && <BlockedHelp />}
