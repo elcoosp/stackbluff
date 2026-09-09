@@ -1,5 +1,5 @@
-import { canFireAnalytics } from '@/stores/consentStore';
 import { analyticsLogger } from '@/lib/logger';
+import { canFireAnalytics } from '@/stores/consentStore';
 
 /**
  * Fire an analytics event only if the user has given cookie consent.
@@ -10,7 +10,7 @@ export function trackEvent(
   options?: {
     props?: Record<string, string | number | boolean>;
     callback?: () => void;
-  }
+  },
 ): void {
   if (!canFireAnalytics()) {
     analyticsLogger.debug('Analytics event blocked: no cookie consent', { eventName });
@@ -26,7 +26,7 @@ export function trackEvent(
   const enrichedProps = {
     ...options?.props,
     // Add user context if available (from auth store or session)
-    ...(typeof window !== 'undefined' && (window as any).__USER_CONTEXT__ || {}),
+    ...((typeof window !== 'undefined' && (window as any).__USER_CONTEXT__) || {}),
   };
 
   analyticsLogger.info('Firing analytics event', { eventName, props: enrichedProps });
