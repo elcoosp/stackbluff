@@ -1,15 +1,14 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { useLeaderboard } from '../hooks/useLeaderboard';
-import { useAuthStore } from '@stackbluff/shared/stores/authStore';
-import { motion } from 'framer-motion';
-import { cn } from '@/lib/utils';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Card } from '@/components/ui/card';
-import { Trophy, Medal, Calendar, TrendingUp, Crown, Sparkles, ChevronRight, User } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { trackGameEvent } from '@/lib/customAnalytics';
-import { Trans } from '@lingui/react/macro';
 import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
+import { useAuthStore } from '@stackbluff/shared/stores/authStore';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import { motion } from 'framer-motion';
+import { Calendar, ChevronRight, Crown, Medal, Sparkles, TrendingUp, Trophy } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { trackGameEvent } from '@/lib/customAnalytics';
+import { cn } from '@/lib/utils';
+import { useLeaderboard } from '../hooks/useLeaderboard';
 
 export const Route = createFileRoute('/leaderboard')({
   component: LeaderboardPage,
@@ -94,21 +93,21 @@ function LeaderboardPage() {
       color: 'text-slate-300',
       bg: 'bg-slate-400/10',
       border: 'border-slate-400/30',
-      icon: <Medal className="w-6 h-6" />
+      icon: <Medal className="w-6 h-6" />,
     },
     {
       height: 'h-48',
       color: 'text-yellow-400',
       bg: 'bg-yellow-500/10',
       border: 'border-yellow-500/40',
-      icon: <Crown className="w-7 h-7" />
+      icon: <Crown className="w-7 h-7" />,
     },
     {
       height: 'h-28',
       color: 'text-orange-400',
       bg: 'bg-orange-500/10',
       border: 'border-orange-500/30',
-      icon: <Medal className="w-6 h-6" />
+      icon: <Medal className="w-6 h-6" />,
     },
   ];
 
@@ -153,7 +152,7 @@ function LeaderboardPage() {
               'flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-300',
               period === p
                 ? 'bg-gradient-to-r from-tertiary to-emerald-400 text-on-tertiary shadow-lg shadow-tertiary/20'
-                : 'text-on-surface-variant hover:text-on-surface hover:bg-white/5'
+                : 'text-on-surface-variant hover:text-on-surface hover:bg-white/5',
             )}
           >
             {periodLabels[p].icon}
@@ -174,22 +173,31 @@ function LeaderboardPage() {
               key={entry.user_id}
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 + idx * 0.15, type: "spring", stiffness: 200, damping: 20 }}
+              transition={{ delay: 0.2 + idx * 0.15, type: 'spring', stiffness: 200, damping: 20 }}
               className="flex flex-col items-center w-24 md:w-32"
-              onClick={() => navigate({ to: '/players/$userId', params: { userId: entry.user_id } })}
+              onClick={() =>
+                navigate({ to: '/players/$userId', params: { userId: entry.user_id } })
+              }
             >
               {/* Avatar */}
               <div className="relative mb-3">
-                <div className={cn(
-                  "w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-2xl font-bold border-2 transition-transform hover:scale-105 cursor-pointer",
-                  style.bg, style.color, style.border
-                )}>
+                <div
+                  className={cn(
+                    'w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-2xl font-bold border-2 transition-transform hover:scale-105 cursor-pointer',
+                    style.bg,
+                    style.color,
+                    style.border,
+                  )}
+                >
                   {entry.display_name.charAt(0).toUpperCase()}
                 </div>
-                <div className={cn(
-                  "absolute -top-3 -right-3 w-8 h-8 rounded-full flex items-center justify-center bg-surface border-2",
-                  style.border, style.color
-                )}>
+                <div
+                  className={cn(
+                    'absolute -top-3 -right-3 w-8 h-8 rounded-full flex items-center justify-center bg-surface border-2',
+                    style.border,
+                    style.color,
+                  )}
+                >
                   {style.icon}
                 </div>
               </div>
@@ -203,13 +211,17 @@ function LeaderboardPage() {
               </span>
 
               {/* Podium Block */}
-              <div className={cn(
-                "w-full rounded-t-xl border-t-2 backdrop-blur-xl flex items-start justify-center pt-3 transition-colors cursor-pointer",
-                style.height, style.bg, style.border,
-                "bg-white/5 hover:bg-white/10",
-                isCurrentUser && "ring-2 ring-tertiary ring-offset-2 ring-offset-surface"
-              )}>
-                <span className={cn("text-2xl font-bold font-data-mono", style.color)}>
+              <div
+                className={cn(
+                  'w-full rounded-t-xl border-t-2 backdrop-blur-xl flex items-start justify-center pt-3 transition-colors cursor-pointer',
+                  style.height,
+                  style.bg,
+                  style.border,
+                  'bg-white/5 hover:bg-white/10',
+                  isCurrentUser && 'ring-2 ring-tertiary ring-offset-2 ring-offset-surface',
+                )}
+              >
+                <span className={cn('text-2xl font-bold font-data-mono', style.color)}>
                   {actualRank}
                 </span>
               </div>
@@ -233,10 +245,12 @@ function LeaderboardPage() {
             <motion.div
               key={entry.user_id}
               variants={itemVariants}
-              onClick={() => navigate({ to: '/players/$userId', params: { userId: entry.user_id } })}
+              onClick={() =>
+                navigate({ to: '/players/$userId', params: { userId: entry.user_id } })
+              }
               className={cn(
-                "flex items-center justify-between p-4 rounded-xl transition-colors cursor-pointer group",
-                isCurrentUser ? "bg-tertiary/10 hover:bg-tertiary/15" : "hover:bg-white/[0.07]"
+                'flex items-center justify-between p-4 rounded-xl transition-colors cursor-pointer group',
+                isCurrentUser ? 'bg-tertiary/10 hover:bg-tertiary/15' : 'hover:bg-white/[0.07]',
               )}
             >
               <div className="flex items-center gap-4 min-w-0">
@@ -276,7 +290,7 @@ function LeaderboardPage() {
         <motion.div
           initial={{ opacity: 0, y: 100 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, type: "spring", stiffness: 200, damping: 25 }}
+          transition={{ delay: 0.5, type: 'spring', stiffness: 200, damping: 25 }}
           className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-md"
         >
           <Link
@@ -288,12 +302,18 @@ function LeaderboardPage() {
                 {userRank}
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-on-surface-variant font-medium"><Trans>Your Rank</Trans></p>
-                <p className="text-sm font-medium text-on-surface truncate">{currentUserEntry.display_name}</p>
+                <p className="text-[10px] uppercase tracking-wider text-on-surface-variant font-medium">
+                  <Trans>Your Rank</Trans>
+                </p>
+                <p className="text-sm font-medium text-on-surface truncate">
+                  {currentUserEntry.display_name}
+                </p>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-[10px] uppercase tracking-wider text-on-surface-variant font-medium"><Trans>Chips Won</Trans></p>
+              <p className="text-[10px] uppercase tracking-wider text-on-surface-variant font-medium">
+                <Trans>Chips Won</Trans>
+              </p>
               <p className="text-sm font-data-mono font-bold text-tertiary">
                 ${(currentUserEntry.total_chips_won || 0).toLocaleString()}
               </p>
