@@ -1,22 +1,37 @@
-import { useState, useRef } from 'react';
-import { toast } from 'sonner';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
+import { apiClient } from '@stackbluff/shared/api/client';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@stackbluff/shared/api/client';
+import { motion } from 'framer-motion';
+import {
+  Crown,
+  Image as ImageIcon,
+  Info,
+  Loader2,
+  Palette,
+  Save,
+  Settings,
+  Upload,
+} from 'lucide-react';
+import { useRef, useState } from 'react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { motion } from 'framer-motion';
-import { Loader2, Upload, Image as ImageIcon, Palette, Crown, Save, Info, Settings } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { uploadFile } from '@/lib/uploadFile';
+import { cn } from '@/lib/utils';
 import type { ClubDetails } from '@/types/club';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
 
 const VALID_COLORS = [
-  "#1a6b42", "#2d7a5a", "#3d8b6b", "#4a9c7a",
-  "#5aad8a", "#0f4c3a", "#1e5945", "#2a6650",
+  '#1a6b42',
+  '#2d7a5a',
+  '#3d8b6b',
+  '#4a9c7a',
+  '#5aad8a',
+  '#0f4c3a',
+  '#1e5945',
+  '#2a6650',
 ];
 
 const CHIP_PRESETS = [
@@ -70,7 +85,7 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
 
   const [logoPreview, setLogoPreview] = useState<string | null>(club.logo_url || null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(
-    club.pro_settings?.banner_url || null
+    club.pro_settings?.banner_url || null,
   );
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isUploadingBanner, setIsUploadingBanner] = useState(false);
@@ -113,7 +128,7 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
       setLogoPreview(url);
       setFormData((prev) => ({ ...prev, logo_url: url }));
       toast.success(t`Logo uploaded`);
-    } catch (err) {
+    } catch (_err) {
       toast.error(t`Failed to upload logo`);
     } finally {
       setIsUploadingLogo(false);
@@ -139,7 +154,7 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
       setBannerPreview(url);
       setFormData((prev) => ({ ...prev, banner_url: url }));
       toast.success(t`Banner uploaded`);
-    } catch (err) {
+    } catch (_err) {
       toast.error(t`Failed to upload banner`);
     } finally {
       setIsUploadingBanner(false);
@@ -185,13 +200,20 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
             <Settings className="w-5 h-5 text-tertiary" />
           </div>
           <div>
-            <span className="text-xs font-data-mono uppercase tracking-widest text-tertiary"><Trans>Configuration</Trans></span>
-            <h3 className="font-headline-md text-base text-on-surface"><Trans>Basic Information</Trans></h3>
+            <span className="text-xs font-data-mono uppercase tracking-widest text-tertiary">
+              <Trans>Configuration</Trans>
+            </span>
+            <h3 className="font-headline-md text-base text-on-surface">
+              <Trans>Basic Information</Trans>
+            </h3>
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="club-name" className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant">
+          <Label
+            htmlFor="club-name"
+            className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant"
+          >
             <Trans>Club Name *</Trans>
           </Label>
           <Input
@@ -204,18 +226,24 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="telegram-group" className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant">
+          <Label
+            htmlFor="telegram-group"
+            className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant"
+          >
             <Trans>Telegram Group ID</Trans>
           </Label>
           <Input
             id="telegram-group"
             value={formData.telegram_group_id}
-            onChange={(e) => setFormData((prev) => ({ ...prev, telegram_group_id: e.target.value }))}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, telegram_group_id: e.target.value }))
+            }
             placeholder={t`e.g., -1001234567890`}
             className="h-12 bg-white/5 border-white/10 rounded-xl px-4 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-tertiary/50 transition-all"
           />
           <p className="text-xs text-on-surface-variant/60 flex items-center gap-1.5 mt-1">
-            <Info className="w-3 h-3" /> <Trans>Link your club to a Telegram group for notifications.</Trans>
+            <Info className="w-3 h-3" />{' '}
+            <Trans>Link your club to a Telegram group for notifications.</Trans>
           </p>
         </div>
       </motion.div>
@@ -227,8 +255,12 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
             <ImageIcon className="w-5 h-5 text-blue-400" />
           </div>
           <div>
-            <span className="text-xs font-data-mono uppercase tracking-widest text-blue-400"><Trans>Assets</Trans></span>
-            <h3 className="font-headline-md text-base text-on-surface"><Trans>Branding</Trans></h3>
+            <span className="text-xs font-data-mono uppercase tracking-widest text-blue-400">
+              <Trans>Assets</Trans>
+            </span>
+            <h3 className="font-headline-md text-base text-on-surface">
+              <Trans>Branding</Trans>
+            </h3>
           </div>
         </div>
 
@@ -275,14 +307,21 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
 
       {/* Pro Features */}
       {hasClubPro && (
-        <motion.div variants={itemVariants} className="space-y-5 p-6 border border-yellow-500/20 rounded-2xl bg-gradient-to-br from-yellow-500/10 to-orange-500/5">
+        <motion.div
+          variants={itemVariants}
+          className="space-y-5 p-6 border border-yellow-500/20 rounded-2xl bg-gradient-to-br from-yellow-500/10 to-orange-500/5"
+        >
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center border border-yellow-500/30">
               <Crown className="w-5 h-5 text-yellow-400" />
             </div>
             <div>
-              <span className="text-xs font-data-mono uppercase tracking-widest text-yellow-400"><Trans>Premium</Trans></span>
-              <h3 className="font-headline-md text-base text-on-surface"><Trans>Club Pro Customization</Trans></h3>
+              <span className="text-xs font-data-mono uppercase tracking-widest text-yellow-400">
+                <Trans>Premium</Trans>
+              </span>
+              <h3 className="font-headline-md text-base text-on-surface">
+                <Trans>Club Pro Customization</Trans>
+              </h3>
             </div>
           </div>
 
@@ -360,10 +399,10 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
                   type="button"
                   onClick={() => setFormData((prev) => ({ ...prev, felt_colour: color }))}
                   className={cn(
-                    "w-10 h-10 rounded-xl border-2 transition-all",
+                    'w-10 h-10 rounded-xl border-2 transition-all',
                     formData.felt_colour === color
-                      ? "border-tertiary ring-2 ring-tertiary/50 scale-105"
-                      : "border-white/10 hover:border-white/30"
+                      ? 'border-tertiary ring-2 ring-tertiary/50 scale-105'
+                      : 'border-white/10 hover:border-white/30',
                   )}
                   style={{ backgroundColor: color }}
                   aria-label={t`Select ${color}`}
@@ -385,7 +424,10 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
       )}
 
       {/* Save Button */}
-      <motion.div variants={itemVariants} className="flex justify-end pt-4 border-t border-white/10">
+      <motion.div
+        variants={itemVariants}
+        className="flex justify-end pt-4 border-t border-white/10"
+      >
         <Button
           type="submit"
           disabled={updateMutation.isPending}
