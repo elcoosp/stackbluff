@@ -34,12 +34,15 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
     const startUpdateInterval = () => {
       if (updateInterval !== null) return;
 
-      updateInterval = window.setInterval(() => {
-        if (isTabVisible) {
-          swLogger.debug('Checking for service worker updates');
-          registration.update();
-        }
-      }, 60 * 60 * 1000); // Every hour
+      updateInterval = window.setInterval(
+        () => {
+          if (isTabVisible) {
+            swLogger.debug('Checking for service worker updates');
+            registration.update();
+          }
+        },
+        60 * 60 * 1000,
+      ); // Every hour
     };
 
     // Listen for visibility changes
