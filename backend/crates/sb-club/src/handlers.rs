@@ -150,7 +150,7 @@ pub async fn update_club_settings(
             // Broadcast club updated event
             state.service.broadcast_club_updated(club_id).await;
             Ok(Json(settings))
-        },
+        }
         Err(e) => {
             tracing::error!("Failed to update club settings: {:?}", e);
             Err((
@@ -167,7 +167,13 @@ pub async fn update_club(
     Path(club_id): Path<ClubId>,
     Json(req): Json<UpdateClubSettingsRequest>,
 ) -> Result<Json<ClubProSettings>, (StatusCode, String)> {
-    let result = update_club_settings(State(state.clone()), Extension(ctx), Path(club_id), Json(req)).await;
+    let result = update_club_settings(
+        State(state.clone()),
+        Extension(ctx),
+        Path(club_id),
+        Json(req),
+    )
+    .await;
     if result.is_ok() {
         // Broadcast club updated event
         state.service.broadcast_club_updated(club_id).await;
@@ -348,7 +354,10 @@ pub async fn create_club_tournament(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
     // Broadcast tournament.created event
-    state.club_service.broadcast_tournament_created(club_id, tournament_id).await;
+    state
+        .club_service
+        .broadcast_tournament_created(club_id, tournament_id)
+        .await;
     Ok((
         StatusCode::CREATED,
         Json(serde_json::json!({ "tournament_id": tournament_id })),
