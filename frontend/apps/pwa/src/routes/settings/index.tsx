@@ -1,17 +1,17 @@
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import { createFileRoute, Link, Outlet, useMatches } from '@tanstack/react-router';
 import {
-  User,
   Bell,
-  Palette,
-  Volume2,
-  Shield,
-  CreditCard,
-  Settings,
-  Send,
   ChevronRight,
+  CreditCard,
+  Palette,
+  Send,
+  Settings,
+  Shield,
+  User,
+  Volume2,
 } from 'lucide-react';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
 
 function SettingsPage() {
   const matches = useMatches();
@@ -73,9 +73,13 @@ function SettingsPage() {
     <div className="max-w-2xl mx-auto p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-display-lg text-3xl text-on-surface flex items-center gap-2">
-          <Settings className="w-8 h-8 text-tertiary" /><Trans>Settings</Trans>
+          <Settings className="w-8 h-8 text-tertiary" />
+          <Trans>Settings</Trans>
         </h1>
-        <Link to="/profile" className="text-sm text-tertiary hover:text-tertiary/80 transition-colors flex items-center gap-1">
+        <Link
+          to="/profile"
+          className="text-sm text-tertiary hover:text-tertiary/80 transition-colors flex items-center gap-1"
+        >
           <User className="w-4 h-4" />
           <Trans>Profile</Trans>
         </Link>
