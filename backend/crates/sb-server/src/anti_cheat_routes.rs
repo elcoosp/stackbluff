@@ -1,12 +1,7 @@
-use axum::{
-    Extension, Json, Router,
-    extract::State,
-    http::StatusCode,
-    routing::post,
-};
-use serde::Deserialize;
+use axum::{Extension, Json, Router, extract::State, http::StatusCode, routing::post};
 use sb_auth::middleware::AuthUser;
 use sb_shared_types::{RequestContext, UserId};
+use serde::Deserialize;
 use std::sync::Arc;
 
 use sb_anti_cheat::FingerprintRepository;
@@ -43,7 +38,10 @@ pub async fn record_fingerprint(
         .await
         .map_err(|e| {
             tracing::error!("Failed to save fingerprint: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to save fingerprint".to_string())
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to save fingerprint".to_string(),
+            )
         })?;
 
     Ok(StatusCode::OK)
