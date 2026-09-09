@@ -1,8 +1,6 @@
 export function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding)
-    .replace(/-/g, '+')
-    .replace(/_/g, '/');
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
 
   const rawData = window.atob(base64);
   const outputArray = new Uint8Array(rawData.length);
@@ -42,15 +40,15 @@ export async function subscribeUserToPush() {
     const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
     subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: convertedVapidKey as unknown as BufferSource
+      applicationServerKey: convertedVapidKey as unknown as BufferSource,
     });
 
     await fetch('/notifications/subscribe', {
       method: 'POST',
       body: JSON.stringify(subscription),
       headers: {
-        'Content-Type': 'application/json'
-      }
+        'Content-Type': 'application/json',
+      },
     });
 
     console.log('User subscribed to push notifications');
@@ -74,8 +72,8 @@ export async function unsubscribeUserFromPush() {
         method: 'POST',
         body: JSON.stringify({ endpoint: subscription.endpoint }),
         headers: {
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'application/json',
+        },
       });
       console.log('User unsubscribed from push notifications');
     }
