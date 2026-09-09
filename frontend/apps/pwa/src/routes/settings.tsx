@@ -1,22 +1,21 @@
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import { createFileRoute, Link, Outlet, useMatchRoute } from '@tanstack/react-router';
 import { motion } from 'framer-motion';
-import { cn } from '@/lib/utils';
-import { requireAuth } from '@/lib/authGuard';
 import {
-  User,
   Bell,
-  Palette,
-  Volume2,
-  Shield,
-  CreditCard,
-  Settings,
-  Send,
   ChevronRight,
-  Sparkles,
+  CreditCard,
   type LucideIcon,
+  Palette,
+  Send,
+  Shield,
+  Sparkles,
+  User,
+  Volume2,
 } from 'lucide-react';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
+import { requireAuth } from '@/lib/authGuard';
+import { cn } from '@/lib/utils';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -36,9 +35,9 @@ const itemVariants = {
     y: 0,
     scale: 1,
     transition: {
-      type: "spring" as const,
+      type: 'spring' as const,
       stiffness: 260,
-      damping: 18
+      damping: 18,
     },
   },
 };
@@ -176,17 +175,22 @@ function SettingsPage() {
                   className="block relative overflow-hidden h-full p-6 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl transition-colors duration-300 hover:border-white/20 group"
                 >
                   {/* Hover Gradient Background */}
-                  <div className={cn(
-                    "absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none",
-                    section.gradient
-                  )} />
+                  <div
+                    className={cn(
+                      'absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none',
+                      section.gradient,
+                    )}
+                  />
 
                   <div className="relative z-10 flex flex-col h-full">
                     <div className="flex items-start justify-between mb-4">
-                      <div className={cn(
-                        "p-3 rounded-xl border border-white/10 transition-transform duration-300 group-hover:scale-110",
-                        section.bg, section.color
-                      )}>
+                      <div
+                        className={cn(
+                          'p-3 rounded-xl border border-white/10 transition-transform duration-300 group-hover:scale-110',
+                          section.bg,
+                          section.color,
+                        )}
+                      >
                         <Icon className="w-6 h-6" />
                       </div>
                       <div className="flex items-center justify-center w-8 h-8 rounded-full bg-white/5 border border-white/5 group-hover:bg-white/10 transition-colors">
@@ -198,9 +202,7 @@ function SettingsPage() {
                       <h3 className="font-headline-md text-lg text-on-surface leading-tight">
                         {section.title}
                       </h3>
-                      <p className="text-sm text-on-surface-variant mt-1">
-                        {section.description}
-                      </p>
+                      <p className="text-sm text-on-surface-variant mt-1">{section.description}</p>
                     </div>
                   </div>
                 </Link>
@@ -216,6 +218,8 @@ function SettingsPage() {
 }
 
 export const Route = createFileRoute('/settings')({
-  beforeLoad: () => { requireAuth(); },
+  beforeLoad: () => {
+    requireAuth();
+  },
   component: SettingsPage,
 });
