@@ -90,13 +90,13 @@ export const DEFAULT_PREFERENCES: FeedbackPreferences = {
 
 /** Seat positions around a poker table (9-max) for spatial panning */
 export const SEAT_PAN_MAP: Record<number, number> = {
-  0: 0,    // Hero (center)
-  1: -0.8,  // Left
-  2: -0.5,  // Far left
-  3: -0.2,  // Near left
-  4: 0.2,  // Near right
-  5: 0.5,  // Far right
-  6: 0.8,  // Right
-  7: -0.6,  // Bottom left
-  8: 0.6,  // Bottom right
+  0: 0, // Hero (center)
+  1: -0.8, // Left
+  2: -0.5, // Far left
+  3: -0.2, // Near left
+  4: 0.2, // Near right
+  5: 0.5, // Far right
+  6: 0.8, // Right
+  7: -0.6, // Bottom left
+  8: 0.6, // Bottom right
 };
