@@ -1,11 +1,10 @@
-import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Medal, X, Sparkles } from 'lucide-react';
-import { createPortal } from 'react-dom';
-import { cn } from '@/lib/utils';
+import { Trans } from '@lingui/react/macro';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import type { TournamentResultEntry } from '@stackbluff/shared/types/tournament.types';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Sparkles, Trophy, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { cn } from '@/lib/utils';
 
 interface TournamentResultsModalProps {
   open: boolean;
@@ -15,7 +14,11 @@ interface TournamentResultsModalProps {
 }
 
 function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount);
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(amount);
 }
 
 function getMedal(position: number): string {
@@ -25,9 +28,14 @@ function getMedal(position: number): string {
   return `${position}`;
 }
 
-export function TournamentResultsModal({ open, results, tournamentId, onClose }: TournamentResultsModalProps) {
+export function TournamentResultsModal({
+  open,
+  results,
+  tournamentId,
+  onClose,
+}: TournamentResultsModalProps) {
   const userId = useAuthStore((s) => s.user?.id);
-  const myResult = results.find((r) => r.user_id === userId);
+  const _myResult = results.find((r) => r.user_id === userId);
   const winner = results.find((r) => r.position === 1);
 
   if (!open) return null;
@@ -53,7 +61,9 @@ export function TournamentResultsModal({ open, results, tournamentId, onClose }:
             <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/5 shrink-0">
               <div className="flex items-center gap-2">
                 <Trophy className="w-5 h-5 text-tertiary" />
-                <h2 className="text-sm font-semibold text-on-surface"><Trans>Tournament Complete</Trans></h2>
+                <h2 className="text-sm font-semibold text-on-surface">
+                  <Trans>Tournament Complete</Trans>
+                </h2>
               </div>
               <button
                 type="button"
@@ -69,9 +79,15 @@ export function TournamentResultsModal({ open, results, tournamentId, onClose }:
               <div className="px-5 py-4 bg-tertiary/5 border-b border-white/5 flex items-center gap-4">
                 <div className="text-3xl">🏆</div>
                 <div>
-                  <div className="text-xs text-on-surface-variant"><Trans>Winner</Trans></div>
-                  <div className="font-semibold text-on-surface">{winner.display_name || winner.user_id.slice(0, 8)}</div>
-                  <div className="font-data-mono text-tertiary text-sm">{formatCurrency(winner.prize)}</div>
+                  <div className="text-xs text-on-surface-variant">
+                    <Trans>Winner</Trans>
+                  </div>
+                  <div className="font-semibold text-on-surface">
+                    {winner.display_name || winner.user_id.slice(0, 8)}
+                  </div>
+                  <div className="font-data-mono text-tertiary text-sm">
+                    {formatCurrency(winner.prize)}
+                  </div>
                 </div>
                 <motion.div
                   animate={{ scale: [1, 1.2, 1] }}
@@ -95,17 +111,24 @@ export function TournamentResultsModal({ open, results, tournamentId, onClose }:
                       className={cn(
                         'flex items-center justify-between px-3 py-2 rounded-lg transition-colors',
                         isMe ? 'bg-tertiary/10 border border-tertiary/20' : 'hover:bg-white/5',
-                        isTop3 && !isMe && 'bg-white/5'
+                        isTop3 && !isMe && 'bg-white/5',
                       )}
                     >
                       <div className="flex items-center gap-3">
-                        <span className={cn(
-                          'w-6 text-center font-mono text-sm',
-                          isTop3 ? 'text-tertiary font-bold' : 'text-on-surface-variant'
-                        )}>
+                        <span
+                          className={cn(
+                            'w-6 text-center font-mono text-sm',
+                            isTop3 ? 'text-tertiary font-bold' : 'text-on-surface-variant',
+                          )}
+                        >
                           {getMedal(result.position)}
                         </span>
-                        <span className={cn('text-sm', isMe ? 'text-tertiary font-semibold' : 'text-on-surface')}>
+                        <span
+                          className={cn(
+                            'text-sm',
+                            isMe ? 'text-tertiary font-semibold' : 'text-on-surface',
+                          )}
+                        >
                           {result.display_name || result.user_id.slice(0, 8)}
                           {isMe && ' (You)'}
                         </span>
@@ -135,6 +158,6 @@ export function TournamentResultsModal({ open, results, tournamentId, onClose }:
         </>
       )}
     </AnimatePresence>,
-    document.body
+    document.body,
   );
 }
