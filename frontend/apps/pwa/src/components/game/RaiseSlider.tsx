@@ -1,11 +1,11 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Minus, Plus, Check } from 'lucide-react';
-import { TimerBar } from './TimerBar';
-import { cn } from '@/lib/utils';
-import { useFeedback } from '@stackbluff/shared/hooks/useFeedback';
-import { Trans } from '@lingui/react/macro';
 import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
+import { useFeedback } from '@stackbluff/shared/hooks/useFeedback';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Check, Minus, Plus, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { cn } from '@/lib/utils';
+import { TimerBar } from './TimerBar';
 
 interface RaiseSliderProps {
   min: number;
@@ -51,11 +51,14 @@ export const RaiseSlider = ({
     }
   }, [isOpen, min]);
 
-  const handleAmountChange = useCallback((value: number) => {
-    const clamped = Math.min(Math.max(value, min), max);
-    setAmount(clamped);
-    setInputValue(String(clamped));
-  }, [min, max]);
+  const handleAmountChange = useCallback(
+    (value: number) => {
+      const clamped = Math.min(Math.max(value, min), max);
+      setAmount(clamped);
+      setInputValue(String(clamped));
+    },
+    [min, max],
+  );
 
   const triggerTick = useCallback(() => {
     const now = Date.now();
@@ -65,52 +68,59 @@ export const RaiseSlider = ({
     }
   }, [trigger]);
 
-  const increment = useCallback((byStep: number) => {
-    handleAmountChange(amount + byStep);
-    triggerTick();
-  }, [amount, handleAmountChange, triggerTick]);
+  const increment = useCallback(
+    (byStep: number) => {
+      handleAmountChange(amount + byStep);
+      triggerTick();
+    },
+    [amount, handleAmountChange, triggerTick],
+  );
 
-  const decrement = useCallback((byStep: number) => {
-    handleAmountChange(amount - byStep);
-    triggerTick();
-  }, [amount, handleAmountChange, triggerTick]);
+  const decrement = useCallback(
+    (byStep: number) => {
+      handleAmountChange(amount - byStep);
+      triggerTick();
+    },
+    [amount, handleAmountChange, triggerTick],
+  );
 
   // Fixed list of 10 presets to guarantee 2 rows of 5 buttons
   const presets = useMemo(() => {
-    const configs = presetMode === 'bb'
-      ? [
-        { label: t`Min`, value: min, isSpecial: true },
-        { label: '2BB', value: bigBlind * 2 },
-        { label: '2.5BB', value: bigBlind * 2.5 },
-        { label: '3BB', value: bigBlind * 3 },
-        { label: '4BB', value: bigBlind * 4 },
-        { label: '5BB', value: bigBlind * 5 },
-        { label: '10BB', value: bigBlind * 10 },
-        { label: '15BB', value: bigBlind * 15 },
-        { label: '20BB', value: bigBlind * 20 },
-        { label: t`All`, value: max, isSpecial: true },
-      ]
-      : [
-        { label: '10%', value: pot * 0.10 },
-        { label: '25%', value: pot * 0.25 },
-        { label: '33%', value: pot * (1 / 3) },
-        { label: '50%', value: pot * 0.50 },
-        { label: '75%', value: pot * 0.75 },
-        { label: '100%', value: pot * 1.00 },
-        { label: '150%', value: pot * 1.50 },
-        { label: '200%', value: pot * 2.00 },
-        { label: '300%', value: pot * 3.00 },
-        { label: t`All`, value: max, isSpecial: true },
-      ];
+    const configs =
+      presetMode === 'bb'
+        ? [
+            { label: t`Min`, value: min, isSpecial: true },
+            { label: '2BB', value: bigBlind * 2 },
+            { label: '2.5BB', value: bigBlind * 2.5 },
+            { label: '3BB', value: bigBlind * 3 },
+            { label: '4BB', value: bigBlind * 4 },
+            { label: '5BB', value: bigBlind * 5 },
+            { label: '10BB', value: bigBlind * 10 },
+            { label: '15BB', value: bigBlind * 15 },
+            { label: '20BB', value: bigBlind * 20 },
+            { label: t`All`, value: max, isSpecial: true },
+          ]
+        : [
+            { label: '10%', value: pot * 0.1 },
+            { label: '25%', value: pot * 0.25 },
+            { label: '33%', value: pot * (1 / 3) },
+            { label: '50%', value: pot * 0.5 },
+            { label: '75%', value: pot * 0.75 },
+            { label: '100%', value: pot * 1.0 },
+            { label: '150%', value: pot * 1.5 },
+            { label: '200%', value: pot * 2.0 },
+            { label: '300%', value: pot * 3.0 },
+            { label: t`All`, value: max, isSpecial: true },
+          ];
 
     // Disable illegal buttons but keep grid fixed
-    return configs.map(p => {
+    return configs.map((p) => {
       const val = Math.round(p.value / step) * step;
       const isDisabled = !p.isSpecial && (val < min || val > max);
       return {
         ...p,
         value: p.isSpecial ? p.value : val,
-        isDisabled
+        isDisabled,
       };
     });
   }, [min, max, step, pot, bigBlind, presetMode]);
@@ -146,7 +156,7 @@ export const RaiseSlider = ({
 
   const commitManualInput = () => {
     const parsed = parseInt(inputValue.replace(/[^0-9]/g, ''), 10);
-    if (!isNaN(parsed)) {
+    if (!Number.isNaN(parsed)) {
       handleAmountChange(parsed);
     } else {
       setInputValue(String(amount));
@@ -159,7 +169,7 @@ export const RaiseSlider = ({
     e.preventDefault();
     const direction = e.deltaY > 0 ? -1 : 1;
     const stepAmount = e.shiftKey ? bigBlind : step;
-    handleAmountChange(amount + (direction * stepAmount));
+    handleAmountChange(amount + direction * stepAmount);
     triggerTick();
   };
 
@@ -170,8 +180,14 @@ export const RaiseSlider = ({
       return;
     }
 
-    if (e.key === 'ArrowUp') { e.preventDefault(); increment(bigBlind); }
-    if (e.key === 'ArrowDown') { e.preventDefault(); decrement(bigBlind); }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      increment(bigBlind);
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      decrement(bigBlind);
+    }
     if (e.key === 'Enter') onConfirm(amount);
     if (e.key === 'Escape') onCancel();
   };
@@ -199,12 +215,7 @@ export const RaiseSlider = ({
             </div>
           )}
 
-          <div
-            className="space-y-4 outline-none"
-            onWheel={onWheel}
-            onKeyDown={handleKeyDown}
-            tabIndex={0}
-          >
+          <div className="space-y-4 outline-none" onWheel={onWheel} onKeyDown={handleKeyDown}>
             {/* Header, Toggle & Close */}
             <div className="flex items-center justify-between pt-1">
               <motion.div
@@ -226,7 +237,9 @@ export const RaiseSlider = ({
                     whileTap={{ scale: 0.95 }}
                     className={cn(
                       'px-2.5 py-1 rounded-[4px] text-[8px] font-label-caps uppercase tracking-wider transition-all',
-                      presetMode === 'bb' ? 'bg-tertiary/20 text-tertiary shadow-sm' : 'text-on-surface-variant/60 hover:text-on-surface-variant'
+                      presetMode === 'bb'
+                        ? 'bg-tertiary/20 text-tertiary shadow-sm'
+                        : 'text-on-surface-variant/60 hover:text-on-surface-variant',
                     )}
                   >
                     <Trans>BB</Trans>
@@ -238,7 +251,9 @@ export const RaiseSlider = ({
                     whileTap={{ scale: 0.95 }}
                     className={cn(
                       'px-2.5 py-1 rounded-[4px] text-[8px] font-label-caps uppercase tracking-wider transition-all',
-                      presetMode === 'pot' ? 'bg-tertiary/20 text-tertiary shadow-sm' : 'text-on-surface-variant/60 hover:text-on-surface-variant'
+                      presetMode === 'pot'
+                        ? 'bg-tertiary/20 text-tertiary shadow-sm'
+                        : 'text-on-surface-variant/60 hover:text-on-surface-variant',
                     )}
                   >
                     <Trans>Pot %</Trans>
@@ -250,7 +265,10 @@ export const RaiseSlider = ({
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 type="button"
-                onClick={() => { onCancel(); trigger('buttonClick'); }}
+                onClick={() => {
+                  onCancel();
+                  trigger('buttonClick');
+                }}
                 className="text-on-surface-variant hover:text-on-surface transition-colors"
               >
                 <X className="w-4 h-4" />
@@ -269,7 +287,10 @@ export const RaiseSlider = ({
                 <Minus className="w-4 h-4" />
               </motion.button>
 
-              <div className="flex-1 text-center cursor-text" onClick={() => !isEditingAmount && setIsEditingAmount(true)}>
+              <div
+                className="flex-1 text-center cursor-text"
+                onClick={() => !isEditingAmount && setIsEditingAmount(true)}
+              >
                 <AnimatePresence mode="popLayout">
                   {isEditingAmount ? (
                     <motion.input
@@ -416,7 +437,7 @@ export const RaiseSlider = ({
                           ? 'bg-white/[0.02] text-white/15 cursor-not-allowed border border-white/5'
                           : amount === preset.value
                             ? 'bg-tertiary text-on-tertiary shadow-[0_0_15px_rgba(78,222,163,0.2)]'
-                            : 'bg-white/5 text-on-surface-variant hover:bg-white/10 border border-white/5'
+                            : 'bg-white/5 text-on-surface-variant hover:bg-white/10 border border-white/5',
                       )}
                     >
                       {preset.label}
