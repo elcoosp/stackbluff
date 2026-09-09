@@ -6,7 +6,7 @@ export const getChipColor = (_amount?: number) => {
     bg: '#1a1a1a',
     edge: '#333333',
     highlight: '#ffffff',
-    text: '#cfcfcf'
+    text: '#cfcfcf',
   };
 };
 
@@ -34,10 +34,10 @@ export const AnimatedChip = ({
   size = 24,
   xOffset = 0,
   yOffset = 0,
-  index = 0
+  index = 0,
 }: AnimatedChipProps) => {
   const midX = (from.x + to.x) / 2 + (index % 2 === 0 ? 20 : -20);
-  const midY = Math.min(from.y, to.y) - arcHeight - (index * 3);
+  const midY = Math.min(from.y, to.y) - arcHeight - index * 3;
 
   return (
     <motion.div
@@ -46,7 +46,7 @@ export const AnimatedChip = ({
         width: size,
         height: size,
         zIndex,
-        willChange: 'transform, opacity'
+        willChange: 'transform, opacity',
       }}
       initial={{
         x: from.x + xOffset - size / 2,
@@ -55,8 +55,18 @@ export const AnimatedChip = ({
         opacity: 0,
       }}
       animate={{
-        x: [from.x + xOffset - size / 2, midX - size / 2, to.x + xOffset - size / 2, to.x + xOffset - size / 2],
-        y: [from.y + yOffset - size / 2, midY - size / 2, to.y + yOffset - size / 2, to.y + yOffset - size / 2],
+        x: [
+          from.x + xOffset - size / 2,
+          midX - size / 2,
+          to.x + xOffset - size / 2,
+          to.x + xOffset - size / 2,
+        ],
+        y: [
+          from.y + yOffset - size / 2,
+          midY - size / 2,
+          to.y + yOffset - size / 2,
+          to.y + yOffset - size / 2,
+        ],
         scale: [0.8, 1.1, 0.7, 0.7],
         opacity: [0, 1, 1, 0],
       }}
