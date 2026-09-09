@@ -1,54 +1,51 @@
+import { tournamentApi } from '@stackbluff/shared/api/tournamentApi';
+import { FeedbackSettingsDialog } from '@stackbluff/shared/components/feedback/FeedbackSettingsDialog';
+import { VisualFeedbackOverlay } from '@stackbluff/shared/components/feedback/VisualFeedbackOverlay';
+import { useFeedback } from '@stackbluff/shared/hooks/useFeedback';
+import type { FeedbackEvent } from '@stackbluff/shared/services/feedback/types';
+import { useAuthStore } from '@stackbluff/shared/stores/authStore';
+import { useDealStore } from '@stackbluff/shared/stores/dealStore';
+import { useActiveRoom, useGameStore } from '@stackbluff/shared/stores/gameStore';
+import { useTournamentStore } from '@stackbluff/shared/stores/tournamentStore';
+import type { TournamentResultEntry } from '@stackbluff/shared/types/tournament.types';
+import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
+import { History, Loader2, LogOut, Plus, Settings } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { ErrorBoundary } from 'react-error-boundary';
+import { toast } from 'sonner';
 import { useGameHandCompletion } from '@/hooks/useGameHandCompletion';
-import { useParams, useSearch } from '@tanstack/react-router';
+import { cn } from '@/lib/utils';
+import {
+  ActionBar,
+  BetAnimationLayer,
+  BuyInDialog,
+  ChipAnimationLayer,
+  CommunityCards,
+  DealAnimationLayer,
+  HandStrength,
+  HistoryDialog,
+  LeaveTableDialog,
+  MobileAnalyticsStrip,
+  PlayerStatsDialog,
+  PotBadge,
+  SeatGrid,
+  TableFelt,
+  TableRail,
+  TacticalOracle,
+} from '../components/game';
+import { KickVoteDialog } from '../components/game/KickVoteDialog';
+import { BlindLevelNotification } from '../components/tournament/BlindLevelNotification';
+import { FinalTableBanner } from '../components/tournament/FinalTableBanner';
+import { TournamentHUD } from '../components/tournament/TournamentHUD';
 import { useGameWebSocket } from '../hooks/useGameWebSocket';
 import { usePreAction } from '../hooks/usePreAction';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
-import {
-  SeatGrid,
-  ActionBar,
-  TacticalOracle,
-  HandStrength,
-  MobileAnalyticsStrip,
-  CommunityCards,
-  TableFelt,
-  TableRail,
-  PotBadge,
-  ChipAnimationLayer,
-  BetAnimationLayer,
-  DealAnimationLayer,
-  LeaveTableDialog,
-  BuyInDialog,
-  HistoryDialog,
-  PlayerStatsDialog,
-} from '../components/game';
-import { useGameStore, useActiveRoom } from '@stackbluff/shared/stores/gameStore';
-import { useDealStore } from '@stackbluff/shared/stores/dealStore';
-import { useFeedback } from '@stackbluff/shared/hooks/useFeedback';
-import { FeedbackSettingsDialog } from '@stackbluff/shared/components/feedback/FeedbackSettingsDialog';
-import { VisualFeedbackOverlay } from '@stackbluff/shared/components/feedback/VisualFeedbackOverlay';
-import type { FeedbackEvent } from '@stackbluff/shared/services/feedback/types';
-import { ErrorBoundary } from 'react-error-boundary';
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { createPortal } from 'react-dom';
-import { cn } from '@/lib/utils';
-import { Settings, LogOut, History, Plus, Loader2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { useNavigate } from '@tanstack/react-router';
-import { useAuthStore } from '@stackbluff/shared/stores/authStore';
-import { toast } from 'sonner';
-import { TournamentHUD } from '../components/tournament/TournamentHUD';
-import { BlindLevelNotification } from '../components/tournament/BlindLevelNotification';
-import { TournamentResultsModal } from '../components/tournament/TournamentResultsModal';
-import { FinalTableBanner } from '../components/tournament/FinalTableBanner';
-import { useTournamentStore } from '@stackbluff/shared/stores/tournamentStore';
-import type { TournamentResultEntry } from '@stackbluff/shared/types/tournament.types';
-import { tournamentApi } from '@stackbluff/shared/api/tournamentApi';
-import { KickVoteDialog } from '../components/game/KickVoteDialog';
 
 function Fallback({ error, resetErrorBoundary }: any) {
-
   // Listen to club theme updates
-  const [feltColor, setFeltColor] = useState<string | null>(null);
+  const [_feltColor, setFeltColor] = useState<string | null>(null);
   useEffect(() => {
     const handler = (event: Event) => {
       const detail = (event as CustomEvent).detail;
@@ -166,7 +163,7 @@ function useGameFeedback(
       }
     }
     prevCurrentTurn.current = game.currentTurnUserId;
-  }, [game.currentTurnUserId, game.seats, resolvedHeroSeat, trigger, getSeatByUserId]);
+  }, [game.currentTurnUserId, resolvedHeroSeat, trigger, getSeatByUserId]);
 
   useEffect(() => {
     for (const [idx, seatRaw] of Object.entries(game.seats)) {
@@ -176,8 +173,12 @@ function useGameFeedback(
       const currAction = seat.action?.text;
       if (currAction && currAction !== prevAction && seatNum !== resolvedHeroSeat) {
         const actionToEvent: Record<string, FeedbackEvent> = {
-          CHECK: 'check', CALL: 'call', BET: 'bet',
-          RAISE: 'raise', FOLD: 'fold', 'ALL-IN': 'allIn',
+          CHECK: 'check',
+          CALL: 'call',
+          BET: 'bet',
+          RAISE: 'raise',
+          FOLD: 'fold',
+          'ALL-IN': 'allIn',
         };
         const event = actionToEvent[currAction];
         if (event) trigger(event, { seatIndex: seatNum });
@@ -245,15 +246,24 @@ export function TablePage() {
   const urlBuyInRaw = (search as any)?.buyIn;
   const urlBuyIn = urlBuyInRaw ? Number(urlBuyInRaw) : undefined;
 
-  const { sendJoin, sendAction, sendRebuy, sendWsMessage, connectionStatus, myUserId, notSeated, sendLeave } = useGameWebSocket(tableId);
+  const {
+    sendJoin,
+    sendAction,
+    sendRebuy,
+    sendWsMessage,
+    connectionStatus,
+    myUserId,
+    notSeated,
+    sendLeave,
+  } = useGameWebSocket(tableId);
   const isDesktop = useResponsiveLayout();
   const isShortHeight = useMediaQuery('(max-height: 720px)');
   const showAnalytics = useMediaQuery('(min-width: 980px)');
 
   const game = useActiveRoom();
-  const activeRoomId = useGameStore(s => s.activeRoomId);
+  const activeRoomId = useGameStore((s) => s.activeRoomId);
 
-  const rooms = useGameStore(s => s.rooms);
+  const rooms = useGameStore((s) => s.rooms);
   const roomIds = useMemo(() => Object.keys(rooms), [rooms]);
 
   const { trigger } = useFeedback();
@@ -265,10 +275,18 @@ export function TablePage() {
   const [isJoining, setIsJoining] = useState(false);
   const [isAddingTable, setIsAddingTable] = useState(false);
   const [statsUserId, setStatsUserId] = useState<string | null>(null);
-  const [kickVoteDialog, setKickVoteDialog] = useState<{ roomId: string; kickVoteId: string; targetId: string; targetName: string; durationSecs: number; requiredVotes: number; initiatorId: string } | null>(null);
+  const [kickVoteDialog, setKickVoteDialog] = useState<{
+    roomId: string;
+    kickVoteId: string;
+    targetId: string;
+    targetName: string;
+    durationSecs: number;
+    requiredVotes: number;
+    initiatorId: string;
+  } | null>(null);
   const isTournament = !!tournamentId;
-  const [resultsModalOpen, setResultsModalOpen] = useState(false);
-  const [resultsData, setResultsData] = useState<TournamentResultEntry[]>([]);
+  const [_resultsModalOpen, setResultsModalOpen] = useState(false);
+  const [_resultsData, setResultsData] = useState<TournamentResultEntry[]>([]);
   const [finalTableVisible, setFinalTableVisible] = useState(false);
   const { isDealing } = useDealStore();
   const balance = useAuthStore((s) => s.balance);
@@ -281,7 +299,9 @@ export function TablePage() {
 
   useEffect(() => {
     if (!tableId) return;
-    const matchingEntry = Object.entries(rooms).find(([, r]: [string, any]) => r.tableId === tableId);
+    const matchingEntry = Object.entries(rooms).find(
+      ([, r]: [string, any]) => r.tableId === tableId,
+    );
     if (matchingEntry) {
       const [rId] = matchingEntry;
       if (activeRoomId !== rId) {
@@ -308,7 +328,9 @@ export function TablePage() {
     const handleElimination = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (detail.tournamentId === tournamentId) {
-        toast.info(`${detail.playerName || 'A player'} eliminated in position ${detail.position || '?'}`);
+        toast.info(
+          `${detail.playerName || 'A player'} eliminated in position ${detail.position || '?'}`,
+        );
       }
     };
     const handleFinalTable = (e: Event) => {
@@ -342,9 +364,6 @@ export function TablePage() {
       window.removeEventListener('tournament:elimination', handleElimination as EventListener);
       window.removeEventListener('tournament:tableChanged', handleTableChanged as EventListener);
     };
-
-
-
   }, [tournamentId, navigate]);
 
   // Listen for kick vote events
@@ -399,7 +418,6 @@ export function TablePage() {
     };
   }, [activeRoomId, kickVoteDialog]);
 
-
   useEffect(() => {
     if (!tournamentId) return;
     const tournamentState = useTournamentStore.getState().tournaments[tournamentId];
@@ -416,7 +434,7 @@ export function TablePage() {
             search: { tournamentId },
           });
         }
-      } catch (e) {
+      } catch (_e) {
         // ignore errors
       }
     }, 5000);
@@ -426,7 +444,7 @@ export function TablePage() {
 
   useEffect(() => {
     useDealStore.setState({ isDealing: false });
-  }, [activeRoomId]);
+  }, []);
 
   const {
     seats,
@@ -453,9 +471,7 @@ export function TablePage() {
   const heroSeatByUserId = myUserId
     ? Object.entries(seats).find(([, s]: [string, any]) => s.user_id === myUserId)
     : null;
-  const resolvedHeroSeat: number = heroSeatByUserId
-    ? Number(heroSeatByUserId[0])
-    : heroSeat ?? 0;
+  const resolvedHeroSeat: number = heroSeatByUserId ? Number(heroSeatByUserId[0]) : (heroSeat ?? 0);
 
   const seatsWithHeroCards = { ...seats };
   if (heroHoleCards && heroHoleCards.length === 2 && !isDealing) {
@@ -489,7 +505,9 @@ export function TablePage() {
         const shouldRevealCards = player.hole_cards && player.hole_cards.length > 0;
         seatsWithShowdown[seatIndex] = {
           ...seatsWithShowdown[seatIndex],
-          hole_cards: shouldRevealCards ? player.hole_cards : seatsWithShowdown[seatIndex].hole_cards,
+          hole_cards: shouldRevealCards
+            ? player.hole_cards
+            : seatsWithShowdown[seatIndex].hole_cards,
           hand_description: player.hand_description,
           is_winner: player.is_winner,
           win_amount: player.win_amount,
@@ -500,12 +518,11 @@ export function TablePage() {
     }
   }
 
-  const displayCommunityCards =
-    showdownReveal?.community_cards?.length
-      ? showdownReveal.community_cards
-      : communityCards;
+  const displayCommunityCards = showdownReveal?.community_cards?.length
+    ? showdownReveal.community_cards
+    : communityCards;
 
-  const allWinningCards = showdownReveal?.players.flatMap(p => p.winning_cards || []) || [];
+  const allWinningCards = showdownReveal?.players.flatMap((p) => p.winning_cards || []) || [];
 
   const isMyTurn = !!actionRequired;
   const toCall = actionRequired?.to_call ?? 0;
@@ -572,7 +589,17 @@ export function TablePage() {
     if (isHeroSeated && showRebuyDialog && !isAddingTable) {
       setShowRebuyDialog(false);
     }
-  }, [connectionStatus, isHeroSeated, isObserving, hasJoined, urlBuyIn, sendJoin, showRebuyDialog, isAddingTable, isTournament]);
+  }, [
+    connectionStatus,
+    isHeroSeated,
+    isObserving,
+    hasJoined,
+    urlBuyIn,
+    sendJoin,
+    showRebuyDialog,
+    isAddingTable,
+    isTournament,
+  ]);
 
   // ─── Rebuy logic ────────────────────────────────────────────────────
   useEffect(() => {
@@ -588,7 +615,7 @@ export function TablePage() {
       !isJoining &&
       connectionStatus === 'connected' &&
       !isObserving &&
-      !isTournament &&   // <-- Disable rebuy for tournaments
+      !isTournament && // <-- Disable rebuy for tournaments
       !isHeroInActiveHand;
 
     if (shouldShow) {
@@ -621,7 +648,8 @@ export function TablePage() {
   const { preAction, togglePreAction, executingAction } = usePreAction({
     isMyTurn,
     toCall,
-    sendAction: (action: string, amount?: number) => activeRoomId ? sendAction(activeRoomId, action, amount) : undefined,
+    sendAction: (action: string, amount?: number) =>
+      activeRoomId ? sendAction(activeRoomId, action, amount) : undefined,
   });
 
   const showdownMorphComplete = useDelayedBoolean(!!showdownReveal, 400);
@@ -645,7 +673,8 @@ export function TablePage() {
 
     const updateRemaining = () => {
       const now = Date.now();
-      const expiresAtMs = heroTimerExpiresAt > 1e12 ? heroTimerExpiresAt : heroTimerExpiresAt * 1000;
+      const expiresAtMs =
+        heroTimerExpiresAt > 1e12 ? heroTimerExpiresAt : heroTimerExpiresAt * 1000;
       const remaining = Math.max(0, expiresAtMs - now);
       setHeroTimerRemainingMs(remaining);
       if (remaining <= 0 && heroIntervalRef.current) {
@@ -683,7 +712,8 @@ export function TablePage() {
 
     const updateRemaining = () => {
       const now = Date.now();
-      const expiresAtMs = opponentTimerExpiresAt > 1e12 ? opponentTimerExpiresAt : opponentTimerExpiresAt * 1000;
+      const expiresAtMs =
+        opponentTimerExpiresAt > 1e12 ? opponentTimerExpiresAt : opponentTimerExpiresAt * 1000;
       const remaining = Math.max(0, expiresAtMs - now);
       setOpponentTimerRemainingMs(remaining);
       if (remaining <= 0 && opponentIntervalRef.current) {
@@ -712,14 +742,17 @@ export function TablePage() {
     heroTimerTotalMs,
   );
 
-
   const sendActionWithFeedback = useCallback(
     (action: string, amount?: number) => {
       if (activeRoomId) {
         sendAction(activeRoomId, action, amount);
         const actionToEvent: Record<string, FeedbackEvent> = {
-          fold: 'fold', check: 'check', call: 'call',
-          bet: 'bet', raise: 'raise', 'all-in': 'allIn',
+          fold: 'fold',
+          check: 'check',
+          call: 'call',
+          bet: 'bet',
+          raise: 'raise',
+          'all-in': 'allIn',
         };
         const eventType = actionToEvent[action];
         if (eventType) trigger(eventType, { seatIndex: resolvedHeroSeat });
@@ -728,27 +761,28 @@ export function TablePage() {
     [sendAction, trigger, resolvedHeroSeat, activeRoomId],
   );
 
-
-
-  const handleKick = useCallback((targetUserId: string) => {
-    if (!activeRoomId) return;
-    const room = useGameStore.getState().rooms[activeRoomId];
-    if (!room) return;
-    // Find the seat of the target user
-    let targetSeat = null;
-    for (const [seat, player] of Object.entries(room.seats)) {
-      if ((player as any).user_id === targetUserId) {
-        targetSeat = seat;
-        break;
+  const _handleKick = useCallback(
+    (targetUserId: string) => {
+      if (!activeRoomId) return;
+      const room = useGameStore.getState().rooms[activeRoomId];
+      if (!room) return;
+      // Find the seat of the target user
+      let targetSeat = null;
+      for (const [seat, player] of Object.entries(room.seats)) {
+        if ((player as any).user_id === targetUserId) {
+          targetSeat = seat;
+          break;
+        }
       }
-    }
-    if (targetSeat === null) return;
-    // Send kick vote start
-    sendWsMessage('kick_vote_start', {
-      room_id: activeRoomId,
-      target_player_id: targetUserId,
-    });
-  }, [activeRoomId, sendWsMessage]);
+      if (targetSeat === null) return;
+      // Send kick vote start
+      sendWsMessage('kick_vote_start', {
+        room_id: activeRoomId,
+        target_player_id: targetUserId,
+      });
+    },
+    [activeRoomId, sendWsMessage],
+  );
 
   const handleLeaveTable = useCallback(() => {
     const roomIdToLeave = activeRoomId || roomIds[0];
@@ -766,11 +800,10 @@ export function TablePage() {
     setShowRebuyDialog(true);
   }, []);
 
-  const isAnyAllIn = Object.values(seatsWithShowdown).some(
-    (s: any) => s.is_all_in && !s.is_folded
-  );
+  const isAnyAllIn = Object.values(seatsWithShowdown).some((s: any) => s.is_all_in && !s.is_folded);
 
-  const headerActionsEl = typeof document !== 'undefined' ? document.getElementById('header-portal-actions') : null;
+  const headerActionsEl =
+    typeof document !== 'undefined' ? document.getElementById('header-portal-actions') : null;
 
   // ─── Render ──────────────────────────────────────────────────────────
   return (
@@ -790,7 +823,8 @@ export function TablePage() {
               transition={{ duration: 0.4, ease: 'easeInOut' }}
               className="fixed inset-0 z-[450] pointer-events-none"
               style={{
-                background: 'radial-gradient(ellipse 120% 90% at 50% 60%, transparent 25%, rgba(0,0,0,0.5) 70%, rgba(0,0,0,0.85) 100%)',
+                background:
+                  'radial-gradient(ellipse 120% 90% at 50% 60%, transparent 25%, rgba(0,0,0,0.5) 70%, rgba(0,0,0,0.85) 100%)',
               }}
             />
           )}
@@ -798,32 +832,42 @@ export function TablePage() {
 
         <VisualFeedbackOverlay />
 
-        {headerActionsEl && createPortal(
-          <div className="flex items-center gap-1 md:gap-2 h-full pr-2 md:pr-4 border-r border-white/5 mr-2 md:mr-4">
-            <button
-              onClick={() => { setShowHistory(true); trigger('buttonClick'); }}
-              className="p-2 rounded-full hover:bg-white/5 text-zinc-400 hover:text-white transition-colors"
-              aria-label="Hand history"
-            >
-              <History className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => { setShowSettings(true); trigger('buttonClick'); }}
-              className="p-2 rounded-full hover:bg-white/5 text-zinc-400 hover:text-white transition-colors"
-              aria-label="Feedback settings"
-            >
-              <Settings className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => { setShowLeaveDialog(true); trigger('buttonClick'); }}
-              className="p-2 rounded-full hover:bg-red-500/10 text-zinc-400 hover:text-red-400 transition-colors"
-              aria-label="Leave table"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>,
-          headerActionsEl
-        )}
+        {headerActionsEl &&
+          createPortal(
+            <div className="flex items-center gap-1 md:gap-2 h-full pr-2 md:pr-4 border-r border-white/5 mr-2 md:mr-4">
+              <button
+                onClick={() => {
+                  setShowHistory(true);
+                  trigger('buttonClick');
+                }}
+                className="p-2 rounded-full hover:bg-white/5 text-zinc-400 hover:text-white transition-colors"
+                aria-label="Hand history"
+              >
+                <History className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => {
+                  setShowSettings(true);
+                  trigger('buttonClick');
+                }}
+                className="p-2 rounded-full hover:bg-white/5 text-zinc-400 hover:text-white transition-colors"
+                aria-label="Feedback settings"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => {
+                  setShowLeaveDialog(true);
+                  trigger('buttonClick');
+                }}
+                className="p-2 rounded-full hover:bg-red-500/10 text-zinc-400 hover:text-red-400 transition-colors"
+                aria-label="Leave table"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>,
+            headerActionsEl,
+          )}
 
         {/* Vertical Glass Morphism Multi-table Rail */}
         <div className="absolute right-3 top-1/2 -translate-y-1/2 z-[1000] flex flex-col items-center gap-3">
@@ -834,10 +878,10 @@ export function TablePage() {
               whileTap={{ x: -6, scale: 1.3 }}
               whileHover={{ x: -2 }}
               className={cn(
-                "rounded-full backdrop-blur-md border transition-all duration-200",
+                'rounded-full backdrop-blur-md border transition-all duration-200',
                 rId === activeRoomId
-                  ? "w-4 h-4 bg-emerald-500/80 border-white/60 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
-                  : "w-3 h-3 bg-white/15 border-white/30 hover:bg-white/30"
+                  ? 'w-4 h-4 bg-emerald-500/80 border-white/60 shadow-[0_0_10px_rgba(16,185,129,0.5)]'
+                  : 'w-3 h-3 bg-white/15 border-white/30 hover:bg-white/30',
               )}
               aria-label={`Switch to table ${rId.slice(0, 4)}`}
             />
@@ -893,7 +937,10 @@ export function TablePage() {
           isRebuy={isHeroSeated && !isAddingTable}
           currentBalance={balance}
         />
-        <PlayerStatsDialog userId={statsUserId} onOpenChange={(open) => !open && setStatsUserId(null)} />
+        <PlayerStatsDialog
+          userId={statsUserId}
+          onOpenChange={(open) => !open && setStatsUserId(null)}
+        />
 
         <div className="absolute inset-0 flex items-center justify-center pt-16 px-3 pb-28 md:pt-16 md:px-4 md:pb-24 z-10">
           <div
@@ -913,7 +960,7 @@ export function TablePage() {
                     className="absolute inset-0 pointer-events-none z-20"
                     style={{
                       borderRadius: isDesktop ? '100px' : '28px',
-                      boxShadow: 'inset 0 0 80px 10px rgba(239, 68, 68, 0.4)'
+                      boxShadow: 'inset 0 0 80px 10px rgba(239, 68, 68, 0.4)',
                     }}
                   />
                 )}
@@ -928,7 +975,8 @@ export function TablePage() {
                     transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
                     className="absolute inset-0 pointer-events-none z-[442]"
                     style={{
-                      background: 'radial-gradient(ellipse 60% 40% at 50% 90%, rgba(78, 222, 163, 0.1) 0%, transparent 70%)'
+                      background:
+                        'radial-gradient(ellipse 60% 40% at 50% 90%, rgba(78, 222, 163, 0.1) 0%, transparent 70%)',
                     }}
                   />
                 )}
@@ -936,7 +984,11 @@ export function TablePage() {
 
               {tournamentId && (
                 <div className="absolute top-4 right-4 z-[460]">
-                  <TournamentHUD tournamentId={tournamentId} isMobile={!isDesktop} heroStack={heroStack} />
+                  <TournamentHUD
+                    tournamentId={tournamentId}
+                    isMobile={!isDesktop}
+                    heroStack={heroStack}
+                  />
                 </div>
               )}
               {tournamentId && <BlindLevelNotification tournamentId={tournamentId} />}
@@ -955,16 +1007,27 @@ export function TablePage() {
 
             <div className="absolute top-0 left-0 right-0 z-30 pointer-events-none">
               {!showAnalytics && (
-                <MobileAnalyticsStrip winProb={winProb} potOdds={potOdds} bestHand={bestHand} strength={strength} />
+                <MobileAnalyticsStrip
+                  winProb={winProb}
+                  potOdds={potOdds}
+                  bestHand={bestHand}
+                  strength={strength}
+                />
               )}
             </div>
 
-            <div className={cn(
-              "absolute left-1/2 -translate-x-1/2 z-30 transition-[top] duration-700 ease-in-out pointer-events-none",
-              showdownReveal
-                ? isShortHeight ? "top-[25px]" : "top-[50px]"
-                : isShortHeight ? "top-[45px]" : "top-[70px]"
-            )}>
+            <div
+              className={cn(
+                'absolute left-1/2 -translate-x-1/2 z-30 transition-[top] duration-700 ease-in-out pointer-events-none',
+                showdownReveal
+                  ? isShortHeight
+                    ? 'top-[25px]'
+                    : 'top-[50px]'
+                  : isShortHeight
+                    ? 'top-[45px]'
+                    : 'top-[70px]',
+              )}
+            >
               <div className="pointer-events-auto">
                 <PotBadge
                   amount={pot}
@@ -1032,7 +1095,9 @@ export function TablePage() {
             {isTournament ? (
               <div className="mb-4 px-8 py-3 md:py-4 bg-white/10 border border-white/20 rounded-lg flex items-center gap-3 text-on-surface">
                 <Loader2 className="w-5 h-5 animate-spin text-tertiary" />
-                <span className="font-label-caps text-sm uppercase tracking-wider">Waiting for tournament to start...</span>
+                <span className="font-label-caps text-sm uppercase tracking-wider">
+                  Waiting for tournament to start...
+                </span>
               </div>
             ) : (
               <button
