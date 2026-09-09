@@ -1,18 +1,24 @@
-import { useState, useEffect } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useAuthStore } from '@stackbluff/shared/stores/authStore';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import { apiClient } from '@stackbluff/shared/api/client';
-import { toast } from 'sonner';
 import { Dialog } from '@stackbluff/shared/components/Dialog';
+import { useAuthStore } from '@stackbluff/shared/stores/authStore';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Calendar, Coins, Loader2, Plus, Trophy } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Plus, Trophy, Calendar, Users, Coins } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useBlindTemplates } from '@/hooks/useBlindTemplates';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
+import { cn } from '@/lib/utils';
 
 interface AdminCreateTournamentProps {
   open: boolean;
@@ -64,7 +70,7 @@ export function AdminCreateTournament({ open, onClose, onSuccess }: AdminCreateT
         setForm((f) => ({ ...f, blind_schedule_id: templates[0].id }));
       }
     }
-  }, [open, templates]);
+  }, [open, templates, form.blind_schedule_id]);
 
   // Update min_players_to_start when type changes
   useEffect(() => {
@@ -148,7 +154,10 @@ export function AdminCreateTournament({ open, onClose, onSuccess }: AdminCreateT
         <div className="px-5 py-4 space-y-4 overflow-y-auto flex-1 dialog-scroll">
           {/* Tournament Name */}
           <div className="space-y-2">
-            <Label htmlFor="admin-name" className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+            <Label
+              htmlFor="admin-name"
+              className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase"
+            >
               <Trans>Tournament Name *</Trans>
             </Label>
             <Input
@@ -171,13 +180,17 @@ export function AdminCreateTournament({ open, onClose, onSuccess }: AdminCreateT
                 type="button"
                 onClick={() => {
                   setSelectedType('SitAndGo');
-                  setForm((f) => ({ ...f, tournament_type: 'SitAndGo', max_players: Math.min(f.max_players, 9) }));
+                  setForm((f) => ({
+                    ...f,
+                    tournament_type: 'SitAndGo',
+                    max_players: Math.min(f.max_players, 9),
+                  }));
                 }}
                 className={cn(
                   'flex-1 py-2 rounded-lg border-2 transition-all flex items-center justify-center gap-2',
                   selectedType === 'SitAndGo'
                     ? 'border-tertiary bg-tertiary/10 text-tertiary'
-                    : 'border-white/10 text-on-surface-variant hover:border-white/30'
+                    : 'border-white/10 text-on-surface-variant hover:border-white/30',
                 )}
               >
                 <Trans>Sit & Go</Trans>
@@ -186,13 +199,17 @@ export function AdminCreateTournament({ open, onClose, onSuccess }: AdminCreateT
                 type="button"
                 onClick={() => {
                   setSelectedType('Mtt');
-                  setForm((f) => ({ ...f, tournament_type: 'Mtt', max_players: Math.max(f.max_players, 10) }));
+                  setForm((f) => ({
+                    ...f,
+                    tournament_type: 'Mtt',
+                    max_players: Math.max(f.max_players, 10),
+                  }));
                 }}
                 className={cn(
                   'flex-1 py-2 rounded-lg border-2 transition-all flex items-center justify-center gap-2',
                   selectedType === 'Mtt'
                     ? 'border-tertiary bg-tertiary/10 text-tertiary'
-                    : 'border-white/10 text-on-surface-variant hover:border-white/30'
+                    : 'border-white/10 text-on-surface-variant hover:border-white/30',
                 )}
               >
                 <Trans>MTT</Trans>
@@ -222,7 +239,10 @@ export function AdminCreateTournament({ open, onClose, onSuccess }: AdminCreateT
 
           {/* Buy-in */}
           <div className="space-y-2">
-            <Label htmlFor="admin-buyin" className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+            <Label
+              htmlFor="admin-buyin"
+              className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase"
+            >
               <Trans>Buy-in (chips)</Trans>
             </Label>
             <div className="relative">
@@ -241,7 +261,10 @@ export function AdminCreateTournament({ open, onClose, onSuccess }: AdminCreateT
 
           {/* Scheduled Start */}
           <div className="space-y-2">
-            <Label htmlFor="admin-start" className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+            <Label
+              htmlFor="admin-start"
+              className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase"
+            >
               <Trans>Start Date & Time *</Trans>
             </Label>
             <div className="relative">
@@ -269,7 +292,9 @@ export function AdminCreateTournament({ open, onClose, onSuccess }: AdminCreateT
               max={120}
               step={5}
               value={form.start_delay_seconds}
-              onChange={(e) => setForm((f) => ({ ...f, start_delay_seconds: Number(e.target.value) }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, start_delay_seconds: Number(e.target.value) }))
+              }
               className="w-full h-2 bg-outline-variant/30 rounded-lg appearance-none cursor-pointer accent-tertiary"
             />
             <div className="flex justify-between text-[10px] text-on-surface-variant">
@@ -289,7 +314,9 @@ export function AdminCreateTournament({ open, onClose, onSuccess }: AdminCreateT
               max={form.max_players}
               step={1}
               value={form.min_players_to_start}
-              onChange={(e) => setForm((f) => ({ ...f, min_players_to_start: Number(e.target.value) }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, min_players_to_start: Number(e.target.value) }))
+              }
               className="w-full h-2 bg-outline-variant/30 rounded-lg appearance-none cursor-pointer accent-tertiary"
             />
             <div className="flex justify-between text-[10px] text-on-surface-variant">
@@ -308,7 +335,9 @@ export function AdminCreateTournament({ open, onClose, onSuccess }: AdminCreateT
               onValueChange={(value) => setForm((f) => ({ ...f, blind_schedule_id: value }))}
             >
               <SelectTrigger className="bg-surface-container-high border-outline-variant/50 text-on-surface">
-                <SelectValue placeholder={templatesLoading ? t`Loading...` : t`Select a template`} />
+                <SelectValue
+                  placeholder={templatesLoading ? t`Loading...` : t`Select a template`}
+                />
               </SelectTrigger>
               <SelectContent>
                 {templates?.map((template) => (
@@ -317,7 +346,9 @@ export function AdminCreateTournament({ open, onClose, onSuccess }: AdminCreateT
                   </SelectItem>
                 ))}
                 {(!templates || templates.length === 0) && (
-                  <SelectItem value="default" disabled><Trans>No templates available</Trans></SelectItem>
+                  <SelectItem value="default" disabled>
+                    <Trans>No templates available</Trans>
+                  </SelectItem>
                 )}
               </SelectContent>
             </Select>
