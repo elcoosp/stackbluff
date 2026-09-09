@@ -119,7 +119,6 @@ stackbluff/
 ├── package.json                # Root: card-compositor-renderer (Puppeteer)
 ├── tsconfig.json
 ├── justfile
-├── wr.sh                       # Patch + cargo check + nextest + commit script
 └── dump.txt / dump-f.txt       # Debug dumps (gitignored artifacts)
 ```
 
@@ -179,8 +178,6 @@ pnpm lint:fix                    # Biome format + lint
 cd ../tools/sb-cards/card-compositor-renderer
 pnpm dev
 ```
-
-**Patch script (`wr.sh`):** Automated workflow that patches shared `is_bot` fields across Rust structs, runs `cargo check`, runs `cargo-nextest`, and commits on green.
 
 ---
 
