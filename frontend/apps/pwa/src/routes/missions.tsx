@@ -1,35 +1,29 @@
-import { createFileRoute, useNavigate, Link } from '@tanstack/react-router';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useAuthStore } from '@stackbluff/shared/stores/authStore';
-import { apiClient } from '@stackbluff/shared/api/client';
-import { toast } from 'sonner';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Progress } from '@/components/ui/progress';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
-import { ErrorState } from '@/components/ui/ErrorState';
-import { requireAuth } from '@/lib/authGuard';
-import {
-  Trophy,
-  Target,
-  CheckCircle,
-  RotateCcw,
-  Gift,
-  Flame,
-  Zap,
-  Award,
-  Users,
-  Share2,
-  TrendingUp,
-  Calendar,
-  Coins,
-  Sparkles,
-} from 'lucide-react';
-import { Trans } from '@lingui/react/macro';
 import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
+import { apiClient } from '@stackbluff/shared/api/client';
+import { useAuthStore } from '@stackbluff/shared/stores/authStore';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+  Calendar,
+  CheckCircle,
+  Coins,
+  Flame,
+  Gift,
+  RotateCcw,
+  Share2,
+  Sparkles,
+  Target,
+  TrendingUp,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/missions')({
   component: MissionsPage,
@@ -75,11 +69,16 @@ const itemVariants = {
 };
 
 function MissionsPage() {
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const queryClient = useQueryClient();
   const {} = useAuthStore();
 
-  const { data: missions, isLoading, error, refetch } = useQuery<Mission[]>({
+  const {
+    data: missions,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<Mission[]>({
     queryKey: ['missions', 'today'],
     queryFn: () => apiClient<Mission[]>('/missions/today'),
     enabled: true,
@@ -90,7 +89,7 @@ function MissionsPage() {
     mutationFn: () =>
       apiClient<{ chips_awarded: number; streak_count: number; weekly_bonus_awarded: boolean }>(
         '/missions/claim',
-        { method: 'POST' }
+        { method: 'POST' },
       ),
     onSuccess: (data) => {
       toast.success(t`Claimed ${data.chips_awarded} chips!`);
@@ -171,7 +170,7 @@ function MissionsPage() {
             'relative flex items-center gap-2 px-6 py-3 rounded-xl font-data-mono text-sm uppercase tracking-wider transition-all duration-300 overflow-hidden group',
             allCompleted
               ? 'bg-gradient-to-r from-tertiary to-emerald-400 text-on-tertiary shadow-lg shadow-tertiary/30'
-              : 'bg-gray-700 text-gray-300 cursor-not-allowed'
+              : 'bg-gray-700 text-gray-300 cursor-not-allowed',
           )}
         >
           {allCompleted && (
@@ -205,12 +204,14 @@ function MissionsPage() {
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${overallProgress}%` }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
+              transition={{ duration: 0.8, ease: 'easeOut' }}
               className="absolute top-0 left-0 h-full bg-gradient-to-r from-tertiary to-emerald-400 rounded-full shadow-lg"
             />
           </div>
           <div className="flex justify-between text-xs text-on-surface-variant mt-2 font-medium">
-            <span>{completedCount} / {missions.length} <Trans>Completed</Trans></span>
+            <span>
+              {completedCount} / {missions.length} <Trans>Completed</Trans>
+            </span>
             {allCompleted && (
               <span className="text-tertiary flex items-center gap-1">
                 <CheckCircle className="w-3.5 h-3.5" /> <Trans>Ready to claim!</Trans>
@@ -223,13 +224,17 @@ function MissionsPage() {
         <Card className="p-6 bg-gradient-to-br from-orange-500/10 to-red-500/5 backdrop-blur-xl border-orange-500/20 shadow-xl rounded-2xl">
           <div className="flex flex-col h-full justify-between">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-on-surface-variant"><Trans>Streak</Trans></span>
+              <span className="text-sm font-medium text-on-surface-variant">
+                <Trans>Streak</Trans>
+              </span>
               <Flame className="w-5 h-5 text-orange-400" />
             </div>
             <div className="mt-2">
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl font-bold font-data-mono text-orange-400">7</span>
-                <span className="text-sm text-on-surface-variant"><Trans>days</Trans></span>
+                <span className="text-sm text-on-surface-variant">
+                  <Trans>days</Trans>
+                </span>
               </div>
               <p className="text-[10px] text-on-surface-variant mt-1 opacity-80">
                 <Trans>Keep it up!</Trans>
@@ -260,23 +265,27 @@ function MissionsPage() {
                     'p-5 border transition-all duration-300 hover:bg-white/[0.07] backdrop-blur-xl group rounded-2xl relative overflow-hidden',
                     isCompleted
                       ? 'border-tertiary/30 bg-tertiary/[0.05] shadow-lg shadow-tertiary/10'
-                      : 'border-white/10 bg-white/5 shadow-xl'
+                      : 'border-white/10 bg-white/5 shadow-xl',
                   )}
                 >
                   {/* Hover accent line */}
-                  <div className={cn(
-                    "absolute left-0 top-0 h-full w-1 transition-colors duration-300",
-                    isCompleted ? "bg-tertiary" : "bg-transparent group-hover:bg-white/20"
-                  )} />
+                  <div
+                    className={cn(
+                      'absolute left-0 top-0 h-full w-1 transition-colors duration-300',
+                      isCompleted ? 'bg-tertiary' : 'bg-transparent group-hover:bg-white/20',
+                    )}
+                  />
 
                   <div className="flex items-center gap-4 pl-2">
                     {/* Icon Circle */}
-                    <div className={cn(
-                      'flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center border transition-all duration-300',
-                      isCompleted
-                        ? 'bg-tertiary/10 border-tertiary/30'
-                        : 'bg-white/5 border-white/10 group-hover:border-white/20'
-                    )}>
+                    <div
+                      className={cn(
+                        'flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center border transition-all duration-300',
+                        isCompleted
+                          ? 'bg-tertiary/10 border-tertiary/30'
+                          : 'bg-white/5 border-white/10 group-hover:border-white/20',
+                      )}
+                    >
                       {isCompleted ? (
                         <CheckCircle className="w-6 h-6 text-tertiary" />
                       ) : (
@@ -316,12 +325,12 @@ function MissionsPage() {
                         <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: `${progress}%` }}
-                          transition={{ duration: 0.6, ease: "easeOut" }}
+                          transition={{ duration: 0.6, ease: 'easeOut' }}
                           className={cn(
-                            "absolute top-0 left-0 h-full rounded-full",
+                            'absolute top-0 left-0 h-full rounded-full',
                             isCompleted
                               ? 'bg-gradient-to-r from-tertiary to-emerald-400'
-                              : 'bg-gradient-to-r from-blue-400 to-purple-400'
+                              : 'bg-gradient-to-r from-blue-400 to-purple-400',
                           )}
                         />
                       </div>
@@ -336,7 +345,9 @@ function MissionsPage() {
                           className="flex items-center gap-1 text-xs font-medium text-tertiary"
                         >
                           <CheckCircle className="w-4 h-4" />
-                          <span><Trans>Done</Trans></span>
+                          <span>
+                            <Trans>Done</Trans>
+                          </span>
                         </motion.div>
                       ) : (
                         canReroll && (
@@ -369,7 +380,9 @@ function MissionsPage() {
         className="text-center pt-4"
       >
         <p className="text-xs text-on-surface-variant/60 font-mono">
-          <Trans>Missions reset in <span className="text-tertiary">14h 32m</span></Trans>
+          <Trans>
+            Missions reset in <span className="text-tertiary">14h 32m</span>
+          </Trans>
         </p>
       </motion.div>
     </div>
