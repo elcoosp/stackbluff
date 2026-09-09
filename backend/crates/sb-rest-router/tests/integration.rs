@@ -1,26 +1,27 @@
-
 // Helper to ensure JWT_SECRET is set for tests
 fn ensure_jwt_secret() {
     if std::env::var("JWT_SECRET").is_err() {
-        unsafe { std::env::set_var("JWT_SECRET", "test-secret-key-for-integration-tests"); }
+        unsafe {
+            std::env::set_var("JWT_SECRET", "test-secret-key-for-integration-tests");
+        }
     }
 }
-use chrono::NaiveDate;
-use sb_contracts::puzzle_repo::PuzzleError;
-use sb_shared_types::puzzle::PuzzleSubmissionRecord;
 use axum::http::StatusCode;
 use axum_test::TestServer;
+use chrono::NaiveDate;
+use sb_auth::config::AuthConfig;
+use sb_auth::{AuthServiceImpl, SharedAuthService};
 use sb_contracts::CreateTableInput;
 use sb_contracts::HandHistoryRepository;
 use sb_contracts::leaderboard::LeaderboardQuery;
 use sb_contracts::lobby_api::{TableInfo, TableRepo, TableService};
+use sb_contracts::puzzle_repo::PuzzleError;
 use sb_rest_router::create_router;
-use sb_auth::{AuthServiceImpl, SharedAuthService};
-use sb_auth::config::AuthConfig;
+use sb_shared_types::puzzle::PuzzleSubmissionRecord;
 use sb_shared_types::{AppError, RequestContext, StakeLevel, TableId, UserId};
-use uuid::Uuid;
 use sb_table_registry::Registry;
 use std::sync::Arc;
+use uuid::Uuid;
 
 // Dummy implementations for repos and services.
 
@@ -46,19 +47,33 @@ impl sb_contracts::stats_api::PlayerStatsRepo for DummyStatsRepo {
 
 // Dummy services for new AppState fields
 use sb_contracts::notification_api::NotificationService;
-use sb_contracts::tournament_api::TournamentService;
 use sb_contracts::service_api::{MissionApi, ViralService};
+use sb_contracts::tournament_api::TournamentService;
 
 struct DummyNotificationService;
 #[async_trait::async_trait]
 impl NotificationService for DummyNotificationService {
-    async fn send_telegram_message(&self, _chat_id: i64, _text: String, _keyboard: Option<serde_json::Value>) -> Result<(), sb_contracts::notification_api::NotificationError> {
+    async fn send_telegram_message(
+        &self,
+        _chat_id: i64,
+        _text: String,
+        _keyboard: Option<serde_json::Value>,
+    ) -> Result<(), sb_contracts::notification_api::NotificationError> {
         Ok(())
     }
-    async fn send_telegram_message_to_user(&self, _user_id: UserId, _text: String, _keyboard: Option<serde_json::Value>) -> Result<(), sb_contracts::notification_api::NotificationError> {
+    async fn send_telegram_message_to_user(
+        &self,
+        _user_id: UserId,
+        _text: String,
+        _keyboard: Option<serde_json::Value>,
+    ) -> Result<(), sb_contracts::notification_api::NotificationError> {
         Ok(())
     }
-    async fn answer_callback_query(&self, _callback_query_id: String, _text: Option<String>) -> Result<(), sb_contracts::notification_api::NotificationError> {
+    async fn answer_callback_query(
+        &self,
+        _callback_query_id: String,
+        _text: Option<String>,
+    ) -> Result<(), sb_contracts::notification_api::NotificationError> {
         Ok(())
     }
 }
@@ -66,41 +81,130 @@ impl NotificationService for DummyNotificationService {
 struct DummyTournamentService;
 #[async_trait::async_trait]
 impl TournamentService for DummyTournamentService {
-    async fn create_tournament(&self, _ctx: &RequestContext, _config: sb_contracts::tournament_api::TournamentConfig) -> Result<sb_shared_types::TournamentId, AppError> { unimplemented!() }
-    async fn register(&self, _ctx: &RequestContext, _tournament_id: sb_shared_types::TournamentId, _user_id: UserId) -> Result<(), AppError> { unimplemented!() }
-    async fn unregister(&self, _ctx: &RequestContext, _tournament_id: sb_shared_types::TournamentId, _user_id: UserId) -> Result<(), AppError> { unimplemented!() }
-    async fn get_tournament(&self, _ctx: &RequestContext, _tournament_id: sb_shared_types::TournamentId) -> Result<sb_contracts::tournament_api::TournamentSummary, AppError> { unimplemented!() }
-    async fn list_tournaments(&self, _ctx: &RequestContext, _type_filter: Option<sb_contracts::tournament_api::TournamentType>, _status_filter: Option<sb_contracts::tournament_api::TournamentStatus>) -> Result<Vec<sb_contracts::tournament_api::TournamentSummary>, AppError> { unimplemented!() }
-    async fn get_results(&self, _ctx: &RequestContext, _tournament_id: sb_shared_types::TournamentId) -> Result<Vec<sb_contracts::tournament_api::TournamentResult>, AppError> { unimplemented!() }
-    async fn get_my_table(&self, _ctx: &RequestContext, _tournament_id: sb_shared_types::TournamentId, _user_id: UserId) -> Result<Option<TableId>, AppError> { unimplemented!() }
+    async fn create_tournament(
+        &self,
+        _ctx: &RequestContext,
+        _config: sb_contracts::tournament_api::TournamentConfig,
+    ) -> Result<sb_shared_types::TournamentId, AppError> {
+        unimplemented!()
+    }
+    async fn register(
+        &self,
+        _ctx: &RequestContext,
+        _tournament_id: sb_shared_types::TournamentId,
+        _user_id: UserId,
+    ) -> Result<(), AppError> {
+        unimplemented!()
+    }
+    async fn unregister(
+        &self,
+        _ctx: &RequestContext,
+        _tournament_id: sb_shared_types::TournamentId,
+        _user_id: UserId,
+    ) -> Result<(), AppError> {
+        unimplemented!()
+    }
+    async fn get_tournament(
+        &self,
+        _ctx: &RequestContext,
+        _tournament_id: sb_shared_types::TournamentId,
+    ) -> Result<sb_contracts::tournament_api::TournamentSummary, AppError> {
+        unimplemented!()
+    }
+    async fn list_tournaments(
+        &self,
+        _ctx: &RequestContext,
+        _type_filter: Option<sb_contracts::tournament_api::TournamentType>,
+        _status_filter: Option<sb_contracts::tournament_api::TournamentStatus>,
+    ) -> Result<Vec<sb_contracts::tournament_api::TournamentSummary>, AppError> {
+        unimplemented!()
+    }
+    async fn get_results(
+        &self,
+        _ctx: &RequestContext,
+        _tournament_id: sb_shared_types::TournamentId,
+    ) -> Result<Vec<sb_contracts::tournament_api::TournamentResult>, AppError> {
+        unimplemented!()
+    }
+    async fn get_my_table(
+        &self,
+        _ctx: &RequestContext,
+        _tournament_id: sb_shared_types::TournamentId,
+        _user_id: UserId,
+    ) -> Result<Option<TableId>, AppError> {
+        unimplemented!()
+    }
 }
 
 struct DummyMissionService;
 #[async_trait::async_trait]
 impl MissionApi for DummyMissionService {
-    async fn on_hand_completed(&self, _ctx: &RequestContext, _hand_result: &sb_shared_types::game_types::HandResult) -> Result<(), AppError> { unimplemented!() }
-    async fn on_share_created(&self, _ctx: &RequestContext, _share_type: &str) -> Result<(), AppError> { unimplemented!() }
-    async fn get_today_missions(&self, _ctx: &RequestContext) -> Result<Vec<sb_shared_types::missions::Mission>, AppError> { unimplemented!() }
-    async fn reroll_mission(&self, _ctx: &RequestContext, _mission_id: sb_shared_types::missions::MissionId) -> Result<sb_shared_types::missions::Mission, AppError> { unimplemented!() }
-    async fn claim_daily_reward(&self, _ctx: &RequestContext) -> Result<sb_contracts::service_api::ClaimResult, AppError> { unimplemented!() }
+    async fn on_hand_completed(
+        &self,
+        _ctx: &RequestContext,
+        _hand_result: &sb_shared_types::game_types::HandResult,
+    ) -> Result<(), AppError> {
+        unimplemented!()
+    }
+    async fn on_share_created(
+        &self,
+        _ctx: &RequestContext,
+        _share_type: &str,
+    ) -> Result<(), AppError> {
+        unimplemented!()
+    }
+    async fn get_today_missions(
+        &self,
+        _ctx: &RequestContext,
+    ) -> Result<Vec<sb_shared_types::missions::Mission>, AppError> {
+        unimplemented!()
+    }
+    async fn reroll_mission(
+        &self,
+        _ctx: &RequestContext,
+        _mission_id: sb_shared_types::missions::MissionId,
+    ) -> Result<sb_shared_types::missions::Mission, AppError> {
+        unimplemented!()
+    }
+    async fn claim_daily_reward(
+        &self,
+        _ctx: &RequestContext,
+    ) -> Result<sb_contracts::service_api::ClaimResult, AppError> {
+        unimplemented!()
+    }
 }
 
 struct DummyViralService;
 #[async_trait::async_trait]
 impl ViralService for DummyViralService {
-    async fn generate_replay_card(&self, _hand_result: &sb_shared_types::game_types::HandResult, _winner_id: UserId, _table_id: TableId) -> Result<sb_contracts::service_api::ReplayCard, AppError> {
+    async fn generate_replay_card(
+        &self,
+        _hand_result: &sb_shared_types::game_types::HandResult,
+        _winner_id: UserId,
+        _table_id: TableId,
+    ) -> Result<sb_contracts::service_api::ReplayCard, AppError> {
         unimplemented!()
     }
-    async fn record_referral(&self, _referrer_id: UserId, _referred_id: UserId) -> Result<(), AppError> {
+    async fn record_referral(
+        &self,
+        _referrer_id: UserId,
+        _referred_id: UserId,
+    ) -> Result<(), AppError> {
         unimplemented!()
     }
     async fn on_hand_completed(&self, _user_id: UserId) -> Result<(), AppError> {
         unimplemented!()
     }
-    async fn get_referral_stats(&self, _user_id: UserId) -> Result<sb_contracts::service_api::ReferralStats, AppError> {
+    async fn get_referral_stats(
+        &self,
+        _user_id: UserId,
+    ) -> Result<sb_contracts::service_api::ReferralStats, AppError> {
         unimplemented!()
     }
-    async fn get_referral_list(&self, _user_id: UserId) -> Result<Vec<sb_contracts::repo_api::ReferralRecord>, AppError> {
+    async fn get_referral_list(
+        &self,
+        _user_id: UserId,
+    ) -> Result<Vec<sb_contracts::repo_api::ReferralRecord>, AppError> {
         unimplemented!()
     }
 }
@@ -176,29 +280,54 @@ mockall::mock! {
 struct DummyGdprRepo;
 #[async_trait::async_trait]
 impl sb_contracts::repo_api::GdprRepo for DummyGdprRepo {
-    async fn request_deletion(&self, _user_id: uuid::Uuid) -> Result<(), sb_contracts::repo_api::PersistenceError> {
+    async fn request_deletion(
+        &self,
+        _user_id: uuid::Uuid,
+    ) -> Result<(), sb_contracts::repo_api::PersistenceError> {
         Ok(())
     }
-    async fn get_pending_deletions(&self, _older_than_days: i64) -> Result<Vec<sb_contracts::repo_api::DeletionRequestDto>, sb_contracts::repo_api::PersistenceError> {
+    async fn get_pending_deletions(
+        &self,
+        _older_than_days: i64,
+    ) -> Result<
+        Vec<sb_contracts::repo_api::DeletionRequestDto>,
+        sb_contracts::repo_api::PersistenceError,
+    > {
         Ok(vec![])
     }
-    async fn mark_deletion_completed(&self, _user_id: uuid::Uuid) -> Result<(), sb_contracts::repo_api::PersistenceError> {
+    async fn mark_deletion_completed(
+        &self,
+        _user_id: uuid::Uuid,
+    ) -> Result<(), sb_contracts::repo_api::PersistenceError> {
         Ok(())
     }
-    async fn get_user_data(&self, _user_id: uuid::Uuid) -> Result<sb_contracts::repo_api::UserDataExportDto, sb_contracts::repo_api::PersistenceError> {
+    async fn get_user_data(
+        &self,
+        _user_id: uuid::Uuid,
+    ) -> Result<sb_contracts::repo_api::UserDataExportDto, sb_contracts::repo_api::PersistenceError>
+    {
         Ok(sb_contracts::repo_api::UserDataExportDto {
             profile: serde_json::Value::Null,
             hand_history: serde_json::Value::Null,
             missions: serde_json::Value::Null,
         })
     }
-    async fn anonymize_user(&self, _user_id: uuid::Uuid) -> Result<(), sb_contracts::repo_api::PersistenceError> {
+    async fn anonymize_user(
+        &self,
+        _user_id: uuid::Uuid,
+    ) -> Result<(), sb_contracts::repo_api::PersistenceError> {
         Ok(())
     }
-    async fn invalidate_sessions(&self, _user_id: uuid::Uuid) -> Result<(), sb_contracts::repo_api::PersistenceError> {
+    async fn invalidate_sessions(
+        &self,
+        _user_id: uuid::Uuid,
+    ) -> Result<(), sb_contracts::repo_api::PersistenceError> {
         Ok(())
     }
-    async fn get_user_password_hash(&self, _user_id: uuid::Uuid) -> Result<String, sb_contracts::repo_api::PersistenceError> {
+    async fn get_user_password_hash(
+        &self,
+        _user_id: uuid::Uuid,
+    ) -> Result<String, sb_contracts::repo_api::PersistenceError> {
         Ok("".to_string())
     }
 }
@@ -208,7 +337,10 @@ impl sb_contracts::repo_api::GdprRepo for DummyGdprRepo {
 struct DummyProductRepo;
 #[async_trait::async_trait]
 impl sb_contracts::product_api::ProductRepo for DummyProductRepo {
-    async fn list_products(&self) -> Result<Vec<sb_contracts::product_api::Product>, sb_contracts::repo_api::PersistenceError> {
+    async fn list_products(
+        &self,
+    ) -> Result<Vec<sb_contracts::product_api::Product>, sb_contracts::repo_api::PersistenceError>
+    {
         Ok(vec![])
     }
 }
@@ -318,7 +450,9 @@ impl sb_contracts::repo_api::ClubRepo for DummyClubRepo {
     ) -> Result<(), sb_contracts::ClubError> {
         Ok(())
     }
-    async fn get_all_club_ids(&self) -> Result<Vec<sb_shared_types::ClubId>, sb_contracts::ClubError> {
+    async fn get_all_club_ids(
+        &self,
+    ) -> Result<Vec<sb_shared_types::ClubId>, sb_contracts::ClubError> {
         Ok(vec![])
     }
     async fn update_club_pro_settings(
@@ -407,8 +541,8 @@ async fn test_unauthenticated_returns_401() {
     let mission_service = Arc::new(DummyMissionService);
     let viral_service = Arc::new(DummyViralService);
 
-        let db = sea_orm::Database::connect("sqlite::memory:").await.unwrap();
-let state = Arc::new(sb_rest_router::AppState {
+    let db = sea_orm::Database::connect("sqlite::memory:").await.unwrap();
+    let state = Arc::new(sb_rest_router::AppState {
         puzzle_repo: std::sync::Arc::new(DummyPuzzleRepo),
         r2: std::sync::Arc::new(DummyR2),
         notification_service,
@@ -432,14 +566,17 @@ let state = Arc::new(sb_rest_router::AppState {
 
     // Create a dummy auth service for the middleware
     let auth_config = AuthConfig::from_env();
-    let user_repo = Arc::new(sb_db_repos::user_repo::UserRepoImpl::new(tokio::sync::mpsc::unbounded_channel().0));
+    let user_repo = Arc::new(sb_db_repos::user_repo::UserRepoImpl::new(
+        tokio::sync::mpsc::unbounded_channel().0,
+    ));
     let auth_impl = Arc::new(AuthServiceImpl::new(user_repo, auth_config));
     let auth_service: SharedAuthService = auth_impl;
-    let app = create_router(state)
-        .layer(axum::middleware::from_fn(move |mut req: axum::extract::Request, next: axum::middleware::Next| {
+    let app = create_router(state).layer(axum::middleware::from_fn(
+        move |mut req: axum::extract::Request, next: axum::middleware::Next| {
             req.extensions_mut().insert(auth_service.clone());
             next.run(req)
-        }));
+        },
+    ));
 
     let server = TestServer::new(app);
     let resp = server.get("/lobby").await;
@@ -449,12 +586,28 @@ let state = Arc::new(sb_rest_router::AppState {
 struct DummyPuzzleRepo;
 #[async_trait::async_trait]
 impl sb_contracts::puzzle_repo::PuzzleRepo for DummyPuzzleRepo {
-    async fn find_submission(&self, _user_id: Uuid, _date: NaiveDate) -> Result<Option<PuzzleSubmissionRecord>, PuzzleError> { todo!() }
-    async fn save_submission(&self, _record: PuzzleSubmissionRecord) -> Result<(), PuzzleError> { todo!() }
+    async fn find_submission(
+        &self,
+        _user_id: Uuid,
+        _date: NaiveDate,
+    ) -> Result<Option<PuzzleSubmissionRecord>, PuzzleError> {
+        todo!()
+    }
+    async fn save_submission(&self, _record: PuzzleSubmissionRecord) -> Result<(), PuzzleError> {
+        todo!()
+    }
 }
 
 struct DummyR2;
 #[async_trait::async_trait]
 impl sb_contracts::r2_storage::R2Storage for DummyR2 {
-    async fn put_object( &self, _bucket: &str, _key: &str, _data: Vec<u8>, _content_type: &str, ) -> Result<String, AppError> { todo!() }
+    async fn put_object(
+        &self,
+        _bucket: &str,
+        _key: &str,
+        _data: Vec<u8>,
+        _content_type: &str,
+    ) -> Result<String, AppError> {
+        todo!()
+    }
 }
