@@ -43,7 +43,13 @@ async fn test_registry_creates_table_and_joins_player() {
         turn_time_limit_ms: 30000,
     };
 
-    let table_id = registry.create_table(config, sb_shared_types::UserId::new(uuid::Uuid::nil()), None).await;
+    let table_id = registry
+        .create_table(
+            config,
+            sb_shared_types::UserId::new(uuid::Uuid::nil()),
+            None,
+        )
+        .await;
     assert_ne!(table_id, TableId(Uuid::nil()));
 
     let user_id = UserId(Uuid::new_v4());
