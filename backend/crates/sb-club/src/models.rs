@@ -54,7 +54,6 @@ impl From<LeaderboardPage> for GetLeaderboardResponse {
     }
 }
 
-
 #[derive(Debug, Clone, Serialize)]
 pub struct GetUserDivisionResponse {
     pub division: Option<u32>,
