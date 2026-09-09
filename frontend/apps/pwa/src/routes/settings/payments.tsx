@@ -1,16 +1,14 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
-import { useQuery } from '@tanstack/react-query';
-import { useAuthStore } from '@stackbluff/shared/stores/authStore';
-import { apiClient } from '@stackbluff/shared/api/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
-import { History, Coins, Calendar, FileText, Download, ArrowLeft } from 'lucide-react';
-import { requireAuth } from '@/lib/authGuard';
 import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
+import { apiClient } from '@stackbluff/shared/api/client';
+import { useAuthStore } from '@stackbluff/shared/stores/authStore';
+import { useQuery } from '@tanstack/react-query';
+import { createFileRoute, Link } from '@tanstack/react-router';
+import { ArrowLeft, Calendar, Coins, FileText, History } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/settings/payments')({
   component: PurchaseHistoryPage,
@@ -33,7 +31,12 @@ function PurchaseHistoryPage() {
   const {} = useAuthStore();
 
   // Fetch purchase history
-  const { data: purchases, isLoading, error, refetch } = useQuery<PurchaseRecord[]>({
+  const {
+    data: purchases,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<PurchaseRecord[]>({
     queryKey: ['purchase-history'],
     queryFn: () => apiClient<PurchaseRecord[]>('/payments/history'),
     enabled: true,
@@ -48,9 +51,15 @@ function PurchaseHistoryPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-6">
         <Card className="max-w-md w-full p-6 text-center">
-          <h2 className="text-xl font-semibold text-red-400 mb-2"><Trans>Error</Trans></h2>
-          <p className="text-on-surface-variant text-sm"><Trans>Failed to load purchase history.</Trans></p>
-          <Button onClick={() => refetch()} className="mt-4"><Trans>Retry</Trans></Button>
+          <h2 className="text-xl font-semibold text-red-400 mb-2">
+            <Trans>Error</Trans>
+          </h2>
+          <p className="text-on-surface-variant text-sm">
+            <Trans>Failed to load purchase history.</Trans>
+          </p>
+          <Button onClick={() => refetch()} className="mt-4">
+            <Trans>Retry</Trans>
+          </Button>
         </Card>
       </div>
     );
@@ -70,10 +79,16 @@ function PurchaseHistoryPage() {
         </div>
         <Card className="p-12 text-center">
           <Coins className="w-12 h-12 text-on-surface-variant/30 mx-auto mb-4" />
-          <p className="text-on-surface-variant"><Trans>No purchases yet.</Trans></p>
-          <p className="text-on-surface-variant/60 text-sm mt-2"><Trans>Visit the shop to buy chips or subscriptions.</Trans></p>
+          <p className="text-on-surface-variant">
+            <Trans>No purchases yet.</Trans>
+          </p>
+          <p className="text-on-surface-variant/60 text-sm mt-2">
+            <Trans>Visit the shop to buy chips or subscriptions.</Trans>
+          </p>
           <Link to="/shop" className="mt-4 inline-block">
-            <Button className="bg-tertiary text-on-tertiary hover:bg-tertiary/80"><Trans>Go to Shop</Trans></Button>
+            <Button className="bg-tertiary text-on-tertiary hover:bg-tertiary/80">
+              <Trans>Go to Shop</Trans>
+            </Button>
           </Link>
         </Card>
       </div>
@@ -90,7 +105,9 @@ function PurchaseHistoryPage() {
           <History className="w-6 h-6 text-tertiary" />
           <Trans>Purchase History</Trans>
         </h1>
-        <span className="text-sm text-on-surface-variant ml-auto">{purchases.length} <Trans>purchases</Trans></span>
+        <span className="text-sm text-on-surface-variant ml-auto">
+          {purchases.length} <Trans>purchases</Trans>
+        </span>
       </div>
 
       <div className="space-y-4">
@@ -105,12 +122,18 @@ function PurchaseHistoryPage() {
           const statusLabel = purchase.status.charAt(0).toUpperCase() + purchase.status.slice(1);
 
           return (
-            <Card key={purchase.id} className="p-4 bg-white/5 border-white/10 hover:border-tertiary/30 transition-colors">
+            <Card
+              key={purchase.id}
+              className="p-4 bg-white/5 border-white/10 hover:border-tertiary/30 transition-colors"
+            >
               <div className="flex flex-col md:flex-row md:items-center gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-semibold text-on-surface">{purchase.product_name}</h3>
-                    <Badge variant="outline" className="text-[10px] border-white/20 text-on-surface-variant">
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] border-white/20 text-on-surface-variant"
+                    >
                       {purchase.product_type.replace(/_/g, ' ')}
                     </Badge>
                     <Badge className={cn('text-[10px]', statusColors[purchase.status])}>
