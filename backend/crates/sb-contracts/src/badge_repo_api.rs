@@ -1,6 +1,6 @@
 use async_trait::async_trait;
-use sea_orm::DatabaseTransaction;
 use sb_shared_types::ids::UserId;
+use sea_orm::DatabaseTransaction;
 use std::collections::HashSet;
 use thiserror::Error;
 
