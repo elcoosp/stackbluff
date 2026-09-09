@@ -20,8 +20,8 @@ use sea_orm_migration::MigratorTrait;
 use std::sync::Arc;
 use std::time::Duration;
 use tower_cookies::CookieManagerLayer;
-use tower_http::cors::CorsLayer;
 use tower_http::compression::CompressionLayer;
+use tower_http::cors::CorsLayer;
 use uuid::Uuid;
 
 use sb_auth::middleware::auth_middleware_with_context;
@@ -42,13 +42,13 @@ use sb_db_repos::badge_repo::BadgeRepoImpl;
 use sb_db_repos::club_repo::ClubRepoImpl;
 use sb_db_repos::gdpr_repo::PgGdprRepo;
 use sb_db_repos::hand_history_repo::{HandHistoryRepoImpl, spawn_hand_history_cleanup};
-use sb_db_repos::push_subscription_repo::PushSubscriptionRepo;
 use sb_db_repos::init_writer_loop;
 use sb_db_repos::player_stats_repo::PlayerStatsRepoImpl;
 use sb_db_repos::product_repo::ProductRepoImpl;
+use sb_db_repos::push_subscription_repo::PushSubscriptionRepo;
+use sb_db_repos::puzzle_repo::PuzzleRepoImpl;
 use sb_db_repos::referral_repo::ReferralRepositoryImpl;
 use sb_db_repos::tournament_repo::TournamentRepoImpl;
-use sb_db_repos::puzzle_repo::PuzzleRepoImpl;
 use sb_db_repos::user_repo::UserRepoImpl;
 use sb_mission::service::MissionServiceImpl;
 use sb_payment::RealPaymentService;
@@ -60,8 +60,8 @@ use sb_rest_router::season_card;
 
 use sb_rest_router::tournament_routes::{self, TournamentState};
 
-use sb_rest_router::{AppState, create_router};
 use sb_rest_router::rate_limit::rate_limit_layer;
+use sb_rest_router::{AppState, create_router};
 
 use sb_shared_types::request_context::RequestContext;
 use sb_shared_types::{GameVariant, StakeLevel, TableConfig, TournamentId, UserId};
@@ -199,7 +199,9 @@ async fn reschedule_tournament_reminders(
                 }
             }
         }
-        Err(e) => tracing::error!(error = ?e, "Failed to fetch tournaments for reminder rescheduling"),
+        Err(e) => {
+            tracing::error!(error = ?e, "Failed to fetch tournaments for reminder rescheduling")
+        }
     }
 }
 
@@ -326,7 +328,9 @@ async fn run_app() {
         let mut interval = tokio::time::interval(std::time::Duration::from_secs(3600));
         loop {
             interval.tick().await;
-            let repo = sb_db_repos::push_subscription_repo::PushSubscriptionRepoImpl { db: push_db.clone() };
+            let repo = sb_db_repos::push_subscription_repo::PushSubscriptionRepoImpl {
+                db: push_db.clone(),
+            };
             if let Err(e) = repo.delete_expired().await {
                 tracing::error!("Failed to cleanup expired push subscriptions: {}", e);
             }
@@ -435,7 +439,7 @@ async fn run_app() {
     let r2_contract: Arc<dyn sb_contracts::r2_storage::R2Storage + Send + Sync> =
         Arc::new(r2_storage::R2StorageAdapter::new(r2.clone()));
 
-let app_state = Arc::new(AppState {
+    let app_state = Arc::new(AppState {
         table_service: table_service.clone(),
         table_repo: table_repo.clone(),
         registry: registry.clone(),
@@ -522,10 +526,12 @@ let app_state = Arc::new(AppState {
         .merge(season_card::router(db.clone()))
         .merge(club_tournament_router)
         .merge(mission_router)
-        .merge(notification_routes(Arc::new(sb_rest_router::notification_routes::NotificationState {
-            db: db.clone(),
-            vapid_public_key: std::env::var("VAPID_PUBLIC_KEY").unwrap_or_default(),
-        })))
+        .merge(notification_routes(Arc::new(
+            sb_rest_router::notification_routes::NotificationState {
+                db: db.clone(),
+                vapid_public_key: std::env::var("VAPID_PUBLIC_KEY").unwrap_or_default(),
+            },
+        )))
         .merge(club_router)
         .layer(axum::Extension(app_state.clone()))
         .merge(sb_rest_router::analytics_routes::analytics_routes())
@@ -689,8 +695,11 @@ async fn start_gdpr_job(state: std::sync::Arc<AppState>) {
                                 );
                                 continue;
                             }
-                            use sb_db_entities::push_subscription::{Entity, Column};
-                            let _ = Entity::delete_many().filter(Column::UserId.eq(req.user_id)).exec(&state.db).await;
+                            use sb_db_entities::push_subscription::{Column, Entity};
+                            let _ = Entity::delete_many()
+                                .filter(Column::UserId.eq(req.user_id))
+                                .exec(&state.db)
+                                .await;
                             let _ = state.gdpr_repo.mark_deletion_completed(req.user_id).await;
                         }
                     }
