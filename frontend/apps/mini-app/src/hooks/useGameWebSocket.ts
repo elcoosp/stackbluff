@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '@stackbluff/shared/stores/gameStore';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner'; // Added Sonner import
 
 const getToken = () => {
@@ -52,8 +52,17 @@ const parseMessage = (data: any) => {
 export function useGameWebSocket(tableId: string) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
-  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'reconnecting' | 'disconnected'>('disconnected');
-  const { setSnapshot, setHeroHoleCards, setActionRequired, applyActionBroadcast, setHandResult, clearActionRequired } = useGameStore();
+  const [connectionStatus, setConnectionStatus] = useState<
+    'connected' | 'reconnecting' | 'disconnected'
+  >('disconnected');
+  const {
+    setSnapshot,
+    setHeroHoleCards,
+    setActionRequired,
+    applyActionBroadcast,
+    setHandResult,
+    clearActionRequired,
+  } = useGameStore();
 
   const connect = () => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
@@ -109,7 +118,7 @@ export function useGameWebSocket(tableId: string) {
       wsRef.current?.close();
       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
     };
-  }, [tableId]);
+  }, [connect]);
 
   return { sendAction, connectionStatus };
 }
