@@ -94,7 +94,9 @@ fn set_auth_cookie(cookies: &Cookies, jwt: &str) {
     let cookie = Cookie::build(("token", jwt.to_string()))
         .path("/")
         .http_only(true)
-        .secure(std::env::var("APP_ENV").unwrap_or_else(|_| "development".to_string()) == "production")
+        .secure(
+            std::env::var("APP_ENV").unwrap_or_else(|_| "development".to_string()) == "production",
+        )
         .same_site(tower_cookies::cookie::SameSite::Lax)
         .build();
     cookies.add(cookie);
@@ -107,11 +109,7 @@ fn error_response(e: AppError) -> axum::response::Response {
     } else {
         e.to_string()
     };
-    (
-        status,
-        Json(serde_json::json!({"error": message})),
-    )
-        .into_response()
+    (status, Json(serde_json::json!({"error": message}))).into_response()
 }
 
 async fn telegram_auth(
