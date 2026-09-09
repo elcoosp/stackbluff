@@ -1,6 +1,5 @@
-import { RefreshCw } from 'lucide-react';
 import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
+import { RefreshCw } from 'lucide-react';
 
 interface ResyncButtonProps {
   isProcessing: boolean;
