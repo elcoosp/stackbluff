@@ -1,6 +1,6 @@
-import { ReactNode } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Dialog } from '@stackbluff/shared/components/Dialog';
+import { AnimatePresence, motion } from 'framer-motion';
+import type { ReactNode } from 'react';
 import { TimerBar } from './TimerBar';
 
 interface GameDialogProps {
@@ -22,7 +22,7 @@ export function GameDialog({
   timerRemainingMs = null,
   timerTotalMs = null,
   showCloseButton = true,
-  className
+  className,
 }: GameDialogProps) {
   return (
     <Dialog open={open} onClose={onClose} showCloseButton={showCloseButton} className={className}>
@@ -37,7 +37,11 @@ export function GameDialog({
             className="overflow-hidden shrink-0"
           >
             <div className="px-4 pt-4">
-              <TimerBar remainingMs={timerRemainingMs} totalMs={timerTotalMs ?? null} isActive={true} />
+              <TimerBar
+                remainingMs={timerRemainingMs}
+                totalMs={timerTotalMs ?? null}
+                isActive={true}
+              />
             </div>
           </motion.div>
         )}
