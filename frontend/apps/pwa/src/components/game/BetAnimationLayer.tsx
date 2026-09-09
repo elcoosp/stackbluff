@@ -1,5 +1,5 @@
-import { useState, useLayoutEffect, useEffect, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   desktopPositions,
   getMobilePositions,
@@ -27,7 +27,12 @@ interface BetAnimationLayerProps {
   seats: Record<number, any>;
 }
 
-export const BetAnimationLayer = ({ isDesktop, heroSeat, lastAction, seats }: BetAnimationLayerProps) => {
+export const BetAnimationLayer = ({
+  isDesktop,
+  heroSeat,
+  lastAction,
+  seats,
+}: BetAnimationLayerProps) => {
   const vw = useViewportWidth();
 
   const isNarrow = !isDesktop && vw < 362;
@@ -35,7 +40,9 @@ export const BetAnimationLayer = ({ isDesktop, heroSeat, lastAction, seats }: Be
 
   const [node, setNode] = useState<HTMLDivElement | null>(null);
   const [containerSize, setContainerSize] = useState({ w: 0, h: 0 });
-  const [activeChips, setActiveChips] = useState<Array<{ id: string; from: any; to: any; color: any; delay: number; index: number }>>([]);
+  const [activeChips, setActiveChips] = useState<
+    Array<{ id: string; from: any; to: any; color: any; delay: number; index: number }>
+  >([]);
   const idCounter = useRef(0);
   const processedActionId = useRef<string | null>(null);
 
@@ -65,7 +72,9 @@ export const BetAnimationLayer = ({ isDesktop, heroSeat, lastAction, seats }: Be
     processedActionId.current = actionId;
 
     // 2. Find the seat of the player who acted
-    const seatEntry = Object.entries(seats).find(([, s]: [string, any]) => s.user_id === lastAction.player_id);
+    const seatEntry = Object.entries(seats).find(
+      ([, s]: [string, any]) => s.user_id === lastAction.player_id,
+    );
     if (!seatEntry) return;
 
     const seatIndex = Number(seatEntry[0]);
@@ -92,7 +101,7 @@ export const BetAnimationLayer = ({ isDesktop, heroSeat, lastAction, seats }: Be
     // Pot is at top: 6% (mobile) or 3% (desktop), left: 50%
     const potPx = {
       x: containerSize.w / 2,
-      y: containerSize.h * (isDesktop ? 0.03 : 0.06)
+      y: containerSize.h * (isDesktop ? 0.03 : 0.06),
     };
 
     // 3. Determine chip amount and count
@@ -126,10 +135,7 @@ export const BetAnimationLayer = ({ isDesktop, heroSeat, lastAction, seats }: Be
   }, [lastAction, seats, heroSeat, positions, containerSize, isDesktop]);
 
   return (
-    <div
-      ref={setNode}
-      className="absolute inset-0 z-[445] pointer-events-none overflow-visible"
-    >
+    <div ref={setNode} className="absolute inset-0 z-[445] pointer-events-none overflow-visible">
       <AnimatePresence>
         {activeChips.map((chip) => (
           <AnimatedChip
