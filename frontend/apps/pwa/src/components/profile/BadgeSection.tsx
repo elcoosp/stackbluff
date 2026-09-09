@@ -1,13 +1,13 @@
-import React from "react";
-import { useBadges } from "../../hooks/useBadges";
-import { BadgeIcon, FoundingMemberProgress } from "../badges";
+import type React from 'react';
+import { useBadges } from '../../hooks/useBadges';
+import { BadgeIcon, FoundingMemberProgress } from '../badges';
 
 export const BadgeSection: React.FC = () => {
   const { data: badges, isLoading } = useBadges();
 
   if (isLoading) return <div className="text-sm text-muted-foreground">Loading badges…</div>;
 
-  const hasFoundingMember = badges?.some((b) => b.badge_type === "founding_member");
+  const hasFoundingMember = badges?.some((b) => b.badge_type === 'founding_member');
 
   return (
     <div className="space-y-3">
@@ -24,9 +24,7 @@ export const BadgeSection: React.FC = () => {
         <div className="text-sm text-muted-foreground">No badges yet.</div>
       )}
 
-      {!hasFoundingMember && (
-        <FoundingMemberProgress completed={0} required={10} />
-      )}
+      {!hasFoundingMember && <FoundingMemberProgress completed={0} required={10} />}
     </div>
   );
 };
