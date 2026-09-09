@@ -1,4 +1,4 @@
-import type { SoundType, FeedbackPreferences } from './types';
+import type { FeedbackPreferences, SoundType } from './types';
 
 /**
  * AudioEngine — Procedural sound synthesis using the Web Audio API.
@@ -129,7 +129,6 @@ export class AudioEngine {
    ═══════════════════════════════════════════════════════════════════ */
 
 const SOUND_MAP: Record<SoundType, SoundMethod> = {
-
   /* ── Card Flip ──
      A very short, soft high-frequency noise burst.
      Sounds like a card sliding and snapping on felt. */
@@ -357,7 +356,7 @@ const SOUND_MAP: Record<SoundType, SoundMethod> = {
   /* ── Urgent Tick (Timer Warning) ──
      A slightly louder, lower double-tap. */
   urgentTick(ctx, now, vol, pan, pitch, masterGain) {
-    [0, 0.04].forEach(offset => {
+    [0, 0.04].forEach((offset) => {
       const osc = ctx.createOscillator();
       osc.type = 'sine';
       osc.frequency.value = 900 * pitch;
@@ -397,7 +396,8 @@ const SOUND_MAP: Record<SoundType, SoundMethod> = {
   /* ── Chime (Notification) ──
      A soft, warm 2-note bell. */
   chime(ctx, now, vol, pan, pitch, masterGain) {
-    [880, 1108.73].forEach((freq, i) => { // A5, C#6
+    [880, 1108.73].forEach((freq, i) => {
+      // A5, C#6
       const t = now + i * 0.08;
       const osc = ctx.createOscillator();
       osc.type = 'sine';
