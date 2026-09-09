@@ -15,7 +15,7 @@ export function usePaymentProvider(): 'stripe' | 'telegram_stars' {
   return useSyncExternalStore(
     () => () => {},
     getProvider,
-    () => 'stripe'
+    () => 'stripe',
   );
 }
 
@@ -23,6 +23,6 @@ export function useIsMiniApp(): boolean {
   return useSyncExternalStore(
     () => () => {},
     getIsMiniApp,
-    () => false
+    () => false,
   );
 }
