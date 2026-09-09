@@ -5,9 +5,8 @@ interface MessageFeedbackProps {
 export function MessageFeedback({ message }: MessageFeedbackProps) {
   if (!message) return null;
 
-  const colorClass = message.type === 'success'
-    ? 'bg-green-500/15 text-green-400'
-    : 'bg-red-500/15 text-red-400';
+  const colorClass =
+    message.type === 'success' ? 'bg-green-500/15 text-green-400' : 'bg-red-500/15 text-red-400';
 
   return (
     <div
