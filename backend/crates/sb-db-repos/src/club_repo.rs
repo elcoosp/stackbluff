@@ -216,7 +216,7 @@ impl ClubRepo for ClubRepoImpl {
         }
         let mut active_models: Vec<club_leaderboard::ActiveModel> = Vec::new();
         for (division, mut div_members) in by_division {
-            div_members.sort_by(|a, b| b.weekly_xp.cmp(&a.weekly_xp));
+            div_members.sort_by_key(|a| std::cmp::Reverse(a.weekly_xp));
             for (idx, member) in div_members.iter().enumerate() {
                 let rank = (idx + 1) as i32;
                 active_models.push(club_leaderboard::ActiveModel {
