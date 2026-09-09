@@ -59,7 +59,11 @@ export const TimerBar = ({ remainingMs, totalMs, isActive = false, className }: 
         initial={false}
         animate={{
           width: `${progress}%`,
-          boxShadow: isActive ? (isCritical ? `0 0 10px rgb(${rgbStr})` : `0 0 4px rgba(${rgbStr}, 0.5)`) : 'none',
+          boxShadow: isActive
+            ? isCritical
+              ? `0 0 10px rgb(${rgbStr})`
+              : `0 0 4px rgba(${rgbStr}, 0.5)`
+            : 'none',
           opacity: isActive ? (isCritical ? [1, 0.4, 1] : 1) : 0.4,
         }}
         transition={{
