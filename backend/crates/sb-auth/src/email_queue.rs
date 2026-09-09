@@ -40,48 +40,54 @@ impl EmailQueue {
     }
 
     async fn process_emails(
-    mut receiver: mpsc::Receiver<EmailJob>,
-    email_service: Arc<EmailService>,
-) {
-    info!("Email queue processor started");
-    while let Some(job) = receiver.recv().await {
-        match job {
-            EmailJob::Verification { to, token } => {
-                info!("Processing verification email for {}", to);
-                let mut attempts = 0;
-                while attempts < 3 {
-                    match email_service.send_verification_email(&to, &token).await {
-                        Ok(()) => break,
-                        Err(e) => {
-                            attempts += 1;
-                            let delay = tokio::time::Duration::from_secs(2_u64.pow(attempts));
-                            error!("Failed to send verification email to {} (attempt {}): {}", to, attempts, e);
-                            if attempts < 3 {
-                                tokio::time::sleep(delay).await;
+        mut receiver: mpsc::Receiver<EmailJob>,
+        email_service: Arc<EmailService>,
+    ) {
+        info!("Email queue processor started");
+        while let Some(job) = receiver.recv().await {
+            match job {
+                EmailJob::Verification { to, token } => {
+                    info!("Processing verification email for {}", to);
+                    let mut attempts = 0;
+                    while attempts < 3 {
+                        match email_service.send_verification_email(&to, &token).await {
+                            Ok(()) => break,
+                            Err(e) => {
+                                attempts += 1;
+                                let delay = tokio::time::Duration::from_secs(2_u64.pow(attempts));
+                                error!(
+                                    "Failed to send verification email to {} (attempt {}): {}",
+                                    to, attempts, e
+                                );
+                                if attempts < 3 {
+                                    tokio::time::sleep(delay).await;
+                                }
                             }
                         }
                     }
                 }
-            }
-            EmailJob::PasswordReset { to, token } => {
-                info!("Processing password reset email for {}", to);
-                let mut attempts = 0;
-                while attempts < 3 {
-                    match email_service.send_password_reset_email(&to, &token).await {
-                        Ok(()) => break,
-                        Err(e) => {
-                            attempts += 1;
-                            let delay = tokio::time::Duration::from_secs(2_u64.pow(attempts));
-                            error!("Failed to send password reset email to {} (attempt {}): {}", to, attempts, e);
-                            if attempts < 3 {
-                                tokio::time::sleep(delay).await;
+                EmailJob::PasswordReset { to, token } => {
+                    info!("Processing password reset email for {}", to);
+                    let mut attempts = 0;
+                    while attempts < 3 {
+                        match email_service.send_password_reset_email(&to, &token).await {
+                            Ok(()) => break,
+                            Err(e) => {
+                                attempts += 1;
+                                let delay = tokio::time::Duration::from_secs(2_u64.pow(attempts));
+                                error!(
+                                    "Failed to send password reset email to {} (attempt {}): {}",
+                                    to, attempts, e
+                                );
+                                if attempts < 3 {
+                                    tokio::time::sleep(delay).await;
+                                }
                             }
                         }
                     }
                 }
             }
         }
+        info!("Email queue processor stopped");
     }
-    info!("Email queue processor stopped");
-}
 }
