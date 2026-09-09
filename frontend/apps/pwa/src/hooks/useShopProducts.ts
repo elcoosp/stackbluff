@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { fetchProducts } from '../lib/shopApi';
 import type { ProductDto } from '../lib/shopApi';
+import { fetchProducts } from '../lib/shopApi';
 
 export function useShopProducts() {
   return useQuery<ProductDto[]>({
