@@ -1,11 +1,9 @@
-import { createFileRoute } from '@tanstack/react-router';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Link } from '@tanstack/react-router';
-import { Swords, Trophy, BookOpen, ShoppingBag } from 'lucide-react';
-import { motion } from 'motion/react';
 import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
+import { createFileRoute, Link } from '@tanstack/react-router';
+import { BookOpen, ShoppingBag, Swords, Trophy } from 'lucide-react';
+import { motion } from 'motion/react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export const Route = createFileRoute('/')({
   component: IndexPage,
@@ -63,7 +61,10 @@ function IndexPage() {
               </Button>
             </Link>
             <Link to="/shop">
-              <Button variant="outline" className="border-tertiary/40 text-on-surface hover:bg-tertiary hover:text-on-tertiary font-data-mono text-sm px-8 py-6 rounded-xl shadow-lg hover:shadow-tertiary/30 transition-all duration-300">
+              <Button
+                variant="outline"
+                className="border-tertiary/40 text-on-surface hover:bg-tertiary hover:text-on-tertiary font-data-mono text-sm px-8 py-6 rounded-xl shadow-lg hover:shadow-tertiary/30 transition-all duration-300"
+              >
                 <ShoppingBag className="w-5 h-5 mr-2" />
                 <Trans>Shop</Trans>
               </Button>
