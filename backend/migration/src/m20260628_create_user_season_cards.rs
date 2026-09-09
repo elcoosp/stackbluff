@@ -12,8 +12,16 @@ impl MigrationTrait for Migration {
                     .table(UserSeasonCards::Table)
                     .if_not_exists()
                     .col(ColumnDef::new(UserSeasonCards::UserId).uuid().not_null())
-                    .col(ColumnDef::new(UserSeasonCards::SeasonId).integer().not_null())
-                    .col(ColumnDef::new(UserSeasonCards::CardImageUrl).string().null())
+                    .col(
+                        ColumnDef::new(UserSeasonCards::SeasonId)
+                            .integer()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(UserSeasonCards::CardImageUrl)
+                            .string()
+                            .null(),
+                    )
                     .col(ColumnDef::new(UserSeasonCards::CardData).json().null())
                     .col(
                         ColumnDef::new(UserSeasonCards::GeneratedAt)
