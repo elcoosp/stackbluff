@@ -1,7 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@stackbluff/shared/api/client';
-import { LeaderboardResponseSchema } from '@/lib/schemas';
+import { useQuery } from '@tanstack/react-query';
 import { logger } from '@/lib/logger';
+import { LeaderboardResponseSchema } from '@/lib/schemas';
 
 interface ClubLeaderboardParams {
   clubId: string;
