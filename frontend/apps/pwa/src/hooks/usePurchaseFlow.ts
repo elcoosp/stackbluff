@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useShopStore } from '../stores/shopStore';
-import { createPaymentIntent, CreateIntentRequest } from '../lib/shopApi';
 import { toast } from 'sonner';
+import { type CreateIntentRequest, createPaymentIntent } from '../lib/shopApi';
+import { useShopStore } from '../stores/shopStore';
 
 export function usePurchaseFlow() {
   const shop = useShopStore();
