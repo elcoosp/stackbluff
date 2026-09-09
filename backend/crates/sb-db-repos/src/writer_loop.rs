@@ -457,7 +457,11 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                     .unwrap_or(false);
                 Ok(Some(is_active.to_string()))
             }
-            DbCommand::ExtendSeasonPass { user_id, duration_days, .. } => {
+            DbCommand::ExtendSeasonPass {
+                user_id,
+                duration_days,
+                ..
+            } => {
                 use sb_db_entities::user;
                 use sea_orm::Set;
                 let uid = user_id.as_uuid();
@@ -474,7 +478,11 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                     .map_err(map_db_error)?;
                 Ok(None)
             }
-            DbCommand::ExtendClubPro { user_id, duration_days, .. } => {
+            DbCommand::ExtendClubPro {
+                user_id,
+                duration_days,
+                ..
+            } => {
                 use sb_db_entities::user;
                 use sea_orm::Set;
                 let uid = user_id.as_uuid();
