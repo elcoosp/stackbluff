@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useEffect } from 'react';
 import { useShopStore } from '../../stores/shopStore';
 
 export function PurchaseToast() {
