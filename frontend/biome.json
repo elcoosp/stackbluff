@@ -9,10 +9,7 @@
       "*.json",
       "*.js"
     ],
-    "ignore": [
-      "**/*.css",
-      "**/routeTree.gen.ts"
-    ],
+    "experimentalScannerIgnores": ["**/*.css", "**/routeTree.gen.ts"],
     "ignoreUnknown": true
   },
   "formatter": {
