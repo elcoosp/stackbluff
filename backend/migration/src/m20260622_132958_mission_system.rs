@@ -20,7 +20,11 @@ impl MigrationTrait for Migration {
                             .primary_key(),
                     )
                     .col(ColumnDef::new(DailyMissions::UserId).uuid().not_null())
-                    .col(ColumnDef::new(DailyMissions::AssignedDate).date().not_null())
+                    .col(
+                        ColumnDef::new(DailyMissions::AssignedDate)
+                            .date()
+                            .not_null(),
+                    )
                     .col(
                         ColumnDef::new(DailyMissions::MissionType)
                             .string()
@@ -115,7 +119,11 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Streaks::CurrentStreak).integer().default(0))
                     .col(ColumnDef::new(Streaks::LongestStreak).integer().default(0))
                     .col(ColumnDef::new(Streaks::LastCompletionDate).date())
-                    .col(ColumnDef::new(Streaks::ShieldAvailable).integer().default(0))
+                    .col(
+                        ColumnDef::new(Streaks::ShieldAvailable)
+                            .integer()
+                            .default(0),
+                    )
                     .col(
                         ColumnDef::new(Streaks::BonusAwardedStreak)
                             .integer()
