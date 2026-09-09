@@ -1,6 +1,7 @@
 // frontend/apps/pwa/src/lib/authGuard.ts
-import { redirect } from '@tanstack/react-router';
+
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
+import { redirect } from '@tanstack/react-router';
 
 /**
  * Authentication guard for route protection.
