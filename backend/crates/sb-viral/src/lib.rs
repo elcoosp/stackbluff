@@ -159,7 +159,10 @@ impl<R: ReferralRepository, U: UserService, B: BadgeRepo> ViralService
             })
     }
 
-    async fn get_referral_list(&self, user_id: UserId) -> Result<Vec<sb_contracts::repo_api::ReferralRecord>, AppError> {
+    async fn get_referral_list(
+        &self,
+        user_id: UserId,
+    ) -> Result<Vec<sb_contracts::repo_api::ReferralRecord>, AppError> {
         self.repo
             .list_referrals(user_id)
             .await
