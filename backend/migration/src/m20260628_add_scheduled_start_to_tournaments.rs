@@ -13,7 +13,7 @@ impl MigrationTrait for Migration {
                     .add_column(
                         ColumnDef::new(Tournament::ScheduledStart)
                             .timestamp_with_time_zone()
-                            .null()
+                            .null(),
                     )
                     .to_owned(),
             )
