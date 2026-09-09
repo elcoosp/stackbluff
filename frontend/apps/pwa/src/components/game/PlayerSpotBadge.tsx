@@ -1,6 +1,5 @@
-import { useUserBadges } from '../../hooks/useBadges';
-import { Trans } from '@lingui/react/macro';
 import { t } from '@lingui/core/macro';
+import { useUserBadges } from '../../hooks/useBadges';
 
 // Define the expected shape of a badge – adjust to match your actual type
 interface Badge {
@@ -32,9 +31,7 @@ export function PlayerSpotBadge({
   if (!showBadges) return null;
 
   // Check for the specific badge type we care about
-  const hasFoundingMember = badges.some(
-    (b) => b.badge_type === 'founding_member'
-  );
+  const hasFoundingMember = badges.some((b) => b.badge_type === 'founding_member');
 
   if (!hasFoundingMember) return null;
 
