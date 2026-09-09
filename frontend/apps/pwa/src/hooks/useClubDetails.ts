@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { ClubDetailsSchema } from '../lib/schemas';
-import { apiRequest } from '../lib/errorHandler';
 import { API } from '../lib/constants';
+import { apiRequest } from '../lib/errorHandler';
+import { ClubDetailsSchema } from '../lib/schemas';
 
 export function useClubDetails(clubId: string) {
   return useQuery({
