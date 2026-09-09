@@ -1,14 +1,13 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
-import { ArrowLeft, Volume2, VolumeX, Music, Play } from 'lucide-react';
+import { createFileRoute, Link } from '@tanstack/react-router';
+import { ArrowLeft, Music, Play, Volume2, VolumeX } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { requireAuth } from '@/lib/authGuard';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Slider } from '@/components/ui/slider';
 
 export const Route = createFileRoute('/settings/audio')({
   component: AudioSettingsPage,
@@ -31,7 +30,9 @@ function AudioSettingsPage() {
         <Link to="/settings" className="p-2 rounded-lg hover:bg-white/5 transition-colors">
           <ArrowLeft className="w-5 h-5 text-on-surface-variant" />
         </Link>
-        <h1 className="font-display-lg text-2xl text-on-surface"><Trans>Audio Settings</Trans></h1>
+        <h1 className="font-display-lg text-2xl text-on-surface">
+          <Trans>Audio Settings</Trans>
+        </h1>
       </div>
 
       <div className="space-y-6">
@@ -53,7 +54,9 @@ function AudioSettingsPage() {
                 step={1}
                 className="flex-1"
               />
-              <span className="text-sm text-on-surface-variant font-mono w-12 text-right">{masterVolume[0]}%</span>
+              <span className="text-sm text-on-surface-variant font-mono w-12 text-right">
+                {masterVolume[0]}%
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -76,7 +79,9 @@ function AudioSettingsPage() {
                 step={1}
                 className="flex-1"
               />
-              <span className="text-sm text-on-surface-variant font-mono w-12 text-right">{sfxVolume[0]}%</span>
+              <span className="text-sm text-on-surface-variant font-mono w-12 text-right">
+                {sfxVolume[0]}%
+              </span>
             </div>
             <Button
               variant="outline"
@@ -108,18 +113,24 @@ function AudioSettingsPage() {
                 step={1}
                 className="flex-1"
               />
-              <span className="text-sm text-on-surface-variant font-mono w-12 text-right">{musicVolume[0]}%</span>
+              <span className="text-sm text-on-surface-variant font-mono w-12 text-right">
+                {musicVolume[0]}%
+              </span>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-semibold text-on-surface"><Trans>Haptics</Trans></CardTitle>
+            <CardTitle className="text-sm font-semibold text-on-surface">
+              <Trans>Haptics</Trans>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <label className="flex items-center justify-between cursor-pointer">
-              <span className="text-sm text-on-surface-variant"><Trans>Enable haptic feedback</Trans></span>
+              <span className="text-sm text-on-surface-variant">
+                <Trans>Enable haptic feedback</Trans>
+              </span>
               <button
                 type="button"
                 onClick={() => setHapticsEnabled(!hapticsEnabled)}
