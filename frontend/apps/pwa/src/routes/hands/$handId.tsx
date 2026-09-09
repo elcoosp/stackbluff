@@ -1,29 +1,28 @@
-import { createFileRoute, useParams, Link } from '@tanstack/react-router';
-import { useQuery } from '@tanstack/react-query';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { apiClient } from '@stackbluff/shared/api/client';
-import { Card } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { useAuthStore } from '@stackbluff/shared/stores/authStore';
+import { useQuery } from '@tanstack/react-query';
+import { createFileRoute, Link, useParams } from '@tanstack/react-router';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowLeft,
-  Play,
-  Pause,
-  SkipForward,
-  SkipBack,
   Clock,
-  Users,
+  Coins,
+  Pause,
+  Play,
+  SkipBack,
+  SkipForward,
+  Sparkles,
   Table,
   Trophy,
-  Sparkles,
-  Coins,
+  Users,
 } from 'lucide-react';
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { requireAuth } from '@/lib/authGuard';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/hands/$handId')({
   component: HandDetailPage,
@@ -164,12 +163,17 @@ const CardBack = () => (
 function HandDetailPage() {
   const params = useParams({ from: '/hands/$handId' });
   const handId = params.handId;
-  const {user} = useAuthStore();
+  const { user } = useAuthStore();
   const [currentStreet, setCurrentStreet] = useState<Street>('preflop');
   const [isPlaying, setIsPlaying] = useState(false);
 
   // Fetch hand detail
-  const { data: hand, isLoading, error, refetch } = useQuery<HandDetail>({
+  const {
+    data: hand,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<HandDetail>({
     queryKey: ['hand', handId],
     queryFn: () => apiClient<HandDetail>(`/hands/${handId}`),
     enabled: true && !!handId,
@@ -183,7 +187,7 @@ function HandDetailPage() {
     queryFn: async () => {
       try {
         return await apiClient<TableInfo[]>('/lobby');
-      } catch (err) {
+      } catch (_err) {
         // If the endpoint fails, return an empty array to avoid unhandled errors
         return [];
       }
@@ -253,7 +257,6 @@ function HandDetailPage() {
     return () => clearInterval(timer);
   }, [isPlaying, streets]);
 
-
   if (isLoading) {
     return <HandDetailSkeleton />;
   }
@@ -273,10 +276,17 @@ function HandDetailPage() {
   const totalPot = winners.reduce((sum, w) => sum + (w.amount_won || 0), 0);
 
   const revealedCount =
-    currentStreet === 'preflop' ? 0 : currentStreet === 'flop' ? 3 : currentStreet === 'turn' ? 4 : 5;
+    currentStreet === 'preflop'
+      ? 0
+      : currentStreet === 'flop'
+        ? 3
+        : currentStreet === 'turn'
+          ? 4
+          : 5;
 
   // Fallback to ID slice if the table name isn't fetched or found
-  const tableName = tableMap.get(hand.table_id) || `Table ${hand.table_id ? hand.table_id.slice(0, 6) : '------'}`;
+  const tableName =
+    tableMap.get(hand.table_id) || `Table ${hand.table_id ? hand.table_id.slice(0, 6) : '------'}`;
 
   return (
     <div className="relative max-w-5xl mx-auto p-4 md:p-8 space-y-6">
@@ -291,7 +301,10 @@ function HandDetailPage() {
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         className="flex items-center gap-4"
       >
-        <Link to="/history" className="p-2.5 rounded-xl bg-white/5 border border-white/10 backdrop-blur-xl hover:bg-white/10 transition-colors">
+        <Link
+          to="/history"
+          className="p-2.5 rounded-xl bg-white/5 border border-white/10 backdrop-blur-xl hover:bg-white/10 transition-colors"
+        >
           <ArrowLeft className="w-5 h-5 text-on-surface-variant" />
         </Link>
         <div className="flex-1 min-w-0">
@@ -316,9 +329,7 @@ function HandDetailPage() {
             </span>
             <span className="flex items-center gap-1">
               <Table className="w-3 h-3" />
-              <span className="font-data-mono text-on-surface-variant/80">
-                {tableName}
-              </span>
+              <span className="font-data-mono text-on-surface-variant/80">{tableName}</span>
             </span>
             <span className="flex items-center gap-1">
               <Users className="w-3 h-3" />
@@ -361,7 +372,10 @@ function HandDetailPage() {
                     <span className="text-sm font-medium text-on-surface">
                       {getPlayerName(w.player_id)}
                     </span>
-                    <Badge variant="outline" className="border-yellow-500/30 text-yellow-400 bg-yellow-500/10 font-mono text-[10px]">
+                    <Badge
+                      variant="outline"
+                      className="border-yellow-500/30 text-yellow-400 bg-yellow-500/10 font-mono text-[10px]"
+                    >
                       {w.hand_description}
                     </Badge>
                   </div>
@@ -394,7 +408,7 @@ function HandDetailPage() {
                     ? 'bg-white/10 text-on-surface shadow-sm'
                     : hasActions
                       ? 'text-on-surface-variant hover:text-on-surface'
-                      : 'text-on-surface-variant/30 cursor-not-allowed'
+                      : 'text-on-surface-variant/30 cursor-not-allowed',
                 )}
               >
                 {STREET_LABELS[street]}
@@ -402,7 +416,9 @@ function HandDetailPage() {
                   <span
                     className={cn(
                       'text-[9px] font-data-mono px-1.5 py-0.5 rounded-md',
-                      isActive ? 'bg-white/10 text-on-surface' : 'bg-white/5 text-on-surface-variant'
+                      isActive
+                        ? 'bg-white/10 text-on-surface'
+                        : 'bg-white/5 text-on-surface-variant',
                     )}
                   >
                     {actionsByStreet[street].length}
@@ -499,10 +515,14 @@ function HandDetailPage() {
               const type = action.action_type?.toLowerCase() || 'action';
 
               let actionColor = 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20';
-              if (type.includes('fold') || type.includes('muck')) actionColor = 'bg-red-500/10 text-red-400 border-red-500/20';
-              else if (type.includes('check') || type.includes('call')) actionColor = 'bg-blue-500/10 text-blue-400 border-blue-500/20';
-              else if (type.includes('bet') || type.includes('raise')) actionColor = 'bg-tertiary/10 text-tertiary border-tertiary/20';
-              else if (type.includes('blind')) actionColor = 'bg-purple-500/10 text-purple-400 border-purple-500/20';
+              if (type.includes('fold') || type.includes('muck'))
+                actionColor = 'bg-red-500/10 text-red-400 border-red-500/20';
+              else if (type.includes('check') || type.includes('call'))
+                actionColor = 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+              else if (type.includes('bet') || type.includes('raise'))
+                actionColor = 'bg-tertiary/10 text-tertiary border-tertiary/20';
+              else if (type.includes('blind'))
+                actionColor = 'bg-purple-500/10 text-purple-400 border-purple-500/20';
 
               return (
                 <motion.div
@@ -514,8 +534,13 @@ function HandDetailPage() {
                     {idx + 1}
                   </span>
                   <div className="flex-1 flex items-center gap-3 min-w-0">
-                    <span className="font-medium text-on-surface text-sm truncate">{displayName}</span>
-                    <Badge variant="outline" className={cn('font-mono text-[10px] border', actionColor)}>
+                    <span className="font-medium text-on-surface text-sm truncate">
+                      {displayName}
+                    </span>
+                    <Badge
+                      variant="outline"
+                      className={cn('font-mono text-[10px] border', actionColor)}
+                    >
                       {action.action_type}
                     </Badge>
                   </div>
