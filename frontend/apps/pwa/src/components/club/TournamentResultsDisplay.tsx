@@ -1,13 +1,10 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '@stackbluff/shared/api/client';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Trophy, Medal, X, ChevronDown, ChevronUp } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
 import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
+import { apiClient } from '@stackbluff/shared/api/client';
+import { useQuery } from '@tanstack/react-query';
+import { ChevronDown, ChevronUp, Trophy } from 'lucide-react';
+import { useState } from 'react';
+import { Card } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 interface TournamentResult {
   tournament_id: string;
@@ -37,10 +34,17 @@ function getMedal(position: number): string {
   return '';
 }
 
-export function TournamentResultsDisplay({ tournamentId, tournamentName }: TournamentResultsDisplayProps) {
+export function TournamentResultsDisplay({
+  tournamentId,
+  tournamentName,
+}: TournamentResultsDisplayProps) {
   const [expanded, setExpanded] = useState(false);
 
-  const { data: results, isLoading, error } = useQuery<TournamentResult[]>({
+  const {
+    data: results,
+    isLoading,
+    error,
+  } = useQuery<TournamentResult[]>({
     queryKey: ['tournament-results', tournamentId],
     queryFn: () => apiClient<TournamentResult[]>(`/tournaments/${tournamentId}/results`),
     enabled: !!tournamentId,
@@ -70,7 +74,9 @@ export function TournamentResultsDisplay({ tournamentId, tournamentName }: Tourn
       >
         <div className="flex items-center gap-2">
           <Trophy className="w-5 h-5 text-yellow-400" />
-          <span className="font-semibold text-on-surface"><Trans>Results: {tournamentName}</Trans></span>
+          <span className="font-semibold text-on-surface">
+            <Trans>Results: {tournamentName}</Trans>
+          </span>
         </div>
         {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
       </button>
@@ -84,9 +90,11 @@ export function TournamentResultsDisplay({ tournamentId, tournamentName }: Tourn
                 key={result.user_id}
                 className={cn(
                   'text-center p-2 rounded-lg',
-                  result.position === 1 ? 'bg-yellow-500/20 border border-yellow-500/30' :
-                  result.position === 2 ? 'bg-gray-500/20 border border-gray-500/30' :
-                  'bg-orange-500/20 border border-orange-500/30'
+                  result.position === 1
+                    ? 'bg-yellow-500/20 border border-yellow-500/30'
+                    : result.position === 2
+                      ? 'bg-gray-500/20 border border-gray-500/30'
+                      : 'bg-orange-500/20 border border-orange-500/30',
                 )}
               >
                 <div className="text-2xl">{getMedal(result.position)}</div>
@@ -109,7 +117,9 @@ export function TournamentResultsDisplay({ tournamentId, tournamentName }: Tourn
                   className="flex items-center justify-between px-3 py-1.5 bg-white/5 rounded-lg text-sm"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="text-on-surface-variant w-6 text-center">#{result.position}</span>
+                    <span className="text-on-surface-variant w-6 text-center">
+                      #{result.position}
+                    </span>
                     <span className="text-on-surface truncate">
                       {result.display_name || result.user_id.slice(0, 8)}
                     </span>
