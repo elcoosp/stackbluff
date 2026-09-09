@@ -1,24 +1,23 @@
-import { useState, useEffect } from 'react';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
+import { GlassPanel } from '@stackbluff/shared/ui/GlassPanel';
 import { useParams } from '@tanstack/react-router';
-import { GlassPanel } from "@stackbluff/shared/ui/GlassPanel";
-import { Card } from "@/components/ui/card";
 import { motion } from 'framer-motion';
-import { useClubDetails } from '../hooks/useClubDetails';
-import { useClubWebSocket } from '../hooks/useClubWebSocket';
-import { ClubHeader } from '../components/club/ClubHeader';
-import { ClubTabs, type TabKey } from '../components/club/ClubTabs';
-import { ClubLeaderboardTab } from '../components/club/ClubLeaderboardTab';
-import { ClubTournamentsTab } from '../components/club/ClubTournamentsTab';
-import { ClubSettingsTab } from '../components/club/ClubSettingsTab';
-import { ClubPageSkeleton } from '../components/club/LoadingSkeletons';
-import { ErrorBoundary } from '../components/ErrorBoundary';
-import { handleApiError } from '../lib/errorHandler';
-import { logger } from '../lib/logger';
-import { XCircle, RotateCcw } from 'lucide-react';
+import { RotateCcw, XCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { trackClubView } from '@/lib/customAnalytics';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
+import { ClubHeader } from '../components/club/ClubHeader';
+import { ClubLeaderboardTab } from '../components/club/ClubLeaderboardTab';
+import { ClubSettingsTab } from '../components/club/ClubSettingsTab';
+import { ClubTabs, type TabKey } from '../components/club/ClubTabs';
+import { ClubTournamentsTab } from '../components/club/ClubTournamentsTab';
+import { ClubPageSkeleton } from '../components/club/LoadingSkeletons';
+import { ErrorBoundary } from '../components/ErrorBoundary';
+import { useClubDetails } from '../hooks/useClubDetails';
+import { useClubWebSocket } from '../hooks/useClubWebSocket';
+import { handleApiError } from '../lib/errorHandler';
+import { logger } from '../lib/logger';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -74,7 +73,9 @@ export function ClubPage() {
           <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4">
             <XCircle className="w-8 h-8 text-red-400" />
           </div>
-          <h1 className="font-display-lg text-3xl text-on-surface mb-2"><Trans>Failed to Load Club</Trans></h1>
+          <h1 className="font-display-lg text-3xl text-on-surface mb-2">
+            <Trans>Failed to Load Club</Trans>
+          </h1>
           <p className="text-on-surface-variant text-sm mb-6">
             {error instanceof Error ? error.message : t`An unexpected error occurred`}
           </p>
@@ -101,8 +102,12 @@ export function ClubPage() {
           <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-4">
             <XCircle className="w-8 h-8 text-on-surface-variant" />
           </div>
-          <h1 className="font-display-lg text-3xl text-on-surface mb-2"><Trans>Club Not Found</Trans></h1>
-          <p className="text-on-surface-variant text-sm"><Trans>The requested club does not exist.</Trans></p>
+          <h1 className="font-display-lg text-3xl text-on-surface mb-2">
+            <Trans>Club Not Found</Trans>
+          </h1>
+          <p className="text-on-surface-variant text-sm">
+            <Trans>The requested club does not exist.</Trans>
+          </p>
         </motion.div>
       </div>
     );
