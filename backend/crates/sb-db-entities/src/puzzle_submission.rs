@@ -1,5 +1,5 @@
-use sea_orm::entity::prelude::*;
 use chrono::{NaiveDate, NaiveDateTime};
+use sea_orm::entity::prelude::*;
 use uuid::Uuid;
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
