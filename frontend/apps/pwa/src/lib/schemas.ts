@@ -9,7 +9,10 @@ import { z } from 'zod';
 export const ClubProSettingsSchema = z.object({
   banner_url: z.string().url().optional(),
   chip_preset: z.string().optional(),
-  felt_colour: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid hex color').optional(),
+  felt_colour: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid hex color')
+    .optional(),
 });
 
 export const ClubDetailsSchema = z.object({
@@ -31,43 +34,47 @@ export const LeaderboardEntrySchema = z.object({
   weekly_xp: z.number().int().nonnegative(),
 });
 
-export const LeaderboardResponseSchema = z.object({
-  entries: z.array(LeaderboardEntrySchema),
-  total_members: z.number().int().nonnegative(),
-  total_divisions: z.number().int().positive(),
-  division: z.number().int().positive(),
-  // Alias for frontend compatibility
-  current_division: z.number().int().positive().optional(),
-}).transform((data) => ({
-  ...data,
-  current_division: data.current_division ?? data.division,
-}));
+export const LeaderboardResponseSchema = z
+  .object({
+    entries: z.array(LeaderboardEntrySchema),
+    total_members: z.number().int().nonnegative(),
+    total_divisions: z.number().int().positive(),
+    division: z.number().int().positive(),
+    // Alias for frontend compatibility
+    current_division: z.number().int().positive().optional(),
+  })
+  .transform((data) => ({
+    ...data,
+    current_division: data.current_division ?? data.division,
+  }));
 
 // Tournament schemas
 export const TournamentStatusSchema = z.enum(['Scheduled', 'Registering', 'Running', 'Completed']);
 
-export const TournamentSchema = z.object({
-  id: z.string().uuid(),
-  name: z.string().min(1).max(200),
-  scheduled_start: z.string().datetime().optional().nullable(),
-  buy_in: z.number().int().nonnegative(),
-  max_players: z.number().int().min(2).max(500), // allow smaller for Sit&Go
-  current_registrations: z.number().int().nonnegative().optional(),
-  registered: z.number().int().nonnegative().optional(),
-  status: TournamentStatusSchema,
-  is_registered: z.boolean().optional().default(false),
-  blind_schedule_id: z.string().optional(),
-  prize_pool: z.number().int().nonnegative().optional(),
-  started_at: z.string().datetime().optional().nullable(),
-  tournament_type: z.string().optional(),
-  current_blind_level: z.number().optional().nullable(),
-}).transform((data) => ({
-  ...data,
-  // Map `registered` to `current_registrations` if missing
-  current_registrations: data.current_registrations ?? data.registered ?? 0,
-  // Provide a default for scheduled_start if missing
-  scheduled_start: data.scheduled_start ?? null,
-}));
+export const TournamentSchema = z
+  .object({
+    id: z.string().uuid(),
+    name: z.string().min(1).max(200),
+    scheduled_start: z.string().datetime().optional().nullable(),
+    buy_in: z.number().int().nonnegative(),
+    max_players: z.number().int().min(2).max(500), // allow smaller for Sit&Go
+    current_registrations: z.number().int().nonnegative().optional(),
+    registered: z.number().int().nonnegative().optional(),
+    status: TournamentStatusSchema,
+    is_registered: z.boolean().optional().default(false),
+    blind_schedule_id: z.string().optional(),
+    prize_pool: z.number().int().nonnegative().optional(),
+    started_at: z.string().datetime().optional().nullable(),
+    tournament_type: z.string().optional(),
+    current_blind_level: z.number().optional().nullable(),
+  })
+  .transform((data) => ({
+    ...data,
+    // Map `registered` to `current_registrations` if missing
+    current_registrations: data.current_registrations ?? data.registered ?? 0,
+    // Provide a default for scheduled_start if missing
+    scheduled_start: data.scheduled_start ?? null,
+  }));
 
 export const TournamentsResponseSchema = z.object({
   tournaments: z.array(TournamentSchema),
@@ -96,7 +103,12 @@ export const UpdateClubSettingsRequestSchema = z.object({
 
 // WebSocket event schemas
 export const ClubWebSocketEventSchema = z.object({
-  type: z.enum(['club.updated', 'tournament.created', 'tournament.registered', 'leaderboard.refreshed']),
+  type: z.enum([
+    'club.updated',
+    'tournament.created',
+    'tournament.registered',
+    'leaderboard.refreshed',
+  ]),
   clubId: z.string().uuid(),
   data: z.unknown().optional(),
 });
