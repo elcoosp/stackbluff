@@ -1,12 +1,11 @@
 use async_trait::async_trait;
-use sea_orm::{
-    ColumnTrait, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter,
-    sea_query::OnConflict,
-};
-use sb_contracts::repo_api::{BadgeRecord, BadgeRepo};
 use sb_contracts::persistence_error::PersistenceError;
-use sb_shared_types::ids::UserId;
+use sb_contracts::repo_api::{BadgeRecord, BadgeRepo};
 use sb_db_entities::user_badges::{self, Entity as UserBadgeEntity};
+use sb_shared_types::ids::UserId;
+use sea_orm::{
+    ColumnTrait, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter, sea_query::OnConflict,
+};
 
 pub struct BadgeRepoImpl<DB: ConnectionTrait + Send + Sync> {
     db: DB,
@@ -48,11 +47,7 @@ impl<DB: ConnectionTrait + Send + Sync> BadgeRepo for BadgeRepoImpl<DB> {
         }
     }
 
-    async fn has_badge(
-        &self,
-        user_id: UserId,
-        badge_type: &str,
-    ) -> Result<bool, PersistenceError> {
+    async fn has_badge(&self, user_id: UserId, badge_type: &str) -> Result<bool, PersistenceError> {
         let count: u64 = UserBadgeEntity::find()
             .filter(user_badges::Column::UserId.eq(user_id.as_uuid()))
             .filter(user_badges::Column::BadgeType.eq(badge_type))
@@ -62,10 +57,7 @@ impl<DB: ConnectionTrait + Send + Sync> BadgeRepo for BadgeRepoImpl<DB> {
         Ok(count > 0u64)
     }
 
-    async fn list_badges(
-        &self,
-        user_id: UserId,
-    ) -> Result<Vec<BadgeRecord>, PersistenceError> {
+    async fn list_badges(&self, user_id: UserId) -> Result<Vec<BadgeRecord>, PersistenceError> {
         let models = UserBadgeEntity::find()
             .filter(user_badges::Column::UserId.eq(user_id.as_uuid()))
             .all(&self.db)
