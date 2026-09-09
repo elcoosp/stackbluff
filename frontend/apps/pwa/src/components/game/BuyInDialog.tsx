@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Wallet, Minus, Plus } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Trans } from '@lingui/react/macro';
 import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Minus, Plus, Wallet, X } from 'lucide-react';
+import { useState } from 'react';
+import { cn } from '@/lib/utils';
 
 interface BuyInDialogProps {
   open: boolean;
@@ -56,18 +56,20 @@ export function BuyInDialog({
   ];
 
   // Deduplicate presets
-  const uniquePresets = presets.reduce((acc, p) => {
-    if (!acc.some((x) => x.value === p.value)) acc.push(p);
-    return acc;
-  }, [] as typeof presets);
+  const uniquePresets = presets.reduce(
+    (acc, p) => {
+      if (!acc.some((x) => x.value === p.value)) acc.push(p);
+      return acc;
+    },
+    [] as typeof presets,
+  );
 
   const handleConfirm = () => {
     if (isValid) onConfirm(amount);
   };
 
-  const progress = effectiveMax > minBuyIn
-    ? ((amount - minBuyIn) / (effectiveMax - minBuyIn)) * 100
-    : 0;
+  const progress =
+    effectiveMax > minBuyIn ? ((amount - minBuyIn) / (effectiveMax - minBuyIn)) * 100 : 0;
 
   return (
     <AnimatePresence>
@@ -96,7 +98,9 @@ export function BuyInDialog({
             {/* Header */}
             <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/5">
               <div>
-                <h2 className="text-sm font-semibold text-on-surface">{isRebuy ? t`Rebuy` : t`Buy In`}</h2>
+                <h2 className="text-sm font-semibold text-on-surface">
+                  {isRebuy ? t`Rebuy` : t`Buy In`}
+                </h2>
                 {isTournament && (
                   <p className="text-xs text-yellow-400 mt-1">
                     <Trans>⚠️ Tournament mode: no rebuys allowed</Trans>
@@ -136,7 +140,9 @@ export function BuyInDialog({
 
               {!canAfford && (
                 <div className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[11px]">
-                  <Trans>Insufficient balance. Minimum buy-in is ${minBuyIn.toLocaleString()}.</Trans>
+                  <Trans>
+                    Insufficient balance. Minimum buy-in is ${minBuyIn.toLocaleString()}.
+                  </Trans>
                 </div>
               )}
 
@@ -147,7 +153,10 @@ export function BuyInDialog({
                   whileTap={amount <= minBuyIn ? undefined : { scale: 0.92 }}
                   type="button"
                   onClick={() => {
-                    const newAmt = Math.max(minBuyIn, amount - (stakeLevel === 'Micro' ? 5 : stakeLevel === 'Low' ? 25 : 100));
+                    const newAmt = Math.max(
+                      minBuyIn,
+                      amount - (stakeLevel === 'Micro' ? 5 : stakeLevel === 'Low' ? 25 : 100),
+                    );
                     setAmount(newAmt);
                     setInputValue(String(newAmt));
                   }}
@@ -168,7 +177,7 @@ export function BuyInDialog({
                       onChange={(e) => {
                         setInputValue(e.target.value);
                         const n = parseInt(e.target.value, 10);
-                        if (!isNaN(n)) setAmount(n);
+                        if (!Number.isNaN(n)) setAmount(n);
                       }}
                       onBlur={() => {
                         setCustomInput(false);
@@ -181,7 +190,6 @@ export function BuyInDialog({
                           (e.target as HTMLInputElement).blur();
                         }
                       }}
-                      autoFocus
                       className="w-full text-center bg-transparent text-3xl font-mono font-bold text-tertiary outline-none border-none tabular-nums"
                     />
                   ) : (
@@ -302,8 +310,12 @@ export function BuyInDialog({
 
               {/* Min/Max labels */}
               <div className="flex justify-between text-[10px] text-on-surface-variant font-mono">
-                <span><Trans>MIN ${minBuyIn.toLocaleString()}</Trans></span>
-                <span><Trans>MAX ${effectiveMax.toLocaleString()}</Trans></span>
+                <span>
+                  <Trans>MIN ${minBuyIn.toLocaleString()}</Trans>
+                </span>
+                <span>
+                  <Trans>MAX ${effectiveMax.toLocaleString()}</Trans>
+                </span>
               </div>
             </div>
 
@@ -320,7 +332,9 @@ export function BuyInDialog({
               </motion.button>
               <motion.button
                 type="button"
-                whileHover={isValid ? { scale: 1.02, boxShadow: '0 0 30px rgba(78,222,163,0.25)' } : undefined}
+                whileHover={
+                  isValid ? { scale: 1.02, boxShadow: '0 0 30px rgba(78,222,163,0.25)' } : undefined
+                }
                 whileTap={isValid ? { scale: 0.95 } : undefined}
                 onClick={handleConfirm}
                 disabled={!isValid}
