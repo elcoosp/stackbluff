@@ -1,37 +1,35 @@
-import { createFileRoute, useNavigate, Link } from '@tanstack/react-router';
-import { useQuery } from '@tanstack/react-query';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useAuthStore } from '@stackbluff/shared/stores/authStore';
-import { apiClient } from '@stackbluff/shared/api/client';
-import { Card } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
-import {
-  Trophy,
-  Calendar,
-  Share2,
-  Eye,
-  Sparkles,
-  Play,
-  ChevronRight,
-  Crown,
-  Layers,
-  Coins,
-  ArrowRight,
-  Table,
-  Link2,
-  Check,
-  X,
-  MoreHorizontal
-} from 'lucide-react';
-import { toast } from 'sonner';
-import { useState, useMemo } from 'react';
-import { ErrorState } from '@/components/ui/ErrorState';
-import { requireAuth } from '@/lib/authGuard';
-import { Trans } from '@lingui/react/macro';
 import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
+import { apiClient } from '@stackbluff/shared/api/client';
+import { useAuthStore } from '@stackbluff/shared/stores/authStore';
+import { useQuery } from '@tanstack/react-query';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+  ArrowRight,
+  Calendar,
+  Check,
+  ChevronRight,
+  Coins,
+  Crown,
+  Eye,
+  Layers,
+  Link2,
+  MoreHorizontal,
+  Share2,
+  Sparkles,
+  Table,
+  Trophy,
+  X,
+} from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/replays')({
   component: ReplaysPage,
@@ -146,7 +144,12 @@ const formatCard = (cardStr: string) => {
 function ReplaysPage() {
   const {} = useAuthStore();
 
-  const { data: replays, isLoading, error, refetch } = useQuery<ReplayCard[]>({
+  const {
+    data: replays,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<ReplayCard[]>({
     queryKey: ['replays'],
     queryFn: () => apiClient<ReplayCard[]>('/replays'),
     enabled: true,
@@ -159,7 +162,7 @@ function ReplaysPage() {
     queryFn: async () => {
       try {
         return await apiClient<TableInfo[]>('/lobby');
-      } catch (err) {
+      } catch (_err) {
         return [];
       }
     },
@@ -228,9 +231,24 @@ function ReplaysPage() {
           animate="visible"
           className="grid grid-cols-2 md:grid-cols-3 gap-3"
         >
-          <StatCard icon={Layers} label={t`Total Replays`} value={totalReplays.toLocaleString()} tint="blue" />
-          <StatCard icon={Coins} label={t`Total Won`} value={`$${totalWinnings.toLocaleString()}`} tint="tertiary" />
-          <StatCard icon={Crown} label={t`Biggest Pot`} value={`$${biggestPot.toLocaleString()}`} tint="yellow" />
+          <StatCard
+            icon={Layers}
+            label={t`Total Replays`}
+            value={totalReplays.toLocaleString()}
+            tint="blue"
+          />
+          <StatCard
+            icon={Coins}
+            label={t`Total Won`}
+            value={`$${totalWinnings.toLocaleString()}`}
+            tint="tertiary"
+          />
+          <StatCard
+            icon={Crown}
+            label={t`Biggest Pot`}
+            value={`$${biggestPot.toLocaleString()}`}
+            tint="yellow"
+          />
         </motion.div>
       )}
 
@@ -247,9 +265,14 @@ function ReplaysPage() {
               <div className="w-16 h-16 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center mx-auto mb-4">
                 <Share2 className="w-8 h-8 text-yellow-400" />
               </div>
-              <h3 className="font-headline-md text-lg text-on-surface mb-1"><Trans>No replay cards yet</Trans></h3>
+              <h3 className="font-headline-md text-lg text-on-surface mb-1">
+                <Trans>No replay cards yet</Trans>
+              </h3>
               <p className="text-on-surface-variant text-sm max-w-sm mx-auto">
-                <Trans>Play more hands to unlock replay cards. Your biggest wins will appear here to be shared.</Trans>
+                <Trans>
+                  Play more hands to unlock replay cards. Your biggest wins will appear here to be
+                  shared.
+                </Trans>
               </p>
               <Link to="/lobby" className="mt-5 inline-block">
                 <Button className="bg-tertiary text-black hover:bg-tertiary/90">
@@ -300,11 +323,18 @@ function StatCard({
   return (
     <Card className="p-4 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl hover:bg-white/[0.07] transition-colors h-full">
       <div className="flex items-center gap-3">
-        <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center border flex-shrink-0', tints[tint])}>
+        <div
+          className={cn(
+            'w-10 h-10 rounded-xl flex items-center justify-center border flex-shrink-0',
+            tints[tint],
+          )}
+        >
           <Icon className="w-5 h-5" />
         </div>
         <div className="min-w-0">
-          <p className="text-[10px] font-data-mono uppercase tracking-wider text-on-surface-variant truncate">{label}</p>
+          <p className="text-[10px] font-data-mono uppercase tracking-wider text-on-surface-variant truncate">
+            {label}
+          </p>
           <p className="font-display text-lg text-on-surface leading-tight truncate">{value}</p>
         </div>
       </div>
@@ -315,7 +345,7 @@ function StatCard({
 function ReplayCardItem({
   replay,
   index,
-  tableMap
+  tableMap,
 }: {
   replay: ReplayCard;
   index: number;
@@ -334,10 +364,26 @@ function ReplayCardItem({
   const shareUrl = rawUrl.startsWith('http') ? rawUrl : `${origin}${rawUrl}`;
 
   const socials = [
-    { name: t`Twitter`, Icon: XIcon, url: `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}` },
-    { name: t`Facebook`, Icon: FacebookIcon, url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}` },
-    { name: t`Reddit`, Icon: RedditIcon, url: `https://www.reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareText)}` },
-    { name: t`Telegram`, Icon: TelegramIcon, url: `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}` },
+    {
+      name: t`Twitter`,
+      Icon: XIcon,
+      url: `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`,
+    },
+    {
+      name: t`Facebook`,
+      Icon: FacebookIcon,
+      url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
+    },
+    {
+      name: t`Reddit`,
+      Icon: RedditIcon,
+      url: `https://www.reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareText)}`,
+    },
+    {
+      name: t`Telegram`,
+      Icon: TelegramIcon,
+      url: `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`,
+    },
   ];
 
   const handleCopyLink = () => {
@@ -353,11 +399,13 @@ function ReplayCardItem({
 
   const handleNativeShare = () => {
     if (navigator.share) {
-      navigator.share({
-        title: t`Check out my poker hand!`,
-        text: shareText,
-        url: shareUrl,
-      }).catch(() => { });
+      navigator
+        .share({
+          title: t`Check out my poker hand!`,
+          text: shareText,
+          url: shareUrl,
+        })
+        .catch(() => {});
     } else {
       handleCopyLink();
     }
@@ -384,11 +432,19 @@ function ReplayCardItem({
                   {replay.hand_description}
                 </h3>
                 <p className="text-xs text-on-surface-variant mt-0.5 truncate">
-                  <Trans>Won by <span className="text-on-surface font-medium">{isMe ? 'You' : replay.winner_name}</span></Trans>
+                  <Trans>
+                    Won by{' '}
+                    <span className="text-on-surface font-medium">
+                      {isMe ? 'You' : replay.winner_name}
+                    </span>
+                  </Trans>
                 </p>
               </div>
             </div>
-            <Badge variant="outline" className="border-yellow-500/30 text-yellow-400 bg-yellow-500/10 font-mono text-[10px] flex-shrink-0">
+            <Badge
+              variant="outline"
+              className="border-yellow-500/30 text-yellow-400 bg-yellow-500/10 font-mono text-[10px] flex-shrink-0"
+            >
               ${replay.pot.toLocaleString()}
             </Badge>
           </div>
@@ -405,9 +461,7 @@ function ReplayCardItem({
             </span>
             <span className="flex items-center gap-1">
               <Table className="w-3 h-3" />
-              <span className="font-data-mono text-on-surface-variant/80">
-                {tableName}
-              </span>
+              <span className="font-data-mono text-on-surface-variant/80">{tableName}</span>
             </span>
           </div>
 
@@ -503,7 +557,9 @@ function ReplayCardItem({
                 <X className="w-4 h-4" />
               </button>
 
-              <h3 className="font-display-lg text-xl text-on-surface mb-1"><Trans>Share Your Hand</Trans></h3>
+              <h3 className="font-display-lg text-xl text-on-surface mb-1">
+                <Trans>Share Your Hand</Trans>
+              </h3>
               <p className="text-on-surface-variant text-sm mb-5">
                 <Trans>Show off your {replay.hand_description} to the world!</Trans>
               </p>
@@ -538,8 +594,10 @@ function ReplayCardItem({
                   size="sm"
                   onClick={handleCopyLink}
                   className={cn(
-                    "rounded-lg px-3",
-                    copied ? "bg-green-500/20 text-green-400 hover:bg-green-500/30" : "bg-tertiary text-black hover:bg-tertiary/90"
+                    'rounded-lg px-3',
+                    copied
+                      ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                      : 'bg-tertiary text-black hover:bg-tertiary/90',
                   )}
                 >
                   {copied ? (
