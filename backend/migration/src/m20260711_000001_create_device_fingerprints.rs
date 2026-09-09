@@ -18,21 +18,13 @@ impl MigrationTrait for Migration {
                             .auto_increment()
                             .primary_key(),
                     )
-                    .col(
-                        ColumnDef::new(DeviceFingerprints::UserId)
-                            .uuid()
-                            .not_null(),
-                    )
+                    .col(ColumnDef::new(DeviceFingerprints::UserId).uuid().not_null())
                     .col(
                         ColumnDef::new(DeviceFingerprints::FingerprintHash)
                             .string()
                             .not_null(),
                     )
-                    .col(
-                        ColumnDef::new(DeviceFingerprints::Ip)
-                            .string()
-                            .not_null(),
-                    )
+                    .col(ColumnDef::new(DeviceFingerprints::Ip).string().not_null())
                     .col(
                         ColumnDef::new(DeviceFingerprints::CreatedAt)
                             .date_time()
