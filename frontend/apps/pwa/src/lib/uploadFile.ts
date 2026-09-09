@@ -11,7 +11,7 @@ export async function uploadFile(file: File): Promise<string> {
   const token = getToken();
   const headers: Record<string, string> = {};
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+    headers.Authorization = `Bearer ${token}`;
   }
 
   const response = await fetch('/api/upload', {
