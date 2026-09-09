@@ -1,5 +1,4 @@
 use crate::commands::DbCommand;
-use sea_orm::prelude::Expr;
 use sb_contracts::repo_api::{
     HandCursor, HandHistoryRepository, HandSummary, HandSummaryPage, PersistenceError,
     PersistenceResult, WinnerSummary,
@@ -7,12 +6,13 @@ use sb_contracts::repo_api::{
 use sb_db_entities::hand_history::{self};
 use sb_db_entities::hand_history_json::{HandPlayers, HandResult};
 use sb_shared_types::{PlayerId, RequestContext, TableId, UserId};
+use sea_orm::prelude::Expr;
 use sea_orm::{
     ColumnTrait, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
 };
 
-use sea_orm::QuerySelect;
 use sb_contracts::repo_api::ReplayCard;
+use sea_orm::QuerySelect;
 
 use std::collections::HashMap;
 use tokio::sync::{mpsc, oneshot};
@@ -190,7 +190,10 @@ impl HandHistoryRepository for HandHistoryRepoImpl {
         let pattern = format!(",{},", user_id.as_uuid());
         let count = hand_history::Entity::find()
             .filter(Column::TableId.eq(table_id.as_uuid()))
-            .filter(Expr::cust_with_values("INSTR(participants, ?) > 0", vec![pattern.clone()]))
+            .filter(Expr::cust_with_values(
+                "INSTR(participants, ?) > 0",
+                vec![pattern.clone()],
+            ))
             .count(&self.db)
             .await
             .map_err(|e| PersistenceError::Database(e.to_string()))?;
@@ -205,28 +208,29 @@ impl HandHistoryRepository for HandHistoryRepoImpl {
         cursor: Option<HandCursor>,
     ) -> PersistenceResult<HandSummaryPage> {
         use hand_history::Column;
+        use sb_contracts::repo_api::{HandSummary, WinnerSummary};
+        use sb_db_entities::hand_history_json::{HandPlayers, HandResult};
+        use sb_shared_types::PlayerId;
         use sea_orm::{Condition, QueryOrder};
         use std::collections::HashMap;
-        use sb_shared_types::PlayerId;
-        use sb_contracts::repo_api::{WinnerSummary, HandSummary};
-        use sb_db_entities::hand_history_json::{HandPlayers, HandResult};
 
         let pattern = format!(",{},", user_id);
         tracing::info!("Querying hand history with pattern: {}", pattern);
         let mut query = hand_history::Entity::find()
-            .filter(Expr::cust_with_values("INSTR(participants, ?) > 0", vec![pattern.clone()]))
+            .filter(Expr::cust_with_values(
+                "INSTR(participants, ?) > 0",
+                vec![pattern.clone()],
+            ))
             .order_by_desc(Column::PlayedAt)
             .order_by_desc(Column::Id);
 
         if let Some((played_at, id)) = cursor {
             query = query.filter(
-                Condition::any()
-                    .add(Column::PlayedAt.lt(played_at))
-                    .add(
-                        Condition::all()
-                            .add(Column::PlayedAt.eq(played_at))
-                            .add(Column::Id.lt(id)),
-                    ),
+                Condition::any().add(Column::PlayedAt.lt(played_at)).add(
+                    Condition::all()
+                        .add(Column::PlayedAt.eq(played_at))
+                        .add(Column::Id.lt(id)),
+                ),
             );
         }
 
@@ -236,7 +240,11 @@ impl HandHistoryRepository for HandHistoryRepoImpl {
             .map_err(|e| PersistenceError::Database(e.to_string()))?;
 
         let has_next = models.len() > limit as usize;
-        let models = if has_next { &models[..limit as usize] } else { &models[..] };
+        let models = if has_next {
+            &models[..limit as usize]
+        } else {
+            &models[..]
+        };
 
         let mut summaries = Vec::with_capacity(models.len());
         for m in models {
@@ -311,7 +319,10 @@ impl HandHistoryRepository for HandHistoryRepoImpl {
         let pattern = format!(",{},", user_id);
         tracing::info!("Querying hand history with pattern: {}", pattern);
         let models = hand_history::Entity::find()
-            .filter(Expr::cust_with_values("INSTR(participants, ?) > 0", vec![pattern.clone()]))
+            .filter(Expr::cust_with_values(
+                "INSTR(participants, ?) > 0",
+                vec![pattern.clone()],
+            ))
             .order_by_desc(Column::PlayedAt)
             .limit(100) // limit to last 100 for performance
             .all(&self.db)
