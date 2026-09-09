@@ -1,10 +1,10 @@
-use axum::{Json, Router, extract::{Extension}, http::StatusCode, routing::post};
+use axum::{Json, Router, extract::Extension, http::StatusCode, routing::post};
+use chrono::Utc;
 use sb_shared_types::RequestContext;
 use sea_orm::{ActiveModelTrait, Set};
-use uuid::Uuid;
-use chrono::Utc;
 use serde::Deserialize;
 use std::sync::Arc;
+use uuid::Uuid;
 
 use crate::AppState;
 
@@ -19,7 +19,9 @@ pub async fn ingest_event(
     Extension(ctx): Extension<RequestContext>,
     Json(event): Json<AnalyticsEvent>,
 ) -> Result<(), (StatusCode, String)> {
-    let user_id = ctx.user_id.ok_or((StatusCode::UNAUTHORIZED, "Unauthorized".to_string()))?;
+    let user_id = ctx
+        .user_id
+        .ok_or((StatusCode::UNAUTHORIZED, "Unauthorized".to_string()))?;
 
     let db = &state.db;
 
@@ -31,7 +33,8 @@ pub async fn ingest_event(
         created_at: Set(Utc::now()),
     };
 
-    new_event.insert(db)
+    new_event
+        .insert(db)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
@@ -39,6 +42,5 @@ pub async fn ingest_event(
 }
 
 pub fn analytics_routes() -> Router {
-    Router::new()
-        .route("/api/analytics/event", post(ingest_event))
+    Router::new().route("/api/analytics/event", post(ingest_event))
 }
