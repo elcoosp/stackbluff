@@ -4,8 +4,8 @@
  * Friendly user-facing messages for known backend errors
  */
 
-import { toast } from 'sonner';
 import { apiClient } from '@stackbluff/shared/api/client';
+import { toast } from 'sonner';
 import { logger } from './logger';
 
 export class AppError extends Error {
@@ -14,7 +14,7 @@ export class AppError extends Error {
     public statusCode?: number,
     public code?: string,
     public context?: Record<string, unknown>,
-    public correlationId?: string
+    public correlationId?: string,
   ) {
     super(message);
     this.name = 'AppError';
@@ -78,7 +78,7 @@ function getUserFriendlyMessage(error: unknown, statusCode?: number): string | n
     // Transfer limit exceeded
     if (msg.includes('TransferLimitExceeded') || msg.includes('Transfer limit exceeded')) {
       const match = msg.match(/\d+/);
-      const limit = match ? parseInt(match[0]) : 5000;
+      const limit = match ? parseInt(match[0], 10) : 5000;
       return `You've reached the daily chip transfer limit (${limit}). Try again tomorrow.`;
     }
 
@@ -160,14 +160,14 @@ function getUserFriendlyMessage(error: unknown, statusCode?: number): string | n
  * Handle API errors with appropriate user feedback
  */
 export function handleApiError(error: unknown, context: Record<string, unknown> = {}): void {
-  const correlationId = context.correlationId as string || generateCorrelationId();
+  const correlationId = (context.correlationId as string) || generateCorrelationId();
   const loggerWithContext = logger.child({ ...context, correlationId });
 
-  let userMessage = getUserFriendlyMessage(error);
-  let statusCode = undefined;
+  const userMessage = getUserFriendlyMessage(error);
+  let _statusCode;
 
   if (error instanceof AppError) {
-    statusCode = error.statusCode;
+    _statusCode = error.statusCode;
     loggerWithContext.error(error.message, error, error.context);
   } else if (error instanceof Error) {
     loggerWithContext.error('Unexpected error', error);
@@ -210,9 +210,9 @@ export function handleApiError(error: unknown, context: Record<string, unknown> 
         });
         break;
       case 429:
-        if (error.message && error.message.includes('Account temporarily locked')) {
+        if (error.message?.includes('Account temporarily locked')) {
           const match = error.message.match(/(\d+)\s*second/);
-          const seconds = match ? parseInt(match[1]) : 900;
+          const seconds = match ? parseInt(match[1], 10) : 900;
           setAccountLockout(seconds);
           toast.error('Account locked', {
             description: `Too many failed attempts. Try again in ${Math.ceil(seconds / 60)} minutes.`,
@@ -252,7 +252,7 @@ export function handleApiError(error: unknown, context: Record<string, unknown> 
 export async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {},
-  context: Record<string, unknown> = {}
+  context: Record<string, unknown> = {},
 ): Promise<T> {
   const correlationId = generateCorrelationId();
   const loggerWithContext = logger.child({ ...context, correlationId, endpoint });
@@ -271,7 +271,7 @@ export async function apiRequest<T>(
   } catch (error) {
     if (error instanceof Error) {
       const statusMatch = error.message.match(/HTTP (\d+)/);
-      const statusCode = statusMatch ? parseInt(statusMatch[1]) : undefined;
+      const statusCode = statusMatch ? parseInt(statusMatch[1], 10) : undefined;
 
       loggerWithContext.error('API request failed', error, { statusCode });
       throw new AppError(error.message, statusCode, undefined, context, correlationId);
