@@ -2,7 +2,9 @@ use image::{ImageBuffer, Rgba, RgbaImage};
 use sb_db_entities::{enums::RankTier, player_rank, season};
 use sb_db_repos::season_card_repo::SeasonCardRepo;
 use sb_shared_types::errors::AppError;
-use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, QueryOrder, Set, TransactionTrait};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, QueryOrder, Set, TransactionTrait,
+};
 use std::sync::Arc;
 use uuid::Uuid;
 
