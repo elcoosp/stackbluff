@@ -184,10 +184,16 @@ pub async fn get_hand(
         serde_json::from_str(&json_str).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     // Flatten the archived structure to match the frontend expectations
-    if let Some(players_json) = json.get("players_json").and_then(|v| v.get("seats").cloned()) {
+    if let Some(players_json) = json
+        .get("players_json")
+        .and_then(|v| v.get("seats").cloned())
+    {
         json["players"] = players_json;
     }
-    if let Some(actions_json) = json.get("actions_json").and_then(|v| v.get("actions").cloned()) {
+    if let Some(actions_json) = json
+        .get("actions_json")
+        .and_then(|v| v.get("actions").cloned())
+    {
         json["actions"] = actions_json;
     }
     if let Some(result_json) = json.get("result_json").cloned() {
@@ -210,7 +216,8 @@ pub async fn upload_club_banner(
     data: bytes::Bytes,
 ) -> Result<String, sb_shared_types::AppError> {
     let key = format!("club_banners/{}/banner.png", club_id);
-    r2.put_object(&key, data.to_vec()).await
+    r2.put_object(&key, data.to_vec())
+        .await
         .map_err(|e| sb_shared_types::AppError::Internal(e.to_string()))?;
     Ok(format!("https://cdn.stackbluff.com/{}", key))
 }
@@ -227,5 +234,4 @@ impl R2Storage for NoOpR2 {
     async fn get_object(&self, _key: &str) -> Result<Vec<u8>, String> {
         Err("not found".to_string())
     }
-
 }
