@@ -1,8 +1,7 @@
-import { cn } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trophy, Medal } from 'lucide-react';
 import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
+import { Trophy } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 export interface PayoutEntry {
   position: number;
@@ -30,7 +29,11 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-export function PayoutStructurePreview({ entries, prizePool, className }: PayoutStructurePreviewProps) {
+export function PayoutStructurePreview({
+  entries,
+  prizePool,
+  className,
+}: PayoutStructurePreviewProps) {
   if (!entries || entries.length === 0) return null;
 
   const sorted = [...entries].sort((a, b) => a.position - b.position);
@@ -53,7 +56,7 @@ export function PayoutStructurePreview({ entries, prizePool, className }: Payout
                 key={entry.position}
                 className={cn(
                   'flex items-center justify-between px-3 py-2 transition-colors',
-                  isTop3 ? 'bg-white/5' : 'hover:bg-white/5'
+                  isTop3 ? 'bg-white/5' : 'hover:bg-white/5',
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -65,7 +68,8 @@ export function PayoutStructurePreview({ entries, prizePool, className }: Payout
                     </span>
                   )}
                   <span className="text-sm text-on-surface">
-                    {entry.position}{entry.position === 1 ? 'st' : entry.position === 2 ? 'nd' : 'th'}
+                    {entry.position}
+                    {entry.position === 1 ? 'st' : entry.position === 2 ? 'nd' : 'th'}
                   </span>
                 </div>
                 <div className="flex items-center gap-4">
