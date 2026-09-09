@@ -18,7 +18,11 @@ impl MigrationTrait for Migration {
                             .primary_key(),
                     )
                     .col(ColumnDef::new(PushSubscription::UserId).uuid().not_null())
-                    .col(ColumnDef::new(PushSubscription::Endpoint).string().not_null())
+                    .col(
+                        ColumnDef::new(PushSubscription::Endpoint)
+                            .string()
+                            .not_null(),
+                    )
                     .col(ColumnDef::new(PushSubscription::P256dh).string().not_null())
                     .col(ColumnDef::new(PushSubscription::Auth).string().not_null())
                     .col(ColumnDef::new(PushSubscription::ExpirationTime).big_integer())
