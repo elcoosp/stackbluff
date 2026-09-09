@@ -18,10 +18,7 @@ pub struct AuthUser {
 }
 
 /// Authentication middleware that uses injected SharedAuthService.
-pub async fn auth_middleware_with_context(
-    mut req: Request,
-    next: Next,
-) -> Response {
+pub async fn auth_middleware_with_context(mut req: Request, next: Next) -> Response {
     // Extract the auth service from request extensions (injected by the router).
     let auth_service = match req.extensions().get::<SharedAuthService>() {
         Some(s) => s.clone(),
