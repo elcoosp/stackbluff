@@ -1,4 +1,4 @@
-import type { FeedbackEvent, FeedbackConfig } from './types';
+import type { FeedbackConfig, FeedbackEvent } from './types';
 
 /**
  * Preset configurations mapping each game event to its
