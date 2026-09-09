@@ -1,5 +1,5 @@
-import { canFireAnalytics } from '@/stores/consentStore';
 import { analyticsLogger } from '@/lib/logger';
+import { canFireAnalytics } from '@/stores/consentStore';
 
 /**
  * Track custom game events (hand actions, tournament registrations, etc.)
@@ -7,7 +7,7 @@ import { analyticsLogger } from '@/lib/logger';
  */
 export async function trackGameEvent(
   eventType: string,
-  payload: Record<string, any>
+  payload: Record<string, any>,
 ): Promise<void> {
   if (!canFireAnalytics()) {
     analyticsLogger.debug('Custom analytics event blocked: no cookie consent', { eventType });
@@ -33,7 +33,11 @@ export async function trackGameEvent(
 
     if (!response.ok) {
       const errorText = await response.text();
-      analyticsLogger.warn('Custom analytics failed', { eventType, status: response.status, error: errorText });
+      analyticsLogger.warn('Custom analytics failed', {
+        eventType,
+        status: response.status,
+        error: errorText,
+      });
     } else {
       analyticsLogger.debug('Custom analytics event sent', { eventType, payload });
     }
@@ -49,7 +53,7 @@ export function trackPlayerAction(
   action: string,
   amount?: number,
   pot?: number,
-  street?: string
+  street?: string,
 ): void {
   trackGameEvent('player_action', {
     action,
@@ -65,7 +69,7 @@ export function trackPlayerAction(
 export function trackTournamentRegistration(
   tournamentId: string,
   tournamentName: string,
-  buyIn: number
+  buyIn: number,
 ): void {
   trackGameEvent('tournament_registration', {
     tournament_id: tournamentId,
