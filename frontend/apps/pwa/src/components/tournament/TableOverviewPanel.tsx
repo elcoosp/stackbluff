@@ -1,10 +1,9 @@
-import { motion } from 'framer-motion';
-import { useRef } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
-import { Users, ChevronRight, Activity } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { motion } from 'framer-motion';
+import { Activity, ChevronRight, Users } from 'lucide-react';
+import { useRef } from 'react';
+import { cn } from '@/lib/utils';
 
 interface TableOverviewPanelProps {
   tables: Record<string, number> | undefined;
@@ -43,7 +42,7 @@ export function TableOverviewPanel({
       transition={{ duration: 0.3 }}
       className={cn(
         'bg-surface-container/80 backdrop-blur-md border border-white/10 rounded-xl overflow-hidden',
-        isMobile ? 'w-full' : 'w-48'
+        isMobile ? 'w-full' : 'w-48',
       )}
     >
       <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
@@ -78,9 +77,7 @@ export function TableOverviewPanel({
                 onClick={() => onSelectTable(tableId)}
                 className={cn(
                   'w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors text-left absolute top-0 left-0',
-                  isActive
-                    ? 'bg-tertiary/10 border border-tertiary/20'
-                    : 'hover:bg-white/5'
+                  isActive ? 'bg-tertiary/10 border border-tertiary/20' : 'hover:bg-white/5',
                 )}
                 style={{
                   height: `${virtualItem.size}px`,
