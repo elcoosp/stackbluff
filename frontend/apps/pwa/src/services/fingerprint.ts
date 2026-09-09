@@ -26,7 +26,9 @@ export function collectFingerprintComponents(): string {
         components.push(`webgl_renderer:${renderer}`);
       }
     }
-  } catch (_) { /* ignore */ }
+  } catch (_) {
+    /* ignore */
+  }
 
   // Fonts are omitted for consistency (async issues).
   return components.join('|');
@@ -37,7 +39,7 @@ export async function hashFingerprint(components: string): Promise<string> {
   const data = encoder.encode(components);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 export async function submitFingerprint(hash: string, token: string): Promise<void> {
@@ -45,7 +47,7 @@ export async function submitFingerprint(hash: string, token: string): Promise<vo
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({ fingerprint_hash: hash }),
   });
