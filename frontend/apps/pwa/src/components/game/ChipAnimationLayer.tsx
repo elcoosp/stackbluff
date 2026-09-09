@@ -1,4 +1,4 @@
-import { useState, useLayoutEffect } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import {
   desktopPositions,
   getMobilePositions,
@@ -26,7 +26,12 @@ interface ChipAnimationLayerProps {
   showdownReveal: any;
 }
 
-export const ChipAnimationLayer = ({ isDesktop, heroSeat, potRef, showdownReveal }: ChipAnimationLayerProps) => {
+export const ChipAnimationLayer = ({
+  isDesktop,
+  heroSeat,
+  potRef,
+  showdownReveal,
+}: ChipAnimationLayerProps) => {
   const vw = useViewportWidth();
 
   const isNarrow = !isDesktop && vw < 362;
@@ -49,7 +54,13 @@ export const ChipAnimationLayer = ({ isDesktop, heroSeat, potRef, showdownReveal
     return () => ro.disconnect();
   }, [node]);
 
-  if (!showdownReveal) return <div ref={setNode} className="absolute inset-0 z-[500] pointer-events-none overflow-visible" />;
+  if (!showdownReveal)
+    return (
+      <div
+        ref={setNode}
+        className="absolute inset-0 z-[500] pointer-events-none overflow-visible"
+      />
+    );
 
   const winnerChips: Array<{ id: string; seatIndex: number; amount: number }> = [];
 
@@ -75,7 +86,7 @@ export const ChipAnimationLayer = ({ isDesktop, heroSeat, potRef, showdownReveal
   // Hardcoded to match the exact CSS top-[30%] left-1/2 morphed pot position
   const potPx = {
     x: containerSize.w / 2,
-    y: containerSize.h * 0.3
+    y: containerSize.h * 0.3,
   };
 
   // Updated toPixels to handle bottom property safely
@@ -93,10 +104,7 @@ export const ChipAnimationLayer = ({ isDesktop, heroSeat, potRef, showdownReveal
   };
 
   return (
-    <div
-      ref={setNode}
-      className="absolute inset-0 z-[500] pointer-events-none overflow-visible"
-    >
+    <div ref={setNode} className="absolute inset-0 z-[500] pointer-events-none overflow-visible">
       {winnerChips.flatMap((winner) => {
         const posIdx = getPositionIndex(winner.seatIndex, heroSeat);
         const seatPos = positions[posIdx];
