@@ -1,8 +1,8 @@
 use anyhow::Result;
 use sb_db_entities::push_subscription::Model;
-use web_push::*;
-use web_push::WebPushError;
 use std::io::Cursor;
+use web_push::WebPushError;
+use web_push::*;
 
 pub struct WebPushSender {
     client: IsahcWebPushClient,
@@ -27,7 +27,10 @@ impl WebPushSender {
     pub async fn send(&self, sub: &Model, payload: String) -> Result<SendOutcome> {
         let subscription = SubscriptionInfo::new(&sub.endpoint, &sub.p256dh, &sub.auth);
 
-        let mut sig_builder = VapidSignatureBuilder::from_pem(Cursor::new(self.private_key_pem.as_bytes()), &subscription)?;
+        let mut sig_builder = VapidSignatureBuilder::from_pem(
+            Cursor::new(self.private_key_pem.as_bytes()),
+            &subscription,
+        )?;
         sig_builder.add_claim("sub", self.subject.as_str());
         let signature = sig_builder.build()?;
 
