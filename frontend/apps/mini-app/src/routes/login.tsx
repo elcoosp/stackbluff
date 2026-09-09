@@ -1,15 +1,14 @@
-import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
-import { useForm } from '@tanstack/react-form';
-import { useMutation } from '@tanstack/react-query';
-import { zodValidator } from '@tanstack/zod-form-adapter';
-import { z } from 'zod';
 import { authApi } from '@stackbluff/shared/auth/api';
 import { setToken } from '@stackbluff/shared/auth/token';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { GlassPanel } from '@stackbluff/shared/ui/GlassPanel';
 import { LiquidMetalButton } from '@stackbluff/shared/ui/LiquidMetalButton';
-import { Link } from '@tanstack/react-router';
-import { User, Lock } from 'lucide-react';
+import { useForm } from '@tanstack/react-form';
+import { useMutation } from '@tanstack/react-query';
+import { createFileRoute, Link, redirect, useNavigate } from '@tanstack/react-router';
+import { zodValidator } from '@tanstack/zod-form-adapter';
+import { Lock, User } from 'lucide-react';
+import { z } from 'zod';
 
 const loginSchema = z.object({
   username: z.string().min(1, 'Username is required'),
@@ -46,15 +45,25 @@ function LoginPage() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#1a1b1e_0%,_#0a0a0a_100%)]" />
       <div className="relative z-10 w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter">STACKBLUFF</h1>
+          <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter">
+            STACKBLUFF
+          </h1>
           <p className="font-data-mono text-xs text-tertiary mt-2 tracking-widest">SECURE LOGIN</p>
         </div>
         <GlassPanel>
-          <form onSubmit={(e) => { e.preventDefault(); form.handleSubmit(); }} className="space-y-6">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              form.handleSubmit();
+            }}
+            className="space-y-6"
+          >
             <form.Field name="username">
               {(field) => (
                 <div className="space-y-2">
-                  <label className="block font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">Username or Email</label>
+                  <label className="block font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+                    Username or Email
+                  </label>
                   <div className="relative border border-outline-variant/50 rounded-lg bg-black/40">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-outline-variant">
                       <User size={16} />
@@ -68,7 +77,9 @@ function LoginPage() {
                     />
                   </div>
                   {field.state.meta.errors.map((err) => (
-                    <p key={err} className="text-error text-xs font-mono mt-1">{err}</p>
+                    <p key={err} className="text-error text-xs font-mono mt-1">
+                      {err}
+                    </p>
                   ))}
                 </div>
               )}
@@ -76,7 +87,9 @@ function LoginPage() {
             <form.Field name="password">
               {(field) => (
                 <div className="space-y-2">
-                  <label className="block font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">Password</label>
+                  <label className="block font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+                    Password
+                  </label>
                   <div className="relative border border-outline-variant/50 rounded-lg bg-black/40">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-outline-variant">
                       <Lock size={16} />
@@ -90,7 +103,9 @@ function LoginPage() {
                     />
                   </div>
                   {field.state.meta.errors.map((err) => (
-                    <p key={err} className="text-error text-xs font-mono mt-1">{err}</p>
+                    <p key={err} className="text-error text-xs font-mono mt-1">
+                      {err}
+                    </p>
                   ))}
                 </div>
               )}
@@ -98,7 +113,9 @@ function LoginPage() {
             <LiquidMetalButton type="submit" disabled={mutation.isPending} className="w-full">
               {mutation.isPending ? 'AUTHENTICATING...' : 'SIGN IN'}
             </LiquidMetalButton>
-            {mutation.error && <p className="text-error text-xs font-mono text-center">{mutation.error.message}</p>}
+            {mutation.error && (
+              <p className="text-error text-xs font-mono text-center">{mutation.error.message}</p>
+            )}
             <div className="text-center pt-4">
               <Link
                 to="/register"
