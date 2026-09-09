@@ -1,25 +1,25 @@
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
+  BookOpen,
+  Bug,
+  ChevronDown,
   HelpCircle,
   MessageCircle,
   Send,
-  ChevronDown,
-  Bug,
-  BookOpen,
-  Users,
   Sparkles,
+  Users,
 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
 
 export const Route = createFileRoute('/help')({
   component: HelpPage,
@@ -163,8 +163,12 @@ function HelpPage() {
                     <BookOpen className="w-6 h-6" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-headline-md text-base text-on-surface"><Trans>Guide</Trans></p>
-                    <p className="text-xs text-on-surface-variant"><Trans>Learn the rules</Trans></p>
+                    <p className="font-headline-md text-base text-on-surface">
+                      <Trans>Guide</Trans>
+                    </p>
+                    <p className="text-xs text-on-surface-variant">
+                      <Trans>Learn the rules</Trans>
+                    </p>
                   </div>
                   <ChevronDown className="w-5 h-5 text-on-surface-variant -rotate-90 group-hover:text-on-surface transition-colors" />
                 </div>
@@ -180,8 +184,12 @@ function HelpPage() {
                     <Users className="w-6 h-6" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-headline-md text-base text-on-surface"><Trans>Community</Trans></p>
-                    <p className="text-xs text-on-surface-variant"><Trans>Join our Discord</Trans></p>
+                    <p className="font-headline-md text-base text-on-surface">
+                      <Trans>Community</Trans>
+                    </p>
+                    <p className="text-xs text-on-surface-variant">
+                      <Trans>Join our Discord</Trans>
+                    </p>
                   </div>
                   <ChevronDown className="w-5 h-5 text-on-surface-variant -rotate-90 group-hover:text-on-surface transition-colors" />
                 </div>
@@ -191,7 +199,9 @@ function HelpPage() {
 
           <motion.div variants={itemVariants}>
             <button
-              onClick={() => document.getElementById('contact-form')?.scrollIntoView({ behavior: 'smooth' })}
+              onClick={() =>
+                document.getElementById('contact-form')?.scrollIntoView({ behavior: 'smooth' })
+              }
               className="w-full h-full text-left"
             >
               <Card className="p-5 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl hover:bg-white/[0.07] hover:border-white/20 transition-all duration-300 group h-full">
@@ -200,8 +210,12 @@ function HelpPage() {
                     <Bug className="w-6 h-6" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-headline-md text-base text-on-surface"><Trans>Report Bug</Trans></p>
-                    <p className="text-xs text-on-surface-variant"><Trans>Help us improve</Trans></p>
+                    <p className="font-headline-md text-base text-on-surface">
+                      <Trans>Report Bug</Trans>
+                    </p>
+                    <p className="text-xs text-on-surface-variant">
+                      <Trans>Help us improve</Trans>
+                    </p>
                   </div>
                   <ChevronDown className="w-5 h-5 text-on-surface-variant -rotate-90 group-hover:text-on-surface transition-colors" />
                 </div>
@@ -218,38 +232,52 @@ function HelpPage() {
                 <div className="w-10 h-10 rounded-full bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20">
                   <HelpCircle className="w-5 h-5 text-cyan-400" />
                 </div>
-                <h3 className="font-headline-md text-base text-on-surface"><Trans>Frequently Asked Questions</Trans></h3>
+                <h3 className="font-headline-md text-base text-on-surface">
+                  <Trans>Frequently Asked Questions</Trans>
+                </h3>
               </div>
             </div>
             <div className="p-6 pt-4 space-y-3">
               {FAQ_ITEMS.map((item, index) => {
                 const isOpen = openFaqIndex === index;
                 return (
-                  <div key={index} className={cn(
-                    "border rounded-xl overflow-hidden transition-colors duration-300",
-                    isOpen ? "bg-white/[0.04] border-white/15" : "bg-white/[0.02] border-white/5 hover:bg-white/[0.04]"
-                  )}>
+                  <div
+                    key={index}
+                    className={cn(
+                      'border rounded-xl overflow-hidden transition-colors duration-300',
+                      isOpen
+                        ? 'bg-white/[0.04] border-white/15'
+                        : 'bg-white/[0.02] border-white/5 hover:bg-white/[0.04]',
+                    )}
+                  >
                     <button
                       type="button"
                       onClick={() => toggleFaq(index)}
                       className="w-full px-4 py-4 flex items-center justify-between text-left"
                     >
-                      <span className="text-sm font-medium text-on-surface pr-4">{item.question}</span>
+                      <span className="text-sm font-medium text-on-surface pr-4">
+                        {item.question}
+                      </span>
                       <motion.div
                         animate={{ rotate: isOpen ? 180 : 0 }}
                         transition={{ duration: 0.2 }}
                         className="flex-shrink-0"
                       >
-                        <ChevronDown className={cn("w-4 h-4", isOpen ? "text-tertiary" : "text-on-surface-variant")} />
+                        <ChevronDown
+                          className={cn(
+                            'w-4 h-4',
+                            isOpen ? 'text-tertiary' : 'text-on-surface-variant',
+                          )}
+                        />
                       </motion.div>
                     </button>
                     <AnimatePresence initial={false}>
                       {isOpen && (
                         <motion.div
                           initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
+                          animate={{ height: 'auto', opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.3, ease: "easeInOut" }}
+                          transition={{ duration: 0.3, ease: 'easeInOut' }}
                           className="overflow-hidden"
                         >
                           <div className="px-4 pb-4 text-sm text-on-surface-variant">
@@ -273,14 +301,19 @@ function HelpPage() {
                 <div className="w-10 h-10 rounded-full bg-tertiary/10 flex items-center justify-center border border-tertiary/20">
                   <MessageCircle className="w-5 h-5 text-tertiary" />
                 </div>
-                <h3 className="font-headline-md text-base text-on-surface"><Trans>Contact Support</Trans></h3>
+                <h3 className="font-headline-md text-base text-on-surface">
+                  <Trans>Contact Support</Trans>
+                </h3>
               </div>
             </div>
             <div className="p-6 pt-4">
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-2">
-                    <Label htmlFor="contact-name" className="text-on-surface-variant text-xs uppercase tracking-wider">
+                    <Label
+                      htmlFor="contact-name"
+                      className="text-on-surface-variant text-xs uppercase tracking-wider"
+                    >
                       <Trans>Your Name</Trans>
                     </Label>
                     <Input
@@ -293,7 +326,10 @@ function HelpPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="contact-email" className="text-on-surface-variant text-xs uppercase tracking-wider">
+                    <Label
+                      htmlFor="contact-email"
+                      className="text-on-surface-variant text-xs uppercase tracking-wider"
+                    >
                       <Trans>Email Address</Trans>
                     </Label>
                     <Input
@@ -308,7 +344,10 @@ function HelpPage() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="contact-message" className="text-on-surface-variant text-xs uppercase tracking-wider">
+                  <Label
+                    htmlFor="contact-message"
+                    className="text-on-surface-variant text-xs uppercase tracking-wider"
+                  >
                     <Trans>Message</Trans>
                   </Label>
                   <Textarea
