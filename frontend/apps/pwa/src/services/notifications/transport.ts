@@ -1,8 +1,8 @@
-import { notificationLogger } from '@/lib/logger';
 import {
   NOTIFICATIONS_SUBSCRIBE_ENDPOINT,
-  NOTIFICATIONS_UNSUBSCRIBE_ENDPOINT
+  NOTIFICATIONS_UNSUBSCRIBE_ENDPOINT,
 } from '@/lib/consent/constants';
+import { notificationLogger } from '@/lib/logger';
 
 interface PushSubscriptionPayload {
   endpoint: string;
@@ -13,10 +13,10 @@ interface PushSubscriptionPayload {
 }
 
 export async function sendSubscriptionToBackend(
-  subscription: PushSubscriptionPayload
+  subscription: PushSubscriptionPayload,
 ): Promise<boolean> {
   notificationLogger.info('Sending subscription to backend', {
-    endpoint: subscription.endpoint
+    endpoint: subscription.endpoint,
   });
 
   try {
