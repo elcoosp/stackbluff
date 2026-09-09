@@ -1,13 +1,16 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { i18n } from '@lingui/core';
+import { Trans, t } from '@lingui/react/macro';
+import { apiClient } from '@stackbluff/shared/api/client';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { useMutation } from '@tanstack/react-query';
-import { apiClient } from '@stackbluff/shared/api/client';
+import { createFileRoute, Link } from '@tanstack/react-router';
+import { ArrowLeft, Globe, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
@@ -15,11 +18,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeft, Loader2, CheckCircle, AlertCircle, Globe } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { requireAuth } from '@/lib/authGuard';
-import { Trans, t } from '@lingui/react/macro';
-import { i18n } from '@lingui/core';
 
 // Helper to load locale dynamically
 async function loadLocale(locale: string) {
@@ -130,13 +128,17 @@ function AccountSettingsPage() {
         <Link to="/settings" className="p-2 rounded-lg hover:bg-white/5 transition-colors">
           <ArrowLeft className="w-5 h-5 text-on-surface-variant" />
         </Link>
-        <h1 className="font-display-lg text-2xl text-on-surface"><Trans>Account Settings</Trans></h1>
+        <h1 className="font-display-lg text-2xl text-on-surface">
+          <Trans>Account Settings</Trans>
+        </h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-semibold text-on-surface"><Trans>Display Name</Trans></CardTitle>
+            <CardTitle className="text-sm font-semibold text-on-surface">
+              <Trans>Display Name</Trans>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <Input
@@ -150,7 +152,9 @@ function AccountSettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-semibold text-on-surface"><Trans>Change Password</Trans></CardTitle>
+            <CardTitle className="text-sm font-semibold text-on-surface">
+              <Trans>Change Password</Trans>
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -206,9 +210,7 @@ function AccountSettingsPage() {
                   <SelectItem value="es">Español</SelectItem>
                 </SelectContent>
               </Select>
-              {isLoadingLang && (
-                <Loader2 className="w-4 h-4 animate-spin text-tertiary" />
-              )}
+              {isLoadingLang && <Loader2 className="w-4 h-4 animate-spin text-tertiary" />}
               {!isLoadingLang && selectedLanguage && (
                 <span className="text-xs text-on-surface-variant">
                   <Trans>Current: {selectedLanguage.toUpperCase()}</Trans>
