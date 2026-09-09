@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@stackbluff/shared/api/client';
+import { useQuery } from '@tanstack/react-query';
 import { logger } from '@/lib/logger';
 
 export interface BlindLevel {
