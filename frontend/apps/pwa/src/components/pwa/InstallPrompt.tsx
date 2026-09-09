@@ -1,10 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Download, X, Smartphone, Laptop, Sparkles } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { trackEvent } from '@/lib/analytics';
-import { Trans } from '@lingui/react/macro';
 import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Download, Smartphone, Sparkles, X } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { trackEvent } from '@/lib/analytics';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -91,7 +90,9 @@ export function InstallPrompt() {
       // Fallback: open app store or guide
       if (isMobile) {
         // On iOS, suggest adding to home screen
-        alert(t`To install StackBluff on your device: tap the share button and select "Add to Home Screen".`);
+        alert(
+          t`To install StackBluff on your device: tap the share button and select "Add to Home Screen".`,
+        );
       } else {
         alert(t`To install StackBluff: click the install icon in your browser address bar.`);
       }
