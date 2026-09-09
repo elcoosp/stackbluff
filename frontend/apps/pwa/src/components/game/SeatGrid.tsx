@@ -1,12 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
 import { LayoutGroup } from 'framer-motion';
-import { PlayerSpot } from './PlayerSpot';
-import {
-  desktopPositions,
-  getMobilePositions,
-  MAX_SEATS,
-} from '@/lib/seatPositions';
+import { useEffect, useMemo, useState } from 'react';
+import { desktopPositions, getMobilePositions, MAX_SEATS } from '@/lib/seatPositions';
 import { cn } from '@/lib/utils';
+import { PlayerSpot } from './PlayerSpot';
 
 const seatTransition = 'left 0.4s ease, top 0.4s ease, bottom 0.4s ease, transform 0.4s ease';
 
@@ -21,7 +17,8 @@ export const SeatGrid = ({
   opponentTimerRemainingMs,
   opponentTimerTotalMs,
   isDealing,
-  onShowStats, onKick,
+  onShowStats,
+  onKick,
 }: any) => {
   const [vw, setVw] = useState(typeof window !== 'undefined' ? window.innerWidth : 500);
 
@@ -35,7 +32,7 @@ export const SeatGrid = ({
 
   const positions = useMemo(
     () => (isDesktop ? desktopPositions : getMobilePositions(isNarrowMobile)),
-    [isDesktop, isNarrowMobile]
+    [isDesktop, isNarrowMobile],
   );
 
   let currentDealerSeat: number | null = null;
@@ -60,7 +57,7 @@ export const SeatGrid = ({
         const seatIndex = Number(index);
         const posIndex =
           heroSeat !== null
-            ? ((seatIndex - heroSeat) % MAX_SEATS + MAX_SEATS) % MAX_SEATS
+            ? (((seatIndex - heroSeat) % MAX_SEATS) + MAX_SEATS) % MAX_SEATS
             : seatIndex;
         const pos = positions[posIndex];
         if (!pos) return null;
@@ -81,7 +78,7 @@ export const SeatGrid = ({
         return (
           <div
             key={index}
-            className={cn("absolute overflow-visible", isHero ? "z-[445]" : "z-[440]")}
+            className={cn('absolute overflow-visible', isHero ? 'z-[445]' : 'z-[440]')}
             style={{
               left: pos.left,
               top: pos.top,
