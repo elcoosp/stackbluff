@@ -12,7 +12,7 @@ use sb_auth::middleware::AuthUser;
 use sb_shared_types::RequestContext;
 use serde::Serialize;
 
-use crate::{AppState, ErrorResponse, internal_error, bad_request};
+use crate::{AppState, ErrorResponse, bad_request, internal_error};
 
 #[derive(Serialize)]
 pub struct ReplayCardResponse {
