@@ -1,9 +1,11 @@
-import { useState } from 'react';
-import { useNavigate } from '@tanstack/react-router';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import { apiClient } from '@stackbluff/shared';
-import { LiquidMetalButton } from "@stackbluff/shared/ui/LiquidMetalButton";
 import { Dialog } from '@stackbluff/shared/components/Dialog';
+import { LiquidMetalButton } from '@stackbluff/shared/ui/LiquidMetalButton';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from '@tanstack/react-router';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -13,8 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
 
 interface CreateTableModalProps {
   open: boolean;
@@ -66,7 +66,9 @@ export function CreateTableModal({ open, onClose, onTableCreated }: CreateTableM
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/5 shrink-0">
           <div>
-            <h2 className="text-lg font-display-lg text-on-surface"><Trans>Create New Table</Trans></h2>
+            <h2 className="text-lg font-display-lg text-on-surface">
+              <Trans>Create New Table</Trans>
+            </h2>
             <p className="text-[11px] text-on-surface-variant mt-0.5">
               <Trans>Enter a name and choose the stakes.</Trans>
             </p>
@@ -97,11 +99,21 @@ export function CreateTableModal({ open, onClose, onTableCreated }: CreateTableM
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-surface-container-high border-outline-variant/50">
-                <SelectItem value="Micro"><Trans>Micro ($0.02/$0.05)</Trans></SelectItem>
-                <SelectItem value="Low"><Trans>Low ($0.10/$0.25)</Trans></SelectItem>
-                <SelectItem value="Medium"><Trans>Medium ($0.50/$1.00)</Trans></SelectItem>
-                <SelectItem value="High"><Trans>High ($2/$4)</Trans></SelectItem>
-                <SelectItem value="VeryHigh"><Trans>Very High ($5/$10)</Trans></SelectItem>
+                <SelectItem value="Micro">
+                  <Trans>Micro ($0.02/$0.05)</Trans>
+                </SelectItem>
+                <SelectItem value="Low">
+                  <Trans>Low ($0.10/$0.25)</Trans>
+                </SelectItem>
+                <SelectItem value="Medium">
+                  <Trans>Medium ($0.50/$1.00)</Trans>
+                </SelectItem>
+                <SelectItem value="High">
+                  <Trans>High ($2/$4)</Trans>
+                </SelectItem>
+                <SelectItem value="VeryHigh">
+                  <Trans>Very High ($5/$10)</Trans>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -119,7 +131,14 @@ export function CreateTableModal({ open, onClose, onTableCreated }: CreateTableM
               className="w-full h-2 bg-outline-variant/30 rounded-lg appearance-none cursor-pointer accent-tertiary"
             />
             <div className="flex justify-between text-[10px] text-on-surface-variant">
-              <span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span>
+              <span>2</span>
+              <span>3</span>
+              <span>4</span>
+              <span>5</span>
+              <span>6</span>
+              <span>7</span>
+              <span>8</span>
+              <span>9</span>
             </div>
           </div>
         </div>
