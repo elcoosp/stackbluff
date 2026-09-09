@@ -1,19 +1,19 @@
-import { useState } from 'react';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { useQuery } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import { apiClient } from '@stackbluff/shared/api/client';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Plus, Users, Crown, ChevronRight, Sparkles } from 'lucide-react';
-import { toast } from 'sonner';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
+import { useQuery } from '@tanstack/react-query';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { motion } from 'framer-motion';
+import { ChevronRight, Crown, Plus, Sparkles, Users } from 'lucide-react';
+import { useState } from 'react';
+import { toast } from 'sonner';
 import { CreateClubModal } from '@/components/club/CreateClubModal';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { requireAuth } from '@/lib/authGuard';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
 
 interface Club {
   id: string;
@@ -25,7 +25,7 @@ interface Club {
 
 export const Route = createFileRoute('/clubs/')({
   component: ClubsListPage,
-  beforeLoad: requireAuth
+  beforeLoad: requireAuth,
 });
 
 const containerVariants = {
@@ -51,10 +51,15 @@ const itemVariants = {
 
 function ClubsListPage() {
   const navigate = useNavigate();
-  const user = useAuthStore((s) => s.user);
+  const _user = useAuthStore((s) => s.user);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
-  const { data: clubs, isLoading, error, refetch } = useQuery<Club[]>({
+  const {
+    data: clubs,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<Club[]>({
     queryKey: ['clubs'],
     queryFn: () => apiClient<Club[]>('/clubs'),
     staleTime: 60 * 1000,
@@ -153,7 +158,9 @@ function ClubsListPage() {
         >
           <Card className="p-12 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl text-center flex flex-col items-center">
             <Users className="w-12 h-12 text-on-surface-variant/30 mx-auto mb-4" />
-            <p className="text-on-surface-variant"><Trans>You haven't joined any clubs yet.</Trans></p>
+            <p className="text-on-surface-variant">
+              <Trans>You haven't joined any clubs yet.</Trans>
+            </p>
             <p className="text-on-surface-variant/60 text-sm mt-2">
               <Trans>Create a club or join one with an invite.</Trans>
             </p>
@@ -197,7 +204,10 @@ function ClubsListPage() {
                         {club.name}
                       </h3>
                       {club.is_owner && (
-                        <Badge variant="outline" className="border-yellow-500/30 text-yellow-400 bg-yellow-500/10 font-mono flex-shrink-0">
+                        <Badge
+                          variant="outline"
+                          className="border-yellow-500/30 text-yellow-400 bg-yellow-500/10 font-mono flex-shrink-0"
+                        >
                           <Crown className="w-3 h-3 mr-1" /> <Trans>Owner</Trans>
                         </Badge>
                       )}
@@ -215,7 +225,13 @@ function ClubsListPage() {
       )}
 
       {/* Modals */}
-      <CreateClubModal open={isCreateOpen} onClose={() => { setIsCreateOpen(false); refetch(); }} />
+      <CreateClubModal
+        open={isCreateOpen}
+        onClose={() => {
+          setIsCreateOpen(false);
+          refetch();
+        }}
+      />
     </div>
   );
 }
