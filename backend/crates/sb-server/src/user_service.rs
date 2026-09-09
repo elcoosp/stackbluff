@@ -96,7 +96,11 @@ impl UserService for UserServiceImpl {
         Ok(profile)
     }
 
-    async fn extend_season_pass(&self, user_id: UserId, duration_days: i64) -> Result<(), AppError> {
+    async fn extend_season_pass(
+        &self,
+        user_id: UserId,
+        duration_days: i64,
+    ) -> Result<(), AppError> {
         let ctx = RequestContext::new(Uuid::new_v4(), Some(user_id));
         self.user_repo
             .extend_season_pass(ctx, user_id, duration_days)
