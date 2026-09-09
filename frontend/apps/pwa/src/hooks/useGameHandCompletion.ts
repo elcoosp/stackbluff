@@ -1,14 +1,14 @@
-import { useEffect, useRef } from 'react';
 import { useActiveRoom } from '@stackbluff/shared/stores/gameStore';
-import { useConsentStore } from '@/stores/consentStore';
+import { useEffect, useRef } from 'react';
 import { FIRST_HAND_PLAYED_KEY } from '@/lib/consent/constants';
 import { consentLogger } from '@/lib/logger';
+import { useConsentStore } from '@/stores/consentStore';
 
 const logger = consentLogger.child({ component: 'useGameHandCompletion' });
 
 export function useGameHandCompletion() {
   const activeRoom = useActiveRoom();
-  const notificationConsent = useConsentStore((s) => s.notificationConsent);
+  const _notificationConsent = useConsentStore((s) => s.notificationConsent);
 
   const prevShowdownRef = useRef<unknown>(undefined);
   const prevHandInProgressRef = useRef<boolean | undefined>(undefined);
@@ -44,7 +44,7 @@ export function useGameHandCompletion() {
 
     prevShowdownRef.current = currentShowdown;
     prevHandInProgressRef.current = currentHandInProgress;
-  }, [activeRoom, notificationConsent]);
+  }, [activeRoom]);
 }
 
 function markFirstHandComplete(): void {
