@@ -1,41 +1,39 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { useEffect } from 'react';
-import { useAuthStore } from '@stackbluff/shared/stores/authStore';
-import { useBadges } from '@/hooks/useBadges';
-import { useQuery } from '@tanstack/react-query';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import { apiClient } from '@stackbluff/shared/api/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AvatarUpload } from '@/components/settings/AvatarUpload';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
-import { SeasonCardDisplay } from '@/components/profile/SeasonCardDisplay';
-import { Button } from '@/components/ui/button';
+import { useAuthStore } from '@stackbluff/shared/stores/authStore';
+import { useQuery } from '@tanstack/react-query';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { motion } from 'framer-motion';
-import { cn } from '@/lib/utils';
 import {
-  Trophy,
-  Coins,
-  Calendar,
   Award,
-  Crown,
-  TrendingUp,
-  Target,
-  History,
-  Film,
-  Users,
   Building2,
+  Calendar,
+  Coins,
+  Crown,
+  Edit,
+  Film,
+  Gem,
+  History,
   Settings,
   Sparkles,
-  Edit,
-  Flame,
   Swords,
-  Gem,
+  Target,
+  TrendingUp,
+  Trophy,
+  Users,
 } from 'lucide-react';
-import type { PlayerStats } from '@/types/player-stats';
-import { requireAuth } from '@/lib/authGuard';
+import { useEffect } from 'react';
+import { SeasonCardDisplay } from '@/components/profile/SeasonCardDisplay';
+import { AvatarUpload } from '@/components/settings/AvatarUpload';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useBadges } from '@/hooks/useBadges';
 import { trackGameEvent } from '@/lib/customAnalytics';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
+import { cn } from '@/lib/utils';
+import type { PlayerStats } from '@/types/player-stats';
 
 export const Route = createFileRoute('/profile')({
   component: ProfilePage,
@@ -64,7 +62,7 @@ const itemVariants = {
 
 function ProfilePage() {
   const navigate = useNavigate();
-  const {user} = useAuthStore();
+  const { user } = useAuthStore();
   const { data: badges, isLoading: badgesLoading } = useBadges();
 
   const { data: stats, isLoading: statsLoading } = useQuery<PlayerStats>({
@@ -111,7 +109,12 @@ function ProfilePage() {
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
       <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
 
-      <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="space-y-6"
+      >
         {/* Profile Header Card */}
         <motion.div variants={itemVariants}>
           <Card className="p-6 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl shadow-xl overflow-hidden relative">
@@ -122,29 +125,40 @@ function ProfilePage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <Sparkles className="w-4 h-4 text-tertiary" />
-                  <span className="text-xs font-data-mono uppercase tracking-widest text-tertiary"><Trans>Player Profile</Trans></span>
+                  <span className="text-xs font-data-mono uppercase tracking-widest text-tertiary">
+                    <Trans>Player Profile</Trans>
+                  </span>
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
                   <h1 className="font-display-lg text-3xl text-on-surface">{displayName}</h1>
                   {hasFoundingMember && (
-                    <Badge variant="outline" className="bg-yellow-500/10 text-yellow-400 border-yellow-500/30 font-mono">
+                    <Badge
+                      variant="outline"
+                      className="bg-yellow-500/10 text-yellow-400 border-yellow-500/30 font-mono"
+                    >
                       <Crown className="w-3 h-3 mr-1" />
                       <Trans>Founding Member</Trans>
                     </Badge>
                   )}
-                  <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/30 font-mono">
+                  <Badge
+                    variant="outline"
+                    className="bg-blue-500/10 text-blue-400 border-blue-500/30 font-mono"
+                  >
                     <Trophy className="w-3 h-3 mr-1" />
                     <Trans>Silver</Trans>
                   </Badge>
                 </div>
                 <p className="text-on-surface-variant text-sm mt-1.5 flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5" /> <Trans>Member since {new Date().toLocaleDateString()}</Trans>
+                  <Calendar className="w-3.5 h-3.5" />{' '}
+                  <Trans>Member since {new Date().toLocaleDateString()}</Trans>
                 </p>
                 <div className="flex flex-wrap gap-4 mt-3">
                   <div className="flex items-center gap-1.5 text-sm font-data-mono bg-black/20 px-3 py-1.5 rounded-lg border border-white/5">
                     <Coins className="w-4 h-4 text-yellow-400" />
                     <span className="text-on-surface font-bold">{balance.toLocaleString()}</span>
-                    <span className="text-on-surface-variant text-xs"><Trans>chips</Trans></span>
+                    <span className="text-on-surface-variant text-xs">
+                      <Trans>chips</Trans>
+                    </span>
                   </div>
                 </div>
               </div>
@@ -184,10 +198,38 @@ function ProfilePage() {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard label={t`Hands Played`} value={handsPlayed.toLocaleString()} icon={<Target className="w-4 h-4" />} color="text-blue-400" bg="bg-blue-500/10" variants={itemVariants} />
-          <StatCard label={t`Win Rate`} value={`${(winRate * 100).toFixed(1)}%`} icon={<TrendingUp className="w-4 h-4" />} color="text-tertiary" bg="bg-tertiary/10" variants={itemVariants} />
-          <StatCard label={t`Net Profit`} value={`${netProfit >= 0 ? '+' : ''}${netProfit.toLocaleString()}`} icon={<Coins className="w-4 h-4" />} color="text-yellow-400" bg="bg-yellow-500/10" variants={itemVariants} />
-          <StatCard label={t`Biggest Pot`} value={biggestPot.toLocaleString()} icon={<Gem className="w-4 h-4" />} color="text-purple-400" bg="bg-purple-500/10" variants={itemVariants} />
+          <StatCard
+            label={t`Hands Played`}
+            value={handsPlayed.toLocaleString()}
+            icon={<Target className="w-4 h-4" />}
+            color="text-blue-400"
+            bg="bg-blue-500/10"
+            variants={itemVariants}
+          />
+          <StatCard
+            label={t`Win Rate`}
+            value={`${(winRate * 100).toFixed(1)}%`}
+            icon={<TrendingUp className="w-4 h-4" />}
+            color="text-tertiary"
+            bg="bg-tertiary/10"
+            variants={itemVariants}
+          />
+          <StatCard
+            label={t`Net Profit`}
+            value={`${netProfit >= 0 ? '+' : ''}${netProfit.toLocaleString()}`}
+            icon={<Coins className="w-4 h-4" />}
+            color="text-yellow-400"
+            bg="bg-yellow-500/10"
+            variants={itemVariants}
+          />
+          <StatCard
+            label={t`Biggest Pot`}
+            value={biggestPot.toLocaleString()}
+            icon={<Gem className="w-4 h-4" />}
+            color="text-purple-400"
+            bg="bg-purple-500/10"
+            variants={itemVariants}
+          />
         </div>
 
         {/* Detailed Stats */}
@@ -198,11 +240,21 @@ function ProfilePage() {
                 <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
                   <Target className="w-4 h-4 text-blue-400" />
                 </div>
-                <h3 className="font-headline-md text-base text-on-surface"><Trans>Preflop Aggression</Trans></h3>
+                <h3 className="font-headline-md text-base text-on-surface">
+                  <Trans>Preflop Aggression</Trans>
+                </h3>
               </div>
               <div className="space-y-4">
-                <StatBar label={t`VPIP`} value={`${(vpip * 100).toFixed(1)}%`} percentage={vpip * 100} />
-                <StatBar label={t`PFR`} value={`${(pfr * 100).toFixed(1)}%`} percentage={pfr * 100} />
+                <StatBar
+                  label={t`VPIP`}
+                  value={`${(vpip * 100).toFixed(1)}%`}
+                  percentage={vpip * 100}
+                />
+                <StatBar
+                  label={t`PFR`}
+                  value={`${(pfr * 100).toFixed(1)}%`}
+                  percentage={pfr * 100}
+                />
                 <StatRow label={t`Aggression Factor`} value={aggressionFactor.toFixed(2)} />
               </div>
             </Card>
@@ -214,10 +266,16 @@ function ProfilePage() {
                 <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
                   <Swords className="w-4 h-4 text-purple-400" />
                 </div>
-                <h3 className="font-headline-md text-base text-on-surface"><Trans>Showdowns</Trans></h3>
+                <h3 className="font-headline-md text-base text-on-surface">
+                  <Trans>Showdowns</Trans>
+                </h3>
               </div>
               <div className="space-y-4">
-                <StatBar label={t`Showdown Win Rate`} value={showdowns > 0 ? `${((showdownWins / showdowns) * 100).toFixed(1)}%` : '0%'} percentage={showdowns > 0 ? (showdownWins / showdowns) * 100 : 0} />
+                <StatBar
+                  label={t`Showdown Win Rate`}
+                  value={showdowns > 0 ? `${((showdownWins / showdowns) * 100).toFixed(1)}%` : '0%'}
+                  percentage={showdowns > 0 ? (showdownWins / showdowns) * 100 : 0}
+                />
                 <StatRow label={t`Total Showdowns`} value={showdowns.toString()} />
                 <StatRow label={t`All-Ins`} value={allInCount.toString()} />
               </div>
@@ -232,19 +290,27 @@ function ProfilePage() {
               <div className="w-8 h-8 rounded-full bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20">
                 <Award className="w-4 h-4 text-yellow-400" />
               </div>
-              <h3 className="font-headline-md text-base text-on-surface"><Trans>Badges</Trans></h3>
+              <h3 className="font-headline-md text-base text-on-surface">
+                <Trans>Badges</Trans>
+              </h3>
             </div>
             {badges && badges.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {badges.map((b) => (
-                  <Badge key={b.badge_type} variant="outline" className="bg-yellow-500/10 text-yellow-400 border-yellow-500/30 font-mono py-1.5 px-3 text-xs">
+                  <Badge
+                    key={b.badge_type}
+                    variant="outline"
+                    className="bg-yellow-500/10 text-yellow-400 border-yellow-500/30 font-mono py-1.5 px-3 text-xs"
+                  >
                     {b.badge_type === 'founding_member' && <Crown className="w-3 h-3 mr-1.5" />}
                     {b.badge_type.replace(/_/g, ' ')}
                   </Badge>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-on-surface-variant text-center py-4 opacity-80"><Trans>No badges yet. Keep playing to earn them!</Trans></p>
+              <p className="text-sm text-on-surface-variant text-center py-4 opacity-80">
+                <Trans>No badges yet. Keep playing to earn them!</Trans>
+              </p>
             )}
           </Card>
         </motion.div>
@@ -256,7 +322,9 @@ function ProfilePage() {
               <div className="w-8 h-8 rounded-full bg-tertiary/10 flex items-center justify-center border border-tertiary/20">
                 <Calendar className="w-4 h-4 text-tertiary" />
               </div>
-              <h3 className="font-headline-md text-base text-on-surface"><Trans>Season Cards</Trans></h3>
+              <h3 className="font-headline-md text-base text-on-surface">
+                <Trans>Season Cards</Trans>
+              </h3>
             </div>
             <SeasonCardDisplay />
           </Card>
@@ -266,15 +334,37 @@ function ProfilePage() {
   );
 }
 
-function StatCard({ label, value, icon, color, bg, variants }: { label: string; value: string | number; icon: React.ReactNode; color: string; bg: string; variants: any }) {
+function StatCard({
+  label,
+  value,
+  icon,
+  color,
+  bg,
+  variants,
+}: {
+  label: string;
+  value: string | number;
+  icon: React.ReactNode;
+  color: string;
+  bg: string;
+  variants: any;
+}) {
   return (
     <motion.div variants={variants}>
       <Card className="p-5 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl shadow-xl h-full hover:bg-white/[0.07] transition-colors">
-        <div className={cn("w-8 h-8 rounded-full flex items-center justify-center mb-3 border border-white/10", bg, color)}>
+        <div
+          className={cn(
+            'w-8 h-8 rounded-full flex items-center justify-center mb-3 border border-white/10',
+            bg,
+            color,
+          )}
+        >
           {icon}
         </div>
         <div className="text-2xl font-bold font-data-mono text-on-surface truncate">{value}</div>
-        <p className="text-xs text-on-surface-variant mt-1 uppercase tracking-wider font-medium">{label}</p>
+        <p className="text-xs text-on-surface-variant mt-1 uppercase tracking-wider font-medium">
+          {label}
+        </p>
       </Card>
     </motion.div>
   );
@@ -284,12 +374,22 @@ function StatRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between text-sm items-center">
       <span className="text-on-surface-variant">{label}</span>
-      <span className="text-on-surface font-data-mono font-bold bg-black/20 px-2 py-0.5 rounded-md border border-white/5">{value}</span>
+      <span className="text-on-surface font-data-mono font-bold bg-black/20 px-2 py-0.5 rounded-md border border-white/5">
+        {value}
+      </span>
     </div>
   );
 }
 
-function StatBar({ label, value, percentage }: { label: string; value: string; percentage: number }) {
+function StatBar({
+  label,
+  value,
+  percentage,
+}: {
+  label: string;
+  value: string;
+  percentage: number;
+}) {
   return (
     <div>
       <div className="flex justify-between text-sm mb-1.5">
@@ -300,7 +400,7 @@ function StatBar({ label, value, percentage }: { label: string; value: string; p
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${Math.min(percentage, 100)}%` }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
+          transition={{ duration: 0.8, ease: 'easeOut' }}
           className="absolute top-0 left-0 h-full bg-gradient-to-r from-tertiary to-emerald-400 rounded-full"
         />
       </div>
