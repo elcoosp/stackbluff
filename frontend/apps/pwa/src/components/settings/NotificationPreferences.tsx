@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
+import { apiClient } from '@stackbluff/shared/api/client';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@stackbluff/shared/api/client';
+import { Bell, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Loader2, Bell } from 'lucide-react';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
 
 interface NotificationSettings {
   tournamentReminder60: boolean;
