@@ -1,6 +1,8 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use sb_shared_types::{ClubId, AppError, ChipAmount, RequestContext, TableId, TournamentId, UserId};
+use sb_shared_types::{
+    AppError, ChipAmount, ClubId, RequestContext, TableId, TournamentId, UserId,
+};
 use serde::{Deserialize, Serialize};
 
 // ── Enums ────────────────────────────────────────────────────────────────────
