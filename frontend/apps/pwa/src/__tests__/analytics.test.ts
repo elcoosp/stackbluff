@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { trackEvent, trackPageView } from '../lib/analytics';
 import { useConsentStore } from '../stores/consentStore';
 
@@ -35,7 +35,9 @@ describe('analytics', () => {
     it('should fire events when cookie consent accepted', () => {
       useConsentStore.getState().setCookieConsent('accepted');
       trackEvent('test_event', { props: { foo: 'bar' } });
-      expect((window as any).plausible).toHaveBeenCalledWith('test_event', { props: { foo: 'bar' } });
+      expect((window as any).plausible).toHaveBeenCalledWith('test_event', {
+        props: { foo: 'bar' },
+      });
     });
   });
 
@@ -43,7 +45,9 @@ describe('analytics', () => {
     it('should use Plausible when available', () => {
       useConsentStore.getState().setCookieConsent('accepted');
       trackEvent('test_event', { props: { foo: 'bar' } });
-      expect((window as any).plausible).toHaveBeenCalledWith('test_event', { props: { foo: 'bar' } });
+      expect((window as any).plausible).toHaveBeenCalledWith('test_event', {
+        props: { foo: 'bar' },
+      });
     });
 
     it('should fallback to dataLayer when Plausible not available', () => {
@@ -58,7 +62,7 @@ describe('analytics', () => {
 
     it('should handle missing window object gracefully', () => {
       const originalWindow = global.window;
-      // @ts-ignore
+      // @ts-expect-error
       delete global.window;
 
       expect(() => trackEvent('test_event')).not.toThrow();
