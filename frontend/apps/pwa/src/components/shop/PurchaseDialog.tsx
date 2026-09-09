@@ -1,9 +1,7 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import { Loader2 } from 'lucide-react';
 import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
+import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface PurchaseDialogProps {
   open: boolean;
@@ -44,9 +42,14 @@ export function PurchaseDialog({
         </DialogHeader>
         <div className="space-y-4">
           <p className="text-on-surface-variant text-sm text-center">
-            <Trans>You are about to purchase <span className="text-on-surface font-medium">{productName || 'this item'}</span>
-            {priceDisplay && <span className="text-tertiary font-mono ml-1">for {priceDisplay}</span>}
-            .</Trans>
+            <Trans>
+              You are about to purchase{' '}
+              <span className="text-on-surface font-medium">{productName || 'this item'}</span>
+              {priceDisplay && (
+                <span className="text-tertiary font-mono ml-1">for {priceDisplay}</span>
+              )}
+              .
+            </Trans>
           </p>
           <div className="flex gap-3 pt-2">
             <Button
