@@ -1,6 +1,6 @@
-import { ReactNode } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '../lib/utils';
 
@@ -12,7 +12,13 @@ interface DialogProps {
   className?: string;
 }
 
-export function Dialog({ open, onClose, children, showCloseButton = true, className }: DialogProps) {
+export function Dialog({
+  open,
+  onClose,
+  children,
+  showCloseButton = true,
+  className,
+}: DialogProps) {
   if (typeof document === 'undefined') return null;
 
   return createPortal(
@@ -38,8 +44,8 @@ export function Dialog({ open, onClose, children, showCloseButton = true, classN
             exit={{ opacity: 0, y: 40, scale: 0.95 }}
             transition={{ type: 'spring', damping: 30, stiffness: 400, duration: 0.3 }}
             className={cn(
-              "fixed z-[2010] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-sm rounded-xl bg-[rgba(12,12,12,0.97)] border border-white/10 backdrop-blur-xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]",
-              className
+              'fixed z-[2010] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-sm rounded-xl bg-[rgba(12,12,12,0.97)] border border-white/10 backdrop-blur-xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]',
+              className,
             )}
           >
             {showCloseButton && (
@@ -77,6 +83,6 @@ export function Dialog({ open, onClose, children, showCloseButton = true, classN
         </>
       )}
     </AnimatePresence>,
-    document.body
+    document.body,
   );
 }
