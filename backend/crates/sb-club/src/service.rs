@@ -4,9 +4,9 @@ use sb_contracts::repo_api::Club;
 use sb_contracts::service_api::{ClubProSettings, UpdateClubSettingsRequest};
 use sb_contracts::{ClubError, ClubRepo, ClubService, LeaderboardPage};
 use sb_shared_types::{ClubId, RequestContext, UserId};
+use sb_shared_types::{TableId, TournamentId};
 use sb_table_registry::connection_broker::ConnectionBroker;
 use sb_table_registry::game_room::RoomMessage;
-use sb_shared_types::{TableId, TournamentId};
 use std::sync::Arc;
 use std::sync::OnceLock;
 
@@ -229,7 +229,8 @@ impl ClubService for ClubServiceImpl {
             data: serde_json::json!({ "timestamp": chrono::Utc::now() }),
         };
         // Broadcast to the club's room (using the club_id as the room identifier)
-        self.broker.broadcast_to_room(TableId::new(club_id.as_uuid()), msg);
+        self.broker
+            .broadcast_to_room(TableId::new(club_id.as_uuid()), msg);
     }
 
     /// Broadcast a tournament.created event to all subscribers of the club room.
@@ -239,7 +240,8 @@ impl ClubService for ClubServiceImpl {
             tournament_id,
             data: serde_json::json!({ "timestamp": chrono::Utc::now() }),
         };
-        self.broker.broadcast_to_room(TableId::new(club_id.as_uuid()), msg);
+        self.broker
+            .broadcast_to_room(TableId::new(club_id.as_uuid()), msg);
     }
 
     async fn get_pro_settings(
