@@ -1,33 +1,31 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
-import { useAuthStore } from '@stackbluff/shared/stores/authStore';
-import { apiClient } from '@stackbluff/shared/api/client';
-import { Card } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
-import {
-  History,
-  Table,
-  Users,
-  Calendar,
-  Sparkles,
-  Trophy,
-  TrendingUp,
-  Coins,
-  Eye,
-  ChevronRight,
-  Crown,
-  Layers,
-  ArrowRight,
-} from 'lucide-react';
-import { useState, useMemo } from 'react';
-import { ErrorState } from '@/components/ui/ErrorState';
-import { requireAuth } from '@/lib/authGuard';
-import { Trans } from '@lingui/react/macro';
 import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
+import { apiClient } from '@stackbluff/shared/api/client';
+import { useAuthStore } from '@stackbluff/shared/stores/authStore';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import { motion } from 'framer-motion';
+import {
+  ArrowRight,
+  Calendar,
+  ChevronRight,
+  Coins,
+  Crown,
+  Eye,
+  Layers,
+  Sparkles,
+  Table,
+  TrendingUp,
+  Trophy,
+  Users,
+} from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/history')({
   component: HistoryPage,
@@ -153,7 +151,7 @@ function HistoryPage() {
     queryFn: async () => {
       try {
         return await apiClient<TableInfo[]>('/lobby');
-      } catch (err) {
+      } catch (_err) {
         return [];
       }
     },
@@ -232,7 +230,9 @@ function HistoryPage() {
           <Trans>Hand History</Trans>
         </h1>
         <p className="text-on-surface-variant text-sm mt-1 max-w-md">
-          <Trans>Review every hand you've played. Track wins, study decisions, and improve your game.</Trans>
+          <Trans>
+            Review every hand you've played. Track wins, study decisions, and improve your game.
+          </Trans>
         </p>
       </motion.div>
 
@@ -285,9 +285,14 @@ function HistoryPage() {
               <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto mb-4">
                 <Table className="w-8 h-8 text-blue-400" />
               </div>
-              <h3 className="font-headline-md text-lg text-on-surface mb-1"><Trans>No hands played yet</Trans></h3>
+              <h3 className="font-headline-md text-lg text-on-surface mb-1">
+                <Trans>No hands played yet</Trans>
+              </h3>
               <p className="text-on-surface-variant text-sm max-w-sm mx-auto">
-                <Trans>Join a table and start playing to build your hand history. Every hand you play will appear here.</Trans>
+                <Trans>
+                  Join a table and start playing to build your hand history. Every hand you play
+                  will appear here.
+                </Trans>
               </p>
               <Link to="/lobby" className="mt-5 inline-block">
                 <Button className="bg-tertiary text-black hover:bg-tertiary/90">
@@ -304,8 +309,7 @@ function HistoryPage() {
       {histories.length > 0 && (
         <div className="flex w-full gap-1 bg-white/5 border border-white/10 rounded-2xl p-1.5 backdrop-blur-xl">
           {FILTERS.map(({ value, label, icon: Icon }) => {
-            const count =
-              value === 'wins' ? wins : value === 'losses' ? losses : histories.length;
+            const count = value === 'wins' ? wins : value === 'losses' ? losses : histories.length;
             const active = filter === value;
             return (
               <button
@@ -315,7 +319,7 @@ function HistoryPage() {
                   'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all',
                   active
                     ? 'bg-white/10 text-on-surface'
-                    : 'text-on-surface-variant hover:text-on-surface'
+                    : 'text-on-surface-variant hover:text-on-surface',
                 )}
               >
                 <Icon className="w-4 h-4" />
@@ -323,7 +327,7 @@ function HistoryPage() {
                 <span
                   className={cn(
                     'text-[10px] font-data-mono px-1.5 py-0.5 rounded-md',
-                    active ? 'bg-white/10 text-on-surface' : 'bg-white/5 text-on-surface-variant'
+                    active ? 'bg-white/10 text-on-surface' : 'bg-white/5 text-on-surface-variant',
                   )}
                 >
                   {count}
@@ -420,7 +424,7 @@ function StatCard({
           <div
             className={cn(
               'w-10 h-10 rounded-xl flex items-center justify-center border flex-shrink-0',
-              tints[tint]
+              tints[tint],
             )}
           >
             <Icon className="w-5 h-5" />
@@ -441,7 +445,7 @@ function StatCard({
 function HandHistoryCard({
   hand,
   index,
-  tableMap
+  tableMap,
 }: {
   hand: HandSummary;
   index: number;
@@ -467,7 +471,7 @@ function HandHistoryCard({
         'p-5 border backdrop-blur-xl rounded-2xl transition-all duration-300 hover:bg-white/[0.07] group relative overflow-hidden',
         isWin
           ? 'bg-gradient-to-br from-tertiary/10 to-transparent border-tertiary/20'
-          : 'bg-white/5 border-white/10'
+          : 'bg-white/5 border-white/10',
       )}
     >
       {/* Subtle glow accent for wins */}
@@ -482,7 +486,7 @@ function HandHistoryCard({
             'w-12 h-12 rounded-full flex items-center justify-center font-data-mono text-sm font-bold border flex-shrink-0 transition-colors',
             isWin
               ? 'bg-tertiary/10 border-tertiary/30 text-tertiary'
-              : 'bg-white/5 border-white/10 text-on-surface-variant'
+              : 'bg-white/5 border-white/10 text-on-surface-variant',
           )}
         >
           {String(index + 1).padStart(2, '0')}
@@ -498,7 +502,7 @@ function HandHistoryCard({
                 'font-mono text-[10px]',
                 isWin
                   ? 'border-tertiary/30 text-tertiary bg-tertiary/10'
-                  : 'border-white/20 text-on-surface-variant bg-white/5'
+                  : 'border-white/20 text-on-surface-variant bg-white/5',
               )}
             >
               {isWin ? (
@@ -513,7 +517,7 @@ function HandHistoryCard({
             <span
               className={cn(
                 'font-data-mono text-sm font-semibold',
-                isWin ? 'text-tertiary' : 'text-on-surface-variant'
+                isWin ? 'text-tertiary' : 'text-on-surface-variant',
               )}
             >
               ${hand.pot.toLocaleString()}
@@ -533,9 +537,7 @@ function HandHistoryCard({
             </span>
             <span className="flex items-center gap-1">
               <Table className="w-3 h-3" />
-              <span className="font-data-mono text-on-surface-variant/80">
-                {tableName}
-              </span>
+              <span className="font-data-mono text-on-surface-variant/80">{tableName}</span>
             </span>
             <span className="flex items-center gap-1">
               <Users className="w-3 h-3" />
@@ -567,7 +569,9 @@ function HandHistoryCard({
             className="text-on-surface-variant hover:text-on-surface hover:bg-white/10 rounded-xl group/btn"
           >
             <Eye className="w-4 h-4 mr-1.5 transition-transform group-hover/btn:scale-110" />
-            <span className="hidden sm:inline"><Trans>View</Trans></span>
+            <span className="hidden sm:inline">
+              <Trans>View</Trans>
+            </span>
             <ChevronRight className="w-3.5 h-3.5 ml-0.5 transition-transform group-hover/btn:translate-x-0.5" />
           </Button>
         </div>
