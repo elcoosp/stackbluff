@@ -1,10 +1,10 @@
-import { motion } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import type { TournamentSummary } from '@stackbluff/shared/types/tournament.types';
-import { Clock, Users, Trophy, Zap, Eye } from 'lucide-react';
-import { TimerBar } from '@/components/game/TimerBar';
-import { Trans } from '@lingui/react/macro';
 import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
+import type { TournamentSummary } from '@stackbluff/shared/types/tournament.types';
+import { motion } from 'framer-motion';
+import { Clock, Eye, Trophy, Users, Zap } from 'lucide-react';
+import { TimerBar } from '@/components/game/TimerBar';
+import { Button } from '@/components/ui/button';
 
 interface TournamentCardProps {
   tournament: TournamentSummary;
@@ -19,29 +19,41 @@ interface TournamentCardProps {
 }
 
 function formatCurrency(amount: number): string {
-  if (typeof amount !== 'number' || isNaN(amount)) return '$0';
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount);
+  if (typeof amount !== 'number' || Number.isNaN(amount)) return '$0';
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(amount);
 }
 
 function getStatusColor(status: string): string {
   switch (status) {
-    case 'Registering': return 'text-tertiary border-tertiary/40';
-    case 'Running': return 'text-blue-400 border-blue-400/40';
-    case 'Completed': return 'text-gray-400 border-gray-400/40';
-    default: return 'text-gray-500 border-gray-500/40';
+    case 'Registering':
+      return 'text-tertiary border-tertiary/40';
+    case 'Running':
+      return 'text-blue-400 border-blue-400/40';
+    case 'Completed':
+      return 'text-gray-400 border-gray-400/40';
+    default:
+      return 'text-gray-500 border-gray-500/40';
   }
 }
 
 function getStatusLabel(status: string): string {
   switch (status) {
-    case 'Registering': return t`Registering`;
-    case 'Running': return t`Live`;
-    case 'Completed': return t`Completed`;
-    default: return status;
+    case 'Registering':
+      return t`Registering`;
+    case 'Running':
+      return t`Live`;
+    case 'Completed':
+      return t`Completed`;
+    default:
+      return status;
   }
 }
 
-function getStakeLabel(buy_in: number): string {
+function _getStakeLabel(buy_in: number): string {
   if (buy_in <= 100) return t`Micro`;
   if (buy_in <= 250) return t`Low`;
   if (buy_in <= 500) return t`Medium`;
@@ -101,11 +113,13 @@ export function TournamentCard({
   const canRegister = isRegisteringStatus && !isFull && !isRegistered && !isRegistering;
   const canUnregister = isRegisteringStatus && isRegistered && !isUnregistering;
   const canSpectate = isRunning && !isRegistered;
-  const canPlay = isRunning && isRegistered;
+  const _canPlay = isRunning && isRegistered;
   const canResults = isCompleted;
 
-  const showCountdown = isRegisteringStatus && starts_in_seconds !== undefined && starts_in_seconds > 0;
-  const needsPlayers = isRegisteringStatus && starts_in_seconds === undefined && registered < min_players_to_start;
+  const showCountdown =
+    isRegisteringStatus && starts_in_seconds !== undefined && starts_in_seconds > 0;
+  const needsPlayers =
+    isRegisteringStatus && starts_in_seconds === undefined && registered < min_players_to_start;
 
   const bgImage = getTournamentBg(name, buy_in);
 
@@ -124,9 +138,7 @@ export function TournamentCard({
         style={{ backgroundImage: `url(${bgImage})` }}
       />
       {/* Gradient Overlay Layer - Less dark, smooth transition */}
-      <div
-        className="absolute inset-0 w-full h-full z-0 transition-all duration-500 pointer-events-none bg-gradient-to-r from-[#0a0a0c]/85 via-[#0a0a0c]/50 to-[#0a0a0c]/85 group-hover:from-[#0a0a0c]/75 group-hover:via-[#0a0a0c]/35 group-hover:to-[#0a0a0c]/75"
-      ></div>
+      <div className="absolute inset-0 w-full h-full z-0 transition-all duration-500 pointer-events-none bg-gradient-to-r from-[#0a0a0c]/85 via-[#0a0a0c]/50 to-[#0a0a0c]/85 group-hover:from-[#0a0a0c]/75 group-hover:via-[#0a0a0c]/35 group-hover:to-[#0a0a0c]/75"></div>
 
       <div className="w-full lg:col-span-5 flex items-start lg:items-center gap-3 lg:gap-4 relative z-10">
         <div
@@ -149,7 +161,9 @@ export function TournamentCard({
           <div className="flex items-center gap-3 mt-1 text-[10px] text-on-surface-variant">
             <span>{getStakeText(buy_in)}</span>
             <span>•</span>
-            <span><Trans>Buy-in {formatCurrency(buy_in)}</Trans></span>
+            <span>
+              <Trans>Buy-in {formatCurrency(buy_in)}</Trans>
+            </span>
             <span>•</span>
             <span className="flex items-center gap-1">
               <Trophy className="w-3 h-3" />
@@ -158,7 +172,9 @@ export function TournamentCard({
             {current_blind_level && (
               <>
                 <span>•</span>
-                <span><Trans>Level {current_blind_level}</Trans></span>
+                <span>
+                  <Trans>Level {current_blind_level}</Trans>
+                </span>
               </>
             )}
           </div>
@@ -168,7 +184,9 @@ export function TournamentCard({
       <div className="lg:col-span-2 text-center font-data-mono relative z-10">
         <div className="flex items-center justify-center gap-1">
           <Users className="w-3.5 h-3.5 text-outline" />
-          <span className="text-on-surface">{registered}/{max_players}</span>
+          <span className="text-on-surface">
+            {registered}/{max_players}
+          </span>
         </div>
       </div>
 
@@ -176,17 +194,26 @@ export function TournamentCard({
         {showCountdown && (
           <div className="flex items-center gap-2 text-[10px] text-on-surface-variant">
             <Clock className="w-3 h-3" />
-            <TimerBar remainingMs={starts_in_seconds * 1000} totalMs={starts_in_seconds * 1000} isActive />
+            <TimerBar
+              remainingMs={starts_in_seconds * 1000}
+              totalMs={starts_in_seconds * 1000}
+              isActive
+            />
             <span className="font-mono">{starts_in_seconds}s</span>
           </div>
         )}
         {needsPlayers && (
           <div className="text-[10px] text-on-surface-variant">
-            <Trans>Needs {min_players_to_start - registered} more player{min_players_to_start - registered > 1 ? 's' : ''}</Trans>
+            <Trans>
+              Needs {min_players_to_start - registered} more player
+              {min_players_to_start - registered > 1 ? 's' : ''}
+            </Trans>
           </div>
         )}
         {isRegisteringStatus && starts_in_seconds === 0 && (
-          <div className="text-[10px] text-tertiary"><Trans>Starting soon…</Trans></div>
+          <div className="text-[10px] text-tertiary">
+            <Trans>Starting soon…</Trans>
+          </div>
         )}
       </div>
 
