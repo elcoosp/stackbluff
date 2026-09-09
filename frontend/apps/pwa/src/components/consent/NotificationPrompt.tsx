@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useConsentStore } from '@/stores/consentStore';
-import { isPushSupported, subscribeToPushNotifications } from '@/services/notifications';
-import { consentLogger } from '@/lib/logger';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useInterval } from '@/hooks/useInterval';
 import { FIRST_HAND_PLAYED_KEY, MAYBE_LATER_COOLDOWN_MS } from '@/lib/consent/constants';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
+import { consentLogger } from '@/lib/logger';
+import { isPushSupported, subscribeToPushNotifications } from '@/services/notifications';
+import { useConsentStore } from '@/stores/consentStore';
 
 interface NotificationPromptProps {
   onDecision?: (decision: 'allowed' | 'denied' | 'later') => void;
@@ -46,7 +46,7 @@ export function NotificationPrompt({ onDecision }: NotificationPromptProps) {
         }
       }
     }, [notificationPromptDismissedAt]),
-    shouldCheckCooldown ? 60_000 : null // Check every minute, null to disable
+    shouldCheckCooldown ? 60_000 : null, // Check every minute, null to disable
   );
 
   // Unified visibility: only show if all conditions are met
