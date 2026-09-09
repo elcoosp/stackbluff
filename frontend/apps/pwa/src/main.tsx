@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import ReactDOM from 'react-dom/client';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { FeedbackProvider } from '@stackbluff/shared/components/feedback/FeedbackProvider';
-import { I18nProvider } from '@lingui/react';
 import { i18n } from '@lingui/core';
+import { I18nProvider } from '@lingui/react';
+import { FeedbackProvider } from '@stackbluff/shared/components/feedback/FeedbackProvider';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import React, { useEffect, useState } from 'react';
+import ReactDOM from 'react-dom/client';
 import './index.css';
 
 // --- 1. Load default locale synchronously ---
 import { messages as enMessages } from './locales/en/messages.mjs';
+
 i18n.load('en', enMessages);
 i18n.activate('en');
 
@@ -91,5 +92,5 @@ function RootApp() {
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <RootApp />
-  </React.StrictMode>
+  </React.StrictMode>,
 );
