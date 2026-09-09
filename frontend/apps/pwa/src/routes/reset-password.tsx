@@ -1,19 +1,18 @@
-import { createFileRoute, useNavigate, useSearch } from '@tanstack/react-router';
-import { useForm } from '@tanstack/react-form';
-import { useMutation } from '@tanstack/react-query';
-import { z } from 'zod';
-import { useState } from 'react';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import { authApi } from '@stackbluff/shared/auth/api';
 import { GlassPanel } from '@stackbluff/shared/ui/GlassPanel';
 import { LiquidMetalButton } from '@stackbluff/shared/ui/LiquidMetalButton';
-import { Link } from '@tanstack/react-router';
-import { Lock, ArrowLeft, CheckCircle } from 'lucide-react';
+import { useForm } from '@tanstack/react-form';
+import { useMutation } from '@tanstack/react-query';
+import { createFileRoute, Link, useNavigate, useSearch } from '@tanstack/react-router';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ArrowLeft, CheckCircle, Lock } from 'lucide-react';
+import { useState } from 'react';
 import { toast } from 'sonner';
+import { z } from 'zod';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
 
 const resetPasswordSchema = z
   .object({
@@ -72,7 +71,9 @@ function ResetPasswordPage() {
         <div className="relative z-10 w-full max-w-md">
           <GlassPanel>
             <div className="text-center p-4">
-              <h2 className="text-lg font-semibold text-on-surface mb-2"><Trans>Invalid Reset Link</Trans></h2>
+              <h2 className="text-lg font-semibold text-on-surface mb-2">
+                <Trans>Invalid Reset Link</Trans>
+              </h2>
               <p className="text-on-surface-variant text-sm mb-4">
                 <Trans>The password reset link is missing or invalid.</Trans>
               </p>
@@ -98,17 +99,25 @@ function ResetPasswordPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#1a1b1e_0%,_#0a0a0a_100%)]" />
         <div className="relative z-10 w-full max-w-md">
           <div className="text-center mb-8">
-            <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter"><Trans>STACKBLUFF</Trans></h1>
-            <p className="font-data-mono text-xs text-outline mt-2 tracking-widest"><Trans>PASSWORD RESET</Trans></p>
+            <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter">
+              <Trans>STACKBLUFF</Trans>
+            </h1>
+            <p className="font-data-mono text-xs text-outline mt-2 tracking-widest">
+              <Trans>PASSWORD RESET</Trans>
+            </p>
           </div>
           <GlassPanel>
             <div className="space-y-6 p-2 text-center">
               <div className="flex justify-center">
                 <CheckCircle className="w-16 h-16 text-tertiary" />
               </div>
-              <h2 className="text-lg font-semibold text-on-surface"><Trans>Password Reset Successful</Trans></h2>
+              <h2 className="text-lg font-semibold text-on-surface">
+                <Trans>Password Reset Successful</Trans>
+              </h2>
               <p className="text-on-surface-variant text-sm">
-                <Trans>Your password has been updated. You can now sign in with your new password.</Trans>
+                <Trans>
+                  Your password has been updated. You can now sign in with your new password.
+                </Trans>
               </p>
               <LiquidMetalButton
                 type="button"
@@ -131,8 +140,12 @@ function ResetPasswordPage() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#1a1b1e_0%,_#0a0a0a_100%)]" />
       <div className="relative z-10 w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter"><Trans>STACKBLUFF</Trans></h1>
-          <p className="font-data-mono text-xs text-outline mt-2 tracking-widest"><Trans>RESET PASSWORD</Trans></p>
+          <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter">
+            <Trans>STACKBLUFF</Trans>
+          </h1>
+          <p className="font-data-mono text-xs text-outline mt-2 tracking-widest">
+            <Trans>RESET PASSWORD</Trans>
+          </p>
         </div>
         <GlassPanel>
           <form
@@ -173,9 +186,9 @@ function ResetPasswordPage() {
                           transition={{ duration: 0.2 }}
                           className="text-xs font-data-mono text-red-400 mt-1"
                         >
-                          {field.state.meta.errors.map((e) =>
-                            typeof e === 'string' ? e : e?.message || t`Invalid`
-                          ).join(', ')}
+                          {field.state.meta.errors
+                            .map((e) => (typeof e === 'string' ? e : e?.message || t`Invalid`))
+                            .join(', ')}
                         </motion.p>
                       )}
                     </AnimatePresence>
@@ -215,9 +228,9 @@ function ResetPasswordPage() {
                           transition={{ duration: 0.2 }}
                           className="text-xs font-data-mono text-red-400 mt-1"
                         >
-                          {field.state.meta.errors.map((e) =>
-                            typeof e === 'string' ? e : e?.message || t`Invalid`
-                          ).join(', ')}
+                          {field.state.meta.errors
+                            .map((e) => (typeof e === 'string' ? e : e?.message || t`Invalid`))
+                            .join(', ')}
                         </motion.p>
                       )}
                     </AnimatePresence>
@@ -236,7 +249,10 @@ function ResetPasswordPage() {
             </LiquidMetalButton>
 
             <div className="text-center pt-4">
-              <Link to="/login" className="font-label-caps text-[10px] text-on-surface-variant hover:text-on-surface transition-all tracking-widest uppercase">
+              <Link
+                to="/login"
+                className="font-label-caps text-[10px] text-on-surface-variant hover:text-on-surface transition-all tracking-widest uppercase"
+              >
                 <ArrowLeft className="w-3 h-3 inline mr-1" />
                 <Trans>BACK TO SIGN IN</Trans>
               </Link>
