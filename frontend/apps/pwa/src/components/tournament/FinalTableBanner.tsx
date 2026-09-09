@@ -1,6 +1,6 @@
-import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy } from 'lucide-react';
 import { Trans } from '@lingui/react/macro';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Trophy } from 'lucide-react';
 
 interface FinalTableBannerProps {
   visible: boolean;
