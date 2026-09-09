@@ -42,7 +42,7 @@ impl RealPaymentService {
             config,
         }
     }
-    }
+}
 
 fn currency_from_str(s: &str) -> Result<Currency, AppError> {
     s.parse::<Currency>()
@@ -139,7 +139,8 @@ impl PaymentService for RealPaymentService {
                 Ok(serde_json::json!({
                     "client_secret": client_secret,
                     "checkout_url": checkout_url
-                }).to_string())
+                })
+                .to_string())
             }
             "telegram_stars" => {
                 let synthetic_id = format!(
@@ -176,7 +177,7 @@ impl PaymentService for RealPaymentService {
         metadata: serde_json::Value,
     ) -> Result<String, AppError> {
         use sb_db_entities::products;
-        use sea_orm::{EntityTrait, ColumnTrait, QueryFilter};
+        use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 
         let product = products::Entity::find()
             .filter(products::Column::Id.eq(product_id))
@@ -192,7 +193,8 @@ impl PaymentService for RealPaymentService {
         meta["product_id"] = serde_json::to_value(product_id).unwrap_or_default();
         meta["product_type"] = serde_json::to_value(product.product_type).unwrap_or_default();
 
-        self.create_intent(user_id, amount, currency, provider, meta).await
+        self.create_intent(user_id, amount, currency, provider, meta)
+            .await
     }
 
     async fn confirm_payment(
