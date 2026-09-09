@@ -15,12 +15,36 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Products::Name).string().not_null())
                     .col(ColumnDef::new(Products::Description).string().not_null())
                     .col(ColumnDef::new(Products::Price).big_integer().not_null())
-                    .col(ColumnDef::new(Products::StarsPrice).big_integer().not_null())
-                    .col(ColumnDef::new(Products::Currency).string().not_null().default("USD"))
-                    .col(ColumnDef::new(Products::ProductType).string().not_null().default("chips"))
+                    .col(
+                        ColumnDef::new(Products::StarsPrice)
+                            .big_integer()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(Products::Currency)
+                            .string()
+                            .not_null()
+                            .default("USD"),
+                    )
+                    .col(
+                        ColumnDef::new(Products::ProductType)
+                            .string()
+                            .not_null()
+                            .default("chips"),
+                    )
                     .col(ColumnDef::new(Products::Metadata).json())
-                    .col(ColumnDef::new(Products::CreatedAt).timestamp_with_time_zone().not_null().default(Expr::current_timestamp()))
-                    .col(ColumnDef::new(Products::UpdatedAt).timestamp_with_time_zone().not_null().default(Expr::current_timestamp()))
+                    .col(
+                        ColumnDef::new(Products::CreatedAt)
+                            .timestamp_with_time_zone()
+                            .not_null()
+                            .default(Expr::current_timestamp()),
+                    )
+                    .col(
+                        ColumnDef::new(Products::UpdatedAt)
+                            .timestamp_with_time_zone()
+                            .not_null()
+                            .default(Expr::current_timestamp()),
+                    )
                     .to_owned(),
             )
             .await?;
@@ -30,37 +54,49 @@ impl MigrationTrait for Migration {
             (
                 "Starter Pack",
                 "20,000 chips to start your journey.",
-                499, 499, "chips",
+                499,
+                499,
+                "chips",
                 serde_json::json!({ "chips": 20000 }),
             ),
             (
                 "Booster Pack",
                 "50,000 chips to boost your stack.",
-                999, 999, "chips",
+                999,
+                999,
+                "chips",
                 serde_json::json!({ "chips": 50000 }),
             ),
             (
                 "Pro Pack",
                 "125,000 chips for serious play.",
-                1999, 1999, "chips",
+                1999,
+                1999,
+                "chips",
                 serde_json::json!({ "chips": 125000 }),
             ),
             (
                 "High Roller Pack",
                 "400,000 chips for high rollers.",
-                4999, 4999, "chips",
+                4999,
+                4999,
+                "chips",
                 serde_json::json!({ "chips": 400000 }),
             ),
             (
                 "Season Pass",
                 "30 days of unlimited Oracle access & daily rewards.",
-                1999, 1999, "season_pass",
+                1999,
+                1999,
+                "season_pass",
                 serde_json::json!({ "duration_days": 30 }),
             ),
             (
                 "Club Pro",
                 "Unlock all club customization features.",
-                999, 999, "club_pro",
+                999,
+                999,
+                "club_pro",
                 serde_json::json!({ "duration_days": 30 }),
             ),
         ];
@@ -86,7 +122,9 @@ impl MigrationTrait for Migration {
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        manager.drop_table(Table::drop().table(Products::Table).to_owned()).await
+        manager
+            .drop_table(Table::drop().table(Products::Table).to_owned())
+            .await
     }
 }
 
