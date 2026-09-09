@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use sb_shared_types::{errors::AppError, RequestContext, UserId};
+use sb_shared_types::{RequestContext, UserId, errors::AppError};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
