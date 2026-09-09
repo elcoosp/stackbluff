@@ -1,10 +1,10 @@
+import { Dialog } from '@stackbluff/shared/components/Dialog';
 import { motion } from 'framer-motion';
+import { Award, BarChart3, Coins, Target, TrendingUp } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePlayerStats } from '@/hooks/usePlayerStats';
 import { cn } from '@/lib/utils';
-import { Dialog } from '@stackbluff/shared/components/Dialog';
-import { Coins, Target, TrendingUp, BarChart3, Award } from 'lucide-react';
 
 interface PlayerStatsDialogProps {
   userId: string | null;
@@ -12,7 +12,11 @@ interface PlayerStatsDialogProps {
 }
 
 const formatCurrency = (amount: number) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount);
+  new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(amount);
 
 const formatPercent = (value: number) => `${(value * 100).toFixed(1)}%`;
 
@@ -71,11 +75,17 @@ export function PlayerStatsDialog({ userId, onOpenChange }: PlayerStatsDialogPro
             <Skeleton className="h-6 w-full bg-white/5" />
           </div>
         ) : isError || !stats ? (
-          <motion.div variants={itemVariants} className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[11px]">
+          <motion.div
+            variants={itemVariants}
+            className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[11px]"
+          >
             Failed to load stats. Please try again later.
           </motion.div>
         ) : stats.hands_played === 0 ? (
-          <motion.div variants={itemVariants} className="text-center py-8 text-on-surface-variant text-sm">
+          <motion.div
+            variants={itemVariants}
+            className="text-center py-8 text-on-surface-variant text-sm"
+          >
             Player hasn't completed any hands yet.
           </motion.div>
         ) : (
@@ -92,7 +102,9 @@ export function PlayerStatsDialog({ userId, onOpenChange }: PlayerStatsDialogPro
               </div>
               <div className="flex justify-between font-mono text-sm">
                 <span className="text-on-surface-variant">Hands Won</span>
-                <span className="text-on-surface">{stats.hands_won.toLocaleString()} ({formatPercent(stats.win_rate)})</span>
+                <span className="text-on-surface">
+                  {stats.hands_won.toLocaleString()} ({formatPercent(stats.win_rate)})
+                </span>
               </div>
               <div className="flex justify-between font-mono text-sm">
                 <span className="text-on-surface-variant">All-in Count</span>
@@ -139,7 +151,9 @@ export function PlayerStatsDialog({ userId, onOpenChange }: PlayerStatsDialogPro
               <div className="flex justify-between font-mono text-sm">
                 <span className="text-on-surface-variant">Won at Showdown</span>
                 <span className="text-on-surface">
-                  {stats.showdowns > 0 ? formatPercent(stats.showdown_wins / stats.showdowns) : '0%'}
+                  {stats.showdowns > 0
+                    ? formatPercent(stats.showdown_wins / stats.showdowns)
+                    : '0%'}
                 </span>
               </div>
               <div className="flex justify-between font-mono text-sm">
@@ -157,7 +171,8 @@ export function PlayerStatsDialog({ userId, onOpenChange }: PlayerStatsDialogPro
               <div className="flex justify-between font-mono text-sm">
                 <span className="text-on-surface-variant">Net Profit</span>
                 <span className={cn(stats.net_profit >= 0 ? 'text-tertiary' : 'text-red-400')}>
-                  {stats.net_profit >= 0 ? '+' : ''}{formatCurrency(stats.net_profit)}
+                  {stats.net_profit >= 0 ? '+' : ''}
+                  {formatCurrency(stats.net_profit)}
                 </span>
               </div>
               <div className="flex justify-between font-mono text-sm">
