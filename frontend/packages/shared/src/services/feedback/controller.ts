@@ -1,5 +1,5 @@
-import { hapticEngine } from './haptics';
 import { audioEngine } from './audio';
+import { hapticEngine } from './haptics';
 import { FEEDBACK_PRESETS } from './presets';
 import type { FeedbackEvent, FeedbackPreferences } from './types';
 import { DEFAULT_PREFERENCES } from './types';
