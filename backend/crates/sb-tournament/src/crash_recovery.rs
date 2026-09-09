@@ -24,7 +24,8 @@ pub async fn settle_crashed_tournaments(
 
         // Get results to avoid double-refunding
         let results = repo.list_results(tournament.id).await?;
-        let result_user_ids: std::collections::HashSet<_> = results.iter().map(|r| r.user_id).collect();
+        let result_user_ids: std::collections::HashSet<_> =
+            results.iter().map(|r| r.user_id).collect();
 
         // Get all registrations and refund buy-ins only if not already paid out
         let registrations = repo.list_registrations(tournament.id).await?;
@@ -72,4 +73,3 @@ pub async fn settle_crashed_tournaments(
 
     Ok(())
 }
-
