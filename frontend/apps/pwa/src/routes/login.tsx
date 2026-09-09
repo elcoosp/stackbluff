@@ -1,23 +1,22 @@
-import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
-import { useForm } from '@tanstack/react-form';
-import { useMutation } from '@tanstack/react-query';
-import { z } from 'zod';
-import { useState, useEffect } from 'react';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import { authApi } from '@stackbluff/shared/auth/api';
 import { setToken } from '@stackbluff/shared/auth/token';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { GlassPanel } from '@stackbluff/shared/ui/GlassPanel';
 import { LiquidMetalButton } from '@stackbluff/shared/ui/LiquidMetalButton';
-import { Link } from '@tanstack/react-router';
-import { Mail, Lock } from 'lucide-react';
+import { useForm } from '@tanstack/react-form';
+import { useMutation } from '@tanstack/react-query';
+import { createFileRoute, Link, redirect, useNavigate } from '@tanstack/react-router';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Lock, Mail } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { z } from 'zod';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { motion, AnimatePresence } from 'framer-motion';
-import { isAccountLocked, getLockoutRemaining, clearLockout } from '@/lib/errorHandler';
 import { trackGameEvent } from '@/lib/customAnalytics';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
+import { clearLockout, getLockoutRemaining, isAccountLocked } from '@/lib/errorHandler';
 
 const loginSchema = z.object({
   email: z.string().min(1, t`Email is required`).email(t`Invalid email address`),
@@ -25,7 +24,9 @@ const loginSchema = z.object({
 });
 
 export const Route = createFileRoute('/login')({
-  beforeLoad: () => { if (useAuthStore.getState().user) throw redirect({ to: '/' }); },
+  beforeLoad: () => {
+    if (useAuthStore.getState().user) throw redirect({ to: '/' });
+  },
   component: LoginPage,
 });
 
@@ -103,11 +104,21 @@ function LoginPage() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#1a1b1e_0%,_#0a0a0a_100%)]" />
       <div className="relative z-10 w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter"><Trans>STACKBLUFF</Trans></h1>
-          <p className="font-data-mono text-xs text-outline mt-2 tracking-widest"><Trans>SECURE LOGIN</Trans></p>
+          <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter">
+            <Trans>STACKBLUFF</Trans>
+          </h1>
+          <p className="font-data-mono text-xs text-outline mt-2 tracking-widest">
+            <Trans>SECURE LOGIN</Trans>
+          </p>
         </div>
         <GlassPanel>
-          <form onSubmit={(e) => { e.preventDefault(); form.handleSubmit(); }} className="space-y-6">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              form.handleSubmit();
+            }}
+            className="space-y-6"
+          >
             {isMiniApp && (
               <div className="space-y-4">
                 <LiquidMetalButton
@@ -124,7 +135,9 @@ function LoginPage() {
                     <div className="w-full border-t border-white/10" />
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-black/60 px-2 text-on-surface-variant"><Trans>or</Trans></span>
+                    <span className="bg-black/60 px-2 text-on-surface-variant">
+                      <Trans>or</Trans>
+                    </span>
                   </div>
                 </div>
               </div>
@@ -163,7 +176,9 @@ function LoginPage() {
                               transition={{ duration: 0.2 }}
                               className="text-xs font-data-mono text-red-400 mt-1"
                             >
-                              {field.state.meta.errors.map((e: any) => e?.message || String(e)).join(', ')}
+                              {field.state.meta.errors
+                                .map((e: any) => e?.message || String(e))
+                                .join(', ')}
                             </motion.p>
                           )}
                         </AnimatePresence>
@@ -203,7 +218,9 @@ function LoginPage() {
                               transition={{ duration: 0.2 }}
                               className="text-xs font-data-mono text-red-400 mt-1"
                             >
-                              {field.state.meta.errors.map((e: any) => e?.message || String(e)).join(', ')}
+                              {field.state.meta.errors
+                                .map((e: any) => e?.message || String(e))
+                                .join(', ')}
                             </motion.p>
                           )}
                         </AnimatePresence>
@@ -230,26 +247,40 @@ function LoginPage() {
             )}
 
             <div className="text-center">
-              <Link to="/forgot-password" className="font-label-caps text-[10px] text-on-surface-variant hover:text-on-surface transition-all tracking-widest uppercase">
+              <Link
+                to="/forgot-password"
+                className="font-label-caps text-[10px] text-on-surface-variant hover:text-on-surface transition-all tracking-widest uppercase"
+              >
                 <Trans>FORGOT PASSWORD?</Trans>
               </Link>
             </div>
 
             <div className="text-center pt-2">
-              <Link to="/register" className="font-label-caps text-[10px] text-on-surface-variant hover:text-on-surface transition-all tracking-widest uppercase">
-                <Trans>NEW TO STACKBLUFF? <span className="text-tertiary">CREATE ACCOUNT</span></Trans>
+              <Link
+                to="/register"
+                className="font-label-caps text-[10px] text-on-surface-variant hover:text-on-surface transition-all tracking-widest uppercase"
+              >
+                <Trans>
+                  NEW TO STACKBLUFF? <span className="text-tertiary">CREATE ACCOUNT</span>
+                </Trans>
               </Link>
             </div>
           </form>
         </GlassPanel>
 
-      <div className="flex flex-wrap gap-4 justify-center text-sm text-on-surface-variant mt-6">
-        <Link to="/legal/terms" className="hover:text-tertiary transition-colors"><Trans>Terms of Service</Trans></Link>
-        <span className="text-white/20">|</span>
-        <Link to="/legal/privacy" className="hover:text-tertiary transition-colors"><Trans>Privacy Policy</Trans></Link>
-        <span className="text-white/20">|</span>
-        <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors"><Trans>Responsible Gaming</Trans></Link>
-      </div>
+        <div className="flex flex-wrap gap-4 justify-center text-sm text-on-surface-variant mt-6">
+          <Link to="/legal/terms" className="hover:text-tertiary transition-colors">
+            <Trans>Terms of Service</Trans>
+          </Link>
+          <span className="text-white/20">|</span>
+          <Link to="/legal/privacy" className="hover:text-tertiary transition-colors">
+            <Trans>Privacy Policy</Trans>
+          </Link>
+          <span className="text-white/20">|</span>
+          <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors">
+            <Trans>Responsible Gaming</Trans>
+          </Link>
+        </div>
       </div>
     </div>
   );
