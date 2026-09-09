@@ -52,6 +52,6 @@ export const useShopStore = create<ShopState>()(
       setPurchasing: (isPurchasing) => set({ isPurchasing }),
       setToast: (toast) => set({ toast }),
     }),
-    { name: 'shop-store' }
-  )
+    { name: 'shop-store' },
+  ),
 );
