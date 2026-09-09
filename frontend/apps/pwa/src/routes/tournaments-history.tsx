@@ -1,15 +1,18 @@
-import { createFileRoute, useNavigate, Link } from '@tanstack/react-router';
-import { useQuery } from '@tanstack/react-query';
-import { useAuthStore } from '@stackbluff/shared/stores/authStore';
-import { tournamentApi } from '@stackbluff/shared/api/tournamentApi';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { motion } from 'framer-motion';
-import { Trophy, Calendar, Users, Coins, Sparkles, ChevronRight, LogIn } from 'lucide-react';
-import type { TournamentResultEntry, TournamentSummary } from '@stackbluff/shared/types/tournament.types';
-import { Trans } from '@lingui/react/macro';
 import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
+import { tournamentApi } from '@stackbluff/shared/api/tournamentApi';
+import { useAuthStore } from '@stackbluff/shared/stores/authStore';
+import type {
+  TournamentResultEntry,
+  TournamentSummary,
+} from '@stackbluff/shared/types/tournament.types';
+import { useQuery } from '@tanstack/react-query';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import { motion } from 'framer-motion';
+import { Calendar, ChevronRight, Coins, LogIn, Sparkles, Trophy, Users } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export const Route = createFileRoute('/tournaments-history')({
   component: TournamentHistoryPage,
@@ -42,10 +45,14 @@ const itemVariants = {
 };
 
 function TournamentHistoryPage() {
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const userId = useAuthStore((s) => s.user?.id);
 
-  const { data: tournaments, isLoading, error } = useQuery<TournamentWithResults[]>({
+  const {
+    data: tournaments,
+    isLoading,
+    error,
+  } = useQuery<TournamentWithResults[]>({
     queryKey: ['tournament-history', userId],
     queryFn: async () => {
       const all = await tournamentApi.list({ status: 'Completed' });
@@ -61,9 +68,9 @@ function TournamentHistoryPage() {
             completed_at: (detail as any).completed_at || new Date().toISOString(),
             results: userResults || [],
           } as TournamentWithResults;
-        })
+        }),
       );
-      return userId ? withResults.filter(t => t.results.length > 0) : withResults;
+      return userId ? withResults.filter((t) => t.results.length > 0) : withResults;
     },
     enabled: !!userId,
     staleTime: 60_000,
@@ -84,12 +91,16 @@ function TournamentHistoryPage() {
               <Trans>Past Events</Trans>
             </span>
           </div>
-          <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface"><Trans>Tournament History</Trans></h1>
+          <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface">
+            <Trans>Tournament History</Trans>
+          </h1>
         </motion.div>
         <div className="flex flex-col items-center justify-center min-h-[40vh] p-6">
           <Card className="max-w-md w-full p-12 text-center bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl">
             <Trophy className="w-12 h-12 text-orange-400 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-on-surface mb-2"><Trans>Sign In Required</Trans></h2>
+            <h2 className="text-xl font-semibold text-on-surface mb-2">
+              <Trans>Sign In Required</Trans>
+            </h2>
             <p className="text-on-surface-variant text-sm mb-6">
               <Trans>Please sign in to view your tournament history.</Trans>
             </p>
@@ -124,11 +135,15 @@ function TournamentHistoryPage() {
               <Trans>Error</Trans>
             </span>
           </div>
-          <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface"><Trans>Tournament History</Trans></h1>
+          <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface">
+            <Trans>Tournament History</Trans>
+          </h1>
         </motion.div>
         <div className="flex flex-col items-center justify-center min-h-[40vh] p-6">
           <Card className="max-w-md w-full p-12 text-center bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl">
-            <h2 className="text-xl font-semibold text-red-400 mb-2"><Trans>Failed to Load</Trans></h2>
+            <h2 className="text-xl font-semibold text-red-400 mb-2">
+              <Trans>Failed to Load</Trans>
+            </h2>
             <p className="text-on-surface-variant text-sm mb-6">
               <Trans>There was an error loading your tournament history.</Trans>
             </p>
@@ -178,7 +193,9 @@ function TournamentHistoryPage() {
         >
           <Card className="p-12 text-center bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl flex flex-col items-center">
             <Trophy className="w-12 h-12 text-on-surface-variant mx-auto mb-4" />
-            <p className="text-on-surface-variant"><Trans>You haven't participated in any completed tournaments yet.</Trans></p>
+            <p className="text-on-surface-variant">
+              <Trans>You haven't participated in any completed tournaments yet.</Trans>
+            </p>
             <Link to="/tournaments" className="mt-6 inline-block">
               <Button className="flex items-center gap-2 px-4 py-2 bg-tertiary text-on-tertiary font-label-caps text-xs hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg shadow-emerald-500/10 rounded-lg">
                 <Trophy className="w-4 h-4 mr-1" />
@@ -200,7 +217,9 @@ function TournamentHistoryPage() {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <h3 className="font-headline-md text-base text-on-surface flex items-center gap-2">
-                      <span className="truncate">{tournament.name || tournament.tournament_type}</span>
+                      <span className="truncate">
+                        {tournament.name || tournament.tournament_type}
+                      </span>
                       <span className="text-xs bg-white/10 px-2 py-0.5 rounded-full text-on-surface-variant uppercase tracking-wider">
                         {tournament.tournament_type === 'SitAndGo' ? t`Sit & Go` : t`MTT`}
                       </span>
@@ -220,10 +239,7 @@ function TournamentHistoryPage() {
                       </span>
                     </div>
                   </div>
-                  <Link
-                    to="/tournaments/$tournamentId"
-                    params={{ tournamentId: tournament.id }}
-                  >
+                  <Link to="/tournaments/$tournamentId" params={{ tournamentId: tournament.id }}>
                     <Button
                       variant="outline"
                       className="flex items-center gap-1.5 px-4 py-2 border-outline-variant text-on-surface hover:border-tertiary hover:text-tertiary hover:bg-tertiary/10 font-label-caps text-[10px] uppercase tracking-wider rounded-lg"
@@ -251,7 +267,9 @@ function TournamentHistoryPage() {
                                 {result.position === 1 ? '🥇' : result.position === 2 ? '🥈' : '🥉'}
                               </span>
                             ) : (
-                              <span className="text-on-surface-variant w-6 text-center font-mono">#{result.position}</span>
+                              <span className="text-on-surface-variant w-6 text-center font-mono">
+                                #{result.position}
+                              </span>
                             )}
                             <span className="text-on-surface font-medium">
                               {result.display_name || t`You`}
