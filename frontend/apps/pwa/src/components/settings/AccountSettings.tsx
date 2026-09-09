@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import { useAuthStore } from '@stackbluff/shared/stores/authStore';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import { authApi } from '@stackbluff/shared/auth/api';
+import { useAuthStore } from '@stackbluff/shared/stores/authStore';
+import { AlertCircle, CheckCircle, Loader2, Mail } from 'lucide-react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Loader2, Mail, CheckCircle, AlertCircle } from 'lucide-react';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
 
 export function AccountSettings() {
   const { user, loadUser } = useAuthStore();
@@ -24,7 +24,8 @@ export function AccountSettings() {
       await authApi.resendVerification();
       toast.success(t`Verification email sent! Please check your inbox.`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : t`Failed to send verification email.`;
+      const message =
+        error instanceof Error ? error.message : t`Failed to send verification email.`;
       toast.error(message);
     } finally {
       setIsResending(false);
@@ -33,14 +34,18 @@ export function AccountSettings() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-semibold text-on-surface"><Trans>Account Settings</Trans></h2>
+      <h2 className="text-lg font-semibold text-on-surface">
+        <Trans>Account Settings</Trans>
+      </h2>
 
       {/* Email Verification Section */}
       {hasEmail && (
         <div className="p-4 rounded-lg bg-surface-container-high border border-outline-variant">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-on-surface"><Trans>Email Verification</Trans></p>
+              <p className="text-sm font-medium text-on-surface">
+                <Trans>Email Verification</Trans>
+              </p>
               <p className="text-xs text-on-surface-variant mt-0.5">
                 {isEmailVerified ? (
                   <span className="flex items-center gap-1 text-tertiary">
@@ -78,7 +83,9 @@ export function AccountSettings() {
           </div>
           {!isEmailVerified && (
             <p className="text-xs text-on-surface-variant mt-2">
-              <Trans>Verify your email to unlock full account features and secure your account.</Trans>
+              <Trans>
+                Verify your email to unlock full account features and secure your account.
+              </Trans>
             </p>
           )}
         </div>
@@ -86,7 +93,9 @@ export function AccountSettings() {
 
       {/* Additional account settings can go here */}
       <div className="p-4 rounded-lg bg-surface-container-high border border-outline-variant">
-        <p className="text-sm text-on-surface"><Trans>Account ID:</Trans> {user?.id || t`Not logged in`}</p>
+        <p className="text-sm text-on-surface">
+          <Trans>Account ID:</Trans> {user?.id || t`Not logged in`}
+        </p>
         <p className="text-xs text-on-surface-variant mt-1">
           <Trans>Platform:</Trans> {user?.platform || t`Unknown`}
         </p>
