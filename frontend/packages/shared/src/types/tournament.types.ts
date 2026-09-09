@@ -14,15 +14,20 @@ export interface TournamentSummary {
   status: TournamentStatus;
   registered: number;
   max_players: number;
-  min_players_to_start: number;   // new
-  starts_in_seconds?: number;     // new
+  min_players_to_start: number; // new
+  starts_in_seconds?: number; // new
   buy_in: number;
   prize_pool: number;
   current_blind_level?: number;
   started_at?: Date;
   payout_structure?: PayoutEntry[];
   starts_at?: Date;
-  blind_levels?: Array<{ level: number; small_blind: number; big_blind: number; duration_secs: number }>;
+  blind_levels?: Array<{
+    level: number;
+    small_blind: number;
+    big_blind: number;
+    duration_secs: number;
+  }>;
 }
 
 export interface TournamentState {
