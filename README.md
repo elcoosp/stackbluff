@@ -20,9 +20,11 @@
 
 ## What & Why
 
-**StackBluff** is a free-to-play social poker platform targeting France, then Europe, then the world — aiming for **€1M ARR in its first operational year** on a near-zero budget. It runs natively as a **Telegram Mini App** (`/poker` in any group → table in 10s) and as a **Progressive Web App**, backed by a Rust Axum server that processes game actions with **p99 ≤ 10ms latency** at 1,000 concurrent tables.
+|**StackBluff** is a free-to-play social poker platform targeting France, then Europe, then the world, on a near-zero €100 bootstrap budget. It runs natively as a **Telegram Mini App** (`/poker` in any group → table in 10s) and as a **Progressive Web App**, backed by a Rust Axum server that processes game actions with **p99 ≤ 10ms latency** at 1,000 concurrent tables.
 
 The differentiators are performance and virality: every hand produces a shareable replay card, an AI Coach ("The Oracle") gives heuristic coaching at zero LLM cost, and a club + seasonal-ranking system turns friend groups into recurring poker clubs. There is **no real-money play, no pay-to-win** — monetisation is purely cosmetic (Season Pass, chip bundles, avatar items).
+
+**Key flows:** Telegram group `/poker` summoning → instant game → shareable replay card → referral attribution. Daily missions, 7-day streaks, club leaderboards, seasonal ranking (Brick → Legend), AI Coach post-hand analysis.
 
 This repository is the **primary product** of a solo founder + 5 AI agents working in parallel with a strict file-ownership contract that guarantees zero merge conflicts.
 
@@ -174,19 +176,6 @@ pnpm dev
 - **E2E:** `vitest --config e2e/vitest.config.e2e.ts` (Sit&Go + MTT flows against a live test DB)
 - **Security:** `cargo deny check advisories` (license + advisory gate, `deny.toml` configured)
 - **Load testing:** k6 script targeting 1,000 concurrent tables, p99 ≤ 10ms (`docs/spec/stackbluff-verification.md`)
-
-## Product Vision
-
-**Goal:** €1M ARR in 12 months on a €100 infrastructure budget, reaching 5M registered users on Telegram.
-
-| Metric | M1 | M2 | M3 | M6 | M12 |
-|---|---|---|---|---|---|
-| DAU | 100 | 1,000 | 5,000 | 50,000 | 300,000 |
-| Viral coefficient K | — | — | ≥1.3 | — | — |
-| MRR | — | ≥€1K | — | — | ≥€83K |
-| Infra cost / MRR | — | — | ≤0.5% | — | ≤0.5% |
-
-**Key scenarios:** Telegram group `/poker` summoning → instant game → shareable replay card → referral attribution. Daily missions, 7-day streaks, club leaderboards, seasonal ranking (Brick → Legend), AI Coach post-hand analysis.
 
 ## Documentation
 
