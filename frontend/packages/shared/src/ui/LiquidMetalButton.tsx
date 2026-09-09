@@ -1,6 +1,9 @@
-import { forwardRef, ButtonHTMLAttributes } from 'react';
+import { type ButtonHTMLAttributes, forwardRef } from 'react';
+
 type ButtonVariant = 'emerald' | 'silver';
-interface LiquidMetalButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> { variant?: ButtonVariant; }
+interface LiquidMetalButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: ButtonVariant;
+}
 export const LiquidMetalButton = forwardRef<HTMLButtonElement, LiquidMetalButtonProps>(
   ({ className = '', variant = 'emerald', children, ...props }, ref) => (
     <button
@@ -10,6 +13,6 @@ export const LiquidMetalButton = forwardRef<HTMLButtonElement, LiquidMetalButton
     >
       {children}
     </button>
-  )
+  ),
 );
 LiquidMetalButton.displayName = 'LiquidMetalButton';
