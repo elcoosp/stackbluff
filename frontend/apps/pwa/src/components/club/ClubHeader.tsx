@@ -1,8 +1,6 @@
-import { motion } from 'framer-motion';
+import { Trans } from '@lingui/react/macro';
 import { Sparkles, Users } from 'lucide-react';
 import type { ClubDetails } from '../../types/club';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
 
 interface ClubHeaderProps {
   club: ClubDetails;
@@ -30,9 +28,7 @@ export function ClubHeader({ club }: ClubHeaderProps) {
           </div>
         )}
         <div>
-          <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface">
-            {club.name}
-          </h1>
+          <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface">{club.name}</h1>
           <p className="text-on-surface-variant text-sm mt-1 flex items-center gap-1.5">
             <Users className="w-3.5 h-3.5" /> {club.members_count} <Trans>members</Trans>
           </p>
