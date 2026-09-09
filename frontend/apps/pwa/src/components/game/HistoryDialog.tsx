@@ -1,17 +1,16 @@
-import { useAuthStore } from "@stackbluff/shared/stores/authStore";
-import { useRef, useState } from 'react';
-import { useInfiniteQuery } from '@tanstack/react-query';
-import { useVirtualizer } from '@tanstack/react-virtual';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Eye, ChevronRight, Calendar, Users, Coins } from 'lucide-react';
-import { apiClient } from '@stackbluff/shared';
-import { Card } from './Card';
-import TimeAgo from 'react-timeago-i18n';
-import { createPortal } from 'react-dom';
-import { Link } from '@tanstack/react-router';
-import { cn } from '@/lib/utils';
-import { Trans, Plural } from '@lingui/react/macro';
 import { t } from '@lingui/core/macro';
+import { Plural, Trans } from '@lingui/react/macro';
+import { apiClient } from '@stackbluff/shared';
+import { useAuthStore } from '@stackbluff/shared/stores/authStore';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { Link } from '@tanstack/react-router';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Calendar, ChevronRight, Coins, Eye, Users, X } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { cn } from '@/lib/utils';
+import { Card } from './Card';
 
 // Types
 interface WinnerSummary {
@@ -49,11 +48,25 @@ function shortId(id: string): string {
 
 function parseCard(cardStr: string): { rank: string; suit: string } {
   const rankMap: Record<string, string> = {
-    '2': '2', '3': '3', '4': '4', '5': '5', '6': '6', '7': '7', '8': '8', '9': '9', '10': '10',
-    J: 'J', Q: 'Q', K: 'K', A: 'A'
+    '2': '2',
+    '3': '3',
+    '4': '4',
+    '5': '5',
+    '6': '6',
+    '7': '7',
+    '8': '8',
+    '9': '9',
+    '10': '10',
+    J: 'J',
+    Q: 'Q',
+    K: 'K',
+    A: 'A',
   };
   const suitMap: Record<string, string> = {
-    s: '♠', h: '♥', d: '♦', c: '♣'
+    s: '♠',
+    h: '♥',
+    d: '♦',
+    c: '♣',
   };
   const rank = cardStr.slice(0, -1);
   const suit = cardStr.slice(-1);
@@ -65,18 +78,17 @@ export function HistoryDialog({ open, onClose, tableId }: HistoryDialogProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [showOnlyMine, setShowOnlyMine] = useState(false);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } =
-    useInfiniteQuery({
-      queryKey: ['tableHistory', tableId, showOnlyMine],
-      queryFn: ({ pageParam }) =>
-        apiClient<HistoryResponse>(
-          `/tables/${tableId}/history?limit=20${pageParam ? `&cursor=${pageParam}` : ''}${showOnlyMine ? `&user_id=${userId}` : ''}`
-        ),
-      getNextPageParam: (lastPage) => lastPage.next_cursor,
-      initialPageParam: undefined as string | undefined,
-      enabled: open && !!tableId,
-      staleTime: 60_000,
-    });
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } = useInfiniteQuery({
+    queryKey: ['tableHistory', tableId, showOnlyMine],
+    queryFn: ({ pageParam }) =>
+      apiClient<HistoryResponse>(
+        `/tables/${tableId}/history?limit=20${pageParam ? `&cursor=${pageParam}` : ''}${showOnlyMine ? `&user_id=${userId}` : ''}`,
+      ),
+    getNextPageParam: (lastPage) => lastPage.next_cursor,
+    initialPageParam: undefined as string | undefined,
+    enabled: open && !!tableId,
+    staleTime: 60_000,
+  });
 
   const allHistory = data?.pages.flatMap((p) => p.histories) ?? [];
   const total = data?.pages[0]?.total ?? 0;
@@ -120,7 +132,9 @@ export function HistoryDialog({ open, onClose, tableId }: HistoryDialogProps) {
             {/* Header */}
             <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/5 shrink-0">
               <div className="flex items-center gap-3">
-                <h2 className="text-sm font-semibold text-on-surface"><Trans>Hand History</Trans></h2>
+                <h2 className="text-sm font-semibold text-on-surface">
+                  <Trans>Hand History</Trans>
+                </h2>
                 <span className="text-xs text-on-surface-variant bg-white/5 px-2 py-0.5 rounded-full">
                   <Trans>{total} hands</Trans>
                 </span>
@@ -148,13 +162,19 @@ export function HistoryDialog({ open, onClose, tableId }: HistoryDialogProps) {
             {/* Content */}
             <div ref={containerRef} className="flex-1 overflow-y-auto px-5 py-4 dialog-scroll">
               {status === 'pending' && (
-                <div className="flex justify-center py-8 text-on-surface-variant"><Trans>Loading...</Trans></div>
+                <div className="flex justify-center py-8 text-on-surface-variant">
+                  <Trans>Loading...</Trans>
+                </div>
               )}
               {status === 'error' && (
-                <div className="text-center py-8 text-red-400"><Trans>Failed to load history.</Trans></div>
+                <div className="text-center py-8 text-red-400">
+                  <Trans>Failed to load history.</Trans>
+                </div>
               )}
               {status === 'success' && allHistory.length === 0 && (
-                <div className="text-center py-8 text-on-surface-variant"><Trans>No hands played yet.</Trans></div>
+                <div className="text-center py-8 text-on-surface-variant">
+                  <Trans>No hands played yet.</Trans>
+                </div>
               )}
 
               <div
@@ -190,12 +210,14 @@ export function HistoryDialog({ open, onClose, tableId }: HistoryDialogProps) {
                           params={{ handId: hand.id }}
                           className="block group"
                         >
-                          <div className={cn(
-                            'p-3 rounded-lg border transition-colors hover:border-tertiary/30',
-                            hand.winners.some(w => w.user_id === userId)
-                              ? 'border-tertiary/20 bg-tertiary/5'
-                              : 'border-white/10'
-                          )}>
+                          <div
+                            className={cn(
+                              'p-3 rounded-lg border transition-colors hover:border-tertiary/30',
+                              hand.winners.some((w) => w.user_id === userId)
+                                ? 'border-tertiary/20 bg-tertiary/5'
+                                : 'border-white/10',
+                            )}
+                          >
                             {/* Top row: time, pot, winner count */}
                             <div className="flex items-center justify-between text-xs">
                               <div className="flex items-center gap-2">
@@ -243,9 +265,13 @@ export function HistoryDialog({ open, onClose, tableId }: HistoryDialogProps) {
                             {/* Winner info */}
                             <div className="flex items-center justify-between mt-2 text-xs">
                               <div className="flex items-center gap-2">
-                                <span className="text-on-surface-variant"><Trans>Winner:</Trans></span>
+                                <span className="text-on-surface-variant">
+                                  <Trans>Winner:</Trans>
+                                </span>
                                 <span className="text-on-surface font-medium">
-                                  {hand.winners[0]?.user_id === userId ? t`You` : shortId(hand.winners[0]?.user_id || '')}
+                                  {hand.winners[0]?.user_id === userId
+                                    ? t`You`
+                                    : shortId(hand.winners[0]?.user_id || '')}
                                 </span>
                                 <span className="text-on-surface-variant/50">
                                   {hand.winners[0]?.hand_rank || ''}
@@ -253,7 +279,9 @@ export function HistoryDialog({ open, onClose, tableId }: HistoryDialogProps) {
                               </div>
                               <div className="flex items-center gap-1 text-tertiary">
                                 <Eye className="w-3 h-3" />
-                                <span className="group-hover:underline"><Trans>View</Trans></span>
+                                <span className="group-hover:underline">
+                                  <Trans>View</Trans>
+                                </span>
                                 <ChevronRight className="w-3 h-3" />
                               </div>
                             </div>
@@ -280,6 +308,6 @@ export function HistoryDialog({ open, onClose, tableId }: HistoryDialogProps) {
         </>
       )}
     </AnimatePresence>,
-    document.body
+    document.body,
   );
 }
