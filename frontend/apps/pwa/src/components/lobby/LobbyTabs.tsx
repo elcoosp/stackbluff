@@ -1,6 +1,6 @@
-import { useNavigate, useLocation } from '@tanstack/react-router';
-import { cn } from '@/lib/utils';
 import { Trans } from '@lingui/react/macro';
+import { useLocation, useNavigate } from '@tanstack/react-router';
+import { cn } from '@/lib/utils';
 
 export function LobbyTabs() {
   const navigate = useNavigate();
@@ -23,7 +23,7 @@ export function LobbyTabs() {
             'px-3 md:px-6 py-1.5 md:py-2 rounded-lg font-label-caps text-xs md:text-sm transition-all',
             location.pathname === tab.path
               ? 'bg-surface-container-highest text-tertiary'
-              : 'text-on-surface-variant hover:text-on-surface'
+              : 'text-on-surface-variant hover:text-on-surface',
           )}
         >
           {tab.label}
