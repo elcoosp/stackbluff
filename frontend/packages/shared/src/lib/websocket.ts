@@ -1,6 +1,10 @@
 import { getToken } from '@stackbluff/shared/auth/token';
 
-type MessageType = 'club.updated' | 'tournament.created' | 'tournament.registered' | 'leaderboard.refreshed';
+type MessageType =
+  | 'club.updated'
+  | 'tournament.created'
+  | 'tournament.registered'
+  | 'leaderboard.refreshed';
 
 interface WebSocketMessage {
   type: MessageType;
@@ -36,10 +40,12 @@ class ClubWebSocketManager {
         this.reconnectAttempts = 0;
 
         // Subscribe to club events
-        this.ws?.send(JSON.stringify({
-          type: 'subscribe',
-          channels: ['club:*'],
-        }));
+        this.ws?.send(
+          JSON.stringify({
+            type: 'subscribe',
+            channels: ['club:*'],
+          }),
+        );
       };
 
       this.ws.onmessage = (event) => {
@@ -47,9 +53,11 @@ class ClubWebSocketManager {
           const message: WebSocketMessage = JSON.parse(event.data);
 
           // Dispatch as custom DOM event (same pattern as game WebSocket)
-          window.dispatchEvent(new CustomEvent('club:event', {
-            detail: message,
-          }));
+          window.dispatchEvent(
+            new CustomEvent('club:event', {
+              detail: message,
+            }),
+          );
         } catch (err) {
           console.error('Failed to parse WebSocket message:', err);
         }
@@ -81,7 +89,9 @@ class ClubWebSocketManager {
 
     this.reconnectTimeout = window.setTimeout(() => {
       this.reconnectAttempts++;
-      console.log(`Attempting to reconnect WebSocket (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
+      console.log(
+        `Attempting to reconnect WebSocket (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`,
+      );
       this.connect();
     }, this.reconnectDelay * this.reconnectAttempts);
   }
