@@ -1,13 +1,12 @@
-import { useState, useLayoutEffect, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useDealStore } from '@stackbluff/shared/stores/dealStore';
 import { useFeedback } from '@stackbluff/shared/hooks/useFeedback';
+import { useDealStore } from '@stackbluff/shared/stores/dealStore';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   desktopPositions,
   getMobilePositions,
   getPositionIndex,
   MAX_SEATS,
-  type Position,
 } from '@/lib/seatPositions';
 
 const pct = (s: string) => parseFloat(s);
@@ -40,7 +39,13 @@ interface DealAnimationLayerProps {
   seats: Record<number, any>;
 }
 
-export const DealAnimationLayer = ({ isDesktop, heroSeat, heroHoleCards, communityCards, seats }: DealAnimationLayerProps) => {
+export const DealAnimationLayer = ({
+  isDesktop,
+  heroSeat,
+  heroHoleCards,
+  communityCards,
+  seats,
+}: DealAnimationLayerProps) => {
   const { isDealing, startDealing, finishDealing } = useDealStore();
   const { trigger } = useFeedback();
   const vw = useViewportWidth();
@@ -81,58 +86,57 @@ export const DealAnimationLayer = ({ isDesktop, heroSeat, heroHoleCards, communi
   const isNarrow = !isDesktop && vw < 362;
   const positions = isDesktop ? desktopPositions : getMobilePositions(isNarrow);
 
-  const getTargetPixels = useCallback((posIndex: number, isHero: boolean) => {
-    const pos = positions[posIndex];
-    if (!pos) return null;
+  const getTargetPixels = useCallback(
+    (posIndex: number, isHero: boolean) => {
+      const pos = positions[posIndex];
+      if (!pos) return null;
 
-    const { w, h } = containerSizeRef.current;
-    if (w === 0 || h === 0) return null;
+      const { w, h } = containerSizeRef.current;
+      if (w === 0 || h === 0) return null;
 
-    const x = (pct(pos.left) / 100) * w;
+      const x = (pct(pos.left) / 100) * w;
 
-    // Updated Y calculation to handle bottom property
-    let y;
-    if (pos.bottom) {
-      y = h - parseFloat(pos.bottom);
-    } else {
-      y = (pct(pos.top) / 100) * h;
-    }
+      // Updated Y calculation to handle bottom property
+      let y;
+      if (pos.bottom) {
+        y = h - parseFloat(pos.bottom);
+      } else {
+        y = (pct(pos.top) / 100) * h;
+      }
 
-    const hubWidth = isHero
-      ? (isDesktop ? 160 : 128)
-      : (isDesktop ? 120 : 100);
+      const hubWidth = isHero ? (isDesktop ? 160 : 128) : isDesktop ? 120 : 100;
 
-    let centerX = x;
-    let centerY = y;
+      let centerX = x;
+      let centerY = y;
 
-    const transform = pos.transform;
-    if (transform.includes('translate(-50%')) {
-      centerX = x;
-    } else if (transform.includes('translate(0')) {
-      centerX = x + (hubWidth / 2);
-    } else if (transform.includes('translate(-100%')) {
-      centerX = x - (hubWidth / 2);
-    }
+      const transform = pos.transform;
+      if (transform.includes('translate(-50%')) {
+        centerX = x;
+      } else if (transform.includes('translate(0')) {
+        centerX = x + hubWidth / 2;
+      } else if (transform.includes('translate(-100%')) {
+        centerX = x - hubWidth / 2;
+      }
 
-    // Changed from 52 to 80 to land cards on the hub correctly when anchored from bottom
-    centerY -= (isHero ? 80 : 34);
+      // Changed from 52 to 80 to land cards on the hub correctly when anchored from bottom
+      centerY -= isHero ? 80 : 34;
 
-    return { x: centerX, y: centerY };
-  }, [positions, isDesktop]);
+      return { x: centerX, y: centerY };
+    },
+    [positions, isDesktop],
+  );
 
   const getDeckPixels = useCallback(() => {
     const { w, h } = containerSizeRef.current;
     return {
-      x: w * 0.50,
+      x: w * 0.5,
       y: h * (isDesktop ? 0.38 : 0.35),
     };
   }, [isDesktop]);
 
   useEffect(() => {
     const currentCards = heroHoleCards || [];
-    const currentKey = currentCards
-      .map((c: any) => `${c.rank}${c.suit}`)
-      .join('');
+    const currentKey = currentCards.map((c: any) => `${c.rank}${c.suit}`).join('');
 
     if (isFirstRenderRef.current) {
       isFirstRenderRef.current = false;
@@ -149,7 +153,7 @@ export const DealAnimationLayer = ({ isDesktop, heroSeat, heroHoleCards, communi
     }
 
     prevHoleCardsKey.current = currentKey;
-  }, [heroHoleCards, communityCards, isDealing]);
+  }, [heroHoleCards, communityCards, isDealing, triggerDeal]);
 
   useEffect(() => {
     if (!heroHoleCards || heroHoleCards.length === 0) {
@@ -258,10 +262,7 @@ export const DealAnimationLayer = ({ isDesktop, heroSeat, heroHoleCards, communi
   }
 
   return (
-    <div
-      ref={setNode}
-      className="absolute inset-0 z-[448] pointer-events-none overflow-visible"
-    >
+    <div ref={setNode} className="absolute inset-0 z-[448] pointer-events-none overflow-visible">
       {/* ═══ Deck Stack ═══ */}
       <AnimatePresence>
         {deckVisible && (
@@ -281,10 +282,7 @@ export const DealAnimationLayer = ({ isDesktop, heroSeat, heroHoleCards, communi
               transform: 'translate(-50%, -50%)',
             }}
           >
-            <div
-              className="relative"
-              style={{ width: cardW + 8, height: cardH + 8 }}
-            >
+            <div className="relative" style={{ width: cardW + 8, height: cardH + 8 }}>
               {Array.from({ length: deckLayers }).map((_, i) => (
                 <div
                   key={i}
@@ -294,8 +292,7 @@ export const DealAnimationLayer = ({ isDesktop, heroSeat, heroHoleCards, communi
                     height: cardH + 2,
                     top: -(deckLayers - 1 - i) * 1.8,
                     left: -(deckLayers - 1 - i) * 0.4,
-                    background:
-                      'linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%)',
+                    background: 'linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%)',
                     border: '1px solid rgba(255,255,255,0.2)',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.6)',
                   }}
@@ -316,8 +313,7 @@ export const DealAnimationLayer = ({ isDesktop, heroSeat, heroHoleCards, communi
                   <div
                     className="absolute top-0 left-0 right-0 h-[30%] rounded-t-sm"
                     style={{
-                      background:
-                        'linear-gradient(to bottom, rgba(255,255,255,0.06), transparent)',
+                      background: 'linear-gradient(to bottom, rgba(255,255,255,0.06), transparent)',
                     }}
                   />
                 </div>
@@ -338,7 +334,7 @@ export const DealAnimationLayer = ({ isDesktop, heroSeat, heroHoleCards, communi
 
           const arcHeight = Math.min(70, distance * 0.2) + (card.isHero ? 15 : 0);
           const midX = (deckPx.x + targetPx.x) / 2 + (card.round === 0 ? 8 : -8);
-          const midY = ((deckPx.y + targetPx.y) / 2) - arcHeight;
+          const midY = (deckPx.y + targetPx.y) / 2 - arcHeight;
 
           const flightRotation = (card.seatPosIdx % 2 === 0 ? 1 : -1) * (6 + card.round * 4);
 
@@ -389,10 +385,9 @@ export const DealAnimationLayer = ({ isDesktop, heroSeat, heroHoleCards, communi
                   background: 'linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%)',
                   border: '1px solid rgba(255,255,255,0.28)',
                   boxShadow: `0 8px 24px rgba(0,0,0,0.8),
-                              0 3px 8px rgba(0,0,0,0.4)${card.isHero
-                      ? ', 0 0 20px rgba(78,222,163,0.15)'
-                      : ''
-                    }`,
+                              0 3px 8px rgba(0,0,0,0.4)${
+                                card.isHero ? ', 0 0 20px rgba(78,222,163,0.15)' : ''
+                              }`,
                 }}
               >
                 <div className="absolute inset-[12%] border border-white/10 rounded-sm" />
@@ -413,8 +408,7 @@ export const DealAnimationLayer = ({ isDesktop, heroSeat, heroHoleCards, communi
                 <div
                   className="absolute top-0 left-0 right-0 h-[35%] rounded-t-sm"
                   style={{
-                    background:
-                      'linear-gradient(to bottom, rgba(255,255,255,0.08), transparent)',
+                    background: 'linear-gradient(to bottom, rgba(255,255,255,0.08), transparent)',
                   }}
                 />
               </div>
