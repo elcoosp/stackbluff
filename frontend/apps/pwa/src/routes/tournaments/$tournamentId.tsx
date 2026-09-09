@@ -1,39 +1,36 @@
-import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import { apiClient } from '@stackbluff/shared/api/client';
 import { tournamentApi } from '@stackbluff/shared/api/tournamentApi';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { useTournamentStore } from '@stackbluff/shared/stores/tournamentStore';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Skeleton } from '@/components/ui/skeleton';
-import { toast } from 'sonner';
-import { motion } from 'framer-motion';
+import type {
+  TournamentResultEntry,
+  TournamentSummary,
+} from '@stackbluff/shared/types/tournament.types';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router';
 import {
   ArrowLeft,
-  Trophy,
-  Users,
-  Coins,
   Clock,
-  Calendar,
-  Zap,
+  Coins,
   Eye,
   LogIn,
-  UserPlus,
-  UserMinus,
   Medal,
-  ChevronDown,
-  ChevronUp,
+  Trophy,
+  UserMinus,
+  UserPlus,
+  Users,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import type { TournamentSummary, TournamentResultEntry, PayoutEntry } from '@stackbluff/shared/types/tournament.types';
+import { useState } from 'react';
+import { toast } from 'sonner';
 import { BlindSchedulePreview } from '@/components/tournament/BlindSchedulePreview';
 import { PayoutStructurePreview } from '@/components/tournament/PayoutStructurePreview';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export const Route = createFileRoute('/tournaments/$tournamentId')({
   component: TournamentDetailPage,
@@ -44,12 +41,17 @@ function TournamentDetailPage() {
   const params = useParams({ from: '/tournaments/$tournamentId' });
   const tournamentId = params.tournamentId;
   const userId = useAuthStore((s) => s.user?.id);
-  const setTournamentState = useTournamentStore((s) => s.setTournamentState);
+  const _setTournamentState = useTournamentStore((s) => s.setTournamentState);
   const tournamentState = useTournamentStore((s) => s.tournamentStates[tournamentId]);
-  const [showPayouts, setShowPayouts] = useState(false);
+  const [_showPayouts, _setShowPayouts] = useState(false);
 
   // Fetch tournament details
-  const { data: tournament, isLoading, error, refetch } = useQuery<TournamentSummary>({
+  const {
+    data: tournament,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<TournamentSummary>({
     queryKey: ['tournament', tournamentId],
     queryFn: () => tournamentApi.get(tournamentId),
     enabled: !!tournamentId,
@@ -59,7 +61,10 @@ function TournamentDetailPage() {
   // Fetch tournament results if completed
   const { data: results } = useQuery<TournamentResultEntry[]>({
     queryKey: ['tournament-results', tournamentId],
-    queryFn: () => tournamentApi.results(tournamentId).then((res) => (res.results || []) as TournamentResultEntry[]),
+    queryFn: () =>
+      tournamentApi
+        .results(tournamentId)
+        .then((res) => (res.results || []) as TournamentResultEntry[]),
     enabled: !!tournamentId && tournament?.status === 'Completed',
     staleTime: 60_000,
   });
@@ -116,7 +121,9 @@ function TournamentDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-6">
         <Card className="max-w-md w-full p-6 text-center">
-          <h2 className="text-xl font-semibold text-red-400 mb-2"><Trans>Tournament Not Found</Trans></h2>
+          <h2 className="text-xl font-semibold text-red-400 mb-2">
+            <Trans>Tournament Not Found</Trans>
+          </h2>
           <p className="text-on-surface-variant text-sm">
             <Trans>The tournament you're looking for doesn't exist or has been removed.</Trans>
           </p>
@@ -221,19 +228,28 @@ function TournamentDetailPage() {
             </Button>
           )}
           {canPlay && (
-            <Button onClick={handlePlay} className="bg-tertiary text-on-tertiary hover:bg-tertiary-fixed">
+            <Button
+              onClick={handlePlay}
+              className="bg-tertiary text-on-tertiary hover:bg-tertiary-fixed"
+            >
               <LogIn className="w-4 h-4 mr-2" />
               <Trans>Play</Trans>
             </Button>
           )}
           {canSpectate && (
-            <Button onClick={handleSpectate} variant="outline" className="border-white/10 hover:border-tertiary">
+            <Button
+              onClick={handleSpectate}
+              variant="outline"
+              className="border-white/10 hover:border-tertiary"
+            >
               <Eye className="w-4 h-4 mr-2" />
               <Trans>Spectate</Trans>
             </Button>
           )}
           {isRegistered && isRegistering && (
-            <Badge variant="secondary" className="self-center"><Trans>Registered</Trans></Badge>
+            <Badge variant="secondary" className="self-center">
+              <Trans>Registered</Trans>
+            </Badge>
           )}
         </div>
       </div>
@@ -247,7 +263,10 @@ function TournamentDetailPage() {
           </div>
           <div className="mt-1">
             <div className="text-xl font-bold text-on-surface">{tournament.registered}</div>
-            <Progress value={(tournament.registered / tournament.max_players) * 100} className="mt-1 h-1" />
+            <Progress
+              value={(tournament.registered / tournament.max_players) * 100}
+              className="mt-1 h-1"
+            />
             <div className="text-xs text-on-surface-variant mt-1">
               <Trans>{tournament.max_players - tournament.registered} spots left</Trans>
             </div>
@@ -264,7 +283,9 @@ function TournamentDetailPage() {
               ${tournament.prize_pool.toLocaleString()}
             </div>
             <div className="text-xs text-on-surface-variant mt-1">
-              {tournament.buy_in > 0 ? `${tournament.registered} × $${tournament.buy_in}` : t`Free entry`}
+              {tournament.buy_in > 0
+                ? `${tournament.registered} × $${tournament.buy_in}`
+                : t`Free entry`}
             </div>
           </div>
         </Card>
@@ -279,7 +300,9 @@ function TournamentDetailPage() {
               {isRegistering ? t`Registering` : isRunning ? t`Live` : t`Completed`}
             </div>
             <div className="text-xs text-on-surface-variant mt-1">
-              {tournament.started_at ? t`Started ${new Date(tournament.started_at).toLocaleString()}` : t`Not started yet`}
+              {tournament.started_at
+                ? t`Started ${new Date(tournament.started_at).toLocaleString()}`
+                : t`Not started yet`}
             </div>
           </div>
         </Card>
@@ -324,9 +347,7 @@ function TournamentDetailPage() {
                     {result.display_name || result.user_id.slice(0, 8)}
                   </span>
                 </div>
-                <span className="text-tertiary font-mono">
-                  ${result.prize.toLocaleString()}
-                </span>
+                <span className="text-tertiary font-mono">${result.prize.toLocaleString()}</span>
               </div>
             ))}
           </div>
