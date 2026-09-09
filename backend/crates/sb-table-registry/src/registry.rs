@@ -10,15 +10,15 @@ use sb_shared_types::AppError;
 use sb_shared_types::{ActionType, ChipAmount, TableConfig, TableId, UserId};
 use uuid::Uuid;
 
+use crate::actor::buy_in_limits_for_stake;
+use sb_shared_types::GameVariant;
+use sb_shared_types::RequestContext;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::time::Duration;
 use tokio::sync::{RwLock, mpsc};
 use tracing::info;
-use sb_shared_types::GameVariant;
-use sb_shared_types::RequestContext;
-use crate::actor::buy_in_limits_for_stake;
 
 type ActorSender = mpsc::Sender<InternalCommand>;
 
@@ -421,14 +421,18 @@ impl Registry {
     }
 
     #[allow(unused_variables)]
-    #[allow(unused_variables)]
     pub async fn send_command(
         &self,
         room_id: TableId,
         cmd: TableCommand,
     ) -> Result<(), TableError> {
         match cmd {
-            TableCommand::CreateTable { table_id, stake_level, max_players, reply_to } => {
+            TableCommand::CreateTable {
+                table_id,
+                stake_level,
+                max_players,
+                reply_to,
+            } => {
                 let (min_buy_in, max_buy_in) = crate::actor::buy_in_limits_for_stake(stake_level);
                 let config = TableConfig {
                     max_players: max_players as u8,
@@ -438,7 +442,13 @@ impl Registry {
                     max_buy_in,
                     turn_time_limit_ms: 30000,
                 };
-                self.register_existing_table(table_id, config, UserId::new(uuid::Uuid::nil()), None).await;
+                self.register_existing_table(
+                    table_id,
+                    config,
+                    UserId::new(uuid::Uuid::nil()),
+                    None,
+                )
+                .await;
                 let _ = reply_to.send(Ok(()));
                 Ok(())
             }
@@ -466,13 +476,26 @@ impl Registry {
                 let _ = reply_to.send(Ok(tables));
                 Ok(())
             }
-            TableCommand::Join { table_id, user_id, reply_to } => {
+            TableCommand::Join {
+                table_id,
+                user_id,
+                reply_to,
+            } => {
                 let rooms = self.find_all_user_rooms(user_id).await;
                 match self.assign_room(table_id, rooms).await {
                     Ok(room_id) => {
                         let (msg_tx, _) = tokio::sync::mpsc::unbounded_channel();
                         let stack = ChipAmount::new(1000).unwrap();
-                        let _ = self.join_room_full(room_id, user_id, "Player".to_string(), None, stack, msg_tx).await;
+                        let _ = self
+                            .join_room_full(
+                                room_id,
+                                user_id,
+                                "Player".to_string(),
+                                None,
+                                stack,
+                                msg_tx,
+                            )
+                            .await;
                         let _ = reply_to.send(Ok(()));
                     }
                     Err(e) => {
@@ -481,9 +504,7 @@ impl Registry {
                 }
                 Ok(())
             }
-            TableCommand::Heartbeat { table_id: _ } => {
-                Ok(())
-            }
+            TableCommand::Heartbeat { table_id: _ } => Ok(()),
         }
     }
 
@@ -627,7 +648,7 @@ impl Registry {
 
                     registry.rooms.write().await.remove(&room_id);
                     let mut table_rooms = registry.table_rooms.write().await;
-                    for (_, room_ids) in table_rooms.iter_mut() {
+                    for room_ids in table_rooms.values_mut() {
                         room_ids.retain(|id| *id != room_id);
                     }
                     info!(%room_id, "Reaped empty room");
