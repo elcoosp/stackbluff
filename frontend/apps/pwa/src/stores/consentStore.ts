@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import { CONSENT_STORAGE_KEY, MAYBE_LATER_COOLDOWN_MS } from '@/lib/consent/constants';
 
 export type NotificationConsent = 'granted' | 'denied' | 'default' | 'not_asked';
@@ -91,8 +91,8 @@ export const useConsentStore = create<ConsentState>()(
         notificationPromptDismissedAt: state.notificationPromptDismissedAt,
         cookieConsent: state.cookieConsent,
       }),
-    }
-  )
+    },
+  ),
 );
 
 // Helper for analytics wrapper
