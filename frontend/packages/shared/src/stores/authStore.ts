@@ -1,6 +1,6 @@
-import { clubWebSocket } from '../lib/websocket';
 import { create } from 'zustand';
 import { apiClient } from '../api/client';
+import { clubWebSocket } from '../lib/websocket';
 
 interface MeResponse {
   id: string;
@@ -11,7 +11,6 @@ interface MeResponse {
   club_pro_expires_at?: string | null;
   chip_balance: number;
 }
-
 
 interface User {
   id: string;
@@ -67,7 +66,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         },
         balance: data.chip_balance,
         isAuthenticated: true,
-        isLoading: false
+        isLoading: false,
       });
     } catch (error) {
       console.error('Failed to load user:', error);
@@ -77,11 +76,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: () => {
-    clubWebSocket.disconnect();   // ✅ now inside the logout method
+    clubWebSocket.disconnect(); // ✅ now inside the logout method
     localStorage.removeItem('auth_token');
     set({ user: null, token: null, balance: 0, isAuthenticated: false, isLoading: false });
   },
 
-  updateBalance: (amount: number) =>
-    set((state) => ({ balance: state.balance + amount })),
+  updateBalance: (amount: number) => set((state) => ({ balance: state.balance + amount })),
 }));
