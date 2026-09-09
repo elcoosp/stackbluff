@@ -11,11 +11,7 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(UserBadges::Table)
                     .if_not_exists()
-                    .col(
-                        ColumnDef::new(UserBadges::UserId)
-                            .uuid()
-                            .not_null(),
-                    )
+                    .col(ColumnDef::new(UserBadges::UserId).uuid().not_null())
                     .col(
                         ColumnDef::new(UserBadges::BadgeType)
                             .string_len(32)
@@ -39,10 +35,7 @@ impl MigrationTrait for Migration {
                             .on_delete(ForeignKeyAction::Cascade)
                             .on_update(ForeignKeyAction::Cascade),
                     )
-                    .check(
-                        Expr::col(UserBadges::BadgeType)
-                            .is_in(["founding_member"]),
-                    )
+                    .check(Expr::col(UserBadges::BadgeType).is_in(["founding_member"]))
                     .to_owned(),
             )
             .await?;
