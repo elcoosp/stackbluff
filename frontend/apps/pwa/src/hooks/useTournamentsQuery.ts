@@ -1,6 +1,6 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { tournamentApi } from '@stackbluff/shared/api/tournamentApi';
-import type { TournamentSummary, TournamentStatus } from '@stackbluff/shared/types/tournament.types';
+import type { TournamentStatus } from '@stackbluff/shared/types/tournament.types';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 const REFRESH_INTERVAL_MS = 10_000;
 
