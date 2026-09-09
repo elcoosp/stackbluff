@@ -1,15 +1,17 @@
-import { motion, AnimatePresence } from 'framer-motion';
-import { useEffect, useState } from 'react';
-import { TrendingUp } from 'lucide-react';
 import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
+import { AnimatePresence, motion } from 'framer-motion';
+import { TrendingUp } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface BlindLevelNotificationProps {
   tournamentId: string;
 }
 
 export function BlindLevelNotification({ tournamentId }: BlindLevelNotificationProps) {
-  const [notification, setNotification] = useState<{ level: number; blinds: { smallBlind: number; bigBlind: number } } | null>(null);
+  const [notification, setNotification] = useState<{
+    level: number;
+    blinds: { smallBlind: number; bigBlind: number };
+  } | null>(null);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
