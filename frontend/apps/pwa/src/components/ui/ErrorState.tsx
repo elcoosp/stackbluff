@@ -1,8 +1,8 @@
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
 
 interface ErrorStateProps {
   message?: string;
@@ -12,14 +12,16 @@ interface ErrorStateProps {
 
 export function ErrorState({ message, onRetry, className }: ErrorStateProps) {
   return (
-    <div className={cn("flex flex-col items-center justify-center min-h-[60vh] p-6", className)}>
+    <div className={cn('flex flex-col items-center justify-center min-h-[60vh] p-6', className)}>
       <Card className="max-w-md w-full p-6 text-center">
-        <h2 className="text-xl font-semibold text-red-400 mb-2"><Trans>Error</Trans></h2>
-        <p className="text-on-surface-variant text-sm">
-          {message || t`Failed to load data.`}
-        </p>
+        <h2 className="text-xl font-semibold text-red-400 mb-2">
+          <Trans>Error</Trans>
+        </h2>
+        <p className="text-on-surface-variant text-sm">{message || t`Failed to load data.`}</p>
         {onRetry && (
-          <Button onClick={onRetry} className="mt-4"><Trans>Retry</Trans></Button>
+          <Button onClick={onRetry} className="mt-4">
+            <Trans>Retry</Trans>
+          </Button>
         )}
       </Card>
     </div>
