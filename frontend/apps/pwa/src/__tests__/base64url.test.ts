@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { urlBase64ToUint8Array, uint8ArrayToUrlBase64 } from '../lib/crypto/base64url';
+import { describe, expect, it } from 'vitest';
+import { uint8ArrayToUrlBase64, urlBase64ToUint8Array } from '../lib/crypto/base64url';
 
 describe('urlBase64ToUint8Array', () => {
   it('should convert valid base64url string to Uint8Array', () => {
@@ -52,7 +52,8 @@ describe('urlBase64ToUint8Array', () => {
   it('should handle typical VAPID public key length (65 bytes)', () => {
     // VAPID P-256 public keys are 65 bytes (uncompressed point)
     // This is a valid 88-character base64url string (66 bytes when decoded)
-    const vapidKey = 'BPM1KZ9xH8Y8Z5Q3X2W1V0U9T8S7R6Q5P4O3N2M1L0K9J8I7H6G5F4E3D2C1B0A9Z8Y7X6W5V4U3T2S1R0Q9P8O7N6M5L4K3J2I1H0G9F8E7D6C5B4A3Z2Y1X0W9V8U7T6S5R4Q3P2O1N0M9L8K7J6I5H4G3F2E1D0C9B8A7Z6Y5X4W3V2U1T0S9R8Q7P6O5N4M3L2K1J0I9H8G7F6E5D4C3B2A1';
+    const vapidKey =
+      'BPM1KZ9xH8Y8Z5Q3X2W1V0U9T8S7R6Q5P4O3N2M1L0K9J8I7H6G5F4E3D2C1B0A9Z8Y7X6W5V4U3T2S1R0Q9P8O7N6M5L4K3J2I1H0G9F8E7D6C5B4A3Z2Y1X0W9V8U7T6S5R4Q3P2O1N0M9L8K7J6I5H4G3F2E1D0C9B8A7Z6Y5X4W3V2U1T0S9R8Q7P6O5N4M3L2K1J0I9H8G7F6E5D4C3B2A1';
     const result = urlBase64ToUint8Array(vapidKey);
     expect(result).toBeInstanceOf(Uint8Array);
     expect(result.length).toBeGreaterThan(0);
