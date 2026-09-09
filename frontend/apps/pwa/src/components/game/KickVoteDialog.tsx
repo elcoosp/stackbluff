@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react';
-import { Dialog } from '@stackbluff/shared/components/Dialog';
-import { motion, AnimatePresence } from 'framer-motion';
-import { UserX, Clock, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
+import { Dialog } from '@stackbluff/shared/components/Dialog';
+import { motion } from 'framer-motion';
+import { AlertTriangle, CheckCircle, Clock, UserX } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { cn } from '@/lib/utils';
 
 interface KickVoteDialogProps {
   open: boolean;
@@ -92,7 +91,9 @@ export function KickVoteDialog({
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <UserX className="w-5 h-5 text-yellow-400" />
-            <h2 className="text-lg font-semibold text-on-surface"><Trans>Kick Vote</Trans></h2>
+            <h2 className="text-lg font-semibold text-on-surface">
+              <Trans>Kick Vote</Trans>
+            </h2>
           </div>
           <div className="flex items-center gap-1 text-sm font-mono text-on-surface-variant">
             <Clock className="w-4 h-4" />
@@ -101,14 +102,21 @@ export function KickVoteDialog({
         </div>
 
         <p className="text-sm text-on-surface-variant mb-4">
-          <Trans>Vote to remove <span className="text-on-surface font-medium">{targetName}</span> from the table.</Trans>
+          <Trans>
+            Vote to remove <span className="text-on-surface font-medium">{targetName}</span> from
+            the table.
+          </Trans>
           {requiredVotes} <Trans>votes needed.</Trans>
         </p>
 
         <div className="mb-4">
           <div className="flex justify-between text-xs text-on-surface-variant mb-1">
-            <span>{votes} <Trans>votes</Trans></span>
-            <span>{requiredVotes} <Trans>needed</Trans></span>
+            <span>
+              {votes} <Trans>votes</Trans>
+            </span>
+            <span>
+              {requiredVotes} <Trans>needed</Trans>
+            </span>
           </div>
           <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
             <motion.div
@@ -139,7 +147,7 @@ export function KickVoteDialog({
                 'flex-1 py-2 rounded-lg font-medium transition-colors',
                 hasVoted
                   ? 'bg-white/5 text-white/30 cursor-not-allowed'
-                  : 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30'
+                  : 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30',
               )}
             >
               {hasVoted ? <Trans>Voted ✓</Trans> : <Trans>Vote Yes</Trans>}
