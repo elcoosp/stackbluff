@@ -6,13 +6,13 @@ pub mod lobby_api;
 pub mod notification;
 pub mod notification_api;
 pub mod persistence_error;
+pub mod product_api;
 pub mod puzzle_repo;
 pub mod repo_api;
 pub mod service_api;
 pub mod stats_api;
 pub mod tournament_api;
 pub mod user_resolution;
-pub mod product_api;
 
 pub use lobby_api::{CreateTableInput, TableService};
 pub use service_api::{ClubService, ReferralStats, ReplayCard, UserService, ViralService};
