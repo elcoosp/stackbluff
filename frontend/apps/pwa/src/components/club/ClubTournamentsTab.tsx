@@ -1,15 +1,14 @@
-import React, { useState } from 'react';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
+import { motion } from 'framer-motion';
+import { Calendar, CheckCircle, Coins, Plus, RotateCcw, Users, XCircle } from 'lucide-react';
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import { useClubTournaments } from '../../hooks/useClubTournaments';
 import { ScheduleTournamentDialog } from './ScheduleTournamentDialog';
-import { Card } from '@/components/ui/card';
-import { toast } from 'sonner';
-import { TournamentResultsDisplay } from './TournamentResultsDisplay';
-import { motion } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { Calendar, Coins, Users, Plus, CheckCircle, XCircle, RotateCcw } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
 
 interface ClubTournamentsTabProps {
   clubId: string;
@@ -58,9 +57,7 @@ function TournamentCard({
     <Card className="p-6 bg-white/5 border border-white/10 backdrop-blur-xl rounded-2xl hover:bg-white/[0.07] transition-colors">
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
         <div className="flex-grow space-y-4">
-          <h3 className="font-headline-md text-lg text-on-surface">
-            {tournament.name}
-          </h3>
+          <h3 className="font-headline-md text-lg text-on-surface">{tournament.name}</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
@@ -71,7 +68,8 @@ function TournamentCard({
                   <Trans>Date & Time</Trans>
                 </p>
                 <p className="text-on-surface font-medium text-sm mt-0.5">
-                  {startDate.toLocaleDateString()} at {startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {startDate.toLocaleDateString()} at{' '}
+                  {startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
             </div>
@@ -113,10 +111,12 @@ function TournamentCard({
                 <p className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant">
                   <Trans>Status</Trans>
                 </p>
-                <p className={cn(
-                  "font-medium text-sm mt-0.5",
-                  tournament.status === 'Registering' ? "text-emerald-400" : "text-purple-400"
-                )}>
+                <p
+                  className={cn(
+                    'font-medium text-sm mt-0.5',
+                    tournament.status === 'Registering' ? 'text-emerald-400' : 'text-purple-400',
+                  )}
+                >
                   {tournament.status}
                 </p>
               </div>
@@ -164,15 +164,8 @@ function TournamentCard({
 
 export function ClubTournamentsTab({ clubId, isOwner }: ClubTournamentsTabProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const {
-    data,
-    isLoading,
-    error,
-    register,
-    unregister,
-    isRegistering,
-    isUnregistering,
-  } = useClubTournaments(clubId);
+  const { data, isLoading, error, register, unregister, isRegistering, isUnregistering } =
+    useClubTournaments(clubId);
 
   const handleRegister = async (tournamentId: string, tournamentName: string) => {
     try {
@@ -195,7 +188,9 @@ export function ClubTournamentsTab({ clubId, isOwner }: ClubTournamentsTabProps)
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="text-on-surface-variant"><Trans>Loading tournaments...</Trans></div>
+        <div className="text-on-surface-variant">
+          <Trans>Loading tournaments...</Trans>
+        </div>
       </div>
     );
   }
@@ -203,7 +198,9 @@ export function ClubTournamentsTab({ clubId, isOwner }: ClubTournamentsTabProps)
   if (error) {
     return (
       <Card className="p-6 bg-red-500/5 border border-red-500/20 rounded-2xl">
-        <h3 className="font-headline-md text-lg text-red-400 mb-2"><Trans>Error Loading Tournaments</Trans></h3>
+        <h3 className="font-headline-md text-lg text-red-400 mb-2">
+          <Trans>Error Loading Tournaments</Trans>
+        </h3>
         <p className="text-on-surface-variant text-sm">
           {error instanceof Error ? error.message : t`Failed to load tournaments`}
         </p>
@@ -213,7 +210,7 @@ export function ClubTournamentsTab({ clubId, isOwner }: ClubTournamentsTabProps)
 
   const tournaments = data?.tournaments ?? [];
   const upcomingTournaments = tournaments.filter(
-    (t: any) => t.status === 'Scheduled' || t.status === 'Registering'
+    (t: any) => t.status === 'Scheduled' || t.status === 'Registering',
   );
   const pastTournaments = tournaments.filter((t: any) => t.status === 'Completed');
 
@@ -227,9 +224,14 @@ export function ClubTournamentsTab({ clubId, isOwner }: ClubTournamentsTabProps)
               <Trans>Events</Trans>
             </span>
           </div>
-          <h2 className="font-headline-md text-xl text-on-surface"><Trans>Tournaments</Trans></h2>
+          <h2 className="font-headline-md text-xl text-on-surface">
+            <Trans>Tournaments</Trans>
+          </h2>
           <p className="text-on-surface-variant text-sm mt-1">
-            <Trans>{upcomingTournaments.length} upcoming tournament{upcomingTournaments.length !== 1 ? 's' : ''}</Trans>
+            <Trans>
+              {upcomingTournaments.length} upcoming tournament
+              {upcomingTournaments.length !== 1 ? 's' : ''}
+            </Trans>
           </p>
         </div>
         {isOwner && (
@@ -245,7 +247,9 @@ export function ClubTournamentsTab({ clubId, isOwner }: ClubTournamentsTabProps)
 
       {upcomingTournaments.length === 0 ? (
         <div className="text-center py-16 bg-white/5 border border-white/10 rounded-2xl">
-          <p className="text-on-surface-variant"><Trans>No upcoming tournaments scheduled</Trans></p>
+          <p className="text-on-surface-variant">
+            <Trans>No upcoming tournaments scheduled</Trans>
+          </p>
           {isOwner && (
             <p className="text-on-surface-variant/60 text-sm mt-2">
               <Trans>Click "Schedule Tournament" to create one!</Trans>
