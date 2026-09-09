@@ -1,5 +1,5 @@
-import { FeedbackSettings } from './FeedbackSettings';
 import { Dialog } from '../Dialog';
+import { FeedbackSettings } from './FeedbackSettings';
 
 interface FeedbackSettingsDialogProps {
   open: boolean;
@@ -12,9 +12,7 @@ export function FeedbackSettingsDialog({ open, onClose }: FeedbackSettingsDialog
       {/* Header — fixed at top */}
       <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/5 shrink-0">
         <div>
-          <h2 className="text-sm font-semibold text-on-surface">
-            Feedback Settings
-          </h2>
+          <h2 className="text-sm font-semibold text-on-surface">Feedback Settings</h2>
           <p className="text-[11px] text-on-surface-variant mt-0.5">
             Configure haptic and audio feedback
           </p>
