@@ -5,16 +5,16 @@
  */
 
 export type {
+  BlindTemplate,
   ClubDetails,
   ClubProSettings,
+  ClubWebSocketEvent,
   LeaderboardEntry,
   LeaderboardResponse,
+  ScheduleTournamentRequest,
   Tournament,
   TournamentsResponse,
-  BlindTemplate,
-  ScheduleTournamentRequest,
   UpdateClubSettingsRequest,
-  ClubWebSocketEvent,
 } from '../lib/schemas';
 
 export type WebSocketConnectionStatus = 'connected' | 'reconnecting' | 'disconnected';
