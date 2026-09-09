@@ -17,11 +17,7 @@ impl MigrationTrait for Migration {
                             .not_null()
                             .primary_key(),
                     )
-                    .col(
-                        ColumnDef::new(AnalyticsEvents::UserId)
-                            .uuid()
-                            .not_null(),
-                    )
+                    .col(ColumnDef::new(AnalyticsEvents::UserId).uuid().not_null())
                     .col(
                         ColumnDef::new(AnalyticsEvents::EventType)
                             .string()
