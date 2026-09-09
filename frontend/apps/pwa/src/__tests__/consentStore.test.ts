@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { useConsentStore } from '../stores/consentStore';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MAYBE_LATER_COOLDOWN_MS } from '../lib/consent/constants';
+import { useConsentStore } from '../stores/consentStore';
 
 // Mock Notification API
 const mockNotificationPermission = vi.fn();
@@ -142,7 +142,8 @@ describe('consentStore', () => {
     });
 
     it('should check cooldown correctly with isNotificationPromptCooldownActive', () => {
-      const { dismissNotificationPrompt, isNotificationPromptCooldownActive } = useConsentStore.getState();
+      const { dismissNotificationPrompt, isNotificationPromptCooldownActive } =
+        useConsentStore.getState();
 
       // Before dismissing
       expect(isNotificationPromptCooldownActive()).toBe(false);
