@@ -4,7 +4,7 @@ export {};
 declare const self: ServiceWorkerGlobalScope;
 
 // Inject manifest placeholder for vite-plugin-pwa
-// @ts-ignore
+// @ts-expect-error
 self.__WB_MANIFEST;
 
 self.addEventListener('push', (event) => {
@@ -15,8 +15,8 @@ self.addEventListener('push', (event) => {
     icon: '/icons/icon-192x192.png',
     badge: '/icons/badge-72x72.png',
     data: {
-      url: data.url || '/'
-    }
+      url: data.url || '/',
+    },
   };
   event.waitUntil(self.registration.showNotification(title, options));
 });
@@ -35,7 +35,7 @@ self.addEventListener('notificationclick', (event) => {
       if (self.clients.openWindow) {
         return self.clients.openWindow(targetUrl);
       }
-    })
+    }),
   );
 });
 
@@ -48,7 +48,7 @@ self.addEventListener('pushsubscriptionchange', (event) => {
         const vapidPublicKey = data.public_key;
         if (!vapidPublicKey) return;
 
-        const padding = '='.repeat((4 - vapidPublicKey.length % 4) % 4);
+        const padding = '='.repeat((4 - (vapidPublicKey.length % 4)) % 4);
         const base64 = (vapidPublicKey + padding).replace(/-/g, '+').replace(/_/g, '/');
         const rawData = atob(base64);
         const outputArray = new Uint8Array(rawData.length);
@@ -58,17 +58,17 @@ self.addEventListener('pushsubscriptionchange', (event) => {
 
         const newSubscription = await self.registration.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: outputArray as unknown as BufferSource
+          applicationServerKey: outputArray as unknown as BufferSource,
         });
 
         await fetch('/notifications/subscribe', {
           method: 'POST',
           body: JSON.stringify(newSubscription),
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json' },
         });
       } catch (error) {
         console.error('Failed to resubscribe:', error);
       }
-    })()
+    })(),
   );
 });
