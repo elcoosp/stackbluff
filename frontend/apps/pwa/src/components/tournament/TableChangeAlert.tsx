@@ -1,9 +1,8 @@
-import { motion, AnimatePresence } from 'framer-motion';
-import { Move, ArrowRight } from 'lucide-react';
+import { Trans } from '@lingui/react/macro';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ArrowRight, Move } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
 
 interface TableChangeAlertProps {
   open: boolean;
@@ -42,15 +41,21 @@ export function TableChangeAlert({
                 <Move className="w-8 h-8 text-tertiary" />
               </div>
               <div>
-                <h2 className="text-sm font-semibold text-on-surface"><Trans>Table Change</Trans></h2>
+                <h2 className="text-sm font-semibold text-on-surface">
+                  <Trans>Table Change</Trans>
+                </h2>
                 <p className="text-[11px] text-on-surface-variant mt-1">
                   <Trans>You have been moved to a new table.</Trans>
                 </p>
               </div>
               <div className="flex items-center gap-3 text-sm text-on-surface-variant bg-white/5 px-4 py-2 rounded-lg w-full justify-center">
-                <span className="font-data-mono"><Trans>Table {newRoomId.slice(0, 6)}</Trans></span>
+                <span className="font-data-mono">
+                  <Trans>Table {newRoomId.slice(0, 6)}</Trans>
+                </span>
                 <ArrowRight className="w-3 h-3 text-tertiary" />
-                <span className="font-data-mono"><Trans>Seat {newSeat + 1}</Trans></span>
+                <span className="font-data-mono">
+                  <Trans>Seat {newSeat + 1}</Trans>
+                </span>
               </div>
               <Button
                 onClick={onAcknowledge}
@@ -63,6 +68,6 @@ export function TableChangeAlert({
         </>
       )}
     </AnimatePresence>,
-    document.body
+    document.body,
   );
 }
