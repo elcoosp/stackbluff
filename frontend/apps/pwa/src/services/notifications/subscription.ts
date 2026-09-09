@@ -1,6 +1,6 @@
-import { notificationLogger } from '@/lib/logger';
 import { VAPID_PUBLIC_KEY_ENV } from '@/lib/consent/constants';
 import { urlBase64ToUint8Array } from '@/lib/crypto/base64url';
+import { notificationLogger } from '@/lib/logger';
 
 /**
  * Push subscription management.
@@ -52,7 +52,7 @@ export async function getExistingSubscription(): Promise<PushSubscription | null
 
     if (subscription) {
       notificationLogger.info('Existing push subscription found', {
-        endpoint: subscription.endpoint
+        endpoint: subscription.endpoint,
       });
       return subscription;
     }
@@ -84,7 +84,7 @@ export async function getPushSubscription(): Promise<PushSubscription | null> {
 
     if (subscription) {
       notificationLogger.info('Existing push subscription found', {
-        endpoint: subscription.endpoint
+        endpoint: subscription.endpoint,
       });
       return subscription;
     }
@@ -103,7 +103,7 @@ export async function getPushSubscription(): Promise<PushSubscription | null> {
     });
 
     notificationLogger.info('Push subscription created', {
-      endpoint: subscription.endpoint
+      endpoint: subscription.endpoint,
     });
     return subscription;
   } catch (error) {
