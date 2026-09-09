@@ -1,19 +1,25 @@
-import { useState, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
+import { apiClient } from '@stackbluff/shared/api/client';
 import { Dialog } from '@stackbluff/shared/components/Dialog';
+import { useForm } from '@tanstack/react-form';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Calendar, Coins, Loader2, Users, Zap } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from 'sonner';
-import { Loader2, Calendar, Users, Coins, Zap } from 'lucide-react';
-import { apiClient } from '@stackbluff/shared/api/client';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useBlindTemplates } from '@/hooks/useBlindTemplates';
-import { z } from 'zod';
-import { useForm } from '@tanstack/react-form';
 import { cn } from '@/lib/utils';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
 
 interface ScheduleTournamentDialogProps {
   clubId: string;
@@ -30,9 +36,13 @@ const tournamentSchema = z.object({
   blind_schedule_id: z.string(),
 });
 
-export function ScheduleTournamentDialog({ clubId, isOpen, onClose }: ScheduleTournamentDialogProps) {
+export function ScheduleTournamentDialog({
+  clubId,
+  isOpen,
+  onClose,
+}: ScheduleTournamentDialogProps) {
   const queryClient = useQueryClient();
-  const [selectedType, setSelectedType] = useState<'SitAndGo' | 'Mtt'>('SitAndGo');
+  const [_selectedType, setSelectedType] = useState<'SitAndGo' | 'Mtt'>('SitAndGo');
 
   // Use the hook for blind templates
   const { data: templates, isLoading: templatesLoading } = useBlindTemplates();
@@ -77,7 +87,7 @@ export function ScheduleTournamentDialog({ clubId, isOpen, onClose }: ScheduleTo
     if (templates && templates.length > 0 && !form.state.values.blind_schedule_id) {
       form.setFieldValue('blind_schedule_id', templates[0].id);
     }
-  }, [templates]);
+  }, [templates, form.state.values.blind_schedule_id, form.setFieldValue]);
 
   const minDateTime = new Date(Date.now() + 15 * 60 * 1000).toISOString().slice(0, 16);
 
@@ -86,7 +96,9 @@ export function ScheduleTournamentDialog({ clubId, isOpen, onClose }: ScheduleTo
       <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
         <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/5 shrink-0">
           <div>
-            <h2 className="text-lg font-semibold text-on-surface"><Trans>Schedule Tournament</Trans></h2>
+            <h2 className="text-lg font-semibold text-on-surface">
+              <Trans>Schedule Tournament</Trans>
+            </h2>
             <p className="text-[11px] text-on-surface-variant mt-0.5">
               <Trans>Create a new tournament for your club</Trans>
             </p>
@@ -98,7 +110,10 @@ export function ScheduleTournamentDialog({ clubId, isOpen, onClose }: ScheduleTo
           <form.Field name="name">
             {(field) => (
               <div className="space-y-2">
-                <Label htmlFor="tournament-name" className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+                <Label
+                  htmlFor="tournament-name"
+                  className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase"
+                >
                   <Trans>Tournament Name *</Trans>
                 </Label>
                 <Input
@@ -133,7 +148,7 @@ export function ScheduleTournamentDialog({ clubId, isOpen, onClose }: ScheduleTo
                       'flex-1 py-2 rounded-lg border-2 transition-all flex items-center justify-center gap-2',
                       field.state.value === 'SitAndGo'
                         ? 'border-tertiary bg-tertiary/10 text-tertiary'
-                        : 'border-white/10 text-on-surface-variant hover:border-white/30'
+                        : 'border-white/10 text-on-surface-variant hover:border-white/30',
                     )}
                   >
                     <Zap className="w-4 h-4" />
@@ -149,7 +164,7 @@ export function ScheduleTournamentDialog({ clubId, isOpen, onClose }: ScheduleTo
                       'flex-1 py-2 rounded-lg border-2 transition-all flex items-center justify-center gap-2',
                       field.state.value === 'Mtt'
                         ? 'border-tertiary bg-tertiary/10 text-tertiary'
-                        : 'border-white/10 text-on-surface-variant hover:border-white/30'
+                        : 'border-white/10 text-on-surface-variant hover:border-white/30',
                     )}
                   >
                     <Users className="w-4 h-4" />
@@ -191,7 +206,10 @@ export function ScheduleTournamentDialog({ clubId, isOpen, onClose }: ScheduleTo
           <form.Field name="buy_in">
             {(field) => (
               <div className="space-y-2">
-                <Label htmlFor="buy-in" className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+                <Label
+                  htmlFor="buy-in"
+                  className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase"
+                >
                   <Trans>Buy-in (chips)</Trans>
                 </Label>
                 <div className="relative">
@@ -214,7 +232,10 @@ export function ScheduleTournamentDialog({ clubId, isOpen, onClose }: ScheduleTo
           <form.Field name="scheduled_start">
             {(field) => (
               <div className="space-y-2">
-                <Label htmlFor="start-time" className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+                <Label
+                  htmlFor="start-time"
+                  className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase"
+                >
                   <Trans>Start Date & Time *</Trans>
                 </Label>
                 <div className="relative">
@@ -247,7 +268,9 @@ export function ScheduleTournamentDialog({ clubId, isOpen, onClose }: ScheduleTo
                   onValueChange={(value) => field.handleChange(value)}
                 >
                   <SelectTrigger className="bg-surface-container-high border-outline-variant/50 text-on-surface">
-                    <SelectValue placeholder={templatesLoading ? t`Loading...` : t`Select a template`} />
+                    <SelectValue
+                      placeholder={templatesLoading ? t`Loading...` : t`Select a template`}
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {templates?.map((template) => (
@@ -255,9 +278,12 @@ export function ScheduleTournamentDialog({ clubId, isOpen, onClose }: ScheduleTo
                         {template.name}
                       </SelectItem>
                     ))}
-                    {!templates || templates.length === 0 && (
-                      <SelectItem value="default" disabled><Trans>No templates available</Trans></SelectItem>
-                    )}
+                    {!templates ||
+                      (templates.length === 0 && (
+                        <SelectItem value="default" disabled>
+                          <Trans>No templates available</Trans>
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
                 {field.state.meta.errors.length > 0 && (
