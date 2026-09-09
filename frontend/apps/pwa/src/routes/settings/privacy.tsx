@@ -1,17 +1,15 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useAuthStore } from '@stackbluff/shared/stores/authStore';
-import { apiClient } from '@stackbluff/shared/api/client';
-import { toast } from 'sonner';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { AlertTriangle, Download, Trash2, Shield, Loader2, CheckCircle, ArrowLeft } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useState } from 'react';
-import { requireAuth } from '@/lib/authGuard';
-import { Trans } from '@lingui/react/macro';
 import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
+import { apiClient } from '@stackbluff/shared/api/client';
+import { useAuthStore } from '@stackbluff/shared/stores/authStore';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import { AlertTriangle, ArrowLeft, CheckCircle, Download, Loader2, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export const Route = createFileRoute('/settings/privacy')({
   component: PrivacySettingsPage,
@@ -24,11 +22,11 @@ interface DeletionStatus {
 }
 
 function PrivacySettingsPage() {
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const queryClient = useQueryClient();
   const {} = useAuthStore();
   const [isDeletionDialogOpen, setIsDeletionDialogOpen] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
+  const [_isExporting, setIsExporting] = useState(false);
 
   // Fetch current deletion status
   const { data: deletionStatus, isLoading: statusLoading } = useQuery<DeletionStatus>({
@@ -40,9 +38,10 @@ function PrivacySettingsPage() {
 
   // Request deletion mutation
   const deleteMutation = useMutation({
-    mutationFn: () => apiClient<{ success: boolean }>('/gdpr/request-deletion', {
-      method: 'POST',
-    }),
+    mutationFn: () =>
+      apiClient<{ success: boolean }>('/gdpr/request-deletion', {
+        method: 'POST',
+      }),
     onSuccess: () => {
       toast.success(t`Deletion request submitted. Your account will be deleted in 30 days.`);
       queryClient.invalidateQueries({ queryKey: ['gdpr'] });
@@ -55,9 +54,10 @@ function PrivacySettingsPage() {
 
   // Cancel deletion mutation
   const cancelMutation = useMutation({
-    mutationFn: () => apiClient<{ success: boolean }>('/gdpr/cancel-deletion', {
-      method: 'POST',
-    }),
+    mutationFn: () =>
+      apiClient<{ success: boolean }>('/gdpr/cancel-deletion', {
+        method: 'POST',
+      }),
     onSuccess: () => {
       toast.success(t`Deletion request cancelled.`);
       queryClient.invalidateQueries({ queryKey: ['gdpr'] });
@@ -69,11 +69,14 @@ function PrivacySettingsPage() {
 
   // Export data mutation
   const exportMutation = useMutation({
-    mutationFn: () => apiClient<{ download_url: string }>('/gdpr/export', {
-      method: 'POST',
-    }),
-    onSuccess: (data) => {
-      toast.success(t`Data export request submitted. You will receive a download link by email within 72 hours.`);
+    mutationFn: () =>
+      apiClient<{ download_url: string }>('/gdpr/export', {
+        method: 'POST',
+      }),
+    onSuccess: (_data) => {
+      toast.success(
+        t`Data export request submitted. You will receive a download link by email within 72 hours.`,
+      );
       setIsExporting(false);
     },
     onError: (error) => {
@@ -99,7 +102,9 @@ function PrivacySettingsPage() {
           <Trans>Privacy & Data</Trans>
         </h1>
       </div>
-      <p className="text-on-surface-variant text-sm -mt-4 mb-6"><Trans>Manage your account data and privacy settings.</Trans></p>
+      <p className="text-on-surface-variant text-sm -mt-4 mb-6">
+        <Trans>Manage your account data and privacy settings.</Trans>
+      </p>
 
       {/* Data Export */}
       <Card>
@@ -111,7 +116,10 @@ function PrivacySettingsPage() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-on-surface-variant mb-4">
-            <Trans>Request a copy of all your personal data. You'll receive a download link by email within 72 hours.</Trans>
+            <Trans>
+              Request a copy of all your personal data. You'll receive a download link by email
+              within 72 hours.
+            </Trans>
           </p>
           <Button
             onClick={() => exportMutation.mutate()}
@@ -152,15 +160,21 @@ function PrivacySettingsPage() {
           {isCompleted ? (
             <div className="text-center py-4">
               <CheckCircle className="w-8 h-8 text-green-400 mx-auto mb-2" />
-              <p className="text-sm text-on-surface"><Trans>Your account has been deleted.</Trans></p>
+              <p className="text-sm text-on-surface">
+                <Trans>Your account has been deleted.</Trans>
+              </p>
             </div>
           ) : isPending ? (
             <div className="space-y-3">
               <p className="text-sm text-on-surface-variant">
-                <Trans>Your account deletion is pending. It will be permanently deleted in 30 days.</Trans>
+                <Trans>
+                  Your account deletion is pending. It will be permanently deleted in 30 days.
+                </Trans>
                 <br />
                 <span className="text-xs text-on-surface-variant/50">
-                  <Trans>Requested on: {new Date(deletionStatus.requested_at!).toLocaleDateString()}</Trans>
+                  <Trans>
+                    Requested on: {new Date(deletionStatus.requested_at!).toLocaleDateString()}
+                  </Trans>
                 </span>
               </p>
               <Button
@@ -175,9 +189,14 @@ function PrivacySettingsPage() {
           ) : (
             <div className="space-y-3">
               <p className="text-sm text-on-surface-variant">
-                <Trans>Permanently delete your account and all associated data. This action is irreversible and cannot be undone.</Trans>
+                <Trans>
+                  Permanently delete your account and all associated data. This action is
+                  irreversible and cannot be undone.
+                </Trans>
                 <br />
-                <span className="text-xs text-red-400/70"><Trans>You will have 30 days to cancel this request.</Trans></span>
+                <span className="text-xs text-red-400/70">
+                  <Trans>You will have 30 days to cancel this request.</Trans>
+                </span>
               </p>
               <Button
                 onClick={() => setIsDeletionDialogOpen(true)}
@@ -196,11 +215,18 @@ function PrivacySettingsPage() {
       {isDeletionDialogOpen && (
         <div className="fixed inset-0 z-[1000] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <Card className="max-w-md w-full p-6 bg-surface-container border border-white/10">
-            <h3 className="text-lg font-semibold text-on-surface mb-2"><Trans>Confirm Account Deletion</Trans></h3>
+            <h3 className="text-lg font-semibold text-on-surface mb-2">
+              <Trans>Confirm Account Deletion</Trans>
+            </h3>
             <p className="text-sm text-on-surface-variant mb-4">
-              <Trans>Are you sure you want to delete your account? This will permanently remove all your data, including chips, statistics, and tournament history.</Trans>
+              <Trans>
+                Are you sure you want to delete your account? This will permanently remove all your
+                data, including chips, statistics, and tournament history.
+              </Trans>
               <br />
-              <span className="text-red-400"><Trans>This action cannot be undone.</Trans></span>
+              <span className="text-red-400">
+                <Trans>This action cannot be undone.</Trans>
+              </span>
             </p>
             <div className="flex gap-3 justify-end">
               <Button
@@ -232,11 +258,17 @@ function PrivacySettingsPage() {
 
       {/* Legal Links */}
       <div className="flex flex-wrap gap-4 justify-center text-sm text-on-surface-variant border-t border-white/10 pt-6">
-        <Link to="/legal/terms" className="hover:text-tertiary transition-colors"><Trans>Terms of Service</Trans></Link>
+        <Link to="/legal/terms" className="hover:text-tertiary transition-colors">
+          <Trans>Terms of Service</Trans>
+        </Link>
         <span className="text-white/20">|</span>
-        <Link to="/legal/privacy" className="hover:text-tertiary transition-colors"><Trans>Privacy Policy</Trans></Link>
+        <Link to="/legal/privacy" className="hover:text-tertiary transition-colors">
+          <Trans>Privacy Policy</Trans>
+        </Link>
         <span className="text-white/20">|</span>
-        <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors"><Trans>Responsible Gaming</Trans></Link>
+        <Link to="/responsible-gaming" className="hover:text-tertiary transition-colors">
+          <Trans>Responsible Gaming</Trans>
+        </Link>
       </div>
     </div>
   );
