@@ -1,15 +1,14 @@
-import { createFileRoute, useNavigate, useSearch } from '@tanstack/react-router';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
-import { apiClient } from '@stackbluff/shared/api/client';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Loader2, Users, Crown, ArrowLeft } from 'lucide-react';
-import { toast } from 'sonner';
-import { useAuthStore } from '@stackbluff/shared/stores/authStore';
-import { requireAuth } from '@/lib/authGuard';
-import { Trans } from '@lingui/react/macro';
 import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
+import { apiClient } from '@stackbluff/shared/api/client';
+import { useAuthStore } from '@stackbluff/shared/stores/authStore';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { createFileRoute, useNavigate, useSearch } from '@tanstack/react-router';
+import { ArrowLeft, Crown, Loader2, Users } from 'lucide-react';
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 
 interface ClubPreview {
   id: string;
@@ -36,11 +35,15 @@ function JoinClubPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { invite } = useSearch({ from: '/clubs/join' });
-  const user = useAuthStore((s) => s.user);
+  const _user = useAuthStore((s) => s.user);
   const [joined, setJoined] = useState(false);
 
   // Fetch club details by invite code
-  const { data: club, isLoading, error } = useQuery<ClubPreview>({
+  const {
+    data: club,
+    isLoading,
+    error,
+  } = useQuery<ClubPreview>({
     queryKey: ['club-invite', invite],
     queryFn: () => apiClient<ClubPreview>(`/clubs/invite/${invite}`),
     enabled: !!invite,
@@ -49,10 +52,11 @@ function JoinClubPage() {
   });
 
   const joinMutation = useMutation({
-    mutationFn: () => apiClient<{ success: boolean }>('/clubs/join', {
-      method: 'POST',
-      body: JSON.stringify({ invite_code: invite }),
-    }),
+    mutationFn: () =>
+      apiClient<{ success: boolean }>('/clubs/join', {
+        method: 'POST',
+        body: JSON.stringify({ invite_code: invite }),
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clubs'] });
       setJoined(true);
@@ -81,8 +85,12 @@ function JoinClubPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-6">
         <Card className="max-w-md w-full p-6 text-center">
-          <h2 className="text-xl font-semibold text-on-surface mb-2"><Trans>No Invite Code</Trans></h2>
-          <p className="text-on-surface-variant text-sm"><Trans>This page requires an invite code.</Trans></p>
+          <h2 className="text-xl font-semibold text-on-surface mb-2">
+            <Trans>No Invite Code</Trans>
+          </h2>
+          <p className="text-on-surface-variant text-sm">
+            <Trans>This page requires an invite code.</Trans>
+          </p>
           <Button onClick={() => navigate({ to: '/clubs' })} className="mt-4">
             <ArrowLeft className="w-4 h-4 mr-2" />
             <Trans>Back to Clubs</Trans>
@@ -96,7 +104,9 @@ function JoinClubPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-6">
         <Loader2 className="w-10 h-10 text-tertiary animate-spin" />
-        <p className="text-on-surface-variant mt-4"><Trans>Loading club details...</Trans></p>
+        <p className="text-on-surface-variant mt-4">
+          <Trans>Loading club details...</Trans>
+        </p>
       </div>
     );
   }
@@ -105,7 +115,9 @@ function JoinClubPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-6">
         <Card className="max-w-md w-full p-6 text-center">
-          <h2 className="text-xl font-semibold text-red-400 mb-2"><Trans>Invalid Invite</Trans></h2>
+          <h2 className="text-xl font-semibold text-red-400 mb-2">
+            <Trans>Invalid Invite</Trans>
+          </h2>
           <p className="text-on-surface-variant text-sm">
             <Trans>This invite link is invalid or has expired.</Trans>
           </p>
@@ -123,11 +135,17 @@ function JoinClubPage() {
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-6">
         <Card className="max-w-md w-full p-6 text-center">
           <div className="text-tertiary text-5xl mb-4">🎉</div>
-          <h2 className="text-xl font-semibold text-on-surface mb-2"><Trans>You're a Member!</Trans></h2>
+          <h2 className="text-xl font-semibold text-on-surface mb-2">
+            <Trans>You're a Member!</Trans>
+          </h2>
           <p className="text-on-surface-variant text-sm">
-            <Trans>You have successfully joined <strong>{club.name}</strong>.</Trans>
+            <Trans>
+              You have successfully joined <strong>{club.name}</strong>.
+            </Trans>
           </p>
-          <p className="text-on-surface-variant/60 text-xs mt-2"><Trans>Redirecting to club page...</Trans></p>
+          <p className="text-on-surface-variant/60 text-xs mt-2">
+            <Trans>Redirecting to club page...</Trans>
+          </p>
         </Card>
       </div>
     );
@@ -164,7 +182,9 @@ function JoinClubPage() {
         </div>
 
         <p className="text-on-surface-variant text-sm mb-4">
-          <Trans>You've been invited to join this club. Click the button below to become a member.</Trans>
+          <Trans>
+            You've been invited to join this club. Click the button below to become a member.
+          </Trans>
         </p>
 
         {club.is_member ? (
