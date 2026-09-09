@@ -12,6 +12,6 @@ pub use payout_calculator::calculate_payouts;
 pub use sit_go_tournament::{SitGoCommand, SitGoTournament};
 pub use tournament_service::TournamentServiceImpl;
 
+pub mod reminders;
 #[cfg(test)]
 mod sit_go_tests;
-pub mod reminders;
