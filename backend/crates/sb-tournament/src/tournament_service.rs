@@ -3,8 +3,8 @@ use chrono::Utc;
 use dashmap::DashMap;
 use sb_contracts::repo_api::UserRepo;
 use sb_contracts::tournament_api::{
-    TournamentConfig, TournamentRepo, TournamentResult, TournamentService, TournamentSummary,
-    TournamentStatus, TournamentType,
+    TournamentConfig, TournamentRepo, TournamentResult, TournamentService, TournamentStatus,
+    TournamentSummary, TournamentType,
 };
 use sb_shared_types::{AppError, RequestContext, TableId, TournamentId, UserId};
 use sb_table_registry::connection_broker::ConnectionBroker;
@@ -223,7 +223,11 @@ impl TournamentService for TournamentServiceImpl {
         config: TournamentConfig,
     ) -> Result<TournamentId, AppError> {
         let id = self.repo.insert_tournament(&config).await?;
-        let record = self.repo.get_tournament(id).await?.ok_or_else(|| AppError::NotFound("Tournament not found".into()))?;
+        let record = self
+            .repo
+            .get_tournament(id)
+            .await?
+            .ok_or_else(|| AppError::NotFound("Tournament not found".into()))?;
         let name = record.name.clone();
         if let Some(start) = config.scheduled_start
             && start > Utc::now()
@@ -437,15 +441,17 @@ impl TournamentService for TournamentServiceImpl {
         type_filter: Option<TournamentType>,
         status_filter: Option<TournamentStatus>,
     ) -> Result<Vec<TournamentSummary>, AppError> {
-        let records = self.repo.list_tournaments(type_filter, status_filter).await?;
+        let records = self
+            .repo
+            .list_tournaments(type_filter, status_filter)
+            .await?;
         let mut summaries = Vec::new();
         for r in records {
-            let starts_in_seconds: Option<u32> = r.config.scheduled_start
-                .map(|start| {
-                    let now = chrono::Utc::now();
-                    let diff = (start - now).num_seconds();
-                    if diff > 0 { diff as u32 } else { 0 }
-                });
+            let starts_in_seconds: Option<u32> = r.config.scheduled_start.map(|start| {
+                let now = chrono::Utc::now();
+                let diff = (start - now).num_seconds();
+                if diff > 0 { diff as u32 } else { 0 }
+            });
             summaries.push(TournamentSummary {
                 id: r.id,
                 name: r.name.clone(),
