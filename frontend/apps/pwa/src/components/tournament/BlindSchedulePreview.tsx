@@ -1,7 +1,6 @@
-import { cn } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 export interface BlindLevel {
   level: number;
@@ -17,24 +16,40 @@ interface BlindSchedulePreviewProps {
   className?: string;
 }
 
-export function BlindSchedulePreview({ levels, currentLevel, className }: BlindSchedulePreviewProps) {
+export function BlindSchedulePreview({
+  levels,
+  currentLevel,
+  className,
+}: BlindSchedulePreviewProps) {
   if (!levels || levels.length === 0) return null;
 
   return (
     <Card className={cn('overflow-hidden', className)}>
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-semibold"><Trans>Blind Schedule</Trans></CardTitle>
+        <CardTitle className="text-sm font-semibold">
+          <Trans>Blind Schedule</Trans>
+        </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-white/5 border-b border-white/10">
               <tr>
-                <th className="text-left py-2 px-3 text-[10px] font-mono text-on-surface-variant uppercase tracking-wider"><Trans>Level</Trans></th>
-                <th className="text-left py-2 px-3 text-[10px] font-mono text-on-surface-variant uppercase tracking-wider"><Trans>Small</Trans></th>
-                <th className="text-left py-2 px-3 text-[10px] font-mono text-on-surface-variant uppercase tracking-wider"><Trans>Big</Trans></th>
-                <th className="text-left py-2 px-3 text-[10px] font-mono text-on-surface-variant uppercase tracking-wider"><Trans>Ante</Trans></th>
-                <th className="text-left py-2 px-3 text-[10px] font-mono text-on-surface-variant uppercase tracking-wider"><Trans>Duration</Trans></th>
+                <th className="text-left py-2 px-3 text-[10px] font-mono text-on-surface-variant uppercase tracking-wider">
+                  <Trans>Level</Trans>
+                </th>
+                <th className="text-left py-2 px-3 text-[10px] font-mono text-on-surface-variant uppercase tracking-wider">
+                  <Trans>Small</Trans>
+                </th>
+                <th className="text-left py-2 px-3 text-[10px] font-mono text-on-surface-variant uppercase tracking-wider">
+                  <Trans>Big</Trans>
+                </th>
+                <th className="text-left py-2 px-3 text-[10px] font-mono text-on-surface-variant uppercase tracking-wider">
+                  <Trans>Ante</Trans>
+                </th>
+                <th className="text-left py-2 px-3 text-[10px] font-mono text-on-surface-variant uppercase tracking-wider">
+                  <Trans>Duration</Trans>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -45,11 +60,13 @@ export function BlindSchedulePreview({ levels, currentLevel, className }: BlindS
                     key={level.level}
                     className={cn(
                       'border-b border-white/5 transition-colors',
-                      isCurrent ? 'bg-tertiary/10' : 'hover:bg-white/5'
+                      isCurrent ? 'bg-tertiary/10' : 'hover:bg-white/5',
                     )}
                   >
                     <td className="py-2 px-3 font-mono">
-                      <span className={cn(isCurrent ? 'text-tertiary font-bold' : 'text-on-surface')}>
+                      <span
+                        className={cn(isCurrent ? 'text-tertiary font-bold' : 'text-on-surface')}
+                      >
                         {level.level}
                       </span>
                     </td>
