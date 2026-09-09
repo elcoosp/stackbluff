@@ -1,12 +1,11 @@
-import { useConsentStore } from '@/stores/consentStore';
+import { Trans } from '@lingui/react/macro';
 import { trackEvent } from '@/lib/analytics';
-import { consentLogger } from '@/lib/logger';
 import {
   ANALYTICS_COOKIE_CONSENT_ACCEPTED,
   ANALYTICS_COOKIE_CONSENT_DECLINED,
 } from '@/lib/consent/constants';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
+import { consentLogger } from '@/lib/logger';
+import { useConsentStore } from '@/stores/consentStore';
 
 /**
  * Cookie consent banner – bottom-fixed, non-dismissible except via Accept/Decline.
@@ -43,11 +42,11 @@ export function CookieConsentBanner() {
       data-testid="cookie-consent-banner"
     >
       <div className="mx-auto max-w-4xl flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
-        <p
-          id="cookie-consent-description"
-          className="text-sm text-white flex-1 m-0"
-        >
-          <Trans>We use cookies for analytics and to improve your experience. By clicking "Accept", you consent to our use of cookies.</Trans>
+        <p id="cookie-consent-description" className="text-sm text-white flex-1 m-0">
+          <Trans>
+            We use cookies for analytics and to improve your experience. By clicking "Accept", you
+            consent to our use of cookies.
+          </Trans>
         </p>
         <div className="flex gap-2 flex-shrink-0">
           <button
