@@ -27,7 +27,7 @@ pub fn spawn_viral_observer(
         loop {
             match rx.recv().await {
                 Ok(TableEvent::HandCompleted(event)) => {
-                                        let hc_observer = hand_count_observer.clone();
+                    let hc_observer = hand_count_observer.clone();
                     let rp_observer = replay_observer.clone();
                     let mission_svc = mission_service.clone();
 
@@ -74,7 +74,12 @@ pub fn spawn_viral_observer(
                             .and_then(|p| p.user_id)
                     {
                         let hand_result = HandResult {
-                            hero_raised_preflop: event.players.seats.iter().find(|p| p.user_id == Some(user_id)).is_some_and(|p| p.raised_preflop),
+                            hero_raised_preflop: event
+                                .players
+                                .seats
+                                .iter()
+                                .find(|p| p.user_id == Some(user_id))
+                                .is_some_and(|p| p.raised_preflop),
                             went_to_showdown: true,
                             hero_went_allin: false,
                         };
