@@ -1,0 +1,139 @@
+name: CI — Build & Verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend — Rust
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.94.0"
+          components: clippy, rustfmt
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+          shared-key: backend-${{ hashFiles('backend/Cargo.lock') }}
+
+      - name: cargo fmt --check
+        working-directory: backend
+        run: cargo fmt --all -- --check
+
+      - name: cargo check --workspace
+        working-directory: backend
+        run: cargo check --workspace --all-targets
+
+      - name: cargo clippy --workspace
+        working-directory: backend
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@nextest
+
+      - name: cargo nextest run --workspace
+        working-directory: backend
+        run: cargo nextest run --workspace
+        env:
+          RUST_BACKTRACE: 1
+
+      - name: Install cargo-deny
+        run: cargo install cargo-deny 2>/dev/null || true
+
+      - name: cargo deny check
+        working-directory: backend
+        run: cargo deny check advisories bans licenses sources
+
+  frontend:
+    name: Frontend — Node/pnpm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.8.1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Biome lint + format check
+        working-directory: frontend
+        run: pnpm lint
+
+      - name: TypeScript check (tsc --noEmit)
+        working-directory: frontend
+        run: pnpm -r check
+
+      - name: Vitest unit tests
+        working-directory: frontend
+        run: pnpm -r test
+        env:
+          CI: true
+
+  build-verification:
+    name: Build — Full verification
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.94.0"
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+          shared-key: backend-build-${{ hashFiles('backend/Cargo.lock') }}
+
+      - name: cargo build --release (backend binary)
+        working-directory: backend
+        run: cargo build --release --package sb-server
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.8.1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: pnpm build (all apps + shared)
+        working-directory: frontend
+        run: pnpm build
