@@ -1,16 +1,15 @@
-import { useState } from 'react';
+import { Trans } from '@lingui/react/macro';
 import { useQuery } from '@tanstack/react-query';
-import { LeaderboardResponseSchema } from '../../lib/schemas';
+import { motion } from 'framer-motion';
+import { ChevronLeft, ChevronRight, RotateCcw, Trophy } from 'lucide-react';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { API } from '../../lib/constants';
 import { apiRequest, handleApiError } from '../../lib/errorHandler';
 import { logger } from '../../lib/logger';
+import { LeaderboardResponseSchema } from '../../lib/schemas';
 import { LeaderboardSkeleton } from './LoadingSkeletons';
-import { API } from '../../lib/constants';
-import { motion } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, RotateCcw, Trophy } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
 
 interface ClubLeaderboardTabProps {
   clubId: string;
@@ -46,7 +45,7 @@ export function ClubLeaderboardTab({ clubId }: ClubLeaderboardTabProps) {
       const rawData = await apiRequest<unknown>(
         `/clubs/${clubId}/leaderboard?division=${currentDivision}`,
         {},
-        { clubId, division: currentDivision }
+        { clubId, division: currentDivision },
       );
       return LeaderboardResponseSchema.parse(rawData);
     },
@@ -68,7 +67,9 @@ export function ClubLeaderboardTab({ clubId }: ClubLeaderboardTabProps) {
 
     return (
       <div className="text-center py-12">
-        <p className="text-red-400 mb-4"><Trans>Failed to load leaderboard</Trans></p>
+        <p className="text-red-400 mb-4">
+          <Trans>Failed to load leaderboard</Trans>
+        </p>
         <Button
           onClick={() => refetch()}
           className="bg-tertiary text-on-tertiary hover:bg-tertiary/80 rounded-xl"
@@ -82,7 +83,9 @@ export function ClubLeaderboardTab({ clubId }: ClubLeaderboardTabProps) {
   if (!data || data.entries.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-on-surface-variant"><Trans>No tournament results yet.</Trans></p>
+        <p className="text-on-surface-variant">
+          <Trans>No tournament results yet.</Trans>
+        </p>
         <p className="text-on-surface-variant/60 text-sm mt-2">
           <Trans>Once tournaments are completed, the leaderboard will appear here.</Trans>
         </p>
@@ -102,9 +105,13 @@ export function ClubLeaderboardTab({ clubId }: ClubLeaderboardTabProps) {
               <Trans>Rankings</Trans>
             </span>
           </div>
-          <h2 className="font-headline-md text-xl text-on-surface"><Trans>Club Leaderboard</Trans></h2>
+          <h2 className="font-headline-md text-xl text-on-surface">
+            <Trans>Club Leaderboard</Trans>
+          </h2>
           <p className="text-on-surface-variant text-sm mt-1">
-            <Trans>{total_members} total members • Division {currentDivision} of {total_divisions}</Trans>
+            <Trans>
+              {total_members} total members • Division {currentDivision} of {total_divisions}
+            </Trans>
           </p>
         </div>
         <Button
@@ -113,7 +120,7 @@ export function ClubLeaderboardTab({ clubId }: ClubLeaderboardTabProps) {
           variant="outline"
           className="border-outline-variant text-on-surface hover:border-tertiary hover:text-tertiary hover:bg-tertiary/10 font-label-caps text-xs uppercase tracking-wider rounded-xl w-full sm:w-auto justify-center"
         >
-          <RotateCcw className={cn("w-4 h-4 mr-2", isFetching && "animate-spin")} />
+          <RotateCcw className={cn('w-4 h-4 mr-2', isFetching && 'animate-spin')} />
           {isFetching ? <Trans>Refreshing</Trans> : <Trans>Refresh</Trans>}
         </Button>
       </div>
@@ -129,23 +136,23 @@ export function ClubLeaderboardTab({ clubId }: ClubLeaderboardTabProps) {
             key={entry.user_id}
             variants={itemVariants}
             className={cn(
-              "flex items-center gap-4 p-4 rounded-xl border transition-colors",
+              'flex items-center gap-4 p-4 rounded-xl border transition-colors',
               entry.rank === 1
-                ? "bg-yellow-500/5 border-yellow-500/20"
-                : "bg-white/5 border-white/10 hover:bg-white/[0.07]"
+                ? 'bg-yellow-500/5 border-yellow-500/20'
+                : 'bg-white/5 border-white/10 hover:bg-white/[0.07]',
             )}
           >
             <div className="flex-shrink-0 w-10 text-center">
               <span
                 className={cn(
-                  "text-lg font-bold",
+                  'text-lg font-bold',
                   entry.rank === 1
                     ? 'text-yellow-400'
                     : entry.rank === 2
                       ? 'text-gray-300'
                       : entry.rank === 3
                         ? 'text-orange-400'
-                        : 'text-on-surface-variant'
+                        : 'text-on-surface-variant',
                 )}
               >
                 #{entry.rank}
@@ -171,8 +178,12 @@ export function ClubLeaderboardTab({ clubId }: ClubLeaderboardTabProps) {
             </div>
 
             <div className="flex-shrink-0 text-right">
-              <p className="font-headline-md text-sm text-on-surface">{entry.weekly_xp.toLocaleString()}</p>
-              <p className="text-on-surface-variant text-xs"><Trans>XP this week</Trans></p>
+              <p className="font-headline-md text-sm text-on-surface">
+                {entry.weekly_xp.toLocaleString()}
+              </p>
+              <p className="text-on-surface-variant text-xs">
+                <Trans>XP this week</Trans>
+              </p>
             </div>
           </motion.div>
         ))}
@@ -189,7 +200,9 @@ export function ClubLeaderboardTab({ clubId }: ClubLeaderboardTabProps) {
             <ChevronLeft className="w-4 h-4 mr-1" /> <Trans>Prev</Trans>
           </Button>
           <span className="text-sm font-data-mono text-on-surface-variant">
-            <Trans>Division {currentDivision} / {total_divisions}</Trans>
+            <Trans>
+              Division {currentDivision} / {total_divisions}
+            </Trans>
           </span>
           <Button
             onClick={() => setCurrentDivision((d) => Math.min(total_divisions, d + 1))}
