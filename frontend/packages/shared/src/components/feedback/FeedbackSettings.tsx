@@ -1,20 +1,20 @@
-import { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import {
-  Volume2,
-  VolumeX,
+  ChevronDown,
+  MapPin,
+  Play,
+  RotateCcw,
   Vibrate,
   VibrateOff,
-  MapPin,
+  Volume2,
+  VolumeX,
   Zap,
-  RotateCcw,
-  ChevronDown,
-  Play,
 } from 'lucide-react';
-import { cn } from '../../lib/utils';
-import { useFeedbackStore } from '../../stores/feedbackStore';
+import { AnimatePresence, motion } from 'motion/react';
+import { useState } from 'react';
 import { useFeedback } from '../../hooks/useFeedback';
+import { cn } from '../../lib/utils';
 import type { FeedbackEvent } from '../../services/feedback/types';
+import { useFeedbackStore } from '../../stores/feedbackStore';
 
 /* ── Toggle Switch ── */
 function Toggle({
