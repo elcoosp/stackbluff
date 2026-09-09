@@ -1,6 +1,5 @@
-import { useEffect, useState, useMemo } from 'react';
 import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
+import { useEffect, useMemo, useState } from 'react';
 
 interface SeasonPassTimerProps {
   expiresAt: string;
@@ -9,7 +8,7 @@ interface SeasonPassTimerProps {
 export function SeasonPassTimer({ expiresAt }: SeasonPassTimerProps) {
   const deadline = useMemo(() => {
     const d = new Date(expiresAt);
-    return isNaN(d.getTime()) ? null : d.getTime();
+    return Number.isNaN(d.getTime()) ? null : d.getTime();
   }, [expiresAt]);
 
   const [remaining, setRemaining] = useState(() => {
@@ -29,7 +28,11 @@ export function SeasonPassTimer({ expiresAt }: SeasonPassTimerProps) {
   }, [deadline]);
 
   if (!deadline || remaining === 0) {
-    return <span className="text-sm text-red-400"><Trans>Expired</Trans></span>;
+    return (
+      <span className="text-sm text-red-400">
+        <Trans>Expired</Trans>
+      </span>
+    );
   }
 
   const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
@@ -37,7 +40,9 @@ export function SeasonPassTimer({ expiresAt }: SeasonPassTimerProps) {
 
   return (
     <span className="text-sm text-emerald-400">
-      <Trans>{days}d {hours}h remaining</Trans>
+      <Trans>
+        {days}d {hours}h remaining
+      </Trans>
     </span>
   );
 }
