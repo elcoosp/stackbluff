@@ -1,10 +1,9 @@
 use axum::{
-    Router,
+    Json, Router,
     extract::{Extension, State},
+    http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
-    Json,
-    http::StatusCode,
 };
 use sb_shared_types::request_context::RequestContext;
 use sb_viral::puzzle::models::SubmitRequest;
@@ -28,16 +27,32 @@ pub async fn submit_puzzle(
 ) -> impl IntoResponse {
     let user_id = match ctx.user_id {
         Some(uid) => uid.0,
-        None => return (StatusCode::UNAUTHORIZED, Json(json!({"error": "Auth required"}))).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Auth required"})),
+            )
+                .into_response();
+        }
     };
 
     match service::submit_puzzle_action(user_id, req, state.puzzle_repo.as_ref()).await {
         Ok(res) => (StatusCode::OK, Json(json!(res))).into_response(),
-        Err(service::PuzzleServiceError::AlreadySubmitted { correct, action }) =>
-            (StatusCode::CONFLICT, Json(json!({"error": "Already submitted", "correct": correct, "action": action}))).into_response(),
-        Err(service::PuzzleServiceError::InvalidAction) =>
-            (StatusCode::BAD_REQUEST, Json(json!({"error": "Invalid action"}))).into_response(),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+        Err(service::PuzzleServiceError::AlreadySubmitted { correct, action }) => (
+            StatusCode::CONFLICT,
+            Json(json!({"error": "Already submitted", "correct": correct, "action": action})),
+        )
+            .into_response(),
+        Err(service::PuzzleServiceError::InvalidAction) => (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "Invalid action"})),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
     }
 }
 
