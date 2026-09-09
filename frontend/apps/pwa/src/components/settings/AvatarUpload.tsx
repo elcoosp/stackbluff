@@ -1,15 +1,15 @@
-import { useState, useRef, ChangeEvent, useEffect } from 'react';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
+import { apiClient } from '@stackbluff/shared/api/client';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { uploadFile } from '@/lib/uploadFile';
-import { apiClient } from '@stackbluff/shared/api/client';
+import { Camera, Loader2, Upload, X } from 'lucide-react';
+import { type ChangeEvent, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Loader2, Upload, Camera, X } from 'lucide-react';
+import { uploadFile } from '@/lib/uploadFile';
 import { cn } from '@/lib/utils';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
 
 const AVATAR_STORAGE_KEY = 'stackbluff-avatar-url';
 
@@ -147,7 +147,9 @@ export function AvatarUpload({ className, onAvatarUpdated }: AvatarUploadProps) 
       </div>
 
       <div className="flex flex-col gap-1">
-        <p className="text-sm text-on-surface"><Trans>Profile Picture</Trans></p>
+        <p className="text-sm text-on-surface">
+          <Trans>Profile Picture</Trans>
+        </p>
         <div className="flex gap-2">
           <Button
             variant="outline"
@@ -156,7 +158,7 @@ export function AvatarUpload({ className, onAvatarUpdated }: AvatarUploadProps) 
             disabled={isUploading || updateAvatarMutation.isPending}
             className="border-white/10 text-on-surface-variant hover:text-on-surface"
           >
-            {(isUploading || updateAvatarMutation.isPending) ? (
+            {isUploading || updateAvatarMutation.isPending ? (
               <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
             ) : (
               <Upload className="w-3.5 h-3.5 mr-1" />
