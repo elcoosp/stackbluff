@@ -28,10 +28,10 @@ export function ClubTabs({ tabs, activeTab, onTabChange, children }: ClubTabsPro
             key={tab.key}
             onClick={() => onTabChange(tab.key)}
             className={cn(
-              "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all",
+              'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all',
               activeTab === tab.key
-                ? "bg-white/10 text-on-surface shadow-sm"
-                : "text-on-surface-variant hover:text-on-surface"
+                ? 'bg-white/10 text-on-surface shadow-sm'
+                : 'text-on-surface-variant hover:text-on-surface',
             )}
           >
             {tab.label}
@@ -45,4 +45,4 @@ export function ClubTabs({ tabs, activeTab, onTabChange, children }: ClubTabsPro
   );
 }
 
-export type { TabKey, Tab };
+export type { Tab, TabKey };
