@@ -1,22 +1,24 @@
-<p align="center">
-  <strong>A free‑to‑play, multi‑platform (Telegram Mini App + PWA) social poker platform</strong><br/>
-  with a <strong>sub‑10ms Rust/WebSocket engine</strong>, built end‑to‑end by <strong>5 parallel AI agents</strong> with zero merge conflicts. Ships real poker, clubs, tournaments, an AI coach ("The Oracle"), and a card‑compositor toolchain — all play‑money, GDPR‑compliant, on a €100 bootstrap budget.
-</p>
-
-<div style="display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; align-items: center;">
-  <img src="https://img.shields.io/badge/CI-Build%20%26%20Verify-brightgreen?style=flat-square&logo=githubactions" alt="CI">
-  <img src="https://img.shields.io/badge/Rust-1.94%20%7C%202024-000000?style=flat-square&logo=rust" alt="Rust">
-  <img src="https://img.shields.io/badge/Axum-0.8.9-000000?style=flat-square&logo=rust" alt="Axum">
-  <img src="https://img.shields.io/badge/React-19.2.7-61DAFB?style=flat-square&logo=react" alt="React">
-  <img src="https://img.shields.io/badge/Vite-8.0.8-646CFF?style=flat-square&logo=vite" alt="Vite">
-  <img src="https://img.shields.io/badge/TypeScript-6.0-000000?style=flat-square&logo=typescript" alt="TypeScript">
-  <img src="https://img.shields.io/badge/Tailwind-4.3.1-06B6D4?style=flat-square&logo=tailwindcss" alt="Tailwind">
-  <img src="https://img.shields.io/badge/Biome-2.4.15-F7DF1E?style=flat-square&logo=biome" alt="Biome">
-  <img src="https://img.shields.io/badge/pnpm-10.8.1-F7044E?style=flat-square&logo=pnpm" alt="pnpm">
-  <img src="https://img.shields.io/badge/SQLite-WAL%20%7C%20SeaORM%202.0-003B57?style=flat-square&logo=sqlite" alt="SQLite">
-  <img src="https://img.shields.io/badge/License-Proprietary%20%28launch%29-lightgrey?style=flat-square" alt="License">
-  <img src="https://img.shields.io/badge/Arch-Monorepo%20%2B%20Modular%20Rust%20Monolith-orange?style=flat-square" alt="Arch">
-  <img src="https://img.shields.io/badge/Built%20by-5%20AI%20Agents-blueviolet?style=flat-square" alt="Agents">
+<div align="center">
+  <img src="docs/logo.png" alt="StackBluff Logo" width="200"/>
+  <p>
+    <strong>A free‑to‑play, multi‑platform (Telegram Mini App + PWA) social poker platform</strong><br/>
+    with a <strong>sub‑10ms Rust/WebSocket engine</strong>, built end‑to‑end by <strong>5 parallel AI agents</strong> with zero merge conflicts. Ships real poker, clubs, tournaments, an AI coach ("The Oracle"), and a card‑compositor toolchain — all play‑money, GDPR‑compliant, on a €100 bootstrap budget.
+  </p>
+  <p>
+    <img src="https://img.shields.io/badge/CI-Build%20%26%20Verify-brightgreen?style=flat-square&logo=githubactions" alt="CI"/>
+    <img src="https://img.shields.io/badge/Rust-1.94%20%7C%202024-000000?style=flat-square&logo=rust" alt="Rust"/>
+    <img src="https://img.shields.io/badge/Axum-0.8.9-000000?style=flat-square&logo=rust" alt="Axum"/>
+    <img src="https://img.shields.io/badge/React-19.2.7-61DAFB?style=flat-square&logo=react" alt="React"/>
+    <img src="https://img.shields.io/badge/Vite-8.0.8-646CFF?style=flat-square&logo=vite" alt="Vite"/>
+    <img src="https://img.shields.io/badge/TypeScript-6.0-000000?style=flat-square&logo=typescript" alt="TypeScript"/>
+    <img src="https://img.shields.io/badge/Tailwind-4.3.1-06B6D4?style=flat-square&logo=tailwindcss" alt="Tailwind"/>
+    <img src="https://img.shields.io/badge/Biome-2.4.15-F7DF1E?style=flat-square&logo=biome" alt="Biome"/>
+    <img src="https://img.shields.io/badge/pnpm-10.8.1-F7044E?style=flat-square&logo=pnpm" alt="pnpm"/>
+    <img src="https://img.shields.io/badge/SQLite-WAL%20%7C%20SeaORM%202.0-003B57?style=flat-square&logo=sqlite" alt="SQLite"/>
+    <img src="https://img.shields.io/badge/License-Proprietary%20%28launch%29-lightgrey?style=flat-square" alt="License"/>
+    <img src="https://img.shields.io/badge/Arch-Monorepo%20%2B%20Modular%20Rust%20Monolith-orange?style=flat-square" alt="Arch"/>
+    <img src="https://img.shields.io/badge/Built%20by-5%20AI%20Agents-blueviolet?style=flat-square" alt="Agents"/>
+  </p>
 </div>
 
 ---
