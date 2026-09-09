@@ -2,12 +2,10 @@
 //! Uses an in-memory SQLite database with migrations.
 
 use chrono::{Duration, Utc};
+use sb_contracts::r2_storage::R2Storage;
 use sb_db_entities::{enums::Platform, enums::RankTier, player_rank, season, user};
 use sb_server::season_card_generator::SeasonCardGenerator;
-use sb_contracts::r2_storage::R2Storage;
-use sea_orm::{
-    ActiveModelTrait, ColumnTrait, Database, EntityTrait, QueryFilter, Set,
-};
+use sea_orm::{ActiveModelTrait, ColumnTrait, Database, EntityTrait, QueryFilter, Set};
 use sea_orm_migration::MigratorTrait;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -48,7 +46,10 @@ impl sb_db_repos::season_card_repo::SeasonCardRepo for MockSeasonCardRepo {
     ) -> Result<Option<sb_db_entities::user_season_card::Model>, sea_orm::DbErr> {
         unimplemented!()
     }
-    async fn find_by_user(&self, _user_id: Uuid) -> Result<Vec<sb_db_entities::user_season_card::Model>, sea_orm::DbErr> {
+    async fn find_by_user(
+        &self,
+        _user_id: Uuid,
+    ) -> Result<Vec<sb_db_entities::user_season_card::Model>, sea_orm::DbErr> {
         unimplemented!()
     }
 }
