@@ -1,14 +1,14 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { TournamentsResponseSchema, ScheduleTournamentRequestSchema } from '../lib/schemas';
-import type { TournamentsResponse, ScheduleTournamentRequest } from '../lib/schemas';
+import { useAuthStore } from '@stackbluff/shared/stores/authStore';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { API } from '../lib/constants';
 import { apiRequest } from '../lib/errorHandler';
 import { logger } from '../lib/logger';
-import { API } from '../lib/constants';
-import { useAuthStore } from '@stackbluff/shared/stores/authStore';
+import type { ScheduleTournamentRequest, TournamentsResponse } from '../lib/schemas';
+import { ScheduleTournamentRequestSchema, TournamentsResponseSchema } from '../lib/schemas';
 
 export function useClubTournaments(clubId: string) {
   const queryClient = useQueryClient();
-  const userId = useAuthStore((s) => s.user?.id);
+  const _userId = useAuthStore((s) => s.user?.id);
 
   const query = useQuery<TournamentsResponse>({
     queryKey: ['club-tournaments', clubId],
@@ -25,12 +25,19 @@ export function useClubTournaments(clubId: string) {
 
   const registerMutation = useMutation({
     mutationFn: async (tournamentId: string) => {
-      return apiRequest(`/tournaments/${tournamentId}/register`, { method: 'POST' }, { tournamentId });
+      return apiRequest(
+        `/tournaments/${tournamentId}/register`,
+        { method: 'POST' },
+        { tournamentId },
+      );
     },
     onMutate: async (tournamentId) => {
       await queryClient.cancelQueries({ queryKey: ['club-tournaments', clubId] });
 
-      const previousTournaments = queryClient.getQueryData<TournamentsResponse>(['club-tournaments', clubId]);
+      const previousTournaments = queryClient.getQueryData<TournamentsResponse>([
+        'club-tournaments',
+        clubId,
+      ]);
 
       queryClient.setQueryData<TournamentsResponse>(['club-tournaments', clubId], (old) => {
         if (!old) return old;
@@ -38,8 +45,12 @@ export function useClubTournaments(clubId: string) {
           ...old,
           tournaments: old.tournaments.map((t) =>
             t.id === tournamentId
-              ? { ...t, is_registered: true, current_registrations: (t.current_registrations ?? 0) + 1 }
-              : t
+              ? {
+                  ...t,
+                  is_registered: true,
+                  current_registrations: (t.current_registrations ?? 0) + 1,
+                }
+              : t,
           ),
         };
       });
@@ -62,12 +73,19 @@ export function useClubTournaments(clubId: string) {
 
   const unregisterMutation = useMutation({
     mutationFn: async (tournamentId: string) => {
-      return apiRequest(`/tournaments/${tournamentId}/register`, { method: 'DELETE' }, { tournamentId });
+      return apiRequest(
+        `/tournaments/${tournamentId}/register`,
+        { method: 'DELETE' },
+        { tournamentId },
+      );
     },
     onMutate: async (tournamentId) => {
       await queryClient.cancelQueries({ queryKey: ['club-tournaments', clubId] });
 
-      const previousTournaments = queryClient.getQueryData<TournamentsResponse>(['club-tournaments', clubId]);
+      const previousTournaments = queryClient.getQueryData<TournamentsResponse>([
+        'club-tournaments',
+        clubId,
+      ]);
 
       queryClient.setQueryData<TournamentsResponse>(['club-tournaments', clubId], (old) => {
         if (!old) return old;
@@ -75,8 +93,12 @@ export function useClubTournaments(clubId: string) {
           ...old,
           tournaments: old.tournaments.map((t) =>
             t.id === tournamentId
-              ? { ...t, is_registered: false, current_registrations: Math.max(0, (t.current_registrations ?? 0) - 1) }
-              : t
+              ? {
+                  ...t,
+                  is_registered: false,
+                  current_registrations: Math.max(0, (t.current_registrations ?? 0) - 1),
+                }
+              : t,
           ),
         };
       });
@@ -100,16 +122,22 @@ export function useClubTournaments(clubId: string) {
   const scheduleMutation = useMutation({
     mutationFn: async (data: ScheduleTournamentRequest) => {
       const validated = ScheduleTournamentRequestSchema.parse(data);
-      return apiRequest(`/clubs/${clubId}/tournaments`, {
-        method: 'POST',
-        body: JSON.stringify(validated),
-      }, { clubId });
+      return apiRequest(
+        `/clubs/${clubId}/tournaments`,
+        {
+          method: 'POST',
+          body: JSON.stringify(validated),
+        },
+        { clubId },
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['club-tournaments', clubId] });
     },
     onError: (err) => {
-      logger.error('Failed to schedule tournament', err instanceof Error ? err : undefined, { clubId });
+      logger.error('Failed to schedule tournament', err instanceof Error ? err : undefined, {
+        clubId,
+      });
     },
   });
 
