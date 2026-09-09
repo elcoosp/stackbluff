@@ -26,7 +26,8 @@ impl ProductRepo for ProductRepoImpl {
         let products: Result<Vec<Product>, PersistenceError> = models
             .into_iter()
             .map(|m| {
-                let id = Uuid::parse_str(&m.id).map_err(|_| PersistenceError::Database("Invalid UUID".into()))?;
+                let id = Uuid::parse_str(&m.id)
+                    .map_err(|_| PersistenceError::Database("Invalid UUID".into()))?;
                 Ok(Product {
                     id,
                     name: m.name,
@@ -34,8 +35,16 @@ impl ProductRepo for ProductRepoImpl {
                     price_eur: m.price as f64 / 100.0,
                     price_stars: m.stars_price as u64,
                     product_type: m.product_type,
-                    chips_amount: m.metadata.get("chips").and_then(|v| v.as_u64()).unwrap_or(0),
-                    duration_days: m.metadata.get("duration_days").and_then(|v| v.as_u64()).unwrap_or(0),
+                    chips_amount: m
+                        .metadata
+                        .get("chips")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0),
+                    duration_days: m
+                        .metadata
+                        .get("duration_days")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0),
                 })
             })
             .collect();
