@@ -22,16 +22,28 @@ Object.defineProperty(window, 'matchMedia', {
 
 // Mock IntersectionObserver
 global.IntersectionObserver = class IntersectionObserver {
-  observe() { return null; }
-  disconnect() { return null; }
-  unobserve() { return null; }
+  observe() {
+    return null;
+  }
+  disconnect() {
+    return null;
+  }
+  unobserve() {
+    return null;
+  }
 } as any;
 
 // Mock ResizeObserver
 global.ResizeObserver = class ResizeObserver {
-  observe() { return null; }
-  disconnect() { return null; }
-  unobserve() { return null; }
+  observe() {
+    return null;
+  }
+  disconnect() {
+    return null;
+  }
+  unobserve() {
+    return null;
+  }
 } as any;
 
 // Mock localStorage
@@ -59,4 +71,6 @@ Object.defineProperty(window, 'localStorage', {
 beforeEach(() => {
   localStorageMock.clear();
 });
-jest.mock('@stackbluff/shared/api/client', () => ({ apiClient: { post: jest.fn(), get: jest.fn() } }));
+jest.mock('@stackbluff/shared/api/client', () => ({
+  apiClient: { post: jest.fn(), get: jest.fn() },
+}));
