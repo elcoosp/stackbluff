@@ -1,5 +1,5 @@
-import { useUserBadges } from "../hooks/useBadges";
-import { t } from "@lingui/core/macro";
+import { t } from '@lingui/core/macro';
+import { useUserBadges } from '../hooks/useBadges';
 
 interface BadgeIconProps {
   userId: string;
@@ -8,9 +8,7 @@ interface BadgeIconProps {
 export function BadgeIcon({ userId }: BadgeIconProps) {
   const { data: badges } = useUserBadges(userId);
 
-  const hasFoundingMember = badges?.some(
-    (b) => b.badge_type === "founding_member"
-  );
+  const hasFoundingMember = badges?.some((b) => b.badge_type === 'founding_member');
 
   if (!hasFoundingMember) return null;
 
