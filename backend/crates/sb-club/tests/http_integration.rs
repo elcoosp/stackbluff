@@ -1,11 +1,11 @@
 //! HTTP-level integration tests using Axum test client
 
+use axum::Extension;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use axum::Extension;
 use migration::Migrator;
 use sb_club::handlers::ClubState;
-use sb_club::{club_router, ClubServiceImpl};
+use sb_club::{ClubServiceImpl, club_router};
 use sb_contracts::{ClubRepo, ClubService};
 use sb_db_entities::user::ActiveModel as UserActiveModel;
 use sb_db_repos::club_repo::ClubRepoImpl;
