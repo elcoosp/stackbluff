@@ -1,11 +1,15 @@
-import { useEntitlementsStore } from '../stores/entitlementsStore';
+import {
+  type ActionRequired,
+  type TableState,
+  useGameStore,
+} from '@stackbluff/shared/stores/gameStore';
+import { useTournamentStore } from '@stackbluff/shared/stores/tournamentStore';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
+import { generateAndSubmitFingerprint } from '@/services/fingerprint';
 import { UserUpdatedPayloadSchema } from '../lib/wsMessages';
 import { useAuthStore } from '../stores/authStore';
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { useGameStore, TableState, ActionRequired } from '@stackbluff/shared/stores/gameStore';
-import { toast } from 'sonner';
-import { useTournamentStore } from '@stackbluff/shared/stores/tournamentStore';
-import { generateAndSubmitFingerprint } from '@/services/fingerprint';
+import { useEntitlementsStore } from '../stores/entitlementsStore';
 
 function getToken(): string | null {
   return localStorage.getItem('auth_token');
@@ -13,13 +17,26 @@ function getToken(): string | null {
 
 // ── Rank & suit mapping ──
 const rankDisplayMap: Record<string, string> = {
-  Two: '2', Three: '3', Four: '4', Five: '5', Six: '6',
-  Seven: '7', Eight: '8', Nine: '9', Ten: '10',
-  Jack: 'J', Queen: 'Q', King: 'K', Ace: 'A',
+  Two: '2',
+  Three: '3',
+  Four: '4',
+  Five: '5',
+  Six: '6',
+  Seven: '7',
+  Eight: '8',
+  Nine: '9',
+  Ten: '10',
+  Jack: 'J',
+  Queen: 'Q',
+  King: 'K',
+  Ace: 'A',
 };
 
 const suitDisplayMap: Record<string, string> = {
-  hearts: '♥', diamonds: '♦', clubs: '♣', spades: '♠',
+  hearts: '♥',
+  diamonds: '♦',
+  clubs: '♣',
+  spades: '♠',
 };
 
 function convertCard(card: any) {
@@ -118,7 +135,6 @@ const parseMessage = (data: any) => {
       window.dispatchEvent(new CustomEvent('playerRemoved', { detail: data }));
       return null;
 
-
     case 'ShowdownReveal': {
       const players = (data.players || []).map((p: any) => ({
         user_id: p.user_id,
@@ -175,7 +191,7 @@ const parseMessage = (data: any) => {
             potOdds: analyticsData.pot_odds,
             bestHand: analyticsData.best_hand,
             strength: analyticsData.strength,
-          }
+          },
         };
       }
       return null;
@@ -194,7 +210,11 @@ const parseMessage = (data: any) => {
         next_blind_at: data.next_blind_at,
       });
       if (data.players_remaining !== undefined && data.players_remaining <= 9) {
-        window.dispatchEvent(new CustomEvent('tournament:finalTable', { detail: { tournamentId: data.tournament_id } }));
+        window.dispatchEvent(
+          new CustomEvent('tournament:finalTable', {
+            detail: { tournamentId: data.tournament_id },
+          }),
+        );
       }
       return null;
     }
@@ -212,9 +232,11 @@ const parseMessage = (data: any) => {
     }
 
     case 'TournamentStarting': {
-      window.dispatchEvent(new CustomEvent('tournament:starting', {
-        detail: { tournamentId: data.tournament_id, startsInSeconds: data.starts_in_seconds }
-      }));
+      window.dispatchEvent(
+        new CustomEvent('tournament:starting', {
+          detail: { tournamentId: data.tournament_id, startsInSeconds: data.starts_in_seconds },
+        }),
+      );
       return null;
     }
 
@@ -222,16 +244,24 @@ const parseMessage = (data: any) => {
       useTournamentStore.getState().setTournamentState(data.tournament_id, {
         blind_level: data.level,
       });
-      window.dispatchEvent(new CustomEvent('tournament:blindLevel', {
-        detail: { tournamentId: data.tournament_id, level: data.level, blinds: data.blinds }
-      }));
+      window.dispatchEvent(
+        new CustomEvent('tournament:blindLevel', {
+          detail: { tournamentId: data.tournament_id, level: data.level, blinds: data.blinds },
+        }),
+      );
       return null;
     }
 
     case 'TournamentElimination': {
-      window.dispatchEvent(new CustomEvent('tournament:elimination', {
-        detail: { tournamentId: data.tournament_id, playerName: data.player_name, position: data.position }
-      }));
+      window.dispatchEvent(
+        new CustomEvent('tournament:elimination', {
+          detail: {
+            tournamentId: data.tournament_id,
+            playerName: data.player_name,
+            position: data.position,
+          },
+        }),
+      );
       return null;
     }
 
@@ -240,17 +270,25 @@ const parseMessage = (data: any) => {
       state.setTournamentState(data.tournament_id, {
         my_table_id: data.new_room_id,
       });
-      window.dispatchEvent(new CustomEvent('tournament:tableChanged', {
-        detail: { tournamentId: data.tournament_id, newRoomId: data.new_room_id, newSeat: data.new_seat }
-      }));
+      window.dispatchEvent(
+        new CustomEvent('tournament:tableChanged', {
+          detail: {
+            tournamentId: data.tournament_id,
+            newRoomId: data.new_room_id,
+            newSeat: data.new_seat,
+          },
+        }),
+      );
       return null;
     }
 
     case 'TournamentResult': {
       useTournamentStore.getState().setResults(data.tournament_id, data.results);
-      window.dispatchEvent(new CustomEvent('tournament:result', {
-        detail: { tournamentId: data.tournament_id, results: data.results }
-      }));
+      window.dispatchEvent(
+        new CustomEvent('tournament:result', {
+          detail: { tournamentId: data.tournament_id, results: data.results },
+        }),
+      );
       return null;
     }
 
@@ -265,7 +303,9 @@ export function useGameWebSocket(tableId: string) {
   const mountedRef = useRef(true);
   const reconnectAttempts = useRef(0);
 
-  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'reconnecting' | 'disconnected'>('disconnected');
+  const [connectionStatus, setConnectionStatus] = useState<
+    'connected' | 'reconnecting' | 'disconnected'
+  >('disconnected');
   const [myUserId, setMyUserId] = useState<string | null>(null);
   const [notSeated, setNotSeated] = useState(false);
 
@@ -274,7 +314,11 @@ export function useGameWebSocket(tableId: string) {
 
   const connect = useCallback(() => {
     if (!mountedRef.current) return;
-    if (wsRef.current?.readyState === WebSocket.OPEN || wsRef.current?.readyState === WebSocket.CONNECTING) return;
+    if (
+      wsRef.current?.readyState === WebSocket.OPEN ||
+      wsRef.current?.readyState === WebSocket.CONNECTING
+    )
+      return;
 
     myUserIdRef.current = null;
     setNotSeated(false);
@@ -282,7 +326,9 @@ export function useGameWebSocket(tableId: string) {
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
     const baseWs = import.meta.env.VITE_WS_URL || `${proto}://${window.location.host}`;
     const token = getToken();
-    const url = token ? `${baseWs}/ws/game?token=${encodeURIComponent(token)}` : `${baseWs}/ws/game`;
+    const url = token
+      ? `${baseWs}/ws/game?token=${encodeURIComponent(token)}`
+      : `${baseWs}/ws/game`;
 
     const ws = new WebSocket(url);
     wsRef.current = ws;
@@ -299,7 +345,9 @@ export function useGameWebSocket(tableId: string) {
       reconnectAttempts.current = 0;
 
       if (buyInRef.current !== null) {
-        wsRef.current?.send(JSON.stringify({ type: 'join_table', table_id: tableId, buy_in: buyInRef.current }));
+        wsRef.current?.send(
+          JSON.stringify({ type: 'join_table', table_id: tableId, buy_in: buyInRef.current }),
+        );
         buyInRef.current = null;
       } else {
         ws.send(JSON.stringify({ type: 'reconnect', table_id: tableId }));
@@ -328,7 +376,9 @@ export function useGameWebSocket(tableId: string) {
               useAuthStore.getState().setBalance(payload.balance);
             }
             if (payload.season_pass_expires_at !== undefined) {
-              useEntitlementsStore.getState().setSeasonPassExpiresAt(payload.season_pass_expires_at);
+              useEntitlementsStore
+                .getState()
+                .setSeasonPassExpiresAt(payload.season_pass_expires_at);
             }
             if (payload.club_pro_expires_at !== undefined) {
               useEntitlementsStore.getState().setClubProExpiresAt(payload.club_pro_expires_at);
@@ -341,7 +391,7 @@ export function useGameWebSocket(tableId: string) {
         }
 
         if (data.type === 'Error') {
-          if (data.message.includes("Not seated")) {
+          if (data.message.includes('Not seated')) {
             setNotSeated(true);
             if (data.room_id) {
               useGameStore.getState().removeRoom(data.room_id);
@@ -422,7 +472,10 @@ export function useGameWebSocket(tableId: string) {
                 store.setActiveRoom(roomId);
               }
               const state = message as TableState;
-              if (!state.current_hand_in_progress || state.current_turn_user_id !== myUserIdRef.current) {
+              if (
+                !state.current_hand_in_progress ||
+                state.current_turn_user_id !== myUserIdRef.current
+              ) {
                 store.clearActionRequired(roomId);
               }
             }
@@ -430,7 +483,11 @@ export function useGameWebSocket(tableId: string) {
           }
           case 'ActionRequired': {
             if (roomId) {
-              if (myUserIdRef.current && message.player_id && message.player_id === myUserIdRef.current) {
+              if (
+                myUserIdRef.current &&
+                message.player_id &&
+                message.player_id === myUserIdRef.current
+              ) {
                 store.setActionRequired(roomId, message as ActionRequired);
               } else {
                 store.clearActionRequired(roomId);
@@ -486,7 +543,7 @@ export function useGameWebSocket(tableId: string) {
       if (!mountedRef.current) return;
       wsRef.current = null;
       setConnectionStatus('reconnecting');
-      const delay = Math.min(3000 * Math.pow(1.5, reconnectAttempts.current), 30000);
+      const delay = Math.min(3000 * 1.5 ** reconnectAttempts.current, 30000);
       reconnectAttempts.current += 1;
       reconnectTimeoutRef.current = setTimeout(() => {
         if (mountedRef.current) connect();
@@ -521,15 +578,20 @@ export function useGameWebSocket(tableId: string) {
     };
   }, [connect]);
 
-  const sendJoin = useCallback((amount: number) => {
-    buyInRef.current = amount;
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: 'join_table', table_id: tableId, buy_in: amount }));
-      buyInRef.current = null;
-    } else {
-      if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) connect();
-    }
-  }, [tableId, connect]);
+  const sendJoin = useCallback(
+    (amount: number) => {
+      buyInRef.current = amount;
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(
+          JSON.stringify({ type: 'join_table', table_id: tableId, buy_in: amount }),
+        );
+        buyInRef.current = null;
+      } else {
+        if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) connect();
+      }
+    },
+    [tableId, connect],
+  );
 
   const sendRebuy = useCallback((roomId: string, amount: number) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -540,18 +602,24 @@ export function useGameWebSocket(tableId: string) {
   const sendAction = useCallback((roomId: string, action: string, amount?: number) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       const actionMap: Record<string, string> = {
-        fold: 'fold', check: 'check', call: 'call',
-        raise: 'raise', 'all-in': 'allin', bet: 'bet',
+        fold: 'fold',
+        check: 'check',
+        call: 'call',
+        raise: 'raise',
+        'all-in': 'allin',
+        bet: 'bet',
       };
       const mapped = actionMap[action] || action;
-      wsRef.current.send(JSON.stringify({ type: 'player_action', room_id: roomId, action: mapped, amount }));
+      wsRef.current.send(
+        JSON.stringify({ type: 'player_action', room_id: roomId, action: mapped, amount }),
+      );
     }
   }, []);
 
   const sendLeave = useCallback((roomId: string) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'leave_table', room_id: roomId }));
-      const nextRoom = Object.keys(useGameStore.getState().rooms).find(id => id !== roomId);
+      const nextRoom = Object.keys(useGameStore.getState().rooms).find((id) => id !== roomId);
       useGameStore.getState().setActiveRoom(nextRoom || null);
       useGameStore.getState().removeRoom(roomId);
     }
@@ -572,7 +640,16 @@ export function useGameWebSocket(tableId: string) {
         sendWsMessage('unregister_tournament', { tournament_id: tournamentId });
       };
     }
-  }, [tableId, sendWsMessage]);
+  }, [sendWsMessage]);
 
-  return { sendLeave, sendJoin, sendAction, sendRebuy, sendWsMessage, connectionStatus, myUserId, notSeated };
+  return {
+    sendLeave,
+    sendJoin,
+    sendAction,
+    sendRebuy,
+    sendWsMessage,
+    connectionStatus,
+    myUserId,
+    notSeated,
+  };
 }
