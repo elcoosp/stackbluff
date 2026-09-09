@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export type PreAction =
   | { type: 'fold' }
@@ -49,20 +49,19 @@ export function usePreAction({ isMyTurn, toCall, sendAction }: UsePreActionParam
         result = { action: 'fold', label: 'FOLD' };
         break;
       case 'check_or_fold':
-        result = call === 0
-          ? { action: 'check', label: 'CHECK' }
-          : { action: 'fold', label: 'FOLD' };
+        result =
+          call === 0 ? { action: 'check', label: 'CHECK' } : { action: 'fold', label: 'FOLD' };
         break;
       case 'check_or_call_any':
-        result = call === 0
-          ? { action: 'check', label: 'CHECK' }
-          : { action: 'call', label: 'CALL' };
+        result =
+          call === 0 ? { action: 'check', label: 'CHECK' } : { action: 'call', label: 'CALL' };
         break;
       case 'call_up_to':
         if (call <= pa.amount) {
-          result = call === 0
-            ? { action: 'check', label: 'CHECK' }
-            : { action: 'call', label: `CALL $${call}` };
+          result =
+            call === 0
+              ? { action: 'check', label: 'CHECK' }
+              : { action: 'call', label: `CALL $${call}` };
         } else {
           result = { action: 'fold', label: 'FOLD' };
         }
