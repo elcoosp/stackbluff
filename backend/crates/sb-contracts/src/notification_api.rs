@@ -2,8 +2,8 @@
 //! to avoid coupling unrelated domains.
 
 use async_trait::async_trait;
-use sb_shared_types::UserId;
 use sb_shared_types::ClubId;
+use sb_shared_types::UserId;
 
 /// Error type for notification operations.
 #[derive(Debug, thiserror::Error)]
@@ -38,7 +38,11 @@ pub trait NotificationService: Send + Sync {
 
 #[async_trait::async_trait]
 pub trait ClubNotifier: Send + Sync {
-    async fn send_club_reminder(&self, club_id: ClubId, message: String) -> Result<(), sb_shared_types::errors::AppError>;
+    async fn send_club_reminder(
+        &self,
+        club_id: ClubId,
+        message: String,
+    ) -> Result<(), sb_shared_types::errors::AppError>;
 }
 
 #[derive(Debug, Clone)]
