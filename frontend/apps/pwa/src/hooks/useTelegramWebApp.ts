@@ -15,7 +15,7 @@ export function useTelegramWebApp() {
       });
       return true;
     },
-    []
+    [],
   );
 
   return { openInvoice };
