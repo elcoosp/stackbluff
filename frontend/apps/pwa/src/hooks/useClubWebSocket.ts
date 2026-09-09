@@ -1,18 +1,20 @@
-type WebSocketConnectionStatus = "connected" | "reconnecting" | "disconnected";
-import { useEffect, useRef, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+type WebSocketConnectionStatus = 'connected' | 'reconnecting' | 'disconnected';
+
 import { getToken } from '@stackbluff/shared/auth/token';
-import { ClubWebSocketEventSchema } from '../lib/schemas';
-import type { ClubWebSocketEvent } from "../lib/schemas";;
-import { logger } from '../lib/logger';
+import { useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { WEBSOCKET } from '../lib/constants';
+import { logger } from '../lib/logger';
+import type { ClubWebSocketEvent } from '../lib/schemas';
+import { ClubWebSocketEventSchema } from '../lib/schemas';
 
 function useWebSocketConnection(clubId: string) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const reconnectAttemptsRef = useRef(0);
-  const [connectionStatus, setConnectionStatus] = useState<WebSocketConnectionStatus>('disconnected');
+  const [connectionStatus, setConnectionStatus] =
+    useState<WebSocketConnectionStatus>('disconnected');
 
   const connect = () => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
@@ -55,7 +57,7 @@ function useWebSocketConnection(clubId: string) {
       setConnectionStatus('reconnecting');
 
       if (reconnectAttemptsRef.current < WEBSOCKET.MAX_RECONNECT_ATTEMPTS) {
-        const delay = WEBSOCKET.BASE_RECONNECT_DELAY * Math.pow(2, reconnectAttemptsRef.current);
+        const delay = WEBSOCKET.BASE_RECONNECT_DELAY * 2 ** reconnectAttemptsRef.current;
         reconnectTimeoutRef.current = setTimeout(() => {
           reconnectAttemptsRef.current++;
           logger.info('Attempting to reconnect WebSocket', {
@@ -84,7 +86,7 @@ function useWebSocketConnection(clubId: string) {
         clearTimeout(reconnectTimeoutRef.current);
       }
     };
-  }, [clubId]);
+  }, [connect]);
 
   return { connectionStatus };
 }
