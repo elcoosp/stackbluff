@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
-import { Trans, t } from "@lingui/react/macro";
+import { Trans, t } from '@lingui/react/macro';
+import type React from 'react';
+import { useEffect, useState } from 'react';
 
 interface Props {
   badgeType: string;
@@ -20,7 +21,8 @@ export const BadgeUnlockToast: React.FC<Props> = ({ badgeType, inviteLink }) => 
     const message = t`I just became a Founding Member of StackBluff by referring 10 friends who played 5+ hands! Join me: ${inviteLink || window.location.origin}`;
 
     if (navigator.share) {
-      navigator.share({ title: t`StackBluff Founding Member`, text: message })
+      navigator
+        .share({ title: t`StackBluff Founding Member`, text: message })
         .catch(() => navigator.clipboard.writeText(message));
     } else {
       navigator.clipboard.writeText(message).catch(() => {});
