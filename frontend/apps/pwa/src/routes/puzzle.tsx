@@ -1,29 +1,28 @@
-import { createFileRoute } from '@tanstack/react-router';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import { apiClient } from '@stackbluff/shared/api/client';
-import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { createFileRoute } from '@tanstack/react-router';
 import { motion } from 'framer-motion';
-import { toast } from 'sonner';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
 import {
-  Brain,
-  CheckCircle,
-  XCircle,
-  Sparkles,
   ArrowRight,
+  Brain,
   Crown,
-  Target,
+  Layers,
   Lightbulb,
   RotateCcw,
-  Layers,
+  Sparkles,
+  Target,
   Trophy,
+  XCircle,
 } from 'lucide-react';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 interface Puzzle {
   id: number;
@@ -49,12 +48,25 @@ interface SubmitResponse {
 }
 
 const cardRankMap: Record<string, string> = {
-  '2': '2', '3': '3', '4': '4', '5': '5', '6': '6',
-  '7': '7', '8': '8', '9': '9', '10': '10',
-  'J': 'J', 'Q': 'Q', 'K': 'K', 'A': 'A'
+  '2': '2',
+  '3': '3',
+  '4': '4',
+  '5': '5',
+  '6': '6',
+  '7': '7',
+  '8': '8',
+  '9': '9',
+  '10': '10',
+  J: 'J',
+  Q: 'Q',
+  K: 'K',
+  A: 'A',
 };
 const suitMap: Record<string, string> = {
-  'h': '♥', 'd': '♦', 'c': '♣', 's': '♠'
+  h: '♥',
+  d: '♦',
+  c: '♣',
+  s: '♠',
 };
 
 function formatCard(card: string): { rank: string; suit: string; display: string } {
@@ -77,7 +89,9 @@ function CardDisplay({ card, index = 0 }: { card: string; index?: number }) {
       className="w-14 h-20 bg-gradient-to-br from-white to-gray-100 rounded-xl shadow-lg flex flex-col items-center justify-center border border-gray-300/60 relative overflow-hidden"
     >
       <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent pointer-events-none" />
-      <span className={cn('text-sm font-bold relative z-10', isRed ? 'text-red-600' : 'text-gray-900')}>
+      <span
+        className={cn('text-sm font-bold relative z-10', isRed ? 'text-red-600' : 'text-gray-900')}
+      >
         {rank}
       </span>
       <span className={cn('text-2xl relative z-10', isRed ? 'text-red-600' : 'text-gray-900')}>
@@ -117,7 +131,12 @@ function PuzzlePage() {
   const [selectedAction, setSelectedAction] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
-  const { data: puzzle, isLoading, error, refetch } = useQuery<PuzzleResponse>({
+  const {
+    data: puzzle,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<PuzzleResponse>({
     queryKey: ['puzzle', 'today'],
     queryFn: () => apiClient<PuzzleResponse>('/puzzle/today'),
     staleTime: 60_000,
@@ -184,7 +203,9 @@ function PuzzlePage() {
           <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4">
             <XCircle className="w-8 h-8 text-red-400" />
           </div>
-          <h1 className="font-display-lg text-3xl text-on-surface mb-2"><Trans>Failed to Load</Trans></h1>
+          <h1 className="font-display-lg text-3xl text-on-surface mb-2">
+            <Trans>Failed to Load</Trans>
+          </h1>
           <p className="text-on-surface-variant text-sm mb-6">
             <Trans>We couldn't load today's puzzle. Please try again.</Trans>
           </p>
@@ -211,7 +232,9 @@ function PuzzlePage() {
           <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-4">
             <Brain className="w-8 h-8 text-on-surface-variant" />
           </div>
-          <h1 className="font-display-lg text-3xl text-on-surface mb-2"><Trans>No Puzzle Today</Trans></h1>
+          <h1 className="font-display-lg text-3xl text-on-surface mb-2">
+            <Trans>No Puzzle Today</Trans>
+          </h1>
           <p className="text-on-surface-variant text-sm">
             <Trans>Check back tomorrow for a fresh challenge!</Trans>
           </p>
@@ -221,7 +244,7 @@ function PuzzlePage() {
   }
 
   const isCorrect = submitted && submitMutation.data?.correct;
-  const isWrong = submitted && !submitMutation.data?.correct;
+  const _isWrong = submitted && !submitMutation.data?.correct;
 
   return (
     <div className="relative max-w-4xl mx-auto p-4 md:p-8 space-y-8">
@@ -253,7 +276,10 @@ function PuzzlePage() {
           </Badge>
         </div>
         <p className="text-on-surface-variant text-sm mt-1 max-w-md">
-          <Trans>Analyze the scenario and pick the optimal action. Sharpen your instincts one hand at a time.</Trans>
+          <Trans>
+            Analyze the scenario and pick the optimal action. Sharpen your instincts one hand at a
+            time.
+          </Trans>
         </p>
       </motion.div>
 
@@ -275,7 +301,9 @@ function PuzzlePage() {
                 <span className="text-xs font-data-mono uppercase tracking-widest text-tertiary">
                   <Trans>Scenario</Trans>
                 </span>
-                <h2 className="font-headline-md text-base text-on-surface"><Trans>Read the Situation</Trans></h2>
+                <h2 className="font-headline-md text-base text-on-surface">
+                  <Trans>Read the Situation</Trans>
+                </h2>
               </div>
             </div>
             <p className="text-sm text-on-surface-variant leading-relaxed mb-6 relative">
@@ -345,7 +373,7 @@ function PuzzlePage() {
                         'p-4 rounded-2xl border backdrop-blur-xl text-sm font-medium transition-all duration-300 group relative overflow-hidden',
                         isSelected
                           ? 'border-tertiary bg-tertiary/10 text-tertiary shadow-lg shadow-tertiary/10'
-                          : 'border-white/10 bg-white/5 text-on-surface-variant hover:bg-white/[0.07] hover:border-white/20'
+                          : 'border-white/10 bg-white/5 text-on-surface-variant hover:bg-white/[0.07] hover:border-white/20',
                       )}
                     >
                       <div className="flex items-center justify-center gap-2">
@@ -354,12 +382,14 @@ function PuzzlePage() {
                             'w-6 h-6 rounded-full flex items-center justify-center font-data-mono text-xs border transition-colors',
                             isSelected
                               ? 'bg-tertiary/20 border-tertiary/40 text-tertiary'
-                              : 'bg-white/5 border-white/10 text-on-surface-variant group-hover:text-on-surface'
+                              : 'bg-white/5 border-white/10 text-on-surface-variant group-hover:text-on-surface',
                           )}
                         >
                           {idx + 1}
                         </span>
-                        <span className="font-headline-md tracking-wide">{action.toUpperCase()}</span>
+                        <span className="font-headline-md tracking-wide">
+                          {action.toUpperCase()}
+                        </span>
                       </div>
                     </motion.button>
                   );
@@ -396,13 +426,13 @@ function PuzzlePage() {
                 'p-6 md:p-8 border backdrop-blur-xl rounded-2xl relative overflow-hidden',
                 isCorrect
                   ? 'bg-gradient-to-br from-tertiary/10 to-emerald-500/5 border-tertiary/20'
-                  : 'bg-gradient-to-br from-red-500/10 to-orange-500/5 border-red-500/20'
+                  : 'bg-gradient-to-br from-red-500/10 to-orange-500/5 border-red-500/20',
               )}
             >
               <div
                 className={cn(
                   'absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl pointer-events-none',
-                  isCorrect ? 'bg-tertiary/10' : 'bg-red-500/10'
+                  isCorrect ? 'bg-tertiary/10' : 'bg-red-500/10',
                 )}
               />
               <div className="relative">
@@ -412,7 +442,7 @@ function PuzzlePage() {
                       'w-14 h-14 rounded-full flex items-center justify-center border',
                       isCorrect
                         ? 'bg-tertiary/10 border-tertiary/30'
-                        : 'bg-red-500/10 border-red-500/30'
+                        : 'bg-red-500/10 border-red-500/30',
                     )}
                   >
                     {isCorrect ? (
@@ -425,7 +455,7 @@ function PuzzlePage() {
                     <span
                       className={cn(
                         'text-xs font-data-mono uppercase tracking-widest',
-                        isCorrect ? 'text-tertiary' : 'text-red-400'
+                        isCorrect ? 'text-tertiary' : 'text-red-400',
                       )}
                     >
                       {isCorrect ? t`Nice Play` : t`Missed It`}
@@ -433,7 +463,7 @@ function PuzzlePage() {
                     <h2
                       className={cn(
                         'font-display-lg text-2xl',
-                        isCorrect ? 'text-tertiary' : 'text-red-400'
+                        isCorrect ? 'text-tertiary' : 'text-red-400',
                       )}
                     >
                       {isCorrect ? t`Correct!` : t`Incorrect`}
@@ -467,7 +497,7 @@ function PuzzlePage() {
                       'p-4 rounded-xl border',
                       isCorrect
                         ? 'bg-tertiary/5 border-tertiary/20'
-                        : 'bg-tertiary/5 border-tertiary/20'
+                        : 'bg-tertiary/5 border-tertiary/20',
                     )}
                   >
                     <span className="text-xs font-data-mono uppercase tracking-widest text-tertiary block mb-1">
