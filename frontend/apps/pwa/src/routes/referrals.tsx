@@ -1,36 +1,31 @@
-import { createFileRoute, useNavigate, Link } from '@tanstack/react-router';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
-import { useAuthStore } from '@stackbluff/shared/stores/authStore';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import { apiClient } from '@stackbluff/shared/api/client';
-import { toast } from 'sonner';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { cn } from '@/lib/utils';
-import { ErrorState } from '@/components/ui/ErrorState';
-import { requireAuth } from '@/lib/authGuard';
+import { useAuthStore } from '@stackbluff/shared/stores/authStore';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { motion } from 'framer-motion';
 import {
-  Users,
-  Gift,
-  Copy,
-  Share2,
   CheckCircle,
-  TrendingUp,
-  Award,
+  Clock,
+  Coins,
+  Copy,
   Crown,
   Link as LinkIcon,
-  X,
-  Send,
   MessageCircle,
+  Send,
   Sparkles,
-  Coins,
-  Clock,
+  TrendingUp,
+  Users,
+  X,
 } from 'lucide-react';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
+import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/referrals')({
   component: ReferralsPage,
@@ -72,18 +67,26 @@ const itemVariants = {
 };
 
 function ReferralsPage() {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const {user} = useAuthStore();
+  const _navigate = useNavigate();
+  const _queryClient = useQueryClient();
+  const { user } = useAuthStore();
 
-  const { data: stats, isLoading: statsLoading, error: statsError } = useQuery<ReferralStats>({
+  const {
+    data: stats,
+    isLoading: statsLoading,
+    error: statsError,
+  } = useQuery<ReferralStats>({
     queryKey: ['referrals', 'stats'],
     queryFn: () => apiClient<ReferralStats>('/referrals/stats'),
     enabled: true,
     staleTime: 60_000,
   });
 
-  const { data: referrals, isLoading: referralsLoading, error: referralsError } = useQuery<ReferralRecord[]>({
+  const {
+    data: referrals,
+    isLoading: referralsLoading,
+    error: referralsError,
+  } = useQuery<ReferralRecord[]>({
     queryKey: ['referrals', 'list'],
     queryFn: () => apiClient<ReferralRecord[]>('/referrals/list'),
     enabled: true,
@@ -94,11 +97,14 @@ function ReferralsPage() {
 
   const handleCopyLink = () => {
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(referralLink).then(() => {
-        toast.success(t`Referral link copied!`);
-      }).catch(() => {
-        toast.error(t`Failed to copy link`);
-      });
+      navigator.clipboard
+        .writeText(referralLink)
+        .then(() => {
+          toast.success(t`Referral link copied!`);
+        })
+        .catch(() => {
+          toast.error(t`Failed to copy link`);
+        });
     } else {
       const textarea = document.createElement('textarea');
       textarea.value = referralLink;
@@ -138,7 +144,12 @@ function ReferralsPage() {
   }
 
   if (statsError || referralsError || !stats) {
-    return <ErrorState onRetry={() => window.location.reload()} message={t`Failed to load referral data.`} />;
+    return (
+      <ErrorState
+        onRetry={() => window.location.reload()}
+        message={t`Failed to load referral data.`}
+      />
+    );
   }
 
   const { total_referred, bonus_earned, pending_bonus } = stats;
@@ -182,85 +193,120 @@ function ReferralsPage() {
           <motion.div variants={itemVariants}>
             <Card className="p-6 bg-white/5 backdrop-blur-xl border-white/10 shadow-xl rounded-2xl h-full">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider"><Trans>Total Referrals</Trans></span>
+                <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">
+                  <Trans>Total Referrals</Trans>
+                </span>
                 <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
                   <Users className="w-4 h-4 text-blue-400" />
                 </div>
               </div>
-              <div className="text-3xl font-bold font-data-mono text-on-surface">{total_referred}</div>
-              <p className="text-xs text-on-surface-variant mt-1 opacity-80"><Trans>Friends invited</Trans></p>
+              <div className="text-3xl font-bold font-data-mono text-on-surface">
+                {total_referred}
+              </div>
+              <p className="text-xs text-on-surface-variant mt-1 opacity-80">
+                <Trans>Friends invited</Trans>
+              </p>
             </Card>
           </motion.div>
 
           <motion.div variants={itemVariants}>
             <Card className="p-6 bg-white/5 backdrop-blur-xl border-white/10 shadow-xl rounded-2xl h-full">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider"><Trans>Bonus Earned</Trans></span>
+                <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">
+                  <Trans>Bonus Earned</Trans>
+                </span>
                 <div className="w-8 h-8 rounded-full bg-tertiary/10 flex items-center justify-center">
                   <Coins className="w-4 h-4 text-tertiary" />
                 </div>
               </div>
-              <div className="text-3xl font-bold font-data-mono text-tertiary">{bonus_earned * 100}</div>
-              <p className="text-xs text-on-surface-variant mt-1 opacity-80"><Trans>Chips distributed</Trans></p>
+              <div className="text-3xl font-bold font-data-mono text-tertiary">
+                {bonus_earned * 100}
+              </div>
+              <p className="text-xs text-on-surface-variant mt-1 opacity-80">
+                <Trans>Chips distributed</Trans>
+              </p>
             </Card>
           </motion.div>
 
           <motion.div variants={itemVariants}>
             <Card className="p-6 bg-white/5 backdrop-blur-xl border-white/10 shadow-xl rounded-2xl h-full">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider"><Trans>Pending Bonus</Trans></span>
+                <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">
+                  <Trans>Pending Bonus</Trans>
+                </span>
                 <div className="w-8 h-8 rounded-full bg-yellow-500/10 flex items-center justify-center">
                   <Clock className="w-4 h-4 text-yellow-400" />
                 </div>
               </div>
-              <div className="text-3xl font-bold font-data-mono text-yellow-400">{pending_bonus * 100}</div>
-              <p className="text-xs text-on-surface-variant mt-1 opacity-80"><Trans>Awaiting hands played</Trans></p>
+              <div className="text-3xl font-bold font-data-mono text-yellow-400">
+                {pending_bonus * 100}
+              </div>
+              <p className="text-xs text-on-surface-variant mt-1 opacity-80">
+                <Trans>Awaiting hands played</Trans>
+              </p>
             </Card>
           </motion.div>
         </div>
 
         {/* Founding Member Progress */}
         <motion.div variants={itemVariants}>
-          <Card className={cn(
-            "p-6 backdrop-blur-xl border shadow-xl rounded-2xl transition-colors duration-300",
-            hasFoundingMember
-              ? "bg-gradient-to-br from-yellow-500/10 to-orange-500/5 border-yellow-500/30"
-              : "bg-white/5 border-white/10"
-          )}>
+          <Card
+            className={cn(
+              'p-6 backdrop-blur-xl border shadow-xl rounded-2xl transition-colors duration-300',
+              hasFoundingMember
+                ? 'bg-gradient-to-br from-yellow-500/10 to-orange-500/5 border-yellow-500/30'
+                : 'bg-white/5 border-white/10',
+            )}
+          >
             <div className="flex items-start gap-4">
-              <div className={cn(
-                "flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center border transition-all duration-300",
-                hasFoundingMember
-                  ? "bg-yellow-500/10 border-yellow-500/30"
-                  : "bg-white/5 border-white/10"
-              )}>
-                <Crown className={cn(
-                  'w-6 h-6 transition-colors duration-300',
-                  hasFoundingMember ? 'text-yellow-400' : 'text-on-surface-variant/40'
-                )} />
+              <div
+                className={cn(
+                  'flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center border transition-all duration-300',
+                  hasFoundingMember
+                    ? 'bg-yellow-500/10 border-yellow-500/30'
+                    : 'bg-white/5 border-white/10',
+                )}
+              >
+                <Crown
+                  className={cn(
+                    'w-6 h-6 transition-colors duration-300',
+                    hasFoundingMember ? 'text-yellow-400' : 'text-on-surface-variant/40',
+                  )}
+                />
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-headline-md text-base text-on-surface leading-tight"><Trans>Founding Member Badge</Trans></h3>
+                  <h3 className="font-headline-md text-base text-on-surface leading-tight">
+                    <Trans>Founding Member Badge</Trans>
+                  </h3>
                   {hasFoundingMember ? (
-                    <Badge variant="outline" className="text-[10px] border-yellow-500/30 text-yellow-400 bg-yellow-500/10 font-mono">
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] border-yellow-500/30 text-yellow-400 bg-yellow-500/10 font-mono"
+                    >
                       <CheckCircle className="w-3 h-3 mr-1" />
                       <Trans>Unlocked</Trans>
                     </Badge>
                   ) : (
-                    <Badge variant="outline" className="text-[10px] border-white/10 text-on-surface-variant bg-white/5 font-mono">
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] border-white/10 text-on-surface-variant bg-white/5 font-mono"
+                    >
                       {10 - bonus_earned} <Trans>referrals needed</Trans>
                     </Badge>
                   )}
                 </div>
                 <p className="text-sm text-on-surface-variant mt-1.5 mb-3">
-                  <Trans>Refer 10 friends who play at least 5 hands to permanently unlock this exclusive badge.</Trans>
+                  <Trans>
+                    Refer 10 friends who play at least 5 hands to permanently unlock this exclusive
+                    badge.
+                  </Trans>
                 </p>
                 <div className="relative w-full h-2 bg-black/20 rounded-full overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${progressToFounding}%` }}
-                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    transition={{ duration: 0.8, ease: 'easeOut' }}
                     className="absolute top-0 left-0 h-full bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full shadow-lg"
                   />
                 </div>
@@ -278,10 +324,14 @@ function ReferralsPage() {
           <Card className="p-6 bg-white/5 backdrop-blur-xl border-white/10 shadow-xl rounded-2xl">
             <div className="flex flex-col md:flex-row md:items-center gap-4">
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-on-surface-variant uppercase tracking-wider mb-2"><Trans>Your Referral Link</Trans></p>
+                <p className="text-xs font-medium text-on-surface-variant uppercase tracking-wider mb-2">
+                  <Trans>Your Referral Link</Trans>
+                </p>
                 <div className="flex items-center gap-2 bg-black/30 border border-white/5 rounded-xl px-4 py-3">
                   <LinkIcon className="w-4 h-4 text-on-surface-variant/50 flex-shrink-0" />
-                  <span className="text-sm text-on-surface truncate font-data-mono">{referralLink}</span>
+                  <span className="text-sm text-on-surface truncate font-data-mono">
+                    {referralLink}
+                  </span>
                 </div>
               </div>
               <div className="flex gap-2 flex-shrink-0 md:self-end">
@@ -332,7 +382,9 @@ function ReferralsPage() {
                 <Users className="w-5 h-5 text-purple-400" />
                 <Trans>Referred Friends</Trans>
               </h3>
-              <p className="text-xs text-on-surface-variant mt-1"><Trans>Track progress of players you've invited</Trans></p>
+              <p className="text-xs text-on-surface-variant mt-1">
+                <Trans>Track progress of players you've invited</Trans>
+              </p>
             </div>
             <div className="p-6 pt-4">
               {referrals && referrals.length > 0 ? (
@@ -367,7 +419,8 @@ function ReferralsPage() {
                           </span>
                         ) : (
                           <span className="text-xs text-on-surface-variant font-medium flex items-center gap-1 bg-white/5 px-2 py-1 rounded-md">
-                            <TrendingUp className="w-3 h-3" /> {5 - ref.hand_count} <Trans>left</Trans>
+                            <TrendingUp className="w-3 h-3" /> {5 - ref.hand_count}{' '}
+                            <Trans>left</Trans>
                           </span>
                         )}
                       </div>
@@ -379,8 +432,12 @@ function ReferralsPage() {
                   <div className="w-12 h-12 mx-auto rounded-full bg-white/5 flex items-center justify-center mb-3">
                     <Users className="w-6 h-6 text-on-surface-variant/50" />
                   </div>
-                  <p className="text-sm text-on-surface-variant font-medium"><Trans>No referrals yet</Trans></p>
-                  <p className="text-xs text-on-surface-variant/70 mt-1"><Trans>Share your link above to start earning chips!</Trans></p>
+                  <p className="text-sm text-on-surface-variant font-medium">
+                    <Trans>No referrals yet</Trans>
+                  </p>
+                  <p className="text-xs text-on-surface-variant/70 mt-1">
+                    <Trans>Share your link above to start earning chips!</Trans>
+                  </p>
                 </div>
               )}
             </div>
