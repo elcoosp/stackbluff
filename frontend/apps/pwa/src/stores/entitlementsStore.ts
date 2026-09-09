@@ -25,15 +25,15 @@ export const useEntitlementsStore = create<EntitlementsState>()(
         const exp = get().seasonPassExpiresAt;
         if (!exp) return false;
         const d = new Date(exp);
-        return !isNaN(d.getTime()) && d > new Date();
+        return !Number.isNaN(d.getTime()) && d > new Date();
       },
       hasActiveClubPro: () => {
         const exp = get().clubProExpiresAt;
         if (!exp) return false;
         const d = new Date(exp);
-        return !isNaN(d.getTime()) && d > new Date();
+        return !Number.isNaN(d.getTime()) && d > new Date();
       },
     }),
-    { name: 'entitlements-store' }
-  )
+    { name: 'entitlements-store' },
+  ),
 );
