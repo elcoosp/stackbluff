@@ -140,139 +140,160 @@ interface GameState {
   setActiveRoom: (roomId: string | null) => void;
 }
 
-export const useGameStore = create<GameState>((set, get) => ({
+export const useGameStore = create<GameState>((set, _get) => ({
   rooms: {},
   activeRoomId: null,
 
-  ensureRoom: (roomId) => set((state) => {
-    if (state.rooms[roomId]) return {};
-    return { rooms: { ...state.rooms, [roomId]: createInitialRoomState() } };
-  }),
+  ensureRoom: (roomId) =>
+    set((state) => {
+      if (state.rooms[roomId]) return {};
+      return { rooms: { ...state.rooms, [roomId]: createInitialRoomState() } };
+    }),
 
-  setRoomState: (roomId, tableState) => set((state) => {
-    if (!state.rooms[roomId]) return {};
-    const seatsMap: Record<number, Seat> = {};
-    tableState.seats.forEach((seat) => {
-      seatsMap[seat.seat] = {
-        ...seat,
-        is_active: !seat.is_folded && !seat.is_all_in,
+  setRoomState: (roomId, tableState) =>
+    set((state) => {
+      if (!state.rooms[roomId]) return {};
+      const seatsMap: Record<number, Seat> = {};
+      tableState.seats.forEach((seat) => {
+        seatsMap[seat.seat] = {
+          ...seat,
+          is_active: !seat.is_folded && !seat.is_all_in,
+        };
+      });
+
+      return {
+        rooms: {
+          ...state.rooms,
+          [roomId]: {
+            ...state.rooms[roomId],
+            tableId: tableState.room_id,
+            seats: seatsMap,
+            communityCards: tableState.community_cards || [],
+            pot: tableState.pot || 0,
+            sidePots: tableState.side_pots || [],
+            street: tableState.street || '',
+            currentTurnUserId: tableState.current_turn_user_id || null,
+            currentTurnExpiresAt: tableState.current_turn_expires_at || null,
+            currentTurnTimeoutMs: tableState.current_turn_timeout_ms || null,
+            handInProgress: tableState.current_hand_in_progress || false,
+          },
+        },
       };
-    });
+    }),
 
-    return {
-      rooms: {
-        ...state.rooms,
-        [roomId]: {
-          ...state.rooms[roomId],
-          tableId: tableState.room_id,
-          seats: seatsMap,
-          communityCards: tableState.community_cards || [],
-          pot: tableState.pot || 0,
-          sidePots: tableState.side_pots || [],
-          street: tableState.street || '',
-          currentTurnUserId: tableState.current_turn_user_id || null,
-          currentTurnExpiresAt: tableState.current_turn_expires_at || null,
-          currentTurnTimeoutMs: tableState.current_turn_timeout_ms || null,
-          handInProgress: tableState.current_hand_in_progress || false,
+  setHeroSeat: (roomId, seat) =>
+    set((state) => {
+      if (!state.rooms[roomId]) return {};
+      return { rooms: { ...state.rooms, [roomId]: { ...state.rooms[roomId], heroSeat: seat } } };
+    }),
+
+  setHeroHoleCards: (roomId, cards) =>
+    set((state) => {
+      if (!state.rooms[roomId]) return {};
+      if (cards && cards.length === 2) {
+        return {
+          rooms: {
+            ...state.rooms,
+            [roomId]: { ...state.rooms[roomId], heroHoleCards: cards as [Card, Card] },
+          },
+        };
+      }
+      return {};
+    }),
+
+  setActionRequired: (roomId, req) =>
+    set((state) => {
+      if (!state.rooms[roomId]) return {};
+      return {
+        rooms: { ...state.rooms, [roomId]: { ...state.rooms[roomId], actionRequired: req } },
+      };
+    }),
+
+  clearActionRequired: (roomId) =>
+    set((state) => {
+      if (!state.rooms[roomId]) return {};
+      return {
+        rooms: { ...state.rooms, [roomId]: { ...state.rooms[roomId], actionRequired: null } },
+      };
+    }),
+
+  setAnalytics: (roomId, analytics) =>
+    set((state) => {
+      if (!state.rooms[roomId]) return {};
+      return { rooms: { ...state.rooms, [roomId]: { ...state.rooms[roomId], analytics } } };
+    }),
+
+  setShowdownReveal: (roomId, data) =>
+    set((state) => {
+      if (!state.rooms[roomId]) return {};
+      return {
+        rooms: { ...state.rooms, [roomId]: { ...state.rooms[roomId], showdownReveal: data } },
+      };
+    }),
+
+  applyActionBroadcast: (roomId, broadcast) =>
+    set((state) => {
+      if (!state.rooms[roomId]) return {};
+      const { player_id, action, amount, new_stack, new_pot } = broadcast;
+      const roomState = state.rooms[roomId];
+
+      const seatNum = Object.keys(roomState.seats).find(
+        (key) => roomState.seats[Number(key)].user_id === player_id,
+      );
+      if (seatNum === undefined) return {};
+
+      const newSeats = { ...roomState.seats };
+      const seat = { ...newSeats[Number(seatNum)] }; // Create a copy to mutate
+
+      if (seat) {
+        // FIX: Safely parse stack in case backend sends a string like "1500"
+        const parsedStack = Number(new_stack);
+        if (!Number.isNaN(parsedStack)) {
+          seat.stack = parsedStack;
         }
+        // Update the seat's action so the PlayerSpot badge updates correctly
+        seat.action = { text: action.toUpperCase(), amount };
       }
-    };
-  }),
 
-  setHeroSeat: (roomId, seat) => set((state) => {
-    if (!state.rooms[roomId]) return {};
-    return { rooms: { ...state.rooms, [roomId]: { ...state.rooms[roomId], heroSeat: seat } } };
-  }),
+      return {
+        rooms: {
+          ...state.rooms,
+          [roomId]: {
+            ...roomState,
+            seats: { ...newSeats, [Number(seatNum)]: seat },
+            pot: new_pot,
+            lastAction: { player_id, action, amount },
+          },
+        },
+      };
+    }),
 
-  setHeroHoleCards: (roomId, cards) => set((state) => {
-    if (!state.rooms[roomId]) return {};
-    if (cards && cards.length === 2) {
-      return { rooms: { ...state.rooms, [roomId]: { ...state.rooms[roomId], heroHoleCards: cards as [Card, Card] } } };
-    }
-    return {};
-  }),
+  setHandResult: (roomId, result) =>
+    set((state) => {
+      if (!state.rooms[roomId]) return {};
+      return {
+        rooms: {
+          ...state.rooms,
+          [roomId]: {
+            ...state.rooms[roomId],
+            winners: result.winners,
+            actionRequired: null,
+            showdownReveal: null,
+          },
+        },
+      };
+    }),
 
-  setActionRequired: (roomId, req) => set((state) => {
-    if (!state.rooms[roomId]) return {};
-    return { rooms: { ...state.rooms, [roomId]: { ...state.rooms[roomId], actionRequired: req } } };
-  }),
-
-  clearActionRequired: (roomId) => set((state) => {
-    if (!state.rooms[roomId]) return {};
-    return { rooms: { ...state.rooms, [roomId]: { ...state.rooms[roomId], actionRequired: null } } };
-  }),
-
-  setAnalytics: (roomId, analytics) => set((state) => {
-    if (!state.rooms[roomId]) return {};
-    return { rooms: { ...state.rooms, [roomId]: { ...state.rooms[roomId], analytics } } };
-  }),
-
-  setShowdownReveal: (roomId, data) => set((state) => {
-    if (!state.rooms[roomId]) return {};
-    return { rooms: { ...state.rooms, [roomId]: { ...state.rooms[roomId], showdownReveal: data } } };
-  }),
-
-  applyActionBroadcast: (roomId, broadcast) => set((state) => {
-    if (!state.rooms[roomId]) return {};
-    const { player_id, action, amount, new_stack, new_pot } = broadcast;
-    const roomState = state.rooms[roomId];
-
-    const seatNum = Object.keys(roomState.seats).find(
-      (key) => roomState.seats[Number(key)].user_id === player_id
-    );
-    if (seatNum === undefined) return {};
-
-    const newSeats = { ...roomState.seats };
-    const seat = { ...newSeats[Number(seatNum)] }; // Create a copy to mutate
-
-    if (seat) {
-      // FIX: Safely parse stack in case backend sends a string like "1500"
-      const parsedStack = Number(new_stack);
-      if (!isNaN(parsedStack)) {
-        seat.stack = parsedStack;
-      }
-      // Update the seat's action so the PlayerSpot badge updates correctly
-      seat.action = { text: action.toUpperCase(), amount };
-    }
-
-    return {
-      rooms: {
-        ...state.rooms,
-        [roomId]: {
-          ...roomState,
-          seats: { ...newSeats, [Number(seatNum)]: seat },
-          pot: new_pot,
-          lastAction: { player_id, action, amount },
-        }
-      }
-    };
-  }),
-
-  setHandResult: (roomId, result) => set((state) => {
-    if (!state.rooms[roomId]) return {};
-    return {
-      rooms: {
-        ...state.rooms,
-        [roomId]: {
-          ...state.rooms[roomId],
-          winners: result.winners,
-          actionRequired: null,
-          showdownReveal: null,
-        }
-      }
-    };
-  }),
-
-  removeRoom: (roomId) => set((state) => {
-    const newRooms = { ...state.rooms };
-    delete newRooms[roomId];
-    return {
-      rooms: newRooms,
-      activeRoomId: state.activeRoomId === roomId
-        ? Object.keys(newRooms)[0] || null
-        : state.activeRoomId
-    };
-  }),
+  removeRoom: (roomId) =>
+    set((state) => {
+      const newRooms = { ...state.rooms };
+      delete newRooms[roomId];
+      return {
+        rooms: newRooms,
+        activeRoomId:
+          state.activeRoomId === roomId ? Object.keys(newRooms)[0] || null : state.activeRoomId,
+      };
+    }),
 
   setActiveRoom: (roomId) => set({ activeRoomId: roomId }),
 }));
