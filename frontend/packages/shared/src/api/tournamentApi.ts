@@ -1,5 +1,5 @@
+import type { TournamentResult, TournamentSummary } from '../types/tournament.types';
 import { apiClient } from './client';
-import type { TournamentSummary, TournamentResult } from '../types/tournament.types';
 
 export const tournamentApi = {
   list: async (params?: { type?: string; status?: string }): Promise<TournamentSummary[]> => {
@@ -9,13 +9,12 @@ export const tournamentApi = {
       if (params.type) query.append('type', params.type);
       if (params.status) query.append('status', params.status);
       const qs = query.toString();
-      if (qs) url += '?' + qs;
+      if (qs) url += `?${qs}`;
     }
     return apiClient<TournamentSummary[]>(url);
   },
 
-  get: (id: string) =>
-    apiClient<TournamentSummary>(`/tournaments/${id}`),
+  get: (id: string) => apiClient<TournamentSummary>(`/tournaments/${id}`),
 
   register: (tournamentId: string, userId: string) =>
     apiClient<{ status: string }>(`/tournaments/${tournamentId}/register`, {
@@ -33,9 +32,9 @@ export const tournamentApi = {
     apiClient<TournamentResult>(`/tournaments/${tournamentId}/results`),
 
   getPayoutStructure: (tournamentId: string) =>
-    apiClient<TournamentSummary>(`/tournaments/${tournamentId}`).then(res => res.payout_structure || []),
-  getMyTable: (tournamentId: string) =>
-    apiClient<{ table_id: string | null; status: string }>(
-      `/tournaments/${tournamentId}/my-table`
+    apiClient<TournamentSummary>(`/tournaments/${tournamentId}`).then(
+      (res) => res.payout_structure || [],
     ),
+  getMyTable: (tournamentId: string) =>
+    apiClient<{ table_id: string | null; status: string }>(`/tournaments/${tournamentId}/my-table`),
 };
