@@ -8,7 +8,7 @@ export function getPermissionStatus(): NotificationPermission {
 }
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
   const rawData = window.atob(base64);
   const outputArray = new Uint8Array(rawData.length);
@@ -18,12 +18,14 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
-async function waitForServiceWorkerReady(timeoutMs = 5000): Promise<ServiceWorkerRegistration | null> {
+async function waitForServiceWorkerReady(
+  timeoutMs = 5000,
+): Promise<ServiceWorkerRegistration | null> {
   if (!('serviceWorker' in navigator)) return null;
   try {
     const regPromise = navigator.serviceWorker.ready;
     const timeoutPromise = new Promise<ServiceWorkerRegistration | null>((resolve) =>
-      setTimeout(() => resolve(null), timeoutMs)
+      setTimeout(() => resolve(null), timeoutMs),
     );
     return await Promise.race([regPromise, timeoutPromise]);
   } catch {
@@ -82,7 +84,7 @@ export async function unsubscribeFromPushNotifications(): Promise<boolean> {
     await subscription.unsubscribe();
 
     // Then notify backend
-    const response = await fetch('/notifications/unsubscribe', {
+    const _response = await fetch('/notifications/unsubscribe', {
       method: 'POST',
       body: JSON.stringify({ endpoint: subscription.endpoint }),
       headers: { 'Content-Type': 'application/json' },
