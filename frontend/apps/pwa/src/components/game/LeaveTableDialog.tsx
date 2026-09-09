@@ -1,8 +1,7 @@
-import { motion } from 'framer-motion';
-import { LogOut, AlertTriangle } from 'lucide-react';
-import { Dialog } from '@stackbluff/shared/components/Dialog';
 import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
+import { Dialog } from '@stackbluff/shared/components/Dialog';
+import { motion } from 'framer-motion';
+import { AlertTriangle, LogOut } from 'lucide-react';
 
 interface LeaveTableDialogProps {
   open: boolean;
@@ -22,7 +21,9 @@ export function LeaveTableDialog({
   return (
     <Dialog open={open} onClose={onClose} className="max-w-sm">
       <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/5">
-        <h2 className="text-sm font-semibold text-on-surface"><Trans>Leave Table</Trans></h2>
+        <h2 className="text-sm font-semibold text-on-surface">
+          <Trans>Leave Table</Trans>
+        </h2>
       </div>
 
       <div className="px-5 py-4 space-y-4">
@@ -39,8 +40,12 @@ export function LeaveTableDialog({
           <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
             <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
             <div className="text-[11px] text-amber-300">
-              <span className="font-bold"><Trans>Hand in progress.</Trans></span>{' '}
-              <Trans>You will be seated out and your chips returned after the hand completes.</Trans>
+              <span className="font-bold">
+                <Trans>Hand in progress.</Trans>
+              </span>{' '}
+              <Trans>
+                You will be seated out and your chips returned after the hand completes.
+              </Trans>
             </div>
           </div>
         )}
