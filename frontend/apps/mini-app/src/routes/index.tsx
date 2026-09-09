@@ -1,15 +1,14 @@
-import { createFileRoute, redirect } from '@tanstack/react-router';
+import { getToken, isAuthenticated } from '@stackbluff/shared/auth/token';
 import { useQuery } from '@tanstack/react-query';
-import { isAuthenticated, getToken } from '@stackbluff/shared/auth/token';
-import { GlassHub } from '../components/game';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import { Button } from '@/components/ui/button';
-import { Link } from '@tanstack/react-router';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { GlassHub } from '../components/game';
 
 const fetchTables = async () => {
   const token = getToken();
   const res = await fetch('/api/lobby', {
-    headers: { 'Authorization': `Bearer ${token}` },
+    headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
   return res.json();
@@ -20,7 +19,12 @@ export const Route = createFileRoute('/')({
     if (!isAuthenticated()) throw redirect({ to: '/login' });
   },
   component: function LobbyPage() {
-    const { data: tables, isLoading, error, refetch } = useQuery({
+    const {
+      data: tables,
+      isLoading,
+      error,
+      refetch,
+    } = useQuery({
       queryKey: ['tables'],
       queryFn: fetchTables,
       staleTime: 30000,
@@ -44,9 +48,7 @@ export const Route = createFileRoute('/')({
             <div className="flex flex-col items-center gap-4">
               <span className="material-symbols-outlined text-error text-5xl">error</span>
               <h2 className="font-display-lg text-xl text-on-surface">Connection Failed</h2>
-              <p className="font-data-mono text-sm text-on-surface-variant">
-                {error.message}
-              </p>
+              <p className="font-data-mono text-sm text-on-surface-variant">{error.message}</p>
               <p className="text-xs text-outline">
                 Make sure the backend server is running on port 3000.
               </p>
@@ -77,7 +79,9 @@ export const Route = createFileRoute('/')({
                   </CardHeader>
                   <CardContent>
                     <div className="flex justify-between text-on-surface-variant text-sm mb-4">
-                      <span>Players: {table.current_players}/{table.max_players}</span>
+                      <span>
+                        Players: {table.current_players}/{table.max_players}
+                      </span>
                       <span>Status: {table.status || 'Open'}</span>
                     </div>
                     <Link to="/table/$tableId" params={{ tableId: table.table_id }}>
