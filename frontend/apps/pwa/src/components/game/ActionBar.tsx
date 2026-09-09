@@ -1,22 +1,22 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { RaiseSlider } from './RaiseSlider';
-import { cn } from '@/lib/utils';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   Bot,
-  Zap,
-  RotateCcw,
+  Check,
+  DollarSign,
   Infinity,
   LogOut,
-  DollarSign,
-  TrendingUp,
+  RotateCcw,
   Swords,
-  Check,
+  TrendingUp,
+  Zap,
 } from 'lucide-react';
-import type { PreAction } from '../../hooks/usePreAction';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { trackPlayerAction } from '@/lib/customAnalytics';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
+import { cn } from '@/lib/utils';
+import type { PreAction } from '../../hooks/usePreAction';
+import { RaiseSlider } from './RaiseSlider';
 
 // Helper: format currency with "k" shorthand
 function formatCurrency(amount: number): string {
@@ -79,13 +79,16 @@ function useRandomSparkle(enabled: boolean) {
     let timeout2: ReturnType<typeof setTimeout>;
 
     const run = () => {
-      timeout1 = setTimeout(() => {
-        setSparkIndex(Math.floor(Math.random() * 4));
-        timeout2 = setTimeout(() => {
-          setSparkIndex(null);
-          run();
-        }, 800);
-      }, 2000 + Math.random() * 3000);
+      timeout1 = setTimeout(
+        () => {
+          setSparkIndex(Math.floor(Math.random() * 4));
+          timeout2 = setTimeout(() => {
+            setSparkIndex(null);
+            run();
+          }, 800);
+        },
+        2000 + Math.random() * 3000,
+      );
     };
 
     run();
@@ -152,10 +155,10 @@ const preActionOptions: {
   shortLabel: string;
   Icon: React.FC<{ className?: string }>;
 }[] = [
-    { key: 'fold', label: t`Fold`, shortLabel: t`Fold`, Icon: LogOut },
-    { key: 'check_or_fold', label: t`Check / Fold`, shortLabel: t`Chk/Fld`, Icon: RotateCcw },
-    { key: 'check_or_call_any', label: t`Call Any`, shortLabel: t`Call Any`, Icon: Infinity },
-  ];
+  { key: 'fold', label: t`Fold`, shortLabel: t`Fold`, Icon: LogOut },
+  { key: 'check_or_fold', label: t`Check / Fold`, shortLabel: t`Chk/Fld`, Icon: RotateCcw },
+  { key: 'check_or_call_any', label: t`Call Any`, shortLabel: t`Call Any`, Icon: Infinity },
+];
 
 // Variant config
 const variantConfig: Record<
@@ -229,7 +232,7 @@ const variantConfig: Record<
 };
 
 // Subtle hover hook
-function useSubtleHover(cfg: typeof variantConfig[string], disabled: boolean) {
+function useSubtleHover(cfg: (typeof variantConfig)[string], disabled: boolean) {
   const [hovered, setHovered] = useState(false);
   const isDisabled = disabled;
 
@@ -308,7 +311,9 @@ const ActionBtn = ({
       )}
 
       <Icon className="w-4 h-4 shrink-0 relative z-20" />
-      <span className="text-[10px] md:text-[11px] font-label-caps uppercase tracking-wide relative z-20 whitespace-nowrap">{children}</span>
+      <span className="text-[10px] md:text-[11px] font-label-caps uppercase tracking-wide relative z-20 whitespace-nowrap">
+        {children}
+      </span>
       {shortcut && !isMobile && (
         <kbd
           className="text-[8px] font-mono uppercase tracking-wider px-1 py-px rounded relative z-20"
@@ -337,7 +342,7 @@ const ExecutionBanner = ({
 
   const isCall = action?.toLowerCase() === 'call';
   const actionText = action || '';
-  const amountText = (isCall && amount && amount > 0) ? ` $${amount}` : '';
+  const amountText = isCall && amount && amount > 0 ? ` $${amount}` : '';
   const displayText = (t`Auto ${actionText}` + amountText).trim();
 
   return (
@@ -392,10 +397,11 @@ const PreActionPanel = ({
               key={opt.key}
               type="button"
               onClick={() => handleClick(opt.key)}
-              className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-[10px] font-label-caps uppercase tracking-wider border cursor-pointer select-none transition-colors duration-200 ${isSelected
-                ? 'border-tertiary bg-tertiary/15 text-tertiary'
-                : 'border-white/8 bg-white/[0.03] text-white/30 hover:text-white/50 hover:border-white/12'
-                }`}
+              className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-[10px] font-label-caps uppercase tracking-wider border cursor-pointer select-none transition-colors duration-200 ${
+                isSelected
+                  ? 'border-tertiary bg-tertiary/15 text-tertiary'
+                  : 'border-white/8 bg-white/[0.03] text-white/30 hover:text-white/50 hover:border-white/12'
+              }`}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -410,7 +416,9 @@ const PreActionPanel = ({
         <div className="flex items-center gap-1.5">
           {callUpToEditing ? (
             <div className="flex-1 flex items-center gap-1.5 py-2 px-2.5 rounded-lg border border-tertiary/40 bg-black/30">
-              <span className="text-[9px] text-tertiary/50 shrink-0"><Trans>Call ≤ $</Trans></span>
+              <span className="text-[9px] text-tertiary/50 shrink-0">
+                <Trans>Call ≤ $</Trans>
+              </span>
               <input
                 type="number"
                 value={callUpToValue}
@@ -418,7 +426,7 @@ const PreActionPanel = ({
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     const n = parseInt(callUpToValue, 10);
-                    if (!isNaN(n) && n > 0)
+                    if (!Number.isNaN(n) && n > 0)
                       onSetPreAction({ type: 'call_up_to', amount: n });
                     setCallUpToEditing(false);
                   }
@@ -428,7 +436,6 @@ const PreActionPanel = ({
                   }
                 }}
                 onBlur={() => setCallUpToEditing(false)}
-                autoFocus
                 className="flex-1 bg-transparent text-[10px] text-tertiary font-data-mono outline-none border-none min-w-0"
               />
             </div>
@@ -439,10 +446,11 @@ const PreActionPanel = ({
                 if (preAction?.type === 'call_up_to') onSetPreAction(null);
                 else setCallUpToEditing(true);
               }}
-              className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-[10px] font-label-caps uppercase tracking-wider border cursor-pointer select-none transition-colors duration-200 ${preAction?.type === 'call_up_to'
-                ? 'border-tertiary bg-tertiary/15 text-tertiary'
-                : 'border-white/8 bg-white/[0.03] text-white/30 hover:text-white/50 hover:border-white/12'
-                }`}
+              className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-[10px] font-label-caps uppercase tracking-wider border cursor-pointer select-none transition-colors duration-200 ${
+                preAction?.type === 'call_up_to'
+                  ? 'border-tertiary bg-tertiary/15 text-tertiary'
+                  : 'border-white/8 bg-white/[0.03] text-white/30 hover:text-white/50 hover:border-white/12'
+              }`}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -526,13 +534,16 @@ const DesktopActionBar = ({
 
   const allInDisabled = !actionRequired || heroStack === 0;
 
-  const handleAction = useCallback((action: string, amount?: number) => {
-    onAction(action, amount);
-    trackPlayerAction(action, amount, pot);
-    setActionSent(true);
-    if (actionSentTimerRef.current) clearTimeout(actionSentTimerRef.current);
-    actionSentTimerRef.current = setTimeout(() => setActionSent(false), 2500);
-  }, [onAction]);
+  const handleAction = useCallback(
+    (action: string, amount?: number) => {
+      onAction(action, amount);
+      trackPlayerAction(action, amount, pot);
+      setActionSent(true);
+      if (actionSentTimerRef.current) clearTimeout(actionSentTimerRef.current);
+      actionSentTimerRef.current = setTimeout(() => setActionSent(false), 2500);
+    },
+    [onAction, pot],
+  );
 
   const toggleRaise = useCallback(() => setRaiseOpen((p) => !p), []);
   const visibleAction = useVisibleAction(executingAction, toCall);
@@ -561,8 +572,8 @@ const DesktopActionBar = ({
     >
       <div
         className={cn(
-          "pointer-events-auto rounded-2xl overflow-hidden",
-          actionRequired && "action-bar-breathing"
+          'pointer-events-auto rounded-2xl overflow-hidden',
+          actionRequired && 'action-bar-breathing',
         )}
         style={glassStyle}
       >
@@ -616,10 +627,11 @@ const DesktopActionBar = ({
             <motion.button
               type="button"
               onClick={() => setPreActionOpen(!preActionOpen)}
-              className={`flex items-center gap-1.5 px-3.5 py-3.5 rounded-lg border cursor-pointer select-none transition-colors duration-200 ${preAction
-                ? 'border-tertiary/30 bg-tertiary/10 text-tertiary'
-                : 'border-white/8 bg-white/[0.03] text-white/25 hover:text-white/40 hover:border-white/12'
-                }`}
+              className={`flex items-center gap-1.5 px-3.5 py-3.5 rounded-lg border cursor-pointer select-none transition-colors duration-200 ${
+                preAction
+                  ? 'border-tertiary/30 bg-tertiary/10 text-tertiary'
+                  : 'border-white/8 bg-white/[0.03] text-white/25 hover:text-white/40 hover:border-white/12'
+              }`}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -630,16 +642,49 @@ const DesktopActionBar = ({
             </motion.button>
           )}
 
-          <ActionBtn variant="fold" onClick={() => handleAction('fold')} disabled={!actionRequired} shortcut="F" isMobile={false} sparkId={0} currentSpark={sparkIndex}>
+          <ActionBtn
+            variant="fold"
+            onClick={() => handleAction('fold')}
+            disabled={!actionRequired}
+            shortcut="F"
+            isMobile={false}
+            sparkId={0}
+            currentSpark={sparkIndex}
+          >
             <Trans>Fold</Trans>
           </ActionBtn>
-          <ActionBtn variant="call" onClick={() => handleAction(isCheck ? 'check' : 'call')} disabled={!actionRequired} shortcut="C" isMobile={false} IconOverride={isCheck ? Check : undefined} sparkId={1} currentSpark={sparkIndex}>
+          <ActionBtn
+            variant="call"
+            onClick={() => handleAction(isCheck ? 'check' : 'call')}
+            disabled={!actionRequired}
+            shortcut="C"
+            isMobile={false}
+            IconOverride={isCheck ? Check : undefined}
+            sparkId={1}
+            currentSpark={sparkIndex}
+          >
             {callLabel}
           </ActionBtn>
-          <ActionBtn variant="raise" onClick={toggleRaise} disabled={!actionRequired || !canRaise} shortcut="R" isMobile={false} sparkId={2} currentSpark={sparkIndex}>
+          <ActionBtn
+            variant="raise"
+            onClick={toggleRaise}
+            disabled={!actionRequired || !canRaise}
+            shortcut="R"
+            isMobile={false}
+            sparkId={2}
+            currentSpark={sparkIndex}
+          >
             {raiseOpen ? t`Close` : t`Raise`}
           </ActionBtn>
-          <ActionBtn variant="all-in" onClick={() => handleAction('all-in')} disabled={allInDisabled} shortcut="A" isMobile={false} sparkId={3} currentSpark={sparkIndex}>
+          <ActionBtn
+            variant="all-in"
+            onClick={() => handleAction('all-in')}
+            disabled={allInDisabled}
+            shortcut="A"
+            isMobile={false}
+            sparkId={3}
+            currentSpark={sparkIndex}
+          >
             <Trans>All-in</Trans>
           </ActionBtn>
         </div>
@@ -697,13 +742,16 @@ const MobileActionBar = ({
 
   const allInDisabled = !actionRequired || heroStack === 0;
 
-  const handleAction = useCallback((action: string, amount?: number) => {
-    onAction(action, amount);
-    trackPlayerAction(action, amount, pot);
-    setActionSent(true);
-    if (actionSentTimerRef.current) clearTimeout(actionSentTimerRef.current);
-    actionSentTimerRef.current = setTimeout(() => setActionSent(false), 2500);
-  }, [onAction]);
+  const handleAction = useCallback(
+    (action: string, amount?: number) => {
+      onAction(action, amount);
+      trackPlayerAction(action, amount, pot);
+      setActionSent(true);
+      if (actionSentTimerRef.current) clearTimeout(actionSentTimerRef.current);
+      actionSentTimerRef.current = setTimeout(() => setActionSent(false), 2500);
+    },
+    [onAction, pot],
+  );
 
   const vw = useViewportWidth();
   const isNarrow = vw < MOBILE_BREAK;
@@ -723,22 +771,51 @@ const MobileActionBar = ({
   };
 
   const foldBtn = (
-    <ActionBtn variant="fold" onClick={() => handleAction('fold')} disabled={!actionRequired} isMobile sparkId={0} currentSpark={sparkIndex}>
+    <ActionBtn
+      variant="fold"
+      onClick={() => handleAction('fold')}
+      disabled={!actionRequired}
+      isMobile
+      sparkId={0}
+      currentSpark={sparkIndex}
+    >
       <Trans>Fold</Trans>
     </ActionBtn>
   );
   const callBtn = (
-    <ActionBtn variant="call" onClick={() => handleAction(isCheck ? 'check' : 'call')} disabled={!actionRequired} isMobile IconOverride={isCheck ? Check : undefined} sparkId={1} currentSpark={sparkIndex}>
+    <ActionBtn
+      variant="call"
+      onClick={() => handleAction(isCheck ? 'check' : 'call')}
+      disabled={!actionRequired}
+      isMobile
+      IconOverride={isCheck ? Check : undefined}
+      sparkId={1}
+      currentSpark={sparkIndex}
+    >
       {callLabel}
     </ActionBtn>
   );
   const raiseBtn = (
-    <ActionBtn variant="raise" onClick={toggleRaise} disabled={!actionRequired || !canRaise} isMobile sparkId={2} currentSpark={sparkIndex}>
+    <ActionBtn
+      variant="raise"
+      onClick={toggleRaise}
+      disabled={!actionRequired || !canRaise}
+      isMobile
+      sparkId={2}
+      currentSpark={sparkIndex}
+    >
       {raiseOpen ? t`Close` : t`Raise`}
     </ActionBtn>
   );
   const allInBtn = (
-    <ActionBtn variant="all-in" onClick={() => handleAction('all-in')} disabled={allInDisabled} isMobile sparkId={3} currentSpark={sparkIndex}>
+    <ActionBtn
+      variant="all-in"
+      onClick={() => handleAction('all-in')}
+      disabled={allInDisabled}
+      isMobile
+      sparkId={3}
+      currentSpark={sparkIndex}
+    >
       <Trans>All-in</Trans>
     </ActionBtn>
   );
@@ -754,8 +831,8 @@ const MobileActionBar = ({
     >
       <div
         className={cn(
-          "border-x-0 border-b-0 rounded-none",
-          actionRequired && "action-bar-breathing"
+          'border-x-0 border-b-0 rounded-none',
+          actionRequired && 'action-bar-breathing',
         )}
         style={glassStyle}
       >
@@ -828,10 +905,11 @@ const MobileActionBar = ({
                 <motion.button
                   type="button"
                   onClick={() => setDrawerOpen(!drawerOpen)}
-                  className={`w-full py-2 rounded-lg border text-[9px] font-label-caps uppercase tracking-widest text-center cursor-pointer transition-colors duration-200 flex items-center justify-center gap-1.5 ${preAction
-                    ? 'border-tertiary/30 bg-tertiary/10 text-tertiary'
-                    : 'border-white/6 bg-white/[0.02] text-white/20 hover:text-white/35 hover:border-white/10'
-                    }`}
+                  className={`w-full py-2 rounded-lg border text-[9px] font-label-caps uppercase tracking-widest text-center cursor-pointer transition-colors duration-200 flex items-center justify-center gap-1.5 ${
+                    preAction
+                      ? 'border-tertiary/30 bg-tertiary/10 text-tertiary'
+                      : 'border-white/6 bg-white/[0.02] text-white/20 hover:text-white/35 hover:border-white/10'
+                  }`}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.1 }}
