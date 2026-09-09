@@ -62,7 +62,8 @@ export const TableFelt = ({ isMobile, ...props }: { isMobile?: boolean }) => {
 
   return (
     <div
-      className="absolute inset-0 z-[1]" data-club-felt
+      className="absolute inset-0 z-[1]"
+      data-club-felt
       style={{
         borderRadius: r,
         background: gradient,
