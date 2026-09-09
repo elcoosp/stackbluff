@@ -12,9 +12,23 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(DeletionRequests::Table)
                     .if_not_exists()
-                    .col(ColumnDef::new(DeletionRequests::UserId).uuid().not_null().primary_key())
-                    .col(ColumnDef::new(DeletionRequests::RequestedAt).timestamp().not_null())
-                    .col(ColumnDef::new(DeletionRequests::Status).text().not_null().default("pending"))
+                    .col(
+                        ColumnDef::new(DeletionRequests::UserId)
+                            .uuid()
+                            .not_null()
+                            .primary_key(),
+                    )
+                    .col(
+                        ColumnDef::new(DeletionRequests::RequestedAt)
+                            .timestamp()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(DeletionRequests::Status)
+                            .text()
+                            .not_null()
+                            .default("pending"),
+                    )
                     .col(ColumnDef::new(DeletionRequests::ProcessedAt).timestamp())
                     .col(ColumnDef::new(DeletionRequests::Reason).text())
                     .foreign_key(
