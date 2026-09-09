@@ -1,19 +1,18 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
+import { authApi } from '@stackbluff/shared/auth/api';
+import { GlassPanel } from '@stackbluff/shared/ui/GlassPanel';
+import { LiquidMetalButton } from '@stackbluff/shared/ui/LiquidMetalButton';
 import { useForm } from '@tanstack/react-form';
 import { useMutation } from '@tanstack/react-query';
-import { z } from 'zod';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ArrowLeft, Mail } from 'lucide-react';
 import { useState } from 'react';
-import { authApi } from '@stackbluff/shared/auth/api';
-import { GlassPanel } from "@stackbluff/shared/ui/GlassPanel";
-import { LiquidMetalButton } from "@stackbluff/shared/ui/LiquidMetalButton";
-import { Link } from '@tanstack/react-router';
-import { Mail, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
+import { z } from 'zod';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Trans } from '@lingui/react/macro';
-import { t } from '@lingui/core/macro';
 
 const forgotPasswordSchema = z.object({
   email: z.string().min(1, t`Email is required`).email(t`Invalid email address`),
@@ -49,13 +48,19 @@ function ForgotPasswordPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#1a1b1e_0%,_#0a0a0a_100%)]" />
         <div className="relative z-10 w-full max-w-md">
           <div className="text-center mb-8">
-            <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter"><Trans>STACKBLUFF</Trans></h1>
-            <p className="font-data-mono text-xs text-outline mt-2 tracking-widest"><Trans>PASSWORD RESET</Trans></p>
+            <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter">
+              <Trans>STACKBLUFF</Trans>
+            </h1>
+            <p className="font-data-mono text-xs text-outline mt-2 tracking-widest">
+              <Trans>PASSWORD RESET</Trans>
+            </p>
           </div>
           <GlassPanel>
             <div className="space-y-6 p-2">
               <div className="text-center">
-                <h2 className="text-lg font-semibold text-on-surface mb-2"><Trans>Check your email</Trans></h2>
+                <h2 className="text-lg font-semibold text-on-surface mb-2">
+                  <Trans>Check your email</Trans>
+                </h2>
                 <p className="text-on-surface-variant text-sm">
                   <Trans>If the email exists, we've sent a password reset link.</Trans>
                 </p>
@@ -81,8 +86,12 @@ function ForgotPasswordPage() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#1a1b1e_0%,_#0a0a0a_100%)]" />
       <div className="relative z-10 w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter"><Trans>STACKBLUFF</Trans></h1>
-          <p className="font-data-mono text-xs text-outline mt-2 tracking-widest"><Trans>RESET PASSWORD</Trans></p>
+          <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter">
+            <Trans>STACKBLUFF</Trans>
+          </h1>
+          <p className="font-data-mono text-xs text-outline mt-2 tracking-widest">
+            <Trans>RESET PASSWORD</Trans>
+          </p>
         </div>
         <GlassPanel>
           <form
@@ -123,9 +132,9 @@ function ForgotPasswordPage() {
                           transition={{ duration: 0.2 }}
                           className="text-xs font-data-mono text-red-400 mt-1"
                         >
-                          {field.state.meta.errors.map((e) =>
-                            typeof e === 'string' ? e : e?.message || 'Invalid'
-                          ).join(', ')}
+                          {field.state.meta.errors
+                            .map((e) => (typeof e === 'string' ? e : e?.message || 'Invalid'))
+                            .join(', ')}
                         </motion.p>
                       )}
                     </AnimatePresence>
@@ -144,7 +153,10 @@ function ForgotPasswordPage() {
             </LiquidMetalButton>
 
             <div className="text-center pt-4">
-              <Link to="/login" className="font-label-caps text-[10px] text-on-surface-variant hover:text-on-surface transition-all tracking-widest uppercase">
+              <Link
+                to="/login"
+                className="font-label-caps text-[10px] text-on-surface-variant hover:text-on-surface transition-all tracking-widest uppercase"
+              >
                 <ArrowLeft className="w-3 h-3 inline mr-1" />
                 <Trans>BACK TO SIGN IN</Trans>
               </Link>
