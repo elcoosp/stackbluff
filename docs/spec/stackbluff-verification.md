@@ -388,8 +388,8 @@ pass_criteria:
 | G-2 Viral K≥1.3 | SN-001 (Telegram table) | REQ-FUNC-030 | §1.1 Scenario 1, 2 | Manual E2E TG-01 |
 | G-1 PMF | SN-004 (free chips) | REQ-FUNC-080–083 | §1.1 Scenario implied | TC-missions-01 (TBD) |
 | G-1 PMF | SN-006 (Oracle) | REQ-FUNC-060–064 | §1.5 Oracle scenarios | TC-006 |
-| G-4 ARR | BR-001 (no cash-out) | REQ-NFR-COMP-004 | N/A (structural) | Endpoint audit (all routes) |
-| G-4 ARR | SN-008 (payments) | REQ-FUNC-090–094 | §1.4 Payment scenarios | TC-003 |
+| G-4 Sustainable MRR | BR-001 (no cash-out) | REQ-NFR-COMP-004 | N/A (structural) | Endpoint audit (all routes) |
+| G-4 Sustainable MRR | SN-008 (payments) | REQ-FUNC-090–094 | §1.4 Payment scenarios | TC-003 |
 | BG-008 Compliance | BR-005 (GDPR) | REQ-NFR-COMP-001–005 | N/A | §4.4 GDPR checks |
 | All goals | BR-008 (game integrity) | REQ-FUNC-010–013 | §1.2 hand rankings | TC-001, TC-005 |
 | BG-001 PMF | BR-009 (anti-cheat) | REQ-FUNC-100–103 | §1.4 chip velocity | TC-004 |

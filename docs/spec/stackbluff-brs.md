@@ -49,7 +49,7 @@ Traceability: Goals map directly to G-1 through G-6 in the Vision document.
 | BG-002 | Prove self-sustaining viral growth | Viral coefficient K | ≥ 1.3 sustained over 4 weeks | G-2 |
 | BG-003 | Generate first revenue within 30 days of launch | MRR | ≥ 1 € (any paying transaction) | G-3 |
 | BG-004 | Reach 1 000 € MRR by end of Month 2 | MRR | ≥ 1 000 € | G-3 |
-| BG-005 | Reach 1 000 000 € ARR run rate by Month 12 | MRR | ≥ 83 333 € | G-4 |
+| BG-005 | Reach revenue-positive MRR covering infra costs by Month 12 | MRR | Steady-state revenue | G-4 |
 | BG-006 | Build 5 000 000 registered users by Month 12 | Registered accounts | ≥ 5 000 000 | G-5 |
 | BG-007 | Maintain infrastructure cost below 0.5% of MRR at all scales | Infra cost / MRR ratio | ≤ 0.5% monthly | G-6 |
 | BG-008 | Maintain full legal compliance at all times | ANJ / CNIL audit status | Zero enforcement actions or fines | G-1, G-4 |
@@ -319,7 +319,7 @@ StackBluff operates as a multi-platform service in the following external enviro
 | G-1 Product-market fit | BG-001 DAU/MAU ≥ 25% | SN-001, SN-002, SN-003, SN-004 | Core game + free chip floor |
 | G-2 Viral growth K ≥ 1.3 | BG-002 | SN-005, SN-014 | Replay card sharing + Club result posts |
 | G-3 First revenue | BG-003, BG-004 | SN-015 (Club Pro) | Season Pass + chip bundles |
-| G-4 1M ARR | BG-005, BG-009 | SN-006, SN-007, SN-008 | Oracle + League + MTT |
+| G-4 Sustainable MRR | BG-005, BG-009 | SN-006, SN-007, SN-008 | Oracle + League + MTT |
 | G-5 5M registered users | BG-006 | SN-001, SN-011 | Telegram table + Club virality |
 | G-6 Infra cost ratio | BG-007 | (Technical, not user-facing) | Rust actor model + SQLite WAL |
 

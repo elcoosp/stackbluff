@@ -13,7 +13,7 @@
 
 ## 1. Vision Statement
 
-StackBluff is a free-to-play, multi-platform social poker platform that makes competitive poker accessible, viral, and beautiful — capturing France first, then Europe, then the world — reaching 1 000 000 € ARR within its first operational year on a near-zero budget, built entirely by AI agents.
+StackBluff is a free-to-play, multi-platform social poker platform that makes competitive poker accessible, viral, and beautiful — capturing France first, then Europe, then the world — built entirely by 5 parallel AI agents with zero merge conflicts on a near-zero €100 budget.
 
 > **Pichler one-liner:** *A viral social poker platform that turns every friend group into a poker club, every hand into a shareable moment, and every player into a recruiter — at zero marginal cost per user.*
 
@@ -93,7 +93,7 @@ The global social poker market generates $3.2B annually (2025) yet is dominated 
 | G-1 | **Achieve product-market fit** | DAU/MAU ratio | ≥ 25% by Month 3 |
 | G-2 | **Prove viral growth engine** | Viral coefficient K | ≥ 1.3 by Month 2 |
 | G-3 | **Reach revenue sustainability** | MRR | ≥ 1 000 € by Month 2 |
-| G-4 | **Cross 1M € ARR** | MRR | ≥ 83 333 € by Month 12 |
+| G-4 | **Scale to sustainable MRR** | MRR | Reach steady-state revenue covering infra costs by Month 12 |
 | G-5 | **Establish Telegram market leadership** | Registered users | ≥ 5 000 000 by Month 12 |
 | G-6 | **Maintain near-zero infrastructure cost ratio** | Infra cost as % of MRR | ≤ 0.5% at any scale |
 
@@ -114,7 +114,7 @@ The global social poker market generates $3.2B annually (2025) yet is dominated 
 | **Financial** | Total initial cash budget: 100 €. Infrastructure ops: ≤ 90 €/first 3 months. All scaling funded from revenue. |
 | **Platform** | Must operate as Telegram Mini App AND Progressive Web App from Week 1. iOS/Android native apps deferred to Month 3. |
 | **Team** | Solo human founder + 5 AI agents (Claude, or DeepSeek R1/V3 equivalents). No employees until Series A. |
-| **Timeline** | MVP live Week 1. Telegram launch Week 2. Club system Month 2. 1M ARR by Month 12. |
+| **Timeline** | MVP live Week 1. Telegram launch Week 2. Club system Month 2. Revenue-positive by Month 12. |
 | **Stack** | Rust + Axum backend; React + Vite SPA frontend; SQLite (WAL mode); Hetzner VPS. Stack changes require founder approval. |
 | **Architecture** | Highly modular, agent-parallelisable; zero merge conflicts by design. Each subsystem is an isolated Rust actor or front-end module with a clean interface contract. |
 
