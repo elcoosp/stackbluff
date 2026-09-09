@@ -10,7 +10,9 @@ use tracing::{error, info};
 use sb_contracts::tournament_api::{
     TournamentConfig, TournamentResult, TournamentStatus, TournamentType,
 };
-use sb_shared_types::{AppError, ChipAmount, PlayerId, RequestContext, TableConfig, TableId, TournamentId, UserId};
+use sb_shared_types::{
+    AppError, ChipAmount, PlayerId, RequestContext, TableConfig, TableId, TournamentId, UserId,
+};
 use sb_table_registry::actor::InternalCommand as TableCommand;
 use sb_table_registry::actor::InternalCommand;
 use sb_table_registry::connection_broker::ConnectionBroker;
@@ -580,16 +582,11 @@ impl SitGoTournament {
     }
 
     fn build_summary(&self) -> sb_contracts::tournament_api::TournamentSummary {
-        let starts_in_seconds: Option<u32> = self.config.scheduled_start
-            .map(|start| {
-                let now = chrono::Utc::now();
-                let diff = (start - now).num_seconds();
-                if diff > 0 {
-                    diff as u32
-                } else {
-                    0
-                }
-            });
+        let starts_in_seconds: Option<u32> = self.config.scheduled_start.map(|start| {
+            let now = chrono::Utc::now();
+            let diff = (start - now).num_seconds();
+            if diff > 0 { diff as u32 } else { 0 }
+        });
         sb_contracts::tournament_api::TournamentSummary {
             id: self.tournament_id,
             name: self.name.clone(),
