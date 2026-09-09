@@ -66,7 +66,6 @@ pub fn spawn_stats_aggregator(
                         // Combine bet/raise/call to accumulate total wagered
                         match action_type_lower.as_str() {
                             "bet" => {
-
                                 if action.street == "preflop" {
                                     vpip_players.insert(*pid);
                                     if action_type_lower == "raise" || action_type_lower == "bet" {
@@ -79,7 +78,6 @@ pub fn spawn_stats_aggregator(
                                 }
                             }
                             "raise" => {
-
                                 if action.street == "preflop" {
                                     vpip_players.insert(*pid);
                                     if action_type_lower == "raise" || action_type_lower == "bet" {
@@ -92,7 +90,6 @@ pub fn spawn_stats_aggregator(
                                 }
                             }
                             "call" => {
-
                                 if action.street == "preflop" {
                                     vpip_players.insert(*pid);
                                     if action_type_lower == "raise" || action_type_lower == "bet" {
