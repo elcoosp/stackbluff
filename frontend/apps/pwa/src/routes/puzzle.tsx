@@ -24,14 +24,6 @@ import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
-interface Puzzle {
-  id: number;
-  hole_cards: string[];
-  community_cards: string[];
-  action_description: string;
-  possible_actions: string[];
-}
-
 interface PuzzleResponse {
   puzzle_id: number;
   hole_cards: string[];
@@ -320,8 +312,8 @@ function PuzzlePage() {
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                  {puzzle.hole_cards.map((card, idx) => (
-                    <CardDisplay key={`hole-${idx}`} card={card} index={idx} />
+                  {puzzle.hole_cards.map((card) => (
+                    <CardDisplay key={`hole-${card}`} card={card} index={0} />
                   ))}
                 </div>
               </div>
@@ -335,11 +327,11 @@ function PuzzlePage() {
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-3">
-                    {puzzle.community_cards.map((card, idx) => (
+                    {puzzle.community_cards.map((card, cardIdx) => (
                       <CardDisplay
-                        key={`community-${idx}`}
+                        key={`community-${card}`}
                         card={card}
-                        index={idx + puzzle.hole_cards.length}
+                        index={cardIdx + puzzle.hole_cards.length}
                       />
                     ))}
                   </div>
