@@ -60,7 +60,13 @@ export function ScheduleTournamentDialog({
   });
 
   const mutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: {
+      name: string;
+      max_players: number;
+      buy_in: number;
+      scheduled_start: string;
+      blind_schedule_id?: string;
+    }) => {
       return apiClient(`/clubs/${clubId}/tournaments`, {
         method: 'POST',
         body: JSON.stringify(data),
@@ -72,7 +78,7 @@ export function ScheduleTournamentDialog({
       onClose();
       form.reset();
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || t`Failed to schedule tournament`);
     },
   });
