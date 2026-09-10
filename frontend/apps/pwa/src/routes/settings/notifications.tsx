@@ -10,7 +10,7 @@ export const Route = createFileRoute('/settings/notifications')({
 });
 
 function NotificationsSettingsPage() {
-  const {} = useAuthStore();
+  useAuthStore();
 
   return (
     <div className="max-w-2xl mx-auto p-6 space-y-6">
