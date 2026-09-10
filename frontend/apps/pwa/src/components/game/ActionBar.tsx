@@ -1,17 +1,7 @@
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import { AnimatePresence, motion } from 'framer-motion';
-import {
-  Bot,
-  Check,
-  DollarSign,
-  Infinity,
-  LogOut,
-  RotateCcw,
-  Swords,
-  TrendingUp,
-  Zap,
-} from 'lucide-react';
+import { Bot, Check, DollarSign, LogOut, RotateCcw, Swords, TrendingUp, Zap } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { trackPlayerAction } from '@/lib/customAnalytics';
 import { cn } from '@/lib/utils';
@@ -157,7 +147,6 @@ const preActionOptions: {
 }[] = [
   { key: 'fold', label: t`Fold`, shortLabel: t`Fold`, Icon: LogOut },
   { key: 'check_or_fold', label: t`Check / Fold`, shortLabel: t`Chk/Fld`, Icon: RotateCcw },
-  { key: 'check_or_call_any', label: t`Call Any`, shortLabel: t`Call Any`, Icon: Infinity },
 ];
 
 // Variant config
