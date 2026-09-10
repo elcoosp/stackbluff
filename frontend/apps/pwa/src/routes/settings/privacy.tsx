@@ -24,7 +24,7 @@ interface DeletionStatus {
 function PrivacySettingsPage() {
   const _navigate = useNavigate();
   const queryClient = useQueryClient();
-  const {} = useAuthStore();
+  useAuthStore();
   const [isDeletionDialogOpen, setIsDeletionDialogOpen] = useState(false);
   const [_isExporting, setIsExporting] = useState(false);
 
