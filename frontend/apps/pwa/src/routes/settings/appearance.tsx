@@ -25,7 +25,7 @@ const VALID_COLORS = [
 ];
 
 function AppearanceSettingsPage() {
-  const {} = useAuthStore();
+  useAuthStore();
   const [feltColor, setFeltColor] = useState(VALID_COLORS[0]);
 
   const handleColorChange = (color: string) => {
@@ -54,6 +54,7 @@ function AppearanceSettingsPage() {
           <div className="flex flex-wrap gap-3">
             {VALID_COLORS.map((color) => (
               <button
+                type="button"
                 key={color}
                 onClick={() => handleColorChange(color)}
                 className={`w-10 h-10 rounded-lg border-2 transition-all ${
