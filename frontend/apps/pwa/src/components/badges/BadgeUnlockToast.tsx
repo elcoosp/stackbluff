@@ -7,7 +7,7 @@ interface Props {
   inviteLink?: string;
 }
 
-export const BadgeUnlockToast: React.FC<Props> = ({ badgeType, inviteLink }) => {
+export const BadgeUnlockToast: React.FC<Props> = ({ inviteLink }) => {
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
@@ -42,6 +42,7 @@ export const BadgeUnlockToast: React.FC<Props> = ({ badgeType, inviteLink }) => 
               <Trans>Share your achievement with friends.</Trans>
             </p>
             <button
+              type="button"
               onClick={handleShare}
               className="mt-2 inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
             >
@@ -49,6 +50,7 @@ export const BadgeUnlockToast: React.FC<Props> = ({ badgeType, inviteLink }) => 
             </button>
           </div>
           <button
+            type="button"
             onClick={() => setVisible(false)}
             className="text-muted-foreground hover:text-foreground"
           >
