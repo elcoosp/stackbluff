@@ -5,6 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { GlassHub } from '../components/game';
 
+interface Table {
+  table_id: string;
+  stake_level: string;
+  current_players: number;
+  max_players: number;
+  status?: string;
+}
+
 const fetchTables = async () => {
   const token = getToken();
   const res = await fetch('/api/lobby', {
@@ -70,7 +78,7 @@ export const Route = createFileRoute('/')({
           <h1 className="font-display-lg text-4xl text-on-surface mb-2">STACKBLUFF</h1>
           <p className="text-on-surface-variant mb-8">Select a table to join the game</p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {tables?.map((table: any) => (
+            {tables?.map((table: Table) => (
               <GlassHub key={table.table_id} active={false}>
                 <Card className="bg-surface-container/40 border-outline-variant/20 shadow-none">
                   <CardHeader>
