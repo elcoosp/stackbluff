@@ -19,7 +19,7 @@ export const Card = ({
   faceDown,
   className,
   rounded = 'rounded-sm',
-  size = 'md',
+  size: _size = 'md',
   hoverable = true,
   isWinning = false,
   isLosing = false,
@@ -93,8 +93,8 @@ export const Card = ({
   // Determine animation state
   let filter = baseFilter;
   let boxShadow = baseShadow;
-  let animateProps: any = {};
-  let transitionProps: any = {};
+  let animateProps: Record<string, unknown> = {};
+  let transitionProps: Record<string, unknown> = {};
 
   if (isLosing) {
     filter = losingFilter;
