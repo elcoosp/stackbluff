@@ -1,5 +1,24 @@
 import { create } from 'zustand';
 
+export interface Card {
+  rank: string;
+  suit: string;
+}
+
+export interface PlayerStats {
+  display_name?: string;
+  hands_played?: number;
+  win_rate?: number;
+  vpip?: number;
+  pfr?: number;
+  aggression_factor?: number;
+  net_profit?: number;
+  biggest_pot_won?: number;
+  all_in_count?: number;
+  showdowns?: number;
+  showdown_wins?: number;
+}
+
 export interface Seat {
   seat: number;
   user_id: string;
@@ -10,23 +29,18 @@ export interface Seat {
   is_folded: boolean;
   is_active: boolean;
   avatar_url?: string;
-  hole_cards?: any[];
+  hole_cards?: Card[];
   position_badge?: string;
   is_winner?: boolean;
   win_amount?: number;
   hand_description?: string;
   is_showdown_revealed?: boolean;
-  winningCards?: any[];
-  winning_cards?: any[];
+  winningCards?: Card[];
+  winning_cards?: Card[];
   sitting_out?: boolean;
-  stats?: any;
+  stats?: PlayerStats;
   action?: { text: string; amount?: number | null };
   rank_tier?: string;
-}
-
-export interface Card {
-  rank: string;
-  suit: string;
 }
 
 export interface SidePot {
@@ -122,6 +136,19 @@ const createInitialRoomState = (): GameRoomState => ({
 
 const EMPTY_ROOM_STATE = createInitialRoomState();
 
+export interface ActionBroadcast {
+  player_id: string;
+  action: string;
+  amount: number | null;
+  new_stack: number | string;
+  new_pot: number;
+}
+
+export interface HandResult {
+  winners: { user_id: string; display_name: string; amount: number; hand_rank: string }[];
+  pot: number;
+}
+
 interface GameState {
   rooms: Record<string, GameRoomState>;
   activeRoomId: string | null;
@@ -134,8 +161,8 @@ interface GameState {
   clearActionRequired: (roomId: string) => void;
   setAnalytics: (roomId: string, analytics: Analytics | null) => void;
   setShowdownReveal: (roomId: string, data: ShowdownRevealData | null) => void;
-  applyActionBroadcast: (roomId: string, broadcast: any) => void;
-  setHandResult: (roomId: string, result: { winners: any[]; pot: number }) => void;
+  applyActionBroadcast: (roomId: string, broadcast: ActionBroadcast) => void;
+  setHandResult: (roomId: string, result: HandResult) => void;
   removeRoom: (roomId: string) => void;
   setActiveRoom: (roomId: string | null) => void;
 }
