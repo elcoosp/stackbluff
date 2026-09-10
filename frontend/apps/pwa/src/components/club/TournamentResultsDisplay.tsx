@@ -69,6 +69,7 @@ export function TournamentResultsDisplay({
   return (
     <Card className="p-4 bg-white/5 border-white/10">
       <button
+        type="button"
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center justify-between text-left"
       >
