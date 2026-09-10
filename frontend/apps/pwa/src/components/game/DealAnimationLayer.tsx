@@ -34,9 +34,9 @@ interface FlyingCard {
 interface DealAnimationLayerProps {
   isDesktop: boolean;
   heroSeat: number;
-  heroHoleCards: any[];
-  communityCards: any[];
-  seats: Record<number, any>;
+  heroHoleCards: Array<{ rank: string; suit: string }>;
+  communityCards: Array<{ rank: string; suit: string }>;
+  seats: Record<number, { display_name: string; avatar_url?: string; is_active: boolean; position_badge?: string; is_folded?: boolean }>;
 }
 
 export const DealAnimationLayer = ({
@@ -136,7 +136,7 @@ export const DealAnimationLayer = ({
 
   useEffect(() => {
     const currentCards = heroHoleCards || [];
-    const currentKey = currentCards.map((c: any) => `${c.rank}${c.suit}`).join('');
+    const currentKey = currentCards.map((c) => `${c.rank}${c.suit}`).join('');
 
     if (isFirstRenderRef.current) {
       isFirstRenderRef.current = false;
@@ -167,7 +167,7 @@ export const DealAnimationLayer = ({
 
     let dealerSeat = 0;
     for (const [idx, seat] of Object.entries(seats)) {
-      if ((seat as any).position_badge === 'BTN') {
+      if ((seat as { position_badge?: string }).position_badge === 'BTN') {
         dealerSeat = Number(idx);
         break;
       }
