@@ -25,6 +25,7 @@ export function ClubTabs({ tabs, activeTab, onTabChange, children }: ClubTabsPro
       <div className="flex w-full gap-1 bg-white/5 border border-white/10 rounded-2xl p-1.5 backdrop-blur-xl h-auto mb-6">
         {visibleTabs.map((tab) => (
           <button
+            type="button"
             key={tab.key}
             onClick={() => onTabChange(tab.key)}
             className={cn(
