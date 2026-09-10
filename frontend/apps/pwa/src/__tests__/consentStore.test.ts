@@ -4,11 +4,12 @@ import { useConsentStore } from '../stores/consentStore';
 
 // Mock Notification API
 const mockNotificationPermission = vi.fn();
+const mockNotification = {
+  permission: 'default' as NotificationPermission,
+  requestPermission: mockNotificationPermission,
+};
 Object.defineProperty(window, 'Notification', {
-  value: {
-    permission: 'default',
-    requestPermission: mockNotificationPermission,
-  },
+  value: mockNotification,
   writable: true,
   configurable: true,
 });
@@ -23,7 +24,7 @@ describe('consentStore', () => {
     });
 
     // Reset Notification permission
-    (window.Notification as any).permission = 'default';
+    mockNotification.permission = 'default';
   });
 
   afterEach(() => {
@@ -85,19 +86,19 @@ describe('consentStore', () => {
     });
 
     it('should show prompt when not_asked and browser permission is default', () => {
-      (window.Notification as any).permission = 'default';
+      mockNotification.permission = 'default';
       const { canShowNotificationPrompt } = useConsentStore.getState();
       expect(canShowNotificationPrompt()).toBe(true);
     });
 
     it('should not show prompt when browser permission is granted', () => {
-      (window.Notification as any).permission = 'granted';
+      mockNotification.permission = 'granted';
       const { canShowNotificationPrompt } = useConsentStore.getState();
       expect(canShowNotificationPrompt()).toBe(false);
     });
 
     it('should not show prompt when browser permission is denied', () => {
-      (window.Notification as any).permission = 'denied';
+      mockNotification.permission = 'denied';
       const { canShowNotificationPrompt } = useConsentStore.getState();
       expect(canShowNotificationPrompt()).toBe(false);
     });
