@@ -105,7 +105,7 @@ function TournamentsPage() {
       setBuyInDialog({ open: false, tournament: null });
     },
 
-    onError: (error, { tournamentId }) => {
+    onError: (error) => {
       toast.error(error.message || t`Registration failed`);
       setRegisteringId(null);
     },
@@ -126,7 +126,7 @@ function TournamentsPage() {
       setUnregisteringId(null);
     },
 
-    onError: (error, { tournamentId }) => {
+    onError: (error) => {
       toast.error(error.message || t`Unregistration failed`);
       setUnregisteringId(null);
     },
@@ -248,6 +248,7 @@ function TournamentsPage() {
         <div className="flex flex-wrap gap-1 bg-white/5 border border-white/10 backdrop-blur-xl rounded-xl p-1.5">
           {typeTabs.map((type) => (
             <button
+              type="button"
               key={type}
               onClick={() => setTypeFilter(type)}
               className={cn(
@@ -264,6 +265,7 @@ function TournamentsPage() {
         <div className="flex flex-wrap gap-1 bg-white/5 border border-white/10 backdrop-blur-xl rounded-xl p-1.5">
           {statusTabs.map((status) => (
             <button
+              type="button"
               key={status}
               onClick={() => setStatusFilter(status)}
               className={cn(
