@@ -53,11 +53,14 @@ function RegisterPage() {
   const prevStep = () => setStep(step - 1);
 
   // Helper to extract error message from Zod error object
-  const getErrorMessage = (err: any) => {
+  const getErrorMessage = (err: unknown) => {
     if (typeof err === 'string') return err;
-    if (err?.message) return err.message;
-    if (err?.code === 'too_small') return err.message || `Minimum length ${err.minimum}`;
-    if (err?.code === 'invalid_string') return err.message || 'Invalid value';
+    if (err && typeof err === 'object') {
+      const e = err as { message?: string; code?: string; minimum?: number };
+      if (e.message) return e.message;
+      if (e.code === 'too_small') return e.message || `Minimum length ${e.minimum}`;
+      if (e.code === 'invalid_string') return e.message || 'Invalid value';
+    }
     return 'Validation error';
   };
 
@@ -93,7 +96,10 @@ function RegisterPage() {
               <form.Field name="username">
                 {(field) => (
                   <div className="space-y-2">
-                    <label className="block font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+                    <label
+                      htmlFor="register-username"
+                      className="block font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase"
+                    >
                       Username
                     </label>
                     <div className="relative border border-outline-variant/50 rounded-lg bg-black/40">
@@ -101,6 +107,7 @@ function RegisterPage() {
                         <User size={16} />
                       </span>
                       <input
+                        id="register-username"
                         type="text"
                         value={field.state.value}
                         onChange={(e) => field.handleChange(e.target.value)}
@@ -121,7 +128,10 @@ function RegisterPage() {
               <form.Field name="email">
                 {(field) => (
                   <div className="space-y-2">
-                    <label className="block font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+                    <label
+                      htmlFor="register-email"
+                      className="block font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase"
+                    >
                       Email Address
                     </label>
                     <div className="relative border border-outline-variant/50 rounded-lg bg-black/40">
@@ -129,6 +139,7 @@ function RegisterPage() {
                         <Mail size={16} />
                       </span>
                       <input
+                        id="register-email"
                         type="email"
                         value={field.state.value}
                         onChange={(e) => field.handleChange(e.target.value)}
@@ -149,7 +160,10 @@ function RegisterPage() {
               <form.Field name="password">
                 {(field) => (
                   <div className="space-y-2">
-                    <label className="block font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+                    <label
+                      htmlFor="register-password"
+                      className="block font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase"
+                    >
                       Password
                     </label>
                     <div className="relative border border-outline-variant/50 rounded-lg bg-black/40">
@@ -157,6 +171,7 @@ function RegisterPage() {
                         <Lock size={16} />
                       </span>
                       <input
+                        id="register-password"
                         type="password"
                         value={field.state.value}
                         onChange={(e) => field.handleChange(e.target.value)}
