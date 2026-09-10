@@ -14,7 +14,7 @@ export const Route = createFileRoute('/settings/audio')({
 });
 
 function AudioSettingsPage() {
-  const {} = useAuthStore();
+  useAuthStore();
   const [masterVolume, setMasterVolume] = useState([70]);
   const [sfxVolume, setSfxVolume] = useState([80]);
   const [musicVolume, setMusicVolume] = useState([50]);
