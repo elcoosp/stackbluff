@@ -25,13 +25,13 @@ export function trackEvent(
   // Enrich with user context
   const enrichedProps = {
     ...options?.props,
-    ...((typeof window !== 'undefined' && (window as any).__USER_CONTEXT__) || {}),
+    ...((typeof window !== 'undefined' && window.__USER_CONTEXT__) || {}),
   };
 
   analyticsLogger.info('Firing analytics event', { eventName, props: enrichedProps });
 
   // Plausible analytics
-  const plausible = (window as any).plausible;
+  const plausible = window.plausible;
   if (typeof plausible === 'function') {
     try {
       plausible(eventName, { ...options, props: enrichedProps });
@@ -82,15 +82,15 @@ export function setAnalyticsUserContext(context: {
   [key: string]: string | number | boolean | undefined;
 }): void {
   if (typeof window === 'undefined') return;
-  (window as any).__USER_CONTEXT__ = context;
+  window.__USER_CONTEXT__ = context;
   analyticsLogger.info('Analytics user context set', { userId: context.userId });
 }
 
 // Extend Window type
 declare global {
   interface Window {
-    plausible?: (eventName: string, options?: any) => void;
-    dataLayer?: any[];
+    plausible?: (eventName: string, options?: Record<string, string | number | boolean>) => void;
+    dataLayer?: unknown[];
     __USER_CONTEXT__?: Record<string, string | number | boolean>;
   }
 }
