@@ -2,6 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { trackEvent, trackPageView } from '../lib/analytics';
 import { useConsentStore } from '../stores/consentStore';
 
+type MockWindow = Window & {
+  plausible?: (eventName: string, options?: Record<string, unknown>) => void;
+};
+
 describe('analytics', () => {
   beforeEach(() => {
     // Reset store
@@ -10,7 +14,7 @@ describe('analytics', () => {
     });
 
     // Mock window.plausible
-    (window as any).plausible = vi.fn();
+    (window as MockWindow).plausible = vi.fn();
     window.dataLayer = [];
   });
 
@@ -21,21 +25,21 @@ describe('analytics', () => {
   describe('consent checking', () => {
     it('should not fire events when cookie consent not given', () => {
       trackEvent('test_event');
-      expect((window as any).plausible).not.toHaveBeenCalled();
+      expect((window as MockWindow).plausible).not.toHaveBeenCalled();
       expect(window.dataLayer).toHaveLength(0);
     });
 
     it('should not fire events when cookie consent declined', () => {
       useConsentStore.getState().setCookieConsent('declined');
       trackEvent('test_event');
-      expect((window as any).plausible).not.toHaveBeenCalled();
+      expect((window as MockWindow).plausible).not.toHaveBeenCalled();
       expect(window.dataLayer).toHaveLength(0);
     });
 
     it('should fire events when cookie consent accepted', () => {
       useConsentStore.getState().setCookieConsent('accepted');
       trackEvent('test_event', { props: { foo: 'bar' } });
-      expect((window as any).plausible).toHaveBeenCalledWith('test_event', {
+      expect((window as MockWindow).plausible).toHaveBeenCalledWith('test_event', {
         props: { foo: 'bar' },
       });
     });
@@ -45,13 +49,13 @@ describe('analytics', () => {
     it('should use Plausible when available', () => {
       useConsentStore.getState().setCookieConsent('accepted');
       trackEvent('test_event', { props: { foo: 'bar' } });
-      expect((window as any).plausible).toHaveBeenCalledWith('test_event', {
+      expect((window as MockWindow).plausible).toHaveBeenCalledWith('test_event', {
         props: { foo: 'bar' },
       });
     });
 
     it('should fallback to dataLayer when Plausible not available', () => {
-      delete (window as any).plausible;
+      delete (window as MockWindow).plausible;
       useConsentStore.getState().setCookieConsent('accepted');
       trackEvent('test_event', { props: { foo: 'bar' } });
       expect(window.dataLayer).toContainEqual({
@@ -100,7 +104,7 @@ describe('analytics', () => {
     it('should track pageview with url', () => {
       useConsentStore.getState().setCookieConsent('accepted');
       trackPageView('https://example.com/page');
-      expect((window as any).plausible).toHaveBeenCalledWith('pageview', {
+      expect((window as MockWindow).plausible).toHaveBeenCalledWith('pageview', {
         props: { url: 'https://example.com/page' },
       });
     });
@@ -108,7 +112,7 @@ describe('analytics', () => {
     it('should track pageview without url', () => {
       useConsentStore.getState().setCookieConsent('accepted');
       trackPageView();
-      expect((window as any).plausible).toHaveBeenCalledWith('pageview', {
+      expect((window as MockWindow).plausible).toHaveBeenCalledWith('pageview', {
         props: {},
       });
     });
