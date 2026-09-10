@@ -23,7 +23,8 @@ export const RaiseSlider = ({
     <form.Field
       name="amount"
       validators={{ onChange: ({ value }) => value >= min && value <= max }}
-      children={(field) => (
+    >
+      {(field) => (
         <div className="space-y-4 p-4 bg-surface-container rounded-xl border border-outline-variant/20">
           <Slider
             value={[field.state.value]}
@@ -47,6 +48,6 @@ export const RaiseSlider = ({
           </Button>
         </div>
       )}
-    />
+    </form.Field>
   );
 };
