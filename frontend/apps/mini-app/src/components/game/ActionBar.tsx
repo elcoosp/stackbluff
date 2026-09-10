@@ -2,6 +2,17 @@ import { Gamepad2 } from 'lucide-react';
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { ActionButton, RaiseSlider } from './';
+
+interface ActionBarProps {
+  isDesktop: boolean;
+  actionRequired: boolean;
+  toCall: number;
+  minRaise: number;
+  maxRaise: number;
+  pot: number;
+  onAction: (action: string, amount?: number) => void;
+}
+
 export const ActionBar = ({
   isDesktop,
   actionRequired,
@@ -10,7 +21,7 @@ export const ActionBar = ({
   maxRaise,
   pot,
   onAction,
-}: any) => {
+}: ActionBarProps) => {
   const [raiseOpen, setRaiseOpen] = useState(false);
   if (!actionRequired) return null;
   if (isDesktop) {
@@ -46,7 +57,10 @@ export const ActionBar = ({
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <button className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-tertiary text-black px-6 py-2 rounded-full z-[450] flex items-center gap-2">
+        <button
+          type="button"
+          className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-tertiary text-black px-6 py-2 rounded-full z-[450] flex items-center gap-2"
+        >
           <Gamepad2 className="w-4 h-4" /> Actions
         </button>
       </DialogTrigger>
