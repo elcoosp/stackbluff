@@ -78,10 +78,14 @@ export function CreateTableModal({ open, onClose, onTableCreated }: CreateTableM
         {/* Content */}
         <div className="px-5 py-4 space-y-6 dialog-scroll overflow-y-auto flex-1">
           <div className="space-y-2">
-            <label className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+            <label
+              htmlFor="tableName"
+              className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase"
+            >
               <Trans>Table Name</Trans>
             </label>
             <Input
+              id="tableName"
               value={tableName}
               onChange={(e) => setTableName(e.target.value)}
               placeholder={t`e.g., My Private Table`}
@@ -91,9 +95,9 @@ export function CreateTableModal({ open, onClose, onTableCreated }: CreateTableM
           </div>
 
           <div className="space-y-2">
-            <label className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+            <div className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
               <Trans>Stake Level</Trans>
-            </label>
+            </div>
             <Select value={stakeLevel} onValueChange={setStakeLevel}>
               <SelectTrigger className="bg-surface-container-high border-outline-variant/50 text-on-surface">
                 <SelectValue />
@@ -119,10 +123,14 @@ export function CreateTableModal({ open, onClose, onTableCreated }: CreateTableM
           </div>
 
           <div className="space-y-2">
-            <label className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+            <label
+              htmlFor="maxPlayers"
+              className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase"
+            >
               <Trans>Max Players: {maxPlayers}</Trans>
             </label>
             <input
+              id="maxPlayers"
               type="range"
               min={2}
               max={9}
