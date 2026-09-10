@@ -77,25 +77,61 @@ const itemVariants = {
 
 // Custom Brand SVG Icons
 const XIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" {...props}>
+  <svg
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    width="20"
+    height="20"
+    role="img"
+    aria-label="X"
+    {...props}
+  >
+    <title>X</title>
     <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
   </svg>
 );
 
 const FacebookIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" {...props}>
+  <svg
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    width="20"
+    height="20"
+    role="img"
+    aria-label="Facebook"
+    {...props}
+  >
+    <title>Facebook</title>
     <path d="M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.141.195v3.325a8.623 8.623 0 0 0-.653-.036 26.805 26.805 0 0 0-.733-.009c-.707 0-1.259.096-1.675.309a1.686 1.686 0 0 0-.679.622c-.258.42-.374.995-.374 1.752v1.297h3.919l-.386 2.103-.287 1.564h-3.246v8.245C19.396 23.238 24 18.179 24 12.044c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.628 3.874 10.35 9.101 11.647Z" />
   </svg>
 );
 
 const RedditIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" {...props}>
+  <svg
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    width="20"
+    height="20"
+    role="img"
+    aria-label="Reddit"
+    {...props}
+  >
+    <title>Reddit</title>
     <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0Zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.498.268-.27.643-.438 1.064-.438.835 0 1.512.677 1.512 1.512 0 .609-.36 1.13-.878 1.368.042.165.063.336.063.514 0 2.495-2.806 4.518-6.267 4.518s-6.267-2.023-6.267-4.518c0-.18.021-.35.063-.514A1.511 1.511 0 0 1 5.248 12c0-.835.677-1.512 1.512-1.512.42 0 .795.168 1.064.438 1.194-.866 2.85-1.428 4.674-1.498l.878-4.118a.497.497 0 0 1 .205-.313.497.497 0 0 1 .378-.086l3.117.654a1.25 1.25 0 0 1 1.165-.79Zm-8.506 9.014a1.25 1.25 0 1 0 2.498 0 1.25 1.25 0 0 0-2.498 0Zm4.996 0a1.25 1.25 0 1 0 2.498 0 1.25 1.25 0 0 0-2.498 0Zm-2.498 3.74a.625.625 0 0 0 0 1.25c1.516 0 2.873-.476 3.844-1.252a.625.625 0 1 0-.81-.95c-.713.604-1.793.998-3.034.998a.625.625 0 0 0 0-.996Z" />
   </svg>
 );
 
 const TelegramIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" {...props}>
+  <svg
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    width="20"
+    height="20"
+    role="img"
+    aria-label="Telegram"
+    {...props}
+  >
+    <title>Telegram</title>
     <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0Zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635Z" />
   </svg>
 );
@@ -142,7 +178,7 @@ const formatCard = (cardStr: string) => {
 };
 
 function ReplaysPage() {
-  const {} = useAuthStore();
+  useAuthStore();
 
   const {
     data: replays,
@@ -473,9 +509,9 @@ function ReplayCardItem({
                   <Trans>Hole</Trans>
                 </span>
                 <div className="flex gap-1.5">
-                  {replay.winner_cards.map((card, idx) => (
+                  {replay.winner_cards.map((card) => (
                     <span
-                      key={idx}
+                      key={`winner-${card}`}
                       className="w-8 h-10 flex items-center justify-center bg-white rounded-[4px] shadow-sm border border-black/10"
                     >
                       {formatCard(card)}
@@ -490,9 +526,9 @@ function ReplayCardItem({
                   <Trans>Board</Trans>
                 </span>
                 <div className="flex gap-1.5">
-                  {replay.community_cards.map((card, idx) => (
+                  {replay.community_cards.map((card) => (
                     <span
-                      key={idx}
+                      key={`community-${card}`}
                       className="w-8 h-10 flex items-center justify-center bg-white rounded-[4px] shadow-sm border border-black/10"
                     >
                       {formatCard(card)}
@@ -551,6 +587,7 @@ function ReplayCardItem({
               className="bg-zinc-900 border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl relative"
             >
               <button
+                type="button"
                 onClick={() => setIsShareOpen(false)}
                 className="absolute top-4 right-4 p-1.5 rounded-lg text-on-surface-variant hover:bg-white/5 hover:text-on-surface transition-colors"
               >
