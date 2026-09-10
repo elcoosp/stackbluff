@@ -61,11 +61,12 @@ function TournamentHistoryPage() {
           const detail = await tournamentApi.get(t.id);
           const resultsRes = await tournamentApi.results(t.id);
           const userResults = userId
-            ? resultsRes.results.filter((r: any) => r.user_id === userId)
+            ? resultsRes.results.filter((r: { user_id: string }) => r.user_id === userId)
             : resultsRes.results;
           return {
             ...t,
-            completed_at: (detail as any).completed_at || new Date().toISOString(),
+            completed_at:
+              (detail as { completed_at?: string }).completed_at || new Date().toISOString(),
             results: userResults || [],
           } as TournamentWithResults;
         }),
