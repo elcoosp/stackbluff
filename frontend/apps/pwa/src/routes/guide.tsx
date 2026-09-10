@@ -185,7 +185,7 @@ function GuidePage() {
             {HAND_RANKS.map((hand, idx) => {
               const isTop = idx < 3;
               return (
-                <motion.div key={idx} variants={itemVariants}>
+                <motion.div key={hand.name} variants={itemVariants}>
                   <Card
                     className={cn(
                       'p-5 border backdrop-blur-xl rounded-2xl transition-all duration-300 hover:bg-white/[0.07] group relative overflow-hidden',
@@ -266,8 +266,8 @@ function GuidePage() {
             animate="visible"
             className="flex flex-col gap-3"
           >
-            {TERMS.map((item, idx) => (
-              <motion.div key={idx} variants={itemVariants}>
+            {TERMS.map((item, _idx) => (
+              <motion.div key={item.term} variants={itemVariants}>
                 <Card className="p-4 bg-white/5 border-white/10 backdrop-blur-xl rounded-xl flex items-center gap-4 hover:bg-white/[0.07] transition-colors">
                   <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10 flex-shrink-0">
                     <ChevronRight className="w-4 h-4 text-tertiary" />
@@ -308,8 +308,8 @@ function GuidePage() {
                     t`Raise or fold – avoid limping (just calling)`,
                     t`3-bet with strong hands, 4-bet with premiums`,
                     t`Suited connectors and high cards play well in position`,
-                  ].map((tip, i) => (
-                    <div key={i} className="flex items-start gap-3">
+                  ].map((tip, _i) => (
+                    <div key={tip} className="flex items-center gap-3">
                       <div className="w-5 h-5 rounded-full bg-tertiary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
                         <Check className="w-3 h-3 text-tertiary" />
                       </div>
@@ -336,8 +336,8 @@ function GuidePage() {
                     t`Consider your opponent's range, not just your hand`,
                     t`Bet for value with strong hands, bluff with weak ones`,
                     t`Use pot odds to decide if calling is profitable`,
-                  ].map((tip, i) => (
-                    <div key={i} className="flex items-start gap-3">
+                  ].map((tip, _i) => (
+                    <div key={tip} className="flex items-center gap-3">
                       <div className="w-5 h-5 rounded-full bg-tertiary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
                         <Check className="w-3 h-3 text-tertiary" />
                       </div>
@@ -364,8 +364,8 @@ function GuidePage() {
                     t`Apply pressure on the bubble`,
                     t`Understand ICM – chip values change as payouts approach`,
                     t`Adjust to increasing blinds and antes`,
-                  ].map((tip, i) => (
-                    <div key={i} className="flex items-start gap-3">
+                  ].map((tip, _i) => (
+                    <div key={tip} className="flex items-start gap-3">
                       <div className="w-5 h-5 rounded-full bg-yellow-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
                         <Check className="w-3 h-3 text-yellow-400" />
                       </div>
