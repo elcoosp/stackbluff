@@ -18,6 +18,7 @@ export function ClubPageSkeleton() {
       <div className="bg-white/5 rounded-xl p-6">
         <div className="space-y-4">
           {Array.from({ length: 5 }).map((_, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: stable skeleton, no state
             <div key={i} className="h-20 bg-white/10 rounded" />
           ))}
         </div>
@@ -30,6 +31,7 @@ export function LeaderboardSkeleton() {
   return (
     <div className="space-y-2 animate-pulse">
       {Array.from({ length: 10 }).map((_, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: stable skeleton, no state
         <div key={i} className="flex items-center gap-4 p-4 bg-white/5 rounded-lg">
           <div className="w-12 h-8 bg-white/10 rounded" />
           <div className="w-12 h-12 rounded-full bg-white/10" />
@@ -45,6 +47,7 @@ export function TournamentSkeleton() {
   return (
     <div className="space-y-4 animate-pulse">
       {Array.from({ length: 3 }).map((_, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: stable skeleton, no state
         <div key={i} className="p-6 bg-white/5 rounded-xl">
           <div className="h-6 w-48 bg-white/10 rounded mb-4" />
           <div className="grid grid-cols-2 gap-4">
