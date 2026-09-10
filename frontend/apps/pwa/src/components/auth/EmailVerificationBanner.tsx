@@ -36,6 +36,7 @@ export function EmailVerificationBanner() {
   return (
     <div className="relative bg-yellow-500/10 border-b border-yellow-500/20 px-4 py-3 text-center text-sm">
       <button
+        type="button"
         onClick={() => setIsDismissed(true)}
         className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white/80 transition-colors"
         aria-label="Dismiss banner"
@@ -49,6 +50,7 @@ export function EmailVerificationBanner() {
         </span>
         <div>
           <button
+            type="button"
             onClick={handleResend}
             disabled={isResending}
             className="text-yellow-400 hover:text-yellow-300 underline-offset-2 underline font-medium disabled:opacity-50 disabled:cursor-not-allowed"
