@@ -50,7 +50,6 @@ function TournamentDetailPage() {
     data: tournament,
     isLoading,
     error,
-    refetch,
   } = useQuery<TournamentSummary>({
     queryKey: ['tournament', tournamentId],
     queryFn: () => tournamentApi.get(tournamentId),
