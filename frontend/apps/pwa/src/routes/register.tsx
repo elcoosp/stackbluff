@@ -55,13 +55,13 @@ function RegisterPage() {
   });
 
   const nextStep = async () => {
-    let errs: any[] = [];
+    let errs: string[] = [];
     if (step === 1) errs = await form.validateField('username', 'change');
     else if (step === 2) errs = await form.validateField('email', 'change');
     if (errs.length === 0) setStep(step + 1);
   };
   const prevStep = () => setStep(step - 1);
-  const getErrorMessage = (err: any) => {
+  const getErrorMessage = (err: string | { message?: string }) => {
     if (typeof err === 'string') return err;
     if (err?.message) return err.message;
     return t`Validation error`;
@@ -128,7 +128,9 @@ function RegisterPage() {
                             transition={{ duration: 0.2 }}
                             className="text-xs font-data-mono text-red-400 mt-1"
                           >
-                            {field.state.meta.errors.map((e: any) => getErrorMessage(e)).join(', ')}
+                            {field.state.meta.errors
+                              .map((e: string | { message?: string }) => getErrorMessage(e))
+                              .join(', ')}
                           </motion.p>
                         )}
                       </AnimatePresence>
@@ -170,7 +172,9 @@ function RegisterPage() {
                             transition={{ duration: 0.2 }}
                             className="text-xs font-data-mono text-red-400 mt-1"
                           >
-                            {field.state.meta.errors.map((e: any) => getErrorMessage(e)).join(', ')}
+                            {field.state.meta.errors
+                              .map((e: string | { message?: string }) => getErrorMessage(e))
+                              .join(', ')}
                           </motion.p>
                         )}
                       </AnimatePresence>
@@ -212,7 +216,9 @@ function RegisterPage() {
                             transition={{ duration: 0.2 }}
                             className="text-xs font-data-mono text-red-400 mt-1"
                           >
-                            {field.state.meta.errors.map((e: any) => getErrorMessage(e)).join(', ')}
+                            {field.state.meta.errors
+                              .map((e: string | { message?: string }) => getErrorMessage(e))
+                              .join(', ')}
                           </motion.p>
                         )}
                       </AnimatePresence>
