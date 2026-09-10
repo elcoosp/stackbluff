@@ -7,9 +7,9 @@
       "packages/*/src/**/*.ts",
       "packages/*/src/**/*.tsx",
       "*.json",
-      "*.js"
+      "*.js",
+      "!**/routeTree.gen.ts"
     ],
-    "experimentalScannerIgnores": ["**/*.css", "**/routeTree.gen.ts"],
     "ignoreUnknown": true
   },
   "formatter": {
