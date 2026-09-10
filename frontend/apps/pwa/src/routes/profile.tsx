@@ -4,7 +4,7 @@ import { apiClient } from '@stackbluff/shared/api/client';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { motion } from 'framer-motion';
+import { motion, type Variants } from 'framer-motion';
 import {
   Award,
   Building2,
@@ -347,7 +347,7 @@ function StatCard({
   icon: React.ReactNode;
   color: string;
   bg: string;
-  variants: any;
+  variants: Variants;
 }) {
   return (
     <motion.div variants={variants}>
