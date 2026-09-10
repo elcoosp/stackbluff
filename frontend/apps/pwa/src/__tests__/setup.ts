@@ -21,30 +21,40 @@ Object.defineProperty(window, 'matchMedia', {
 });
 
 // Mock IntersectionObserver
-global.IntersectionObserver = class IntersectionObserver {
-  observe() {
+const IntersectionObserverMock = class {
+  observe(): null {
     return null;
   }
-  disconnect() {
+  disconnect(): null {
     return null;
   }
-  unobserve() {
+  unobserve(): null {
     return null;
   }
-} as any;
+};
+Object.defineProperty(window, 'IntersectionObserver', {
+  value: IntersectionObserverMock,
+  writable: true,
+  configurable: true,
+});
 
 // Mock ResizeObserver
-global.ResizeObserver = class ResizeObserver {
-  observe() {
+const ResizeObserverMock = class {
+  observe(): null {
     return null;
   }
-  disconnect() {
+  disconnect(): null {
     return null;
   }
-  unobserve() {
+  unobserve(): null {
     return null;
   }
-} as any;
+};
+Object.defineProperty(window, 'ResizeObserver', {
+  value: ResizeObserverMock,
+  writable: true,
+  configurable: true,
+});
 
 // Mock localStorage
 const localStorageMock = (() => {
