@@ -59,7 +59,13 @@ class FeedbackController {
     });
 
     if (preset.visual && this.prefs.masterEnabled) {
-      const detail: any = { event, ...preset.visual };
+      const detail: {
+        event: FeedbackEvent;
+        glow?: string;
+        shake?: number;
+        pulse?: boolean;
+        seatIndex?: number;
+      } = { event, ...preset.visual };
       if (overrides?.seatIndex !== undefined) detail.seatIndex = overrides.seatIndex;
       window.dispatchEvent(new CustomEvent('feedback:visual', { detail }));
     }
