@@ -40,10 +40,15 @@ export const GdprSettings: React.FC = () => {
           Your deletion request is pending. Data will be anonymised within 30 days.
         </p>
       )}
-      <button onClick={handleExport} className="bg-blue-600 text-white px-4 py-2 rounded mr-4">
+      <button
+        type="button"
+        onClick={handleExport}
+        className="bg-blue-600 text-white px-4 py-2 rounded mr-4"
+      >
         Download my data
       </button>
       <button
+        type="button"
         onClick={() => setShowModal(true)}
         className="bg-red-600 text-white px-4 py-2 rounded"
       >
@@ -66,10 +71,14 @@ export const GdprSettings: React.FC = () => {
               className="border p-2 mb-4 w-full"
             />
             <div className="flex justify-end gap-2">
-              <button onClick={() => setShowModal(false)} className="px-4 py-2">
+              <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2">
                 Cancel
               </button>
-              <button onClick={handleDelete} className="bg-red-600 text-white px-4 py-2 rounded">
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="bg-red-600 text-white px-4 py-2 rounded"
+              >
                 Delete Forever
               </button>
             </div>
