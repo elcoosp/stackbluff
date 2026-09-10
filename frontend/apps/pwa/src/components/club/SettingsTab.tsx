@@ -25,7 +25,7 @@ interface ClubProSettings {
 }
 
 export function SettingsTab({ clubId, settings }: { clubId: string; settings?: ClubProSettings }) {
-  const { user } = useAuthStore() as any; // mock if needed // FIXME: user may not exist
+  const { user } = useAuthStore();
   const isPro = user?.club_pro_expires_at ? new Date(user.club_pro_expires_at) > new Date() : false;
   const [local, setLocal] = useState<ClubProSettings>({
     banner_url: settings?.banner_url ?? null,
@@ -92,9 +92,9 @@ export function SettingsTab({ clubId, settings }: { clubId: string; settings?: C
   return (
     <div className="space-y-6">
       <div>
-        <label className="block text-sm font-medium mb-2">
+        <div className="block text-sm font-medium mb-2">
           <Trans>Club Banner</Trans>
-        </label>
+        </div>
         <div className="border rounded-lg p-4">
           {preview && (
             <img
@@ -112,12 +112,13 @@ export function SettingsTab({ clubId, settings }: { clubId: string; settings?: C
         </div>
       </div>
       <div>
-        <label className="block text-sm font-medium mb-2">
+        <div className="block text-sm font-medium mb-2">
           <Trans>Chip Design</Trans>
-        </label>
+        </div>
         <div className="flex gap-3">
           {CHIP_PRESETS.map((id) => (
             <button
+              type="button"
               key={id}
               onClick={() => setLocal((s) => ({ ...s, chip_preset_id: id }))}
               className={`w-12 h-12 rounded-full border-2 flex items-center justify-center text-xs font-bold ${local.chip_preset_id === id ? 'border-primary ring-2 ring-primary' : 'border-gray-300'}`}
@@ -131,12 +132,13 @@ export function SettingsTab({ clubId, settings }: { clubId: string; settings?: C
         </div>
       </div>
       <div>
-        <label className="block text-sm font-medium mb-2">
+        <div className="block text-sm font-medium mb-2">
           <Trans>Felt Colour</Trans>
-        </label>
+        </div>
         <div className="flex gap-3 flex-wrap">
           {VALID_COLORS.map((c) => (
             <button
+              type="button"
               key={c}
               onClick={() => setLocal((s) => ({ ...s, felt_color: c }))}
               className={`w-10 h-10 rounded-lg border-2 ${local.felt_color === c ? 'border-primary ring-2 ring-primary' : 'border-gray-300'}`}
@@ -167,6 +169,7 @@ export function SettingsTab({ clubId, settings }: { clubId: string; settings?: C
         )}
       </div>
       <button
+        type="button"
         onClick={() => update.mutate(local)}
         disabled={update.isPending}
         className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
