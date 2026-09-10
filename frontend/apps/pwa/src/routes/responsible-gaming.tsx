@@ -161,19 +161,22 @@ function ResponsibleGamingPage() {
           </p>
           <ul className="list-disc pl-5 text-on-surface-variant space-y-1">
             <li>
-              <a href="#" className="text-tertiary hover:underline">
+              <a href="https://www.ncpgambling.org" className="text-tertiary hover:underline">
                 <Trans>National Council on Problem Gambling</Trans>
               </a>{' '}
               - 1-800-522-4700
             </li>
             <li>
-              <a href="#" className="text-tertiary hover:underline">
+              <a href="https://www.gamcare.org.uk" className="text-tertiary hover:underline">
                 <Trans>GamCare (UK)</Trans>
               </a>{' '}
               - 0808 8020 133
             </li>
             <li>
-              <a href="#" className="text-tertiary hover:underline">
+              <a
+                href="https://www.gamblinghelponline.org.au"
+                className="text-tertiary hover:underline"
+              >
                 <Trans>Gambling Help Online (AU)</Trans>
               </a>{' '}
               - 1800 858 858
