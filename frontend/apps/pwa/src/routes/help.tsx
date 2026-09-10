@@ -177,7 +177,7 @@ function HelpPage() {
           </motion.div>
 
           <motion.div variants={itemVariants}>
-            <a href="#" className="block h-full">
+            <a href="https://discord.gg/stackbluff" className="block h-full">
               <Card className="p-5 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl hover:bg-white/[0.07] hover:border-white/20 transition-all duration-300 group h-full">
                 <div className="flex items-center gap-4">
                   <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 transition-transform duration-300 group-hover:scale-110">
@@ -199,6 +199,7 @@ function HelpPage() {
 
           <motion.div variants={itemVariants}>
             <button
+              type="button"
               onClick={() =>
                 document.getElementById('contact-form')?.scrollIntoView({ behavior: 'smooth' })
               }
@@ -242,7 +243,7 @@ function HelpPage() {
                 const isOpen = openFaqIndex === index;
                 return (
                   <div
-                    key={index}
+                    key={item.question}
                     className={cn(
                       'border rounded-xl overflow-hidden transition-colors duration-300',
                       isOpen
