@@ -28,7 +28,7 @@ interface PurchaseRecord {
 }
 
 function PurchaseHistoryPage() {
-  const {} = useAuthStore();
+  useAuthStore();
 
   // Fetch purchase history
   const {
