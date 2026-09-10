@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { Card, CardBack } from './Card';
 
 interface CommunityCardsProps {
-  cards: any[];
+  cards: Array<{ rank: string; suit: string }>;
   isMobile?: boolean;
   revealedCount?: number;
   winningCards?: Array<{ rank: string; suit: string }>;
@@ -47,7 +47,6 @@ EmptySlot.displayName = 'EmptySlot';
 /* ── CommunityCards ── */
 export const CommunityCards = ({
   cards,
-  isMobile = false,
   revealedCount = cards.length,
   winningCards = [],
 }: CommunityCardsProps) => {
@@ -102,7 +101,7 @@ export const CommunityCards = ({
 
   const hasShowdownWinner = winningCards.length > 0;
 
-  const isWinningCard = (card: any) => {
+  const isWinningCard = (card: { rank: string; suit: string }) => {
     return winningCards.some((wc) => wc.rank === card.rank && wc.suit === card.suit);
   };
 
