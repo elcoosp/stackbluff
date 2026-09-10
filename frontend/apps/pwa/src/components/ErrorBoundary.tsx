@@ -44,6 +44,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                   stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
+                  <title>Error</title>
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -57,6 +58,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                 An unexpected error occurred. Please try refreshing the page.
               </p>
               <button
+                type="button"
                 onClick={() => window.location.reload()}
                 className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-lg text-white font-medium transition-all shadow-lg"
               >
