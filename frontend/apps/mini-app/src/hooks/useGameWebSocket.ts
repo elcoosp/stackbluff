@@ -1,17 +1,29 @@
 import { useGameStore } from '@stackbluff/shared/stores/gameStore';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner'; // Added Sonner import
 
 const getToken = () => {
   return localStorage.getItem('auth_token')!;
 };
 
-const parseMessage = (data: any) => {
+interface WebSocketMessage {
+  type: string;
+  players?: (string | number)[][];
+  winners?: (string | number)[][];
+  pot?: number;
+  community_cards?: unknown[];
+  to_call?: number;
+  min_raise?: number;
+  remaining_ms?: number;
+  current_hand_in_progress?: boolean;
+}
+
+const parseMessage = (data: WebSocketMessage) => {
   switch (data.type) {
     case 'TableState':
       return {
         type: 'TableState',
-        seats: data.players.map((player: any, idx: number) => ({
+        seats: (data.players ?? []).map((player: (string | number)[], idx: number) => ({
           seat_index: idx,
           user_id: player[0],
           stack: player[1],
@@ -32,14 +44,18 @@ const parseMessage = (data: any) => {
       return {
         type: 'ActionRequired',
         to_call: data.to_call,
-        min_raise: data.min_raise,
-        max_raise: data.min_raise * 2, // placeholder
+        min_raise: data.min_raise ?? 0,
+        max_raise: (data.min_raise ?? 0) * 2, // placeholder
         remaining_ms: data.remaining_ms,
       };
     case 'HandResult':
       return {
         type: 'HandResult',
-        winners: data.winners.map((w: any) => ({ seat: 0, amount: w[1], cards: undefined })),
+        winners: (data.winners ?? []).map((w: (string | number)[]) => ({
+          seat: 0,
+          amount: Number(w[1]) || 0,
+          cards: undefined,
+        })),
         pot: data.pot,
         community_cards: data.community_cards,
       };
@@ -57,14 +73,13 @@ export function useGameWebSocket(tableId: string) {
   >('disconnected');
   const {
     setSnapshot,
-    setHeroHoleCards,
     setActionRequired,
     applyActionBroadcast,
     setHandResult,
     clearActionRequired,
   } = useGameStore();
 
-  const connect = () => {
+  const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
     const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3000';
     const token = getToken();
@@ -103,7 +118,7 @@ export function useGameWebSocket(tableId: string) {
       console.error('WebSocket error', err);
       toast.error('Connection Error', { description: 'Lost connection to the game server.' });
     };
-  };
+  }, [tableId, setSnapshot, setActionRequired, applyActionBroadcast, setHandResult]);
 
   const sendAction = (action: string, amount?: number) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
