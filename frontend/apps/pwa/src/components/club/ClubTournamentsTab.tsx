@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useClubTournaments } from '../../hooks/useClubTournaments';
+import type { Tournament } from '../../lib/schemas';
 import { ScheduleTournamentDialog } from './ScheduleTournamentDialog';
 
 interface ClubTournamentsTabProps {
@@ -43,7 +44,7 @@ function TournamentCard({
   isRegistering,
   isUnregistering,
 }: {
-  tournament: any;
+  tournament: Tournament;
   onRegister: (id: string, name: string) => void;
   onUnregister: (id: string, name: string) => void;
   isRegistering: boolean;
@@ -210,9 +211,9 @@ export function ClubTournamentsTab({ clubId, isOwner }: ClubTournamentsTabProps)
 
   const tournaments = data?.tournaments ?? [];
   const upcomingTournaments = tournaments.filter(
-    (t: any) => t.status === 'Scheduled' || t.status === 'Registering',
+    (t: Tournament) => t.status === 'Scheduled' || t.status === 'Registering',
   );
-  const pastTournaments = tournaments.filter((t: any) => t.status === 'Completed');
+  const pastTournaments = tournaments.filter((t: Tournament) => t.status === 'Completed');
 
   return (
     <div>
@@ -263,7 +264,7 @@ export function ClubTournamentsTab({ clubId, isOwner }: ClubTournamentsTabProps)
           animate="visible"
           className="space-y-4"
         >
-          {upcomingTournaments.map((tournament: any) => (
+          {upcomingTournaments.map((tournament: Tournament) => (
             <motion.div key={tournament.id} variants={itemVariants}>
               <TournamentCard
                 tournament={tournament}
@@ -283,7 +284,7 @@ export function ClubTournamentsTab({ clubId, isOwner }: ClubTournamentsTabProps)
             <RotateCcw className="w-4 h-4" /> <Trans>Past Tournaments</Trans>
           </h3>
           <div className="space-y-2">
-            {pastTournaments.slice(0, 5).map((tournament: any) => (
+            {pastTournaments.slice(0, 5).map((tournament: Tournament) => (
               <div
                 key={tournament.id}
                 className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl opacity-70 hover:opacity-100 transition-opacity"
