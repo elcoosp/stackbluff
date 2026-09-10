@@ -71,7 +71,7 @@ const itemVariants = {
 function MissionsPage() {
   const _navigate = useNavigate();
   const queryClient = useQueryClient();
-  const {} = useAuthStore();
+  useAuthStore();
 
   const {
     data: missions,
