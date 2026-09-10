@@ -61,7 +61,10 @@ function LoginPage() {
             <form.Field name="username">
               {(field) => (
                 <div className="space-y-2">
-                  <label className="block font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+                  <label
+                    htmlFor="login-username"
+                    className="block font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase"
+                  >
                     Username or Email
                   </label>
                   <div className="relative border border-outline-variant/50 rounded-lg bg-black/40">
@@ -69,6 +72,7 @@ function LoginPage() {
                       <User size={16} />
                     </span>
                     <input
+                      id="login-username"
                       type="text"
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
@@ -87,7 +91,10 @@ function LoginPage() {
             <form.Field name="password">
               {(field) => (
                 <div className="space-y-2">
-                  <label className="block font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">
+                  <label
+                    htmlFor="login-password"
+                    className="block font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase"
+                  >
                     Password
                   </label>
                   <div className="relative border border-outline-variant/50 rounded-lg bg-black/40">
@@ -95,6 +102,7 @@ function LoginPage() {
                       <Lock size={16} />
                     </span>
                     <input
+                      id="login-password"
                       type="password"
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
