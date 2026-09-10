@@ -1,5 +1,13 @@
 import { Card, CardContent } from '@/components/ui/card';
-export const AnalyticsPanel = ({ isDesktop, winProb, potOdds, bestHand, strength }: any) =>
+
+interface AnalyticsPanelProps {
+  isDesktop: boolean;
+  winProb: number;
+  potOdds: number;
+  bestHand: string;
+}
+
+export const AnalyticsPanel = ({ isDesktop, winProb, potOdds, bestHand }: AnalyticsPanelProps) =>
   isDesktop ? (
     <div className="fixed right-4 top-1/2 -translate-y-1/2 w-64 space-y-4 z-[500]">
       <Card className="bg-black/60 backdrop-blur-xl border-white/10">
