@@ -84,6 +84,7 @@ export const TacticalOracle = ({ winProb, potOdds }: { winProb: number; potOdds:
             </span>
           )}
           <button
+            type="button"
             onClick={() => setExpanded(!expanded)}
             className="text-on-surface-variant hover:text-on-surface transition-colors flex items-center"
           >
@@ -161,6 +162,7 @@ export const HandStrength = ({ bestHand, strength }: { bestHand: string; strengt
             </span>
           )}
           <button
+            type="button"
             onClick={() => setExpanded(!expanded)}
             className="text-on-surface-variant hover:text-on-surface transition-colors flex items-center"
           >
