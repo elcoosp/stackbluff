@@ -94,7 +94,13 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
   const updateMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: {
+      name: string;
+      telegram_group_id: string | null;
+      banner_url: string | null;
+      chip_design: string | null;
+      felt_color: string | null;
+    }) => {
       return apiClient(`/clubs/${club.id}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
@@ -168,7 +174,13 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
       return;
     }
 
-    const payload: any = {
+    const payload: {
+      name: string;
+      telegram_group_id: string | null;
+      banner_url: string | null;
+      chip_design: string | null;
+      felt_color: string | null;
+    } = {
       name: formData.name.trim(),
       telegram_group_id: formData.telegram_group_id.trim() || null,
       logo_url: formData.logo_url || null,
