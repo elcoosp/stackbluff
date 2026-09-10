@@ -177,7 +177,9 @@ function LoginPage() {
                               className="text-xs font-data-mono text-red-400 mt-1"
                             >
                               {field.state.meta.errors
-                                .map((e: any) => e?.message || String(e))
+                                .map((e: string | { message?: string }) =>
+                                  typeof e === 'string' ? e : e?.message || String(e),
+                                )
                                 .join(', ')}
                             </motion.p>
                           )}
@@ -219,7 +221,9 @@ function LoginPage() {
                               className="text-xs font-data-mono text-red-400 mt-1"
                             >
                               {field.state.meta.errors
-                                .map((e: any) => e?.message || String(e))
+                                .map((e: string | { message?: string }) =>
+                                  typeof e === 'string' ? e : e?.message || String(e),
+                                )
                                 .join(', ')}
                             </motion.p>
                           )}
