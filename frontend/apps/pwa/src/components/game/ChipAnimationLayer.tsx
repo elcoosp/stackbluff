@@ -23,13 +23,13 @@ interface ChipAnimationLayerProps {
   isDesktop: boolean;
   heroSeat: number;
   potRef: React.RefObject<HTMLDivElement>;
-  showdownReveal: any;
+  showdownReveal: { players?: Array<{ is_winner: boolean }> } | null;
 }
 
 export const ChipAnimationLayer = ({
   isDesktop,
   heroSeat,
-  potRef,
+  _potRef,
   showdownReveal,
 }: ChipAnimationLayerProps) => {
   const vw = useViewportWidth();
@@ -91,7 +91,7 @@ export const ChipAnimationLayer = ({
 
   // Updated toPixels to handle bottom property safely
   const toPixels = (pos: Position) => {
-    let y;
+    let y: number;
     if (pos.bottom) {
       y = containerSize.h - parseFloat(pos.bottom);
     } else {
@@ -125,6 +125,7 @@ export const ChipAnimationLayer = ({
 
           return (
             <AnimatedChip
+              // biome-ignore lint/suspicious/noArrayIndexKey: stable animation list, order doesn't change
               key={`${winner.id}-chip-${i}`}
               from={{ x: potPx.x, y: potPx.y }}
               to={{ x: seatPx.x, y: seatPx.y }}
