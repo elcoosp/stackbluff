@@ -11,7 +11,7 @@ interface LogContext {
   action?: string;
   userId?: string;
   sessionId?: string;
-  [key: string]: any;
+  [key: string]: string | number | boolean | undefined;
 }
 
 interface LogEntry {
@@ -19,7 +19,7 @@ interface LogEntry {
   message: string;
   context: LogContext;
   timestamp: string;
-  extra?: any;
+  extra?: Record<string, string | number | boolean | undefined>;
 }
 
 type LogTransport = (entry: LogEntry) => void;
@@ -36,7 +36,12 @@ function createSentryTransport(): LogTransport | null {
   // Lazy-load Sentry to avoid bundling it in development
   try {
     // Dynamic import would be ideal, but for sync logging we check if it's available
-    const Sentry = (window as any).__SENTRY__;
+    const Sentry = window.__SENTRY__ as
+      | {
+          captureException: (...args: unknown[]) => void;
+          captureMessage: (...args: unknown[]) => void;
+        }
+      | undefined;
     if (!Sentry) return null;
 
     return (entry: LogEntry) => {
