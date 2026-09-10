@@ -23,8 +23,8 @@ function useViewportWidth() {
 interface BetAnimationLayerProps {
   isDesktop: boolean;
   heroSeat: number;
-  lastAction: any;
-  seats: Record<number, any>;
+  lastAction: { player_id: string } | null;
+  seats: Record<number, { user_id?: string }>;
 }
 
 export const BetAnimationLayer = ({
@@ -41,7 +41,14 @@ export const BetAnimationLayer = ({
   const [node, setNode] = useState<HTMLDivElement | null>(null);
   const [containerSize, setContainerSize] = useState({ w: 0, h: 0 });
   const [activeChips, setActiveChips] = useState<
-    Array<{ id: string; from: any; to: any; color: any; delay: number; index: number }>
+    Array<{
+      id: string;
+      from: { x: number; y: number };
+      to: { x: number; y: number };
+      color: string;
+      delay: number;
+      index: number;
+    }>
   >([]);
   const idCounter = useRef(0);
   const processedActionId = useRef<string | null>(null);
@@ -72,9 +79,7 @@ export const BetAnimationLayer = ({
     processedActionId.current = actionId;
 
     // 2. Find the seat of the player who acted
-    const seatEntry = Object.entries(seats).find(
-      ([, s]: [string, any]) => s.user_id === lastAction.player_id,
-    );
+    const seatEntry = Object.entries(seats).find(([, s]) => s.user_id === lastAction?.player_id);
     if (!seatEntry) return;
 
     const seatIndex = Number(seatEntry[0]);
@@ -84,7 +89,7 @@ export const BetAnimationLayer = ({
 
     // Updated toPixels to handle bottom property safely
     const toPixels = (pos: Position) => {
-      let y;
+      let y: number;
       if (pos.bottom) {
         y = containerSize.h - parseFloat(pos.bottom);
       } else {
