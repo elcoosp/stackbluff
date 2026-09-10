@@ -9,7 +9,7 @@ type MessageType =
 interface WebSocketMessage {
   type: MessageType;
   clubId: string;
-  data?: any;
+  data?: Record<string, unknown>;
 }
 
 class ClubWebSocketManager {
@@ -106,7 +106,7 @@ class ClubWebSocketManager {
     }
   }
 
-  send(message: any) {
+  send(message: Record<string, unknown>) {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(message));
     }
