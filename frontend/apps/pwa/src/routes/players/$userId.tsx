@@ -2,7 +2,7 @@ import { apiClient } from '@stackbluff/shared/api/client';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router';
-import { motion } from 'framer-motion';
+import { motion, type Variants } from 'framer-motion';
 import {
   ArrowLeft,
   Award,
@@ -126,6 +126,7 @@ function PublicProfilePage() {
         transition={{ duration: 0.3 }}
       >
         <button
+          type="button"
           onClick={() => window.history.back()}
           className="flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-on-surface-variant hover:text-on-surface transition-colors w-fit"
         >
@@ -340,7 +341,7 @@ function StatCard({
   icon: React.ReactNode;
   color: string;
   bg: string;
-  variants: any;
+  variants: Variants;
 }) {
   return (
     <motion.div variants={variants}>
