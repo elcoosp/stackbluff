@@ -1,5 +1,5 @@
 import { Link, useNavigate } from '@tanstack/react-router';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, type Variants } from 'framer-motion';
 import {
   BookOpen,
   Brain,
@@ -54,13 +54,13 @@ export function Header() {
     setDropdownOpen((prev) => !prev);
   };
 
-  const containerVariants = {
+  const containerVariants: Variants = {
     initial: { opacity: 0, y: -10 },
-    animate: { opacity: 1, y: 0, transition: { duration: 0.2, ease: [0.22, 1, 0.36, 1] as const } },
+    animate: { opacity: 1, y: 0, transition: { duration: 0.2, ease: [0.22, 1, 0.36, 1] } },
     exit: { opacity: 0, y: -10, transition: { duration: 0.15, ease: 'easeIn' } },
   };
 
-  const dropdownVariants = {
+  const dropdownVariants: Variants = {
     initial: { opacity: 0, y: -10, scale: 0.95 },
     animate: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.15, ease: 'easeOut' } },
     exit: { opacity: 0, y: -10, scale: 0.95, transition: { duration: 0.1, ease: 'easeIn' } },
@@ -87,7 +87,7 @@ export function Header() {
               initial="initial"
               animate="animate"
               exit="exit"
-              variants={containerVariants as any}
+              variants={containerVariants}
               className="w-24 h-8"
             />
           ) : user ? (
@@ -96,7 +96,7 @@ export function Header() {
               initial="initial"
               animate="animate"
               exit="exit"
-              variants={containerVariants as any}
+              variants={containerVariants}
               className="flex items-center gap-2 md:gap-4 h-full"
             >
               <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full glass-hub border border-tertiary/30">
@@ -131,7 +131,7 @@ export function Header() {
                       initial="initial"
                       animate="animate"
                       exit="exit"
-                      variants={dropdownVariants as any}
+                      variants={dropdownVariants}
                       className="absolute right-0 top-full mt-2 w-56 max-w-[calc(100vw-1rem)] bg-surface-container border border-outline-variant rounded-lg shadow-xl py-2 z-[2000] backdrop-blur-md origin-top-right"
                       onClick={(e) => e.stopPropagation()}
                     >
@@ -296,7 +296,7 @@ export function Header() {
               initial="initial"
               animate="animate"
               exit="exit"
-              variants={containerVariants as any}
+              variants={containerVariants}
               className="flex items-center gap-4"
             >
               <Link
