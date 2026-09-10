@@ -8,359 +8,359 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './routes/__root';
-import { Route as ClubsIndexRouteImport } from './routes/clubs/index';
-import { Route as ClubsJoinRouteImport } from './routes/clubs/join';
-import { Route as ClubsClubIdRouteImport } from './routes/clubs.$clubId';
-import { Route as ForgotPasswordRouteImport } from './routes/forgot-password';
-import { Route as GuideRouteImport } from './routes/guide';
-import { Route as HandsHandIdRouteImport } from './routes/hands/$handId';
-import { Route as HelpRouteImport } from './routes/help';
-import { Route as HistoryRouteImport } from './routes/history';
-import { Route as IndexRouteImport } from './routes/index';
-import { Route as LeaderboardRouteImport } from './routes/leaderboard';
-import { Route as LegalPrivacyRouteImport } from './routes/legal/privacy';
-import { Route as LegalTermsRouteImport } from './routes/legal/terms';
-import { Route as LobbyRouteImport } from './routes/lobby';
-import { Route as LoginRouteImport } from './routes/login';
-import { Route as MissionsRouteImport } from './routes/missions';
-import { Route as PlayersUserIdRouteImport } from './routes/players/$userId';
-import { Route as ProfileRouteImport } from './routes/profile';
-import { Route as PuzzleRouteImport } from './routes/puzzle';
-import { Route as ReferralsRouteImport } from './routes/referrals';
-import { Route as RegisterRouteImport } from './routes/register';
-import { Route as ReplaysRouteImport } from './routes/replays';
-import { Route as ResetPasswordRouteImport } from './routes/reset-password';
-import { Route as ResponsibleGamingRouteImport } from './routes/responsible-gaming';
-import { Route as SettingsRouteImport } from './routes/settings';
-import { Route as SettingsAccountRouteImport } from './routes/settings/account';
-import { Route as SettingsAppearanceRouteImport } from './routes/settings/appearance';
-import { Route as SettingsAudioRouteImport } from './routes/settings/audio';
-import { Route as SettingsIndexRouteImport } from './routes/settings/index';
-import { Route as SettingsNotificationsRouteImport } from './routes/settings/notifications';
-import { Route as SettingsPaymentsRouteImport } from './routes/settings/payments';
-import { Route as SettingsPrivacyRouteImport } from './routes/settings/privacy';
-import { Route as SettingsTelegramRouteImport } from './routes/settings/telegram';
-import { Route as ShopRouteImport } from './routes/shop';
-import { Route as TableTableIdRouteImport } from './routes/table/$tableId';
-import { Route as TournamentsRouteImport } from './routes/tournaments';
-import { Route as TournamentsTournamentIdRouteImport } from './routes/tournaments/$tournamentId';
-import { Route as TournamentsHistoryRouteImport } from './routes/tournaments-history';
-import { Route as VerifyEmailRouteImport } from './routes/verify-email';
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as VerifyEmailRouteImport } from './routes/verify-email'
+import { Route as TournamentsHistoryRouteImport } from './routes/tournaments-history'
+import { Route as TournamentsRouteImport } from './routes/tournaments'
+import { Route as ShopRouteImport } from './routes/shop'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ResponsibleGamingRouteImport } from './routes/responsible-gaming'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as ReplaysRouteImport } from './routes/replays'
+import { Route as RegisterRouteImport } from './routes/register'
+import { Route as ReferralsRouteImport } from './routes/referrals'
+import { Route as PuzzleRouteImport } from './routes/puzzle'
+import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as MissionsRouteImport } from './routes/missions'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as LobbyRouteImport } from './routes/lobby'
+import { Route as LeaderboardRouteImport } from './routes/leaderboard'
+import { Route as HistoryRouteImport } from './routes/history'
+import { Route as HelpRouteImport } from './routes/help'
+import { Route as GuideRouteImport } from './routes/guide'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as SettingsIndexRouteImport } from './routes/settings/index'
+import { Route as ClubsIndexRouteImport } from './routes/clubs/index'
+import { Route as TournamentsTournamentIdRouteImport } from './routes/tournaments/$tournamentId'
+import { Route as TableTableIdRouteImport } from './routes/table/$tableId'
+import { Route as SettingsTelegramRouteImport } from './routes/settings/telegram'
+import { Route as SettingsPrivacyRouteImport } from './routes/settings/privacy'
+import { Route as SettingsPaymentsRouteImport } from './routes/settings/payments'
+import { Route as SettingsNotificationsRouteImport } from './routes/settings/notifications'
+import { Route as SettingsAudioRouteImport } from './routes/settings/audio'
+import { Route as SettingsAppearanceRouteImport } from './routes/settings/appearance'
+import { Route as SettingsAccountRouteImport } from './routes/settings/account'
+import { Route as PlayersUserIdRouteImport } from './routes/players/$userId'
+import { Route as LegalTermsRouteImport } from './routes/legal/terms'
+import { Route as LegalPrivacyRouteImport } from './routes/legal/privacy'
+import { Route as HandsHandIdRouteImport } from './routes/hands/$handId'
+import { Route as ClubsJoinRouteImport } from './routes/clubs/join'
+import { Route as ClubsClubIdRouteImport } from './routes/clubs.$clubId'
 
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
   id: '/verify-email',
   path: '/verify-email',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const TournamentsHistoryRoute = TournamentsHistoryRouteImport.update({
   id: '/tournaments-history',
   path: '/tournaments-history',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const TournamentsRoute = TournamentsRouteImport.update({
   id: '/tournaments',
   path: '/tournaments',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const ShopRoute = ShopRouteImport.update({
   id: '/shop',
   path: '/shop',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const ResponsibleGamingRoute = ResponsibleGamingRouteImport.update({
   id: '/responsible-gaming',
   path: '/responsible-gaming',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const ReplaysRoute = ReplaysRouteImport.update({
   id: '/replays',
   path: '/replays',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const ReferralsRoute = ReferralsRouteImport.update({
   id: '/referrals',
   path: '/referrals',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const PuzzleRoute = PuzzleRouteImport.update({
   id: '/puzzle',
   path: '/puzzle',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const MissionsRoute = MissionsRouteImport.update({
   id: '/missions',
   path: '/missions',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const LobbyRoute = LobbyRouteImport.update({
   id: '/lobby',
   path: '/lobby',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const LeaderboardRoute = LeaderboardRouteImport.update({
   id: '/leaderboard',
   path: '/leaderboard',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const HistoryRoute = HistoryRouteImport.update({
   id: '/history',
   path: '/history',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const HelpRoute = HelpRouteImport.update({
   id: '/help',
   path: '/help',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const GuideRoute = GuideRouteImport.update({
   id: '/guide',
   path: '/guide',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const SettingsIndexRoute = SettingsIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => SettingsRoute,
-} as any);
+} as any)
 const ClubsIndexRoute = ClubsIndexRouteImport.update({
   id: '/clubs/',
   path: '/clubs/',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const TournamentsTournamentIdRoute = TournamentsTournamentIdRouteImport.update({
   id: '/$tournamentId',
   path: '/$tournamentId',
   getParentRoute: () => TournamentsRoute,
-} as any);
+} as any)
 const TableTableIdRoute = TableTableIdRouteImport.update({
   id: '/table/$tableId',
   path: '/table/$tableId',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const SettingsTelegramRoute = SettingsTelegramRouteImport.update({
   id: '/telegram',
   path: '/telegram',
   getParentRoute: () => SettingsRoute,
-} as any);
+} as any)
 const SettingsPrivacyRoute = SettingsPrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
   getParentRoute: () => SettingsRoute,
-} as any);
+} as any)
 const SettingsPaymentsRoute = SettingsPaymentsRouteImport.update({
   id: '/payments',
   path: '/payments',
   getParentRoute: () => SettingsRoute,
-} as any);
+} as any)
 const SettingsNotificationsRoute = SettingsNotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
   getParentRoute: () => SettingsRoute,
-} as any);
+} as any)
 const SettingsAudioRoute = SettingsAudioRouteImport.update({
   id: '/audio',
   path: '/audio',
   getParentRoute: () => SettingsRoute,
-} as any);
+} as any)
 const SettingsAppearanceRoute = SettingsAppearanceRouteImport.update({
   id: '/appearance',
   path: '/appearance',
   getParentRoute: () => SettingsRoute,
-} as any);
+} as any)
 const SettingsAccountRoute = SettingsAccountRouteImport.update({
   id: '/account',
   path: '/account',
   getParentRoute: () => SettingsRoute,
-} as any);
+} as any)
 const PlayersUserIdRoute = PlayersUserIdRouteImport.update({
   id: '/players/$userId',
   path: '/players/$userId',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const LegalTermsRoute = LegalTermsRouteImport.update({
   id: '/legal/terms',
   path: '/legal/terms',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const LegalPrivacyRoute = LegalPrivacyRouteImport.update({
   id: '/legal/privacy',
   path: '/legal/privacy',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const HandsHandIdRoute = HandsHandIdRouteImport.update({
   id: '/hands/$handId',
   path: '/hands/$handId',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const ClubsJoinRoute = ClubsJoinRouteImport.update({
   id: '/clubs/join',
   path: '/clubs/join',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const ClubsClubIdRoute = ClubsClubIdRouteImport.update({
   id: '/clubs/$clubId',
   path: '/clubs/$clubId',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute;
-  '/forgot-password': typeof ForgotPasswordRoute;
-  '/guide': typeof GuideRoute;
-  '/help': typeof HelpRoute;
-  '/history': typeof HistoryRoute;
-  '/leaderboard': typeof LeaderboardRoute;
-  '/lobby': typeof LobbyRoute;
-  '/login': typeof LoginRoute;
-  '/missions': typeof MissionsRoute;
-  '/profile': typeof ProfileRoute;
-  '/puzzle': typeof PuzzleRoute;
-  '/referrals': typeof ReferralsRoute;
-  '/register': typeof RegisterRoute;
-  '/replays': typeof ReplaysRoute;
-  '/reset-password': typeof ResetPasswordRoute;
-  '/responsible-gaming': typeof ResponsibleGamingRoute;
-  '/settings': typeof SettingsRouteWithChildren;
-  '/shop': typeof ShopRoute;
-  '/tournaments': typeof TournamentsRouteWithChildren;
-  '/tournaments-history': typeof TournamentsHistoryRoute;
-  '/verify-email': typeof VerifyEmailRoute;
-  '/clubs/$clubId': typeof ClubsClubIdRoute;
-  '/clubs/join': typeof ClubsJoinRoute;
-  '/hands/$handId': typeof HandsHandIdRoute;
-  '/legal/privacy': typeof LegalPrivacyRoute;
-  '/legal/terms': typeof LegalTermsRoute;
-  '/players/$userId': typeof PlayersUserIdRoute;
-  '/settings/account': typeof SettingsAccountRoute;
-  '/settings/appearance': typeof SettingsAppearanceRoute;
-  '/settings/audio': typeof SettingsAudioRoute;
-  '/settings/notifications': typeof SettingsNotificationsRoute;
-  '/settings/payments': typeof SettingsPaymentsRoute;
-  '/settings/privacy': typeof SettingsPrivacyRoute;
-  '/settings/telegram': typeof SettingsTelegramRoute;
-  '/table/$tableId': typeof TableTableIdRoute;
-  '/tournaments/$tournamentId': typeof TournamentsTournamentIdRoute;
-  '/clubs/': typeof ClubsIndexRoute;
-  '/settings/': typeof SettingsIndexRoute;
+  '/': typeof IndexRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/guide': typeof GuideRoute
+  '/help': typeof HelpRoute
+  '/history': typeof HistoryRoute
+  '/leaderboard': typeof LeaderboardRoute
+  '/lobby': typeof LobbyRoute
+  '/login': typeof LoginRoute
+  '/missions': typeof MissionsRoute
+  '/profile': typeof ProfileRoute
+  '/puzzle': typeof PuzzleRoute
+  '/referrals': typeof ReferralsRoute
+  '/register': typeof RegisterRoute
+  '/replays': typeof ReplaysRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/responsible-gaming': typeof ResponsibleGamingRoute
+  '/settings': typeof SettingsRouteWithChildren
+  '/shop': typeof ShopRoute
+  '/tournaments': typeof TournamentsRouteWithChildren
+  '/tournaments-history': typeof TournamentsHistoryRoute
+  '/verify-email': typeof VerifyEmailRoute
+  '/clubs/$clubId': typeof ClubsClubIdRoute
+  '/clubs/join': typeof ClubsJoinRoute
+  '/hands/$handId': typeof HandsHandIdRoute
+  '/legal/privacy': typeof LegalPrivacyRoute
+  '/legal/terms': typeof LegalTermsRoute
+  '/players/$userId': typeof PlayersUserIdRoute
+  '/settings/account': typeof SettingsAccountRoute
+  '/settings/appearance': typeof SettingsAppearanceRoute
+  '/settings/audio': typeof SettingsAudioRoute
+  '/settings/notifications': typeof SettingsNotificationsRoute
+  '/settings/payments': typeof SettingsPaymentsRoute
+  '/settings/privacy': typeof SettingsPrivacyRoute
+  '/settings/telegram': typeof SettingsTelegramRoute
+  '/table/$tableId': typeof TableTableIdRoute
+  '/tournaments/$tournamentId': typeof TournamentsTournamentIdRoute
+  '/clubs/': typeof ClubsIndexRoute
+  '/settings/': typeof SettingsIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute;
-  '/forgot-password': typeof ForgotPasswordRoute;
-  '/guide': typeof GuideRoute;
-  '/help': typeof HelpRoute;
-  '/history': typeof HistoryRoute;
-  '/leaderboard': typeof LeaderboardRoute;
-  '/lobby': typeof LobbyRoute;
-  '/login': typeof LoginRoute;
-  '/missions': typeof MissionsRoute;
-  '/profile': typeof ProfileRoute;
-  '/puzzle': typeof PuzzleRoute;
-  '/referrals': typeof ReferralsRoute;
-  '/register': typeof RegisterRoute;
-  '/replays': typeof ReplaysRoute;
-  '/reset-password': typeof ResetPasswordRoute;
-  '/responsible-gaming': typeof ResponsibleGamingRoute;
-  '/shop': typeof ShopRoute;
-  '/tournaments': typeof TournamentsRouteWithChildren;
-  '/tournaments-history': typeof TournamentsHistoryRoute;
-  '/verify-email': typeof VerifyEmailRoute;
-  '/clubs/$clubId': typeof ClubsClubIdRoute;
-  '/clubs/join': typeof ClubsJoinRoute;
-  '/hands/$handId': typeof HandsHandIdRoute;
-  '/legal/privacy': typeof LegalPrivacyRoute;
-  '/legal/terms': typeof LegalTermsRoute;
-  '/players/$userId': typeof PlayersUserIdRoute;
-  '/settings/account': typeof SettingsAccountRoute;
-  '/settings/appearance': typeof SettingsAppearanceRoute;
-  '/settings/audio': typeof SettingsAudioRoute;
-  '/settings/notifications': typeof SettingsNotificationsRoute;
-  '/settings/payments': typeof SettingsPaymentsRoute;
-  '/settings/privacy': typeof SettingsPrivacyRoute;
-  '/settings/telegram': typeof SettingsTelegramRoute;
-  '/table/$tableId': typeof TableTableIdRoute;
-  '/tournaments/$tournamentId': typeof TournamentsTournamentIdRoute;
-  '/clubs': typeof ClubsIndexRoute;
-  '/settings': typeof SettingsIndexRoute;
+  '/': typeof IndexRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/guide': typeof GuideRoute
+  '/help': typeof HelpRoute
+  '/history': typeof HistoryRoute
+  '/leaderboard': typeof LeaderboardRoute
+  '/lobby': typeof LobbyRoute
+  '/login': typeof LoginRoute
+  '/missions': typeof MissionsRoute
+  '/profile': typeof ProfileRoute
+  '/puzzle': typeof PuzzleRoute
+  '/referrals': typeof ReferralsRoute
+  '/register': typeof RegisterRoute
+  '/replays': typeof ReplaysRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/responsible-gaming': typeof ResponsibleGamingRoute
+  '/shop': typeof ShopRoute
+  '/tournaments': typeof TournamentsRouteWithChildren
+  '/tournaments-history': typeof TournamentsHistoryRoute
+  '/verify-email': typeof VerifyEmailRoute
+  '/clubs/$clubId': typeof ClubsClubIdRoute
+  '/clubs/join': typeof ClubsJoinRoute
+  '/hands/$handId': typeof HandsHandIdRoute
+  '/legal/privacy': typeof LegalPrivacyRoute
+  '/legal/terms': typeof LegalTermsRoute
+  '/players/$userId': typeof PlayersUserIdRoute
+  '/settings/account': typeof SettingsAccountRoute
+  '/settings/appearance': typeof SettingsAppearanceRoute
+  '/settings/audio': typeof SettingsAudioRoute
+  '/settings/notifications': typeof SettingsNotificationsRoute
+  '/settings/payments': typeof SettingsPaymentsRoute
+  '/settings/privacy': typeof SettingsPrivacyRoute
+  '/settings/telegram': typeof SettingsTelegramRoute
+  '/table/$tableId': typeof TableTableIdRoute
+  '/tournaments/$tournamentId': typeof TournamentsTournamentIdRoute
+  '/clubs': typeof ClubsIndexRoute
+  '/settings': typeof SettingsIndexRoute
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport;
-  '/': typeof IndexRoute;
-  '/forgot-password': typeof ForgotPasswordRoute;
-  '/guide': typeof GuideRoute;
-  '/help': typeof HelpRoute;
-  '/history': typeof HistoryRoute;
-  '/leaderboard': typeof LeaderboardRoute;
-  '/lobby': typeof LobbyRoute;
-  '/login': typeof LoginRoute;
-  '/missions': typeof MissionsRoute;
-  '/profile': typeof ProfileRoute;
-  '/puzzle': typeof PuzzleRoute;
-  '/referrals': typeof ReferralsRoute;
-  '/register': typeof RegisterRoute;
-  '/replays': typeof ReplaysRoute;
-  '/reset-password': typeof ResetPasswordRoute;
-  '/responsible-gaming': typeof ResponsibleGamingRoute;
-  '/settings': typeof SettingsRouteWithChildren;
-  '/shop': typeof ShopRoute;
-  '/tournaments': typeof TournamentsRouteWithChildren;
-  '/tournaments-history': typeof TournamentsHistoryRoute;
-  '/verify-email': typeof VerifyEmailRoute;
-  '/clubs/$clubId': typeof ClubsClubIdRoute;
-  '/clubs/join': typeof ClubsJoinRoute;
-  '/hands/$handId': typeof HandsHandIdRoute;
-  '/legal/privacy': typeof LegalPrivacyRoute;
-  '/legal/terms': typeof LegalTermsRoute;
-  '/players/$userId': typeof PlayersUserIdRoute;
-  '/settings/account': typeof SettingsAccountRoute;
-  '/settings/appearance': typeof SettingsAppearanceRoute;
-  '/settings/audio': typeof SettingsAudioRoute;
-  '/settings/notifications': typeof SettingsNotificationsRoute;
-  '/settings/payments': typeof SettingsPaymentsRoute;
-  '/settings/privacy': typeof SettingsPrivacyRoute;
-  '/settings/telegram': typeof SettingsTelegramRoute;
-  '/table/$tableId': typeof TableTableIdRoute;
-  '/tournaments/$tournamentId': typeof TournamentsTournamentIdRoute;
-  '/clubs/': typeof ClubsIndexRoute;
-  '/settings/': typeof SettingsIndexRoute;
+  __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/guide': typeof GuideRoute
+  '/help': typeof HelpRoute
+  '/history': typeof HistoryRoute
+  '/leaderboard': typeof LeaderboardRoute
+  '/lobby': typeof LobbyRoute
+  '/login': typeof LoginRoute
+  '/missions': typeof MissionsRoute
+  '/profile': typeof ProfileRoute
+  '/puzzle': typeof PuzzleRoute
+  '/referrals': typeof ReferralsRoute
+  '/register': typeof RegisterRoute
+  '/replays': typeof ReplaysRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/responsible-gaming': typeof ResponsibleGamingRoute
+  '/settings': typeof SettingsRouteWithChildren
+  '/shop': typeof ShopRoute
+  '/tournaments': typeof TournamentsRouteWithChildren
+  '/tournaments-history': typeof TournamentsHistoryRoute
+  '/verify-email': typeof VerifyEmailRoute
+  '/clubs/$clubId': typeof ClubsClubIdRoute
+  '/clubs/join': typeof ClubsJoinRoute
+  '/hands/$handId': typeof HandsHandIdRoute
+  '/legal/privacy': typeof LegalPrivacyRoute
+  '/legal/terms': typeof LegalTermsRoute
+  '/players/$userId': typeof PlayersUserIdRoute
+  '/settings/account': typeof SettingsAccountRoute
+  '/settings/appearance': typeof SettingsAppearanceRoute
+  '/settings/audio': typeof SettingsAudioRoute
+  '/settings/notifications': typeof SettingsNotificationsRoute
+  '/settings/payments': typeof SettingsPaymentsRoute
+  '/settings/privacy': typeof SettingsPrivacyRoute
+  '/settings/telegram': typeof SettingsTelegramRoute
+  '/table/$tableId': typeof TableTableIdRoute
+  '/tournaments/$tournamentId': typeof TournamentsTournamentIdRoute
+  '/clubs/': typeof ClubsIndexRoute
+  '/settings/': typeof SettingsIndexRoute
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath;
+  fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/forgot-password'
@@ -399,8 +399,8 @@ export interface FileRouteTypes {
     | '/table/$tableId'
     | '/tournaments/$tournamentId'
     | '/clubs/'
-    | '/settings/';
-  fileRoutesByTo: FileRoutesByTo;
+    | '/settings/'
+  fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/forgot-password'
@@ -438,7 +438,7 @@ export interface FileRouteTypes {
     | '/table/$tableId'
     | '/tournaments/$tournamentId'
     | '/clubs'
-    | '/settings';
+    | '/settings'
   id:
     | '__root__'
     | '/'
@@ -478,321 +478,321 @@ export interface FileRouteTypes {
     | '/table/$tableId'
     | '/tournaments/$tournamentId'
     | '/clubs/'
-    | '/settings/';
-  fileRoutesById: FileRoutesById;
+    | '/settings/'
+  fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute;
-  ForgotPasswordRoute: typeof ForgotPasswordRoute;
-  GuideRoute: typeof GuideRoute;
-  HelpRoute: typeof HelpRoute;
-  HistoryRoute: typeof HistoryRoute;
-  LeaderboardRoute: typeof LeaderboardRoute;
-  LobbyRoute: typeof LobbyRoute;
-  LoginRoute: typeof LoginRoute;
-  MissionsRoute: typeof MissionsRoute;
-  ProfileRoute: typeof ProfileRoute;
-  PuzzleRoute: typeof PuzzleRoute;
-  ReferralsRoute: typeof ReferralsRoute;
-  RegisterRoute: typeof RegisterRoute;
-  ReplaysRoute: typeof ReplaysRoute;
-  ResetPasswordRoute: typeof ResetPasswordRoute;
-  ResponsibleGamingRoute: typeof ResponsibleGamingRoute;
-  SettingsRoute: typeof SettingsRouteWithChildren;
-  ShopRoute: typeof ShopRoute;
-  TournamentsRoute: typeof TournamentsRouteWithChildren;
-  TournamentsHistoryRoute: typeof TournamentsHistoryRoute;
-  VerifyEmailRoute: typeof VerifyEmailRoute;
-  ClubsClubIdRoute: typeof ClubsClubIdRoute;
-  ClubsJoinRoute: typeof ClubsJoinRoute;
-  HandsHandIdRoute: typeof HandsHandIdRoute;
-  LegalPrivacyRoute: typeof LegalPrivacyRoute;
-  LegalTermsRoute: typeof LegalTermsRoute;
-  PlayersUserIdRoute: typeof PlayersUserIdRoute;
-  TableTableIdRoute: typeof TableTableIdRoute;
-  ClubsIndexRoute: typeof ClubsIndexRoute;
+  IndexRoute: typeof IndexRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
+  GuideRoute: typeof GuideRoute
+  HelpRoute: typeof HelpRoute
+  HistoryRoute: typeof HistoryRoute
+  LeaderboardRoute: typeof LeaderboardRoute
+  LobbyRoute: typeof LobbyRoute
+  LoginRoute: typeof LoginRoute
+  MissionsRoute: typeof MissionsRoute
+  ProfileRoute: typeof ProfileRoute
+  PuzzleRoute: typeof PuzzleRoute
+  ReferralsRoute: typeof ReferralsRoute
+  RegisterRoute: typeof RegisterRoute
+  ReplaysRoute: typeof ReplaysRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
+  ResponsibleGamingRoute: typeof ResponsibleGamingRoute
+  SettingsRoute: typeof SettingsRouteWithChildren
+  ShopRoute: typeof ShopRoute
+  TournamentsRoute: typeof TournamentsRouteWithChildren
+  TournamentsHistoryRoute: typeof TournamentsHistoryRoute
+  VerifyEmailRoute: typeof VerifyEmailRoute
+  ClubsClubIdRoute: typeof ClubsClubIdRoute
+  ClubsJoinRoute: typeof ClubsJoinRoute
+  HandsHandIdRoute: typeof HandsHandIdRoute
+  LegalPrivacyRoute: typeof LegalPrivacyRoute
+  LegalTermsRoute: typeof LegalTermsRoute
+  PlayersUserIdRoute: typeof PlayersUserIdRoute
+  TableTableIdRoute: typeof TableTableIdRoute
+  ClubsIndexRoute: typeof ClubsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
     '/verify-email': {
-      id: '/verify-email';
-      path: '/verify-email';
-      fullPath: '/verify-email';
-      preLoaderRoute: typeof VerifyEmailRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof VerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tournaments-history': {
-      id: '/tournaments-history';
-      path: '/tournaments-history';
-      fullPath: '/tournaments-history';
-      preLoaderRoute: typeof TournamentsHistoryRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/tournaments-history'
+      path: '/tournaments-history'
+      fullPath: '/tournaments-history'
+      preLoaderRoute: typeof TournamentsHistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tournaments': {
-      id: '/tournaments';
-      path: '/tournaments';
-      fullPath: '/tournaments';
-      preLoaderRoute: typeof TournamentsRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/tournaments'
+      path: '/tournaments'
+      fullPath: '/tournaments'
+      preLoaderRoute: typeof TournamentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/shop': {
-      id: '/shop';
-      path: '/shop';
-      fullPath: '/shop';
-      preLoaderRoute: typeof ShopRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/shop'
+      path: '/shop'
+      fullPath: '/shop'
+      preLoaderRoute: typeof ShopRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
-      id: '/settings';
-      path: '/settings';
-      fullPath: '/settings';
-      preLoaderRoute: typeof SettingsRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/responsible-gaming': {
-      id: '/responsible-gaming';
-      path: '/responsible-gaming';
-      fullPath: '/responsible-gaming';
-      preLoaderRoute: typeof ResponsibleGamingRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/responsible-gaming'
+      path: '/responsible-gaming'
+      fullPath: '/responsible-gaming'
+      preLoaderRoute: typeof ResponsibleGamingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reset-password': {
-      id: '/reset-password';
-      path: '/reset-password';
-      fullPath: '/reset-password';
-      preLoaderRoute: typeof ResetPasswordRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/replays': {
-      id: '/replays';
-      path: '/replays';
-      fullPath: '/replays';
-      preLoaderRoute: typeof ReplaysRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/replays'
+      path: '/replays'
+      fullPath: '/replays'
+      preLoaderRoute: typeof ReplaysRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/register': {
-      id: '/register';
-      path: '/register';
-      fullPath: '/register';
-      preLoaderRoute: typeof RegisterRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/referrals': {
-      id: '/referrals';
-      path: '/referrals';
-      fullPath: '/referrals';
-      preLoaderRoute: typeof ReferralsRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/referrals'
+      path: '/referrals'
+      fullPath: '/referrals'
+      preLoaderRoute: typeof ReferralsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/puzzle': {
-      id: '/puzzle';
-      path: '/puzzle';
-      fullPath: '/puzzle';
-      preLoaderRoute: typeof PuzzleRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/puzzle'
+      path: '/puzzle'
+      fullPath: '/puzzle'
+      preLoaderRoute: typeof PuzzleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/profile': {
-      id: '/profile';
-      path: '/profile';
-      fullPath: '/profile';
-      preLoaderRoute: typeof ProfileRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/missions': {
-      id: '/missions';
-      path: '/missions';
-      fullPath: '/missions';
-      preLoaderRoute: typeof MissionsRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/missions'
+      path: '/missions'
+      fullPath: '/missions'
+      preLoaderRoute: typeof MissionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
-      id: '/login';
-      path: '/login';
-      fullPath: '/login';
-      preLoaderRoute: typeof LoginRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lobby': {
-      id: '/lobby';
-      path: '/lobby';
-      fullPath: '/lobby';
-      preLoaderRoute: typeof LobbyRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/lobby'
+      path: '/lobby'
+      fullPath: '/lobby'
+      preLoaderRoute: typeof LobbyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/leaderboard': {
-      id: '/leaderboard';
-      path: '/leaderboard';
-      fullPath: '/leaderboard';
-      preLoaderRoute: typeof LeaderboardRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/leaderboard'
+      path: '/leaderboard'
+      fullPath: '/leaderboard'
+      preLoaderRoute: typeof LeaderboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/history': {
-      id: '/history';
-      path: '/history';
-      fullPath: '/history';
-      preLoaderRoute: typeof HistoryRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof HistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/help': {
-      id: '/help';
-      path: '/help';
-      fullPath: '/help';
-      preLoaderRoute: typeof HelpRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/help'
+      path: '/help'
+      fullPath: '/help'
+      preLoaderRoute: typeof HelpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/guide': {
-      id: '/guide';
-      path: '/guide';
-      fullPath: '/guide';
-      preLoaderRoute: typeof GuideRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/guide'
+      path: '/guide'
+      fullPath: '/guide'
+      preLoaderRoute: typeof GuideRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/forgot-password': {
-      id: '/forgot-password';
-      path: '/forgot-password';
-      fullPath: '/forgot-password';
-      preLoaderRoute: typeof ForgotPasswordRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
-      id: '/';
-      path: '/';
-      fullPath: '/';
-      preLoaderRoute: typeof IndexRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings/': {
-      id: '/settings/';
-      path: '/';
-      fullPath: '/settings/';
-      preLoaderRoute: typeof SettingsIndexRouteImport;
-      parentRoute: typeof SettingsRoute;
-    };
+      id: '/settings/'
+      path: '/'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof SettingsIndexRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/clubs/': {
-      id: '/clubs/';
-      path: '/clubs';
-      fullPath: '/clubs/';
-      preLoaderRoute: typeof ClubsIndexRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/clubs/'
+      path: '/clubs'
+      fullPath: '/clubs/'
+      preLoaderRoute: typeof ClubsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tournaments/$tournamentId': {
-      id: '/tournaments/$tournamentId';
-      path: '/$tournamentId';
-      fullPath: '/tournaments/$tournamentId';
-      preLoaderRoute: typeof TournamentsTournamentIdRouteImport;
-      parentRoute: typeof TournamentsRoute;
-    };
+      id: '/tournaments/$tournamentId'
+      path: '/$tournamentId'
+      fullPath: '/tournaments/$tournamentId'
+      preLoaderRoute: typeof TournamentsTournamentIdRouteImport
+      parentRoute: typeof TournamentsRoute
+    }
     '/table/$tableId': {
-      id: '/table/$tableId';
-      path: '/table/$tableId';
-      fullPath: '/table/$tableId';
-      preLoaderRoute: typeof TableTableIdRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/table/$tableId'
+      path: '/table/$tableId'
+      fullPath: '/table/$tableId'
+      preLoaderRoute: typeof TableTableIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings/telegram': {
-      id: '/settings/telegram';
-      path: '/telegram';
-      fullPath: '/settings/telegram';
-      preLoaderRoute: typeof SettingsTelegramRouteImport;
-      parentRoute: typeof SettingsRoute;
-    };
+      id: '/settings/telegram'
+      path: '/telegram'
+      fullPath: '/settings/telegram'
+      preLoaderRoute: typeof SettingsTelegramRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/privacy': {
-      id: '/settings/privacy';
-      path: '/privacy';
-      fullPath: '/settings/privacy';
-      preLoaderRoute: typeof SettingsPrivacyRouteImport;
-      parentRoute: typeof SettingsRoute;
-    };
+      id: '/settings/privacy'
+      path: '/privacy'
+      fullPath: '/settings/privacy'
+      preLoaderRoute: typeof SettingsPrivacyRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/payments': {
-      id: '/settings/payments';
-      path: '/payments';
-      fullPath: '/settings/payments';
-      preLoaderRoute: typeof SettingsPaymentsRouteImport;
-      parentRoute: typeof SettingsRoute;
-    };
+      id: '/settings/payments'
+      path: '/payments'
+      fullPath: '/settings/payments'
+      preLoaderRoute: typeof SettingsPaymentsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/notifications': {
-      id: '/settings/notifications';
-      path: '/notifications';
-      fullPath: '/settings/notifications';
-      preLoaderRoute: typeof SettingsNotificationsRouteImport;
-      parentRoute: typeof SettingsRoute;
-    };
+      id: '/settings/notifications'
+      path: '/notifications'
+      fullPath: '/settings/notifications'
+      preLoaderRoute: typeof SettingsNotificationsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/audio': {
-      id: '/settings/audio';
-      path: '/audio';
-      fullPath: '/settings/audio';
-      preLoaderRoute: typeof SettingsAudioRouteImport;
-      parentRoute: typeof SettingsRoute;
-    };
+      id: '/settings/audio'
+      path: '/audio'
+      fullPath: '/settings/audio'
+      preLoaderRoute: typeof SettingsAudioRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/appearance': {
-      id: '/settings/appearance';
-      path: '/appearance';
-      fullPath: '/settings/appearance';
-      preLoaderRoute: typeof SettingsAppearanceRouteImport;
-      parentRoute: typeof SettingsRoute;
-    };
+      id: '/settings/appearance'
+      path: '/appearance'
+      fullPath: '/settings/appearance'
+      preLoaderRoute: typeof SettingsAppearanceRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/account': {
-      id: '/settings/account';
-      path: '/account';
-      fullPath: '/settings/account';
-      preLoaderRoute: typeof SettingsAccountRouteImport;
-      parentRoute: typeof SettingsRoute;
-    };
+      id: '/settings/account'
+      path: '/account'
+      fullPath: '/settings/account'
+      preLoaderRoute: typeof SettingsAccountRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/players/$userId': {
-      id: '/players/$userId';
-      path: '/players/$userId';
-      fullPath: '/players/$userId';
-      preLoaderRoute: typeof PlayersUserIdRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/players/$userId'
+      path: '/players/$userId'
+      fullPath: '/players/$userId'
+      preLoaderRoute: typeof PlayersUserIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/legal/terms': {
-      id: '/legal/terms';
-      path: '/legal/terms';
-      fullPath: '/legal/terms';
-      preLoaderRoute: typeof LegalTermsRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/legal/terms'
+      path: '/legal/terms'
+      fullPath: '/legal/terms'
+      preLoaderRoute: typeof LegalTermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/legal/privacy': {
-      id: '/legal/privacy';
-      path: '/legal/privacy';
-      fullPath: '/legal/privacy';
-      preLoaderRoute: typeof LegalPrivacyRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/legal/privacy'
+      path: '/legal/privacy'
+      fullPath: '/legal/privacy'
+      preLoaderRoute: typeof LegalPrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/hands/$handId': {
-      id: '/hands/$handId';
-      path: '/hands/$handId';
-      fullPath: '/hands/$handId';
-      preLoaderRoute: typeof HandsHandIdRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/hands/$handId'
+      path: '/hands/$handId'
+      fullPath: '/hands/$handId'
+      preLoaderRoute: typeof HandsHandIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/clubs/join': {
-      id: '/clubs/join';
-      path: '/clubs/join';
-      fullPath: '/clubs/join';
-      preLoaderRoute: typeof ClubsJoinRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/clubs/join'
+      path: '/clubs/join'
+      fullPath: '/clubs/join'
+      preLoaderRoute: typeof ClubsJoinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/clubs/$clubId': {
-      id: '/clubs/$clubId';
-      path: '/clubs/$clubId';
-      fullPath: '/clubs/$clubId';
-      preLoaderRoute: typeof ClubsClubIdRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/clubs/$clubId'
+      path: '/clubs/$clubId'
+      fullPath: '/clubs/$clubId'
+      preLoaderRoute: typeof ClubsClubIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface SettingsRouteChildren {
-  SettingsAccountRoute: typeof SettingsAccountRoute;
-  SettingsAppearanceRoute: typeof SettingsAppearanceRoute;
-  SettingsAudioRoute: typeof SettingsAudioRoute;
-  SettingsNotificationsRoute: typeof SettingsNotificationsRoute;
-  SettingsPaymentsRoute: typeof SettingsPaymentsRoute;
-  SettingsPrivacyRoute: typeof SettingsPrivacyRoute;
-  SettingsTelegramRoute: typeof SettingsTelegramRoute;
-  SettingsIndexRoute: typeof SettingsIndexRoute;
+  SettingsAccountRoute: typeof SettingsAccountRoute
+  SettingsAppearanceRoute: typeof SettingsAppearanceRoute
+  SettingsAudioRoute: typeof SettingsAudioRoute
+  SettingsNotificationsRoute: typeof SettingsNotificationsRoute
+  SettingsPaymentsRoute: typeof SettingsPaymentsRoute
+  SettingsPrivacyRoute: typeof SettingsPrivacyRoute
+  SettingsTelegramRoute: typeof SettingsTelegramRoute
+  SettingsIndexRoute: typeof SettingsIndexRoute
 }
 
 const SettingsRouteChildren: SettingsRouteChildren = {
@@ -804,19 +804,23 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsPrivacyRoute: SettingsPrivacyRoute,
   SettingsTelegramRoute: SettingsTelegramRoute,
   SettingsIndexRoute: SettingsIndexRoute,
-};
+}
 
-const SettingsRouteWithChildren = SettingsRoute._addFileChildren(SettingsRouteChildren);
+const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
+  SettingsRouteChildren,
+)
 
 interface TournamentsRouteChildren {
-  TournamentsTournamentIdRoute: typeof TournamentsTournamentIdRoute;
+  TournamentsTournamentIdRoute: typeof TournamentsTournamentIdRoute
 }
 
 const TournamentsRouteChildren: TournamentsRouteChildren = {
   TournamentsTournamentIdRoute: TournamentsTournamentIdRoute,
-};
+}
 
-const TournamentsRouteWithChildren = TournamentsRoute._addFileChildren(TournamentsRouteChildren);
+const TournamentsRouteWithChildren = TournamentsRoute._addFileChildren(
+  TournamentsRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -848,7 +852,7 @@ const rootRouteChildren: RootRouteChildren = {
   PlayersUserIdRoute: PlayersUserIdRoute,
   TableTableIdRoute: TableTableIdRoute,
   ClubsIndexRoute: ClubsIndexRoute,
-};
+}
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>();
+  ._addFileTypes<FileRouteTypes>()
