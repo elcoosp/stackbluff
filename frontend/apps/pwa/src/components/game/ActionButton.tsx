@@ -35,6 +35,7 @@ export const ActionButton = ({
 
     return (
       <button
+        type="button"
         className={cn(
           'w-full flex items-center justify-center gap-1.5 py-3 rounded-xl font-bold text-[11px] uppercase whitespace-nowrap transition-all active:scale-[0.97] disabled:opacity-25 disabled:pointer-events-none',
           mobileStyles[variant],
@@ -59,6 +60,7 @@ export const ActionButton = ({
 
   return (
     <button
+      type="button"
       className={cn(
         'px-4 py-2.5 rounded-full font-bold text-xs uppercase tracking-[0.1em] flex items-center gap-1.5 whitespace-nowrap transition-all active:scale-95 disabled:opacity-25 disabled:pointer-events-none',
         desktopStyles[variant],
