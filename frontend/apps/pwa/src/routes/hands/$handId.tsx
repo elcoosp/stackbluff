@@ -238,7 +238,7 @@ function HandDetailPage() {
     return groups;
   }, [hand]);
 
-  const streets: Street[] = ['preflop', 'flop', 'turn', 'river', 'showdown'];
+  const streets = useMemo(() => ['preflop', 'flop', 'turn', 'river', 'showdown'] as Street[], []);
 
   // Auto-play logic
   useEffect(() => {
@@ -367,8 +367,8 @@ function HandDetailPage() {
                 Winner
               </p>
               {winners.length > 0 ? (
-                winners.map((w, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
+                winners.map((w) => (
+                  <div key={w.player_id} className="flex items-center gap-2">
                     <span className="text-sm font-medium text-on-surface">
                       {getPlayerName(w.player_id)}
                     </span>
@@ -396,6 +396,7 @@ function HandDetailPage() {
             const isActive = street === currentStreet;
             return (
               <button
+                type="button"
                 key={street}
                 onClick={() => {
                   setCurrentStreet(street);
@@ -510,7 +511,7 @@ function HandDetailPage() {
               <p className="text-sm text-on-surface-variant">No actions recorded in this street.</p>
             </div>
           ) : (
-            currentActions.map((action, idx) => {
+            currentActions.map((action, index) => {
               const displayName = getPlayerName(action.player_id);
               const type = action.action_type?.toLowerCase() || 'action';
 
@@ -526,12 +527,12 @@ function HandDetailPage() {
 
               return (
                 <motion.div
-                  key={idx}
+                  key={action.timestamp_ms}
                   variants={itemVariants}
                   className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-colors"
                 >
                   <span className="text-[10px] font-data-mono text-on-surface-variant/50 w-6 text-right">
-                    {idx + 1}
+                    {index + 1}
                   </span>
                   <div className="flex-1 flex items-center gap-3 min-w-0">
                     <span className="font-medium text-on-surface text-sm truncate">
