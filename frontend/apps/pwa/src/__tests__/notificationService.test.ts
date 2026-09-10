@@ -16,11 +16,12 @@ vi.stubEnv(
 
 // Mock Notification API
 const mockRequestPermission = vi.fn();
+const mockNotification = {
+  permission: 'default' as NotificationPermission,
+  requestPermission: mockRequestPermission,
+};
 Object.defineProperty(window, 'Notification', {
-  value: {
-    permission: 'default',
-    requestPermission: mockRequestPermission,
-  },
+  value: mockNotification,
   writable: true,
   configurable: true,
 });
@@ -61,8 +62,8 @@ describe('notificationService', () => {
     useConsentStore.setState({
       notificationConsent: 'not_asked',
     });
-    (window.Notification as any).permission = 'default';
-    (apiClient.post as any).mockResolvedValue({ ok: true, status: 200 });
+    mockNotification.permission = 'default';
+    (apiClient.post as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, status: 200 });
   });
 
   afterEach(() => {
@@ -145,7 +146,7 @@ describe('notificationService', () => {
         }),
       });
 
-      (apiClient.post as any).mockResolvedValue({ ok: false, status: 500 });
+      (apiClient.post as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: false, status: 500 });
 
       const result = await subscribeToPushNotifications();
 
