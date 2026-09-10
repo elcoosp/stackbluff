@@ -1,6 +1,15 @@
 import { motion } from 'framer-motion';
 import { PlayerSpot } from './PlayerSpot';
 
+interface SeatData {
+  seat_index: number;
+  display_name: string;
+  avatar_url?: string;
+  is_active: boolean;
+  stack: number;
+  position_badge?: string;
+}
+
 const desktopPositions: Record<
   number,
   { top: string; left: string; transform: string; right?: string }
@@ -30,7 +39,7 @@ export const SeatGrid = ({
   heroSeat,
   isDesktop,
 }: {
-  seats: Record<number, any>;
+  seats: Record<number, SeatData>;
   heroSeat: number;
   isDesktop: boolean;
 }) => (
