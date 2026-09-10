@@ -128,7 +128,7 @@ const formatCard = (cardStr: string) => {
 };
 
 function HistoryPage() {
-  const {} = useAuthStore();
+  useAuthStore();
   const [limit] = useState(20);
   const [filter, setFilter] = useState<FilterType>('all');
 
@@ -313,6 +313,7 @@ function HistoryPage() {
             const active = filter === value;
             return (
               <button
+                type="button"
                 key={value}
                 onClick={() => setFilter(value)}
                 className={cn(
@@ -548,9 +549,9 @@ function HandHistoryCard({
           {/* Community cards preview */}
           {hand.community_cards && hand.community_cards.length > 0 && (
             <div className="flex gap-1.5 mt-2.5">
-              {hand.community_cards.map((card, idx) => (
+              {hand.community_cards.map((card) => (
                 <span
-                  key={idx}
+                  key={card}
                   className="w-8 h-10 flex items-center justify-center bg-white rounded-[4px] shadow-sm border border-black/10"
                 >
                   {formatCard(card)}
