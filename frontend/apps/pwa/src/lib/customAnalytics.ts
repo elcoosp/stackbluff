@@ -7,7 +7,7 @@ import { canFireAnalytics } from '@/stores/consentStore';
  */
 export async function trackGameEvent(
   eventType: string,
-  payload: Record<string, any>,
+  payload: Record<string, string | number | boolean | undefined>,
 ): Promise<void> {
   if (!canFireAnalytics()) {
     analyticsLogger.debug('Custom analytics event blocked: no cookie consent', { eventType });
