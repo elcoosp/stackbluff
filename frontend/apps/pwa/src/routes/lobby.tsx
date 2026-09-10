@@ -24,14 +24,13 @@ import {
   Users,
   Wallet,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { LobbyTabs } from '@/components/lobby/LobbyTabs';
 import { Button } from '@/components/ui/button';
 import { CreateTableModal } from '../components/CreateTableModal';
 import { BuyInDialog } from '../components/game/BuyInDialog';
 
 const STAKE_CONFIG = {
-  Micro: { text: '$0.02/$0.05', bb: 5 },
   Low: { text: '$0.10/$0.25', bb: 25 },
   Medium: { text: '$0.50/$1.00', bb: 100 },
   High: { text: '$2/$4', bb: 400 },
@@ -176,6 +175,7 @@ function LobbyPage() {
             </span>
           </Link>
           <button
+            type="button"
             onClick={() => navigate({ to: '/tournaments' })}
             className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left"
           >
@@ -185,6 +185,7 @@ function LobbyPage() {
             </span>
           </button>
           <button
+            type="button"
             onClick={() => navigate({ to: '/clubs' })}
             className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left"
           >
@@ -194,6 +195,7 @@ function LobbyPage() {
             </span>
           </button>
           <button
+            type="button"
             onClick={() => navigate({ to: '/leaderboard' })}
             className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left"
           >
@@ -203,6 +205,7 @@ function LobbyPage() {
             </span>
           </button>
           <button
+            type="button"
             onClick={() => navigate({ to: '/shop' })}
             className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left"
           >
@@ -213,6 +216,7 @@ function LobbyPage() {
           </button>
           <div className="border-t border-outline-variant/50 my-2"></div>
           <button
+            type="button"
             onClick={() => navigate({ to: '/missions' })}
             className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left"
           >
@@ -222,6 +226,7 @@ function LobbyPage() {
             </span>
           </button>
           <button
+            type="button"
             onClick={() => navigate({ to: '/referrals' })}
             className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left"
           >
@@ -231,6 +236,7 @@ function LobbyPage() {
             </span>
           </button>
           <button
+            type="button"
             onClick={() => navigate({ to: '/replays' })}
             className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left"
           >
@@ -240,6 +246,7 @@ function LobbyPage() {
             </span>
           </button>
           <button
+            type="button"
             onClick={() => navigate({ to: '/history' })}
             className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left"
           >
@@ -250,6 +257,7 @@ function LobbyPage() {
           </button>
           <div className="border-t border-outline-variant/50 my-2"></div>
           <button
+            type="button"
             onClick={() => navigate({ to: '/guide' })}
             className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left"
           >
@@ -259,6 +267,7 @@ function LobbyPage() {
             </span>
           </button>
           <button
+            type="button"
             onClick={() => navigate({ to: '/help' })}
             className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left"
           >
@@ -268,6 +277,7 @@ function LobbyPage() {
             </span>
           </button>
           <button
+            type="button"
             onClick={() => navigate({ to: '/settings' })}
             className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left"
           >
@@ -286,6 +296,7 @@ function LobbyPage() {
             <Plus className="w-4 h-4 mr-2" /> <Trans>New Table</Trans>
           </Button>
           <button
+            type="button"
             onClick={() => {
               removeToken();
               logout();
@@ -342,12 +353,14 @@ function LobbyPage() {
             <div className="flex lg:hidden justify-end">
               <div className="flex flex-wrap gap-1 bg-white/5 border border-white/10 backdrop-blur-xl rounded-xl p-1.5">
                 <button
+                  type="button"
                   className={`flex items-center gap-1.5 text-[10px] px-3 py-1.5 rounded-lg ${sortConfig.key === 'stakes' ? 'bg-white/10 text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface hover:bg-white/5'} font-label-caps uppercase tracking-wider transition-all`}
                   onClick={() => toggleSort('stakes')}
                 >
                   <Trans>Stakes</Trans> {renderSortIcon('stakes')}
                 </button>
                 <button
+                  type="button"
                   className={`flex items-center gap-1.5 text-[10px] px-3 py-1.5 rounded-lg ${sortConfig.key === 'players' ? 'bg-white/10 text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface hover:bg-white/5'} font-label-caps uppercase tracking-wider transition-all`}
                   onClick={() => toggleSort('players')}
                 >
@@ -360,18 +373,20 @@ function LobbyPage() {
               <div className="col-span-4">
                 <Trans>Room Name</Trans>
               </div>
-              <div
-                className="col-span-2 text-center flex items-center justify-center gap-1 cursor-pointer hover:text-on-surface transition-colors"
+              <button
+                type="button"
+                className="col-span-2 text-center flex items-center justify-center gap-1 cursor-pointer hover:text-on-surface transition-colors bg-transparent border-none p-0 font-inherit"
                 onClick={() => toggleSort('stakes')}
               >
                 <Trans>Stakes</Trans> {renderSortIcon('stakes')}
-              </div>
-              <div
-                className="col-span-2 text-center flex items-center justify-center gap-1 cursor-pointer hover:text-on-surface transition-colors"
+              </button>
+              <button
+                type="button"
+                className="col-span-2 text-center flex items-center justify-center gap-1 cursor-pointer hover:text-on-surface transition-colors bg-transparent border-none p-0 font-inherit"
                 onClick={() => toggleSort('players')}
               >
                 <Trans>Players</Trans> {renderSortIcon('players')}
-              </div>
+              </button>
               <div className="col-span-4 text-right">
                 <Trans>Action</Trans>
               </div>
@@ -435,12 +450,10 @@ function LobbyPage() {
 
                   <div className="hidden lg:flex lg:col-span-2 text-center flex-col items-center relative z-10">
                     <div className="flex gap-1">
-                      {Array.from({ length: table.max_players }).map((_, idx) => (
+                      {Array.from({ length: table.max_players }).map((_, seatIdx) => (
                         <span
-                          key={idx}
-                          className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                            idx < table.current_players ? 'bg-tertiary/70' : 'bg-outline-variant/30'
-                          }`}
+                          key={`seat-${table.table_id}-${seatIdx}`}
+                          className={`w-1.5 h-1.5 rounded-full transition-colors ${seatIdx < table.current_players ? 'bg-tertiary/70' : 'bg-outline-variant/30'}`}
                         />
                       ))}
                     </div>
