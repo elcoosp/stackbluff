@@ -116,7 +116,7 @@ export async function unregisterServiceWorker(): Promise<boolean> {
 /**
  * Send a message to the service worker.
  */
-export function sendMessageToSW(message: any): void {
+export function sendMessageToSW(message: unknown): void {
   if (navigator.serviceWorker.controller) {
     swLogger.debug('Sending message to service worker', message);
     navigator.serviceWorker.controller.postMessage(message);
