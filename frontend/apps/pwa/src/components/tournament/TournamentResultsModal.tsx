@@ -28,12 +28,7 @@ function getMedal(position: number): string {
   return `${position}`;
 }
 
-export function TournamentResultsModal({
-  open,
-  results,
-  tournamentId,
-  onClose,
-}: TournamentResultsModalProps) {
+export function TournamentResultsModal({ open, results, onClose }: TournamentResultsModalProps) {
   const userId = useAuthStore((s) => s.user?.id);
   const _myResult = results.find((r) => r.user_id === userId);
   const winner = results.find((r) => r.position === 1);
