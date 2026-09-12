@@ -17,6 +17,7 @@ export function LobbyTabs() {
     <div className="flex gap-1 bg-surface-container p-1 rounded-xl border border-outline-variant self-start md:self-auto">
       {tabs.map((tab) => (
         <button
+          type="button"
           key={tab.path}
           onClick={() => navigate({ to: tab.path })}
           className={cn(
