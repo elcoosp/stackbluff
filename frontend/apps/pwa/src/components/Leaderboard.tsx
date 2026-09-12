@@ -52,8 +52,8 @@ export function Leaderboard({ userId }: LeaderboardProps) {
         <div className="mb-4 h-6 w-48 animate-pulse rounded bg-muted" />
         <div className="space-y-2">
           {Array.from({ length: 10 }).map((_, i) => (
-            <div
-              key={i}
+            <div // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders have no stable identity
+              key={`skeleton-${i}-${userId}`}
               className="h-10 animate-pulse rounded-md bg-muted"
               style={{ animationDelay: `${i * 50}ms` }}
             />
