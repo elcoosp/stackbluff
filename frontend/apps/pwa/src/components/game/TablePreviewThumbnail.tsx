@@ -3,18 +3,12 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 interface TablePreviewThumbnailProps {
-  roomId: string;
   room: GameRoomState;
   isActive: boolean;
   onClick: () => void;
 }
 
-export function TablePreviewThumbnail({
-  roomId,
-  room,
-  isActive,
-  onClick,
-}: TablePreviewThumbnailProps) {
+export function TablePreviewThumbnail({ room, isActive, onClick }: TablePreviewThumbnailProps) {
   const playerCount = Object.keys(room.seats).length;
   const pot = room.pot || 0;
   const heroSeat = room.heroSeat;
@@ -38,11 +32,11 @@ export function TablePreviewThumbnail({
     >
       {/* Player avatars mini grid */}
       <div className="grid grid-cols-2 gap-0.5 w-full h-full p-1">
-        {previewPlayers.map((seat, idx) => {
+        {previewPlayers.map((seat, _idx) => {
           const isHero = seat.user_id === heroUserId;
           return (
             <div
-              key={idx}
+              key={seat.user_id}
               className={cn(
                 'w-full aspect-square rounded-full border flex items-center justify-center text-[6px] font-bold transition-colors',
                 isHero
@@ -55,8 +49,8 @@ export function TablePreviewThumbnail({
           );
         })}
         {Array.from({ length: 4 - previewPlayers.length }).map((_, idx) => (
-          <div
-            key={`empty-${idx}`}
+          <div // biome-ignore lint/suspicious/noArrayIndexKey: empty seat placeholders have no stable identity
+            key={`empty-${idx}-${room.pot}`}
             className="w-full aspect-square rounded-full border border-white/5 bg-white/5 flex items-center justify-center text-[6px] text-white/20"
           >
             •
