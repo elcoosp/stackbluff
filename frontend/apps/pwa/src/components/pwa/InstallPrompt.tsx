@@ -36,7 +36,7 @@ export function InstallPrompt() {
       }
 
       // iOS detection (older iOS uses navigator.standalone)
-      if ((navigator as any).standalone === true) {
+      if (navigator.standalone === true) {
         setIsInstalled(true);
         return;
       }
