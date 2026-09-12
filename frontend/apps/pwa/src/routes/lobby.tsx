@@ -24,7 +24,7 @@ import {
   Users,
   Wallet,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { LobbyTabs } from '@/components/lobby/LobbyTabs';
 import { Button } from '@/components/ui/button';
 import { CreateTableModal } from '../components/CreateTableModal';
@@ -451,7 +451,7 @@ function LobbyPage() {
                   <div className="hidden lg:flex lg:col-span-2 text-center flex-col items-center relative z-10">
                     <div className="flex gap-1">
                       {Array.from({ length: table.max_players }).map((_, seatIdx) => (
-                        <span
+                        <span // biome-ignore lint/suspicious/noArrayIndexKey: seat position is the index, no stable identity
                           key={`seat-${table.table_id}-${seatIdx}`}
                           className={`w-1.5 h-1.5 rounded-full transition-colors ${seatIdx < table.current_players ? 'bg-tertiary/70' : 'bg-outline-variant/30'}`}
                         />
