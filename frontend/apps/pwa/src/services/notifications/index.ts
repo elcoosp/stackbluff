@@ -6,7 +6,7 @@ import {
   ANALYTICS_NOTIFICATION_UNSUBSCRIBED,
 } from '@/lib/consent/constants';
 import { notificationLogger } from '@/lib/logger';
-import { useConsentStore } from '@/stores/consentStore';
+import { type NotificationConsent, useConsentStore } from '@/stores/consentStore';
 import { isPushSupported, requestPermission } from './permission';
 import { getPushSubscription, subscriptionToJSON, unsubscribeFromPush } from './subscription';
 import { sendSubscriptionToBackend } from './transport';
@@ -31,7 +31,7 @@ export async function subscribeToPushNotifications(): Promise<boolean> {
 
   if (permission !== 'granted') {
     logger.info('Permission denied', { permission });
-    useConsentStore.getState().setNotificationConsent(permission as any);
+    useConsentStore.getState().setNotificationConsent(permission as NotificationConsent);
     trackEvent(ANALYTICS_NOTIFICATION_DENIED, { props: { reason: 'permission_denied' } });
     return false;
   }
