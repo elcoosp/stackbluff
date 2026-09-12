@@ -18,7 +18,7 @@ import { History, Loader2, LogOut, Plus, Settings } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ErrorBoundary, type ErrorBoundaryFallbackProps } from 'react-error-boundary';
+import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
 import { toast } from 'sonner';
 import { useGameHandCompletion } from '@/hooks/useGameHandCompletion';
 import { cn } from '@/lib/utils';
@@ -48,7 +48,7 @@ import { useGameWebSocket } from '../hooks/useGameWebSocket';
 import { usePreAction } from '../hooks/usePreAction';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
-function Fallback({ error, resetErrorBoundary }: ErrorBoundaryFallbackProps) {
+function Fallback({ error, resetErrorBoundary }: FallbackProps) {
   // Listen to club theme updates
   const [_feltColor, setFeltColor] = useState<string | null>(null);
   useEffect(() => {
@@ -63,7 +63,7 @@ function Fallback({ error, resetErrorBoundary }: ErrorBoundaryFallbackProps) {
   }, []);
   return (
     <div className="p-4 text-error">
-      <p>Game UI error: {error.message}</p>
+      <p>Game UI error: {error instanceof Error ? error.message : String(error)}</p>
       <button type="button" onClick={resetErrorBoundary}>
         Retry
       </button>
@@ -1056,7 +1056,6 @@ export function TablePage() {
               seats={seatsWithShowdown}
               heroSeat={resolvedHeroSeat}
               isDesktop={isDesktop}
-              currentTurnUserId={currentTurnUserId}
               heroTimerRemainingMs={heroTimerRemainingMs}
               heroTimerTotalMs={heroTimerTotalMs}
               opponentTurnUserId={opponentTurnUserId}
@@ -1153,7 +1152,6 @@ export function TablePage() {
         open={!!kickVoteDialog}
         onClose={() => setKickVoteDialog(null)}
         initiatorId={kickVoteDialog?.initiatorId || ''}
-        targetId={kickVoteDialog?.targetId || ''}
         targetName={kickVoteDialog?.targetName || 'Player'}
         kickVoteId={kickVoteDialog?.kickVoteId || ''}
         durationSecs={kickVoteDialog?.durationSecs || 0}
