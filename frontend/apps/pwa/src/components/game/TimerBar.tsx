@@ -14,7 +14,7 @@ const interpolateColor = (progress: number) => {
   const amber = { r: 251, g: 191, b: 36 };
   const red = { r: 255, g: 0, b: 60 };
 
-  let color;
+  let color: { r: number; g: number; b: number };
   if (progress > 50) {
     // Green to Amber (100% to 50%)
     const t = (100 - progress) / 50;
