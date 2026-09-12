@@ -46,7 +46,7 @@ export function AvatarUpload({ className, onAvatarUpdated }: AvatarUploadProps) 
     mutationFn: async (avatarUrl: string) => {
       // Try to update the user profile if endpoint exists
       try {
-        return await apiClient<{ user: any }>('/user/me', {
+        return await apiClient<{ user: { avatar_url?: string } | null }>('/user/me', {
           method: 'PATCH',
           body: JSON.stringify({ avatar_url: avatarUrl }),
         });
