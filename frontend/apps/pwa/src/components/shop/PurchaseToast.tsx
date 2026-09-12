@@ -27,6 +27,7 @@ export function PurchaseToast() {
       {toast.message}
       {toast.type === 'error' && (
         <button
+          type="button"
           onClick={() => setToast(null)}
           className="ml-3 text-xs underline opacity-75 hover:opacity-100"
         >
