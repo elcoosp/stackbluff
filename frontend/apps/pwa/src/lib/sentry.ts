@@ -35,7 +35,7 @@ export function initSentry() {
   console.log('✅ Sentry initialized');
 }
 
-export function captureException(error: Error, context?: Record<string, any>) {
+export function captureException(error: Error, context?: Record<string, unknown>) {
   Sentry.withScope((scope) => {
     if (context) {
       scope.setExtras(context);
