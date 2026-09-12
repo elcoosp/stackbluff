@@ -9,7 +9,7 @@ import { PurchaseDialog } from '../components/shop/PurchaseDialog';
 import { PurchaseToast } from '../components/shop/PurchaseToast';
 import { usePurchaseFlow } from '../hooks/usePurchaseFlow';
 import { useShopProducts } from '../hooks/useShopProducts';
-import { useShopStore } from '../stores/shopStore';
+import { type Product, useShopStore } from '../stores/shopStore';
 
 type Category = 'all' | 'chips' | 'season_pass' | 'club_pro';
 
@@ -23,10 +23,10 @@ const CATEGORY_LABELS: Record<Category, string> = {
 export default function ShopPage() {
   const shop = useShopStore();
   const { data: productsData, isLoading: productsLoading } = useShopProducts();
-  const { confirmPurchase, stopPolling, isProcessing } = usePurchaseFlow();
+  const { confirmPurchase, isProcessing } = usePurchaseFlow();
   const [category, setCategory] = useState<Category>('all');
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   const transformedProducts = useMemo(() => {
     if (!productsData) return [];
@@ -60,12 +60,14 @@ export default function ShopPage() {
     if (currentIds !== newIds) {
       shop.setProducts(transformedProducts);
       // Track product views
-      transformedProducts.forEach((p) => trackProductView(p.id, p.name));
+      for (const p of transformedProducts) {
+        trackProductView(p.id, p.name);
+      }
     }
   }, [transformedProducts, shop]);
 
   const handlePurchase = useCallback(
-    (product: any) => {
+    (product: Product) => {
       setSelectedProduct(product);
       setDialogOpen(true);
       shop.selectProduct(product);
@@ -142,6 +144,7 @@ export default function ShopPage() {
           {(['all', 'chips', 'season_pass', 'club_pro'] as Category[]).map((cat) => (
             <button
               key={cat}
+              type="button"
               onClick={() => setCategory(cat)}
               className={cn(
                 'px-5 py-2 rounded-lg text-sm font-label-caps uppercase tracking-wider transition-all duration-200',
