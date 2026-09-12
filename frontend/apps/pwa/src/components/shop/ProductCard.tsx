@@ -18,7 +18,16 @@ interface ProductCardProps {
     chipsAmount?: number;
     durationDays?: number;
   };
-  onPurchase: (product: any) => void;
+  onPurchase: (product: {
+    id: string;
+    name: string;
+    description: string;
+    priceEur: number;
+    priceStars: number;
+    type: 'chips' | 'season_pass' | 'club_pro';
+    chipsAmount?: number;
+    durationDays?: number;
+  }) => void;
   className?: string;
 }
 
@@ -49,6 +58,7 @@ export function ProductCard({ product, onPurchase, className }: ProductCardProps
   const imageUrl = getProductImageUrl(product.id, product.name);
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: card is interactive via Button below; this wrapper handles hover state only
     <div
       className={cn(
         'relative overflow-hidden rounded-xl border border-white/10 transition-all duration-300 group hover:scale-[1.02] hover:border-tertiary/40 hover:shadow-xl hover:shadow-emerald-500/10',
