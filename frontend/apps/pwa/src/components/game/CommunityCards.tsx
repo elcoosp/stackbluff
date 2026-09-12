@@ -162,7 +162,7 @@ export const CommunityCards = ({
         </AnimatePresence>
 
         <AnimatePresence>
-          {isDealt && (
+          {isDealt && card && (
             <motion.div
               className="absolute inset-0 transform-gpu [will-change:transform]"
               style={{ transformStyle: 'preserve-3d' }}
