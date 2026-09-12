@@ -109,7 +109,7 @@ export interface GameRoomState {
   actionRequired: ActionRequired | null;
   analytics: Analytics | null;
   showdownReveal: ShowdownRevealData | null;
-  winners: { name: string; amount: number }[] | null;
+  winners: { user_id: string; display_name: string; amount: number; hand_rank: string }[] | null;
   handInProgress: boolean;
   lastAction: { player_id: string; action: string; amount: number | null } | null;
 }
