@@ -1,181 +1,204 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useConsentStore } from '../stores/consentStore';
 
-// Mock the apiClient
-vi.mock('@stackbluff/shared/api/client', () => ({
-  apiClient: {
-    post: vi.fn().mockResolvedValue({ ok: true, status: 200 }),
-  },
+vi.mock('@/lib/analytics', () => ({
+  trackEvent: vi.fn(),
 }));
 
-// Mock VAPID key (valid 88-character base64url string)
-vi.stubEnv(
-  'VITE_VAPID_PUBLIC_KEY',
-  'BPM1KZ9xH8Y8Z5Q3X2W1V0U9T8S7R6Q5P4O3N2M1L0K9J8I7H6G5F4E3D2C1B0A9Z8Y7X6W5V4U3T2S1R0Q9P8O7N6M5L4K3J2I1H0G9F8E7D6C5B4A3Z2Y1X0W9V8U7T6S5R4Q3P2O1N0M9L8K7J6I5H4G3F2E1D0C9B8A7Z6Y5X4W3V2U1T0S9R8Q7P6O5N4M3L2K1J0I9H8G7F6E5D4C3B2A1',
-);
+vi.mock('../services/notifications/permission', () => ({
+  isPushSupported: vi.fn(),
+  getPermissionStatus: vi.fn(),
+  requestPermission: vi.fn(),
+}));
 
-// Mock Notification API
-const mockRequestPermission = vi.fn();
-const mockNotification = {
-  permission: 'default' as NotificationPermission,
-  requestPermission: mockRequestPermission,
-};
-Object.defineProperty(window, 'Notification', {
-  value: mockNotification,
-  writable: true,
-  configurable: true,
-});
+vi.mock('../services/notifications/subscription', () => ({
+  getExistingSubscription: vi.fn(),
+  getPushSubscription: vi.fn(),
+  subscriptionToJSON: vi.fn(),
+  unsubscribeFromPush: vi.fn(),
+}));
 
-// Mock service worker
-const mockSubscribe = vi.fn();
-const mockGetSubscription = vi.fn();
-const mockUnsubscribe = vi.fn();
+vi.mock('../services/notifications/transport', () => ({
+  sendSubscriptionToBackend: vi.fn(),
+}));
 
-Object.defineProperty(navigator, 'serviceWorker', {
-  value: {
-    ready: Promise.resolve({
-      pushManager: {
-        subscribe: mockSubscribe,
-        getSubscription: mockGetSubscription,
-      },
-    }),
-  },
-  writable: true,
-  configurable: true,
-});
-
-Object.defineProperty(window, 'PushManager', {
-  value: class PushManager {},
-  writable: true,
-  configurable: true,
-});
-
-import { apiClient } from '@stackbluff/shared/api/client';
+import { trackEvent } from '@/lib/analytics';
 import {
+  ANALYTICS_NOTIFICATION_ALLOWED,
+  ANALYTICS_NOTIFICATION_DENIED,
+  ANALYTICS_NOTIFICATION_SUBSCRIBED,
+  ANALYTICS_NOTIFICATION_UNSUBSCRIBED,
+} from '@/lib/consent/constants';
+import {
+  getPermissionStatus,
+  resyncSubscription,
   subscribeToPushNotifications,
   unsubscribeFromPushNotifications,
 } from '../services/notifications';
+import { isPushSupported, requestPermission } from '../services/notifications/permission';
+import {
+  getPushSubscription,
+  subscriptionToJSON,
+  unsubscribeFromPush,
+} from '../services/notifications/subscription';
+import { sendSubscriptionToBackend } from '../services/notifications/transport';
+
+const mockIsPushSupported = vi.mocked(isPushSupported);
+const mockGetPermissionStatus = vi.mocked(getPermissionStatus);
+const mockRequestPermission = vi.mocked(requestPermission);
+const mockGetPushSubscription = vi.mocked(getPushSubscription);
+const mockSubscriptionToJSON = vi.mocked(subscriptionToJSON);
+const mockUnsubscribeFromPush = vi.mocked(unsubscribeFromPush);
+const mockSendSubscriptionToBackend = vi.mocked(sendSubscriptionToBackend);
 
 describe('notificationService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useConsentStore.setState({
       notificationConsent: 'not_asked',
+      notificationPromptDismissedAt: null,
     });
-    mockNotification.permission = 'default';
-    (apiClient.post as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, status: 200 });
-  });
-
-  afterEach(() => {
-    vi.clearAllMocks();
+    mockIsPushSupported.mockReturnValue(true);
   });
 
   describe('subscribeToPushNotifications', () => {
-    it('should request permission and subscribe with Uint8Array VAPID key', async () => {
-      mockRequestPermission.mockResolvedValue('granted');
-      mockGetSubscription.mockResolvedValue(null);
-      mockSubscribe.mockResolvedValue({
-        endpoint: 'https://example.com/push',
-        toJSON: () => ({
-          keys: { p256dh: 'test-key', auth: 'test-auth' },
-        }),
-      });
+    it('returns false when push not supported', async () => {
+      mockIsPushSupported.mockReturnValue(false);
 
       const result = await subscribeToPushNotifications();
 
-      expect(mockRequestPermission).toHaveBeenCalled();
-      expect(mockSubscribe).toHaveBeenCalled();
-
-      // Verify applicationServerKey is Uint8Array, not string
-      const subscribeCall = mockSubscribe.mock.calls[0][0];
-      expect(subscribeCall.applicationServerKey).toBeInstanceOf(Uint8Array);
-
-      expect(apiClient.post).toHaveBeenCalled();
-      expect(result).toBe(true);
-      expect(useConsentStore.getState().notificationConsent).toBe('granted');
+      expect(result).toBe(false);
+      expect(mockRequestPermission).not.toHaveBeenCalled();
     });
 
-    it('should not subscribe when permission denied', async () => {
+    it('returns false and denies consent when permission is not granted', async () => {
       mockRequestPermission.mockResolvedValue('denied');
 
       const result = await subscribeToPushNotifications();
 
-      expect(mockRequestPermission).toHaveBeenCalled();
-      expect(mockSubscribe).not.toHaveBeenCalled();
       expect(result).toBe(false);
+      expect(mockRequestPermission).toHaveBeenCalled();
       expect(useConsentStore.getState().notificationConsent).toBe('denied');
+      expect(trackEvent).toHaveBeenCalledWith(ANALYTICS_NOTIFICATION_DENIED, {
+        props: { reason: 'permission_denied' },
+      });
     });
 
-    it('should use existing subscription if available', async () => {
+    it('returns false when getPushSubscription returns null', async () => {
       mockRequestPermission.mockResolvedValue('granted');
-      const existingSubscription = {
-        endpoint: 'https://example.com/existing',
-        toJSON: () => ({
-          keys: { p256dh: 'existing-key', auth: 'existing-auth' },
-        }),
-      };
-      mockGetSubscription.mockResolvedValue(existingSubscription);
+      mockGetPushSubscription.mockResolvedValue(null);
 
       const result = await subscribeToPushNotifications();
 
-      expect(mockGetSubscription).toHaveBeenCalled();
-      expect(mockSubscribe).not.toHaveBeenCalled();
-      expect(apiClient.post).toHaveBeenCalled();
+      expect(result).toBe(false);
+      expect(mockRequestPermission).toHaveBeenCalled();
+      expect(useConsentStore.getState().notificationConsent).toBe('granted');
+    });
+
+    it('returns true when subscription is sent to backend successfully', async () => {
+      mockRequestPermission.mockResolvedValue('granted');
+      const fakeSub = { endpoint: 'https://example.com/push' } as PushSubscription;
+      mockGetPushSubscription.mockResolvedValue(fakeSub);
+      const fakeJSON = { endpoint: 'https://example.com/push', keys: { p256dh: 'k', auth: 'a' } };
+      mockSubscriptionToJSON.mockReturnValue(fakeJSON);
+      mockSendSubscriptionToBackend.mockResolvedValue(true);
+
+      const result = await subscribeToPushNotifications();
+
+      expect(result).toBe(true);
+      expect(useConsentStore.getState().notificationConsent).toBe('granted');
+      expect(trackEvent).toHaveBeenCalledWith(ANALYTICS_NOTIFICATION_ALLOWED);
+      expect(trackEvent).toHaveBeenCalledWith(ANALYTICS_NOTIFICATION_SUBSCRIBED);
+      expect(mockSubscriptionToJSON).toHaveBeenCalledWith(fakeSub);
+      expect(mockSendSubscriptionToBackend).toHaveBeenCalledWith(fakeJSON);
+    });
+
+    it('returns false when backend rejects subscription', async () => {
+      mockRequestPermission.mockResolvedValue('granted');
+      const fakeSub = { endpoint: 'https://example.com/push' } as PushSubscription;
+      mockGetPushSubscription.mockResolvedValue(fakeSub);
+      mockSubscriptionToJSON.mockReturnValue({
+        endpoint: 'https://example.com/push',
+        keys: { p256dh: 'k', auth: 'a' },
+      });
+      mockSendSubscriptionToBackend.mockResolvedValue(false);
+
+      const result = await subscribeToPushNotifications();
+
+      expect(result).toBe(false);
+      expect(trackEvent).not.toHaveBeenCalledWith(ANALYTICS_NOTIFICATION_SUBSCRIBED);
+    });
+  });
+
+  describe('unsubscribeFromPushNotifications', () => {
+    it('returns true and updates consent when browser unsubscribe succeeds', async () => {
+      mockUnsubscribeFromPush.mockResolvedValue(true);
+
+      const result = await unsubscribeFromPushNotifications();
+
+      expect(result).toBe(true);
+      expect(mockUnsubscribeFromPush).toHaveBeenCalled();
+      expect(useConsentStore.getState().notificationConsent).toBe('default');
+      expect(trackEvent).toHaveBeenCalledWith(ANALYTICS_NOTIFICATION_UNSUBSCRIBED);
+    });
+
+    it('returns false when browser unsubscribe fails', async () => {
+      mockUnsubscribeFromPush.mockResolvedValue(false);
+
+      const result = await unsubscribeFromPushNotifications();
+
+      expect(result).toBe(false);
+      expect(useConsentStore.getState().notificationConsent).toBe('not_asked');
+      expect(trackEvent).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('resyncSubscription', () => {
+    it('returns false when no existing subscription', async () => {
+      mockGetPushSubscription.mockResolvedValue(null);
+
+      const result = await resyncSubscription();
+
+      expect(result).toBe(false);
+    });
+
+    it('returns true when backend accepts resync', async () => {
+      const fakeSub = { endpoint: 'https://example.com/push' } as PushSubscription;
+      mockGetPushSubscription.mockResolvedValue(fakeSub);
+      mockSubscriptionToJSON.mockReturnValue({
+        endpoint: 'https://example.com/push',
+        keys: { p256dh: 'k', auth: 'a' },
+      });
+      mockSendSubscriptionToBackend.mockResolvedValue(true);
+
+      const result = await resyncSubscription();
+
       expect(result).toBe(true);
     });
 
-    it('should return false when VAPID key is invalid', async () => {
-      vi.stubEnv('VITE_VAPID_PUBLIC_KEY', '');
-
-      mockRequestPermission.mockResolvedValue('granted');
-      mockGetSubscription.mockResolvedValue(null);
-
-      const result = await subscribeToPushNotifications();
-
-      expect(result).toBe(false);
-      expect(mockSubscribe).not.toHaveBeenCalled();
-    });
-
-    it('should return false when backend call fails', async () => {
-      mockRequestPermission.mockResolvedValue('granted');
-      mockGetSubscription.mockResolvedValue(null);
-      mockSubscribe.mockResolvedValue({
+    it('returns false when backend rejects resync', async () => {
+      const fakeSub = { endpoint: 'https://example.com/push' } as PushSubscription;
+      mockGetPushSubscription.mockResolvedValue(fakeSub);
+      mockSubscriptionToJSON.mockReturnValue({
         endpoint: 'https://example.com/push',
-        toJSON: () => ({
-          keys: { p256dh: 'test-key', auth: 'test-auth' },
-        }),
+        keys: { p256dh: 'k', auth: 'a' },
       });
+      mockSendSubscriptionToBackend.mockResolvedValue(false);
 
-      (apiClient.post as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: false, status: 500 });
-
-      const result = await subscribeToPushNotifications();
+      const result = await resyncSubscription();
 
       expect(result).toBe(false);
     });
   });
 
-  describe('unsubscribeFromPushNotifications', () => {
-    it('should unsubscribe from push notifications', async () => {
-      const subscription = {
-        endpoint: 'https://example.com/push',
-        unsubscribe: mockUnsubscribe.mockResolvedValue(true),
-      };
-      mockGetSubscription.mockResolvedValue(subscription);
+  describe('getPermissionStatus', () => {
+    it('returns denied when push is not supported', async () => {
+      mockGetPermissionStatus.mockReturnValue('denied');
 
-      const result = await unsubscribeFromPushNotifications();
+      const status = getPermissionStatus();
 
-      expect(mockUnsubscribe).toHaveBeenCalled();
-      expect(result).toBe(true);
-      expect(useConsentStore.getState().notificationConsent).toBe('default');
-    });
-
-    it('should handle no subscription gracefully', async () => {
-      mockGetSubscription.mockResolvedValue(null);
-
-      const result = await unsubscribeFromPushNotifications();
-
-      expect(mockUnsubscribe).not.toHaveBeenCalled();
-      expect(result).toBe(true);
+      expect(status).toBe('denied');
+      expect(mockIsPushSupported).not.toHaveBeenCalled();
     });
   });
 });
