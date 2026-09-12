@@ -18,7 +18,6 @@ export function TableOverviewPanel({
   activeTableId,
   onSelectTable,
   isMobile = false,
-  isSpectator = false,
 }: TableOverviewPanelProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const tableEntries = Object.entries(tables);
