@@ -68,7 +68,7 @@ interface PotBadgeProps {
   isMobile?: boolean;
   showdownReveal: ShowdownRevealData | null;
   potRef: React.RefObject<HTMLDivElement>;
-  lastAction?: LastAction;
+  lastAction: LastAction | null;
 }
 
 export const PotBadge = ({
