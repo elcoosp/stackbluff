@@ -1,3 +1,4 @@
+import type { Seat } from '@stackbluff/shared/stores/gameStore';
 import { LayoutGroup } from 'framer-motion';
 import { useEffect, useMemo, useState } from 'react';
 import { desktopPositions, getMobilePositions, MAX_SEATS } from '@/lib/seatPositions';
@@ -6,11 +7,23 @@ import { PlayerSpot } from './PlayerSpot';
 
 const seatTransition = 'left 0.4s ease, top 0.4s ease, bottom 0.4s ease, transform 0.4s ease';
 
+interface SeatGridProps {
+  seats: Record<number, Seat>;
+  heroSeat: number | null;
+  isDesktop: boolean;
+  heroTimerRemainingMs?: number | null;
+  heroTimerTotalMs?: number | null;
+  opponentTurnUserId?: string | null;
+  opponentTimerRemainingMs?: number | null;
+  opponentTimerTotalMs?: number | null;
+  isDealing: boolean;
+  onShowStats?: (userId: string) => void;
+}
+
 export const SeatGrid = ({
   seats,
   heroSeat,
   isDesktop,
-  currentTurnUserId,
   heroTimerRemainingMs,
   heroTimerTotalMs,
   opponentTurnUserId,
@@ -18,8 +31,7 @@ export const SeatGrid = ({
   opponentTimerTotalMs,
   isDealing,
   onShowStats,
-  onKick,
-}: any) => {
+}: SeatGridProps) => {
   const [vw, setVw] = useState(typeof window !== 'undefined' ? window.innerWidth : 500);
 
   useEffect(() => {
@@ -37,7 +49,7 @@ export const SeatGrid = ({
 
   let currentDealerSeat: number | null = null;
   for (const [index, seat] of Object.entries(seats)) {
-    if ((seat as any).position_badge === 'BTN') {
+    if (seat.position_badge === 'BTN') {
       currentDealerSeat = Number(index);
       break;
     }
@@ -53,7 +65,7 @@ export const SeatGrid = ({
 
   return (
     <LayoutGroup>
-      {Object.entries(seats).map(([index, seat]: [string, any]) => {
+      {Object.entries(seats).map(([index, seat]: [string, Seat]) => {
         const seatIndex = Number(index);
         const posIndex =
           heroSeat !== null
@@ -93,8 +105,8 @@ export const SeatGrid = ({
               isMobile={!isDesktop}
               isDealer={isDealer}
               seatPosition={pos}
-              timerRemainingMs={timerRemainingMs}
-              timerTotalMs={timerTotalMs}
+              timerRemainingMs={timerRemainingMs ?? undefined}
+              timerTotalMs={timerTotalMs ?? undefined}
               isDealing={isDealing}
               onShowStats={onShowStats}
             />
