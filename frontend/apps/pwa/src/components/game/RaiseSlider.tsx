@@ -215,7 +215,11 @@ export const RaiseSlider = ({
             </div>
           )}
 
-          <div className="space-y-4 outline-none" onWheel={onWheel} onKeyDown={handleKeyDown}>
+          <fieldset
+            className="space-y-4 outline-none border-0 p-0 m-0"
+            onWheel={onWheel}
+            onKeyDown={handleKeyDown}
+          >
             {/* Header, Toggle & Close */}
             <div className="flex items-center justify-between pt-1">
               <motion.div
@@ -287,8 +291,9 @@ export const RaiseSlider = ({
                 <Minus className="w-4 h-4" />
               </motion.button>
 
-              <div
-                className="flex-1 text-center cursor-text"
+              <button
+                type="button"
+                className="flex-1 text-center cursor-text bg-transparent border-0 p-0"
                 onClick={() => !isEditingAmount && setIsEditingAmount(true)}
               >
                 <AnimatePresence mode="popLayout">
@@ -324,7 +329,7 @@ export const RaiseSlider = ({
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </div>
+              </button>
 
               <motion.button
                 whileHover={{ scale: 1.08 }}
@@ -420,7 +425,7 @@ export const RaiseSlider = ({
                 >
                   {presets.map((preset, idx) => (
                     <motion.button
-                      key={`${preset.label}-${idx}`}
+                      key={preset.label}
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1, transition: { delay: idx * 0.02 } }}
                       whileHover={!preset.isDisabled ? { scale: 1.05, y: -1 } : {}}
@@ -468,7 +473,7 @@ export const RaiseSlider = ({
                 <Trans>Confirm Raise</Trans>
               </motion.button>
             </motion.div>
-          </div>
+          </fieldset>
         </motion.div>
       )}
     </AnimatePresence>
