@@ -17,9 +17,9 @@ export function useGameHandCompletion() {
   useEffect(() => {
     if (!activeRoom) return;
 
-    const currentRoomId = (activeRoom as any)?.roomId || (activeRoom as any)?.id || 'unknown';
-    const currentShowdown = (activeRoom as any)?.showdownReveal;
-    const currentHandInProgress = (activeRoom as any)?.handInProgress;
+    const currentRoomId = activeRoom.tableId || 'unknown';
+    const currentShowdown = activeRoom.showdownReveal;
+    const currentHandInProgress = activeRoom.handInProgress;
 
     if (prevRoomIdRef.current !== currentRoomId) {
       logger.debug('Room changed, resetting hand tracking', { roomId: currentRoomId });
