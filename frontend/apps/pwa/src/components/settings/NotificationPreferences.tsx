@@ -50,7 +50,7 @@ function saveSettings(settings: NotificationSettings): void {
 
 export function NotificationPreferences() {
   const queryClient = useQueryClient();
-  const { user, isAuthenticated } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
   const [settings, setSettings] = useState<NotificationSettings>(DEFAULTS);
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
