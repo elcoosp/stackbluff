@@ -1,3 +1,4 @@
+import type { ShowdownRevealData } from '@stackbluff/shared/stores/gameStore';
 import { useLayoutEffect, useState } from 'react';
 import {
   desktopPositions,
@@ -23,13 +24,13 @@ interface ChipAnimationLayerProps {
   isDesktop: boolean;
   heroSeat: number;
   potRef: React.RefObject<HTMLDivElement>;
-  showdownReveal: { players?: Array<{ is_winner: boolean }> } | null;
+  showdownReveal: ShowdownRevealData | null;
 }
 
 export const ChipAnimationLayer = ({
   isDesktop,
   heroSeat,
-  _potRef,
+  potRef: _potRef,
   showdownReveal,
 }: ChipAnimationLayerProps) => {
   const vw = useViewportWidth();
