@@ -5,7 +5,12 @@ import { useFeedback } from '@stackbluff/shared/hooks/useFeedback';
 import type { FeedbackEvent } from '@stackbluff/shared/services/feedback/types';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { useDealStore } from '@stackbluff/shared/stores/dealStore';
-import { useActiveRoom, useGameStore } from '@stackbluff/shared/stores/gameStore';
+import {
+  type GameRoomState,
+  type Seat,
+  useActiveRoom,
+  useGameStore,
+} from '@stackbluff/shared/stores/gameStore';
 import { useTournamentStore } from '@stackbluff/shared/stores/tournamentStore';
 import type { TournamentResultEntry } from '@stackbluff/shared/types/tournament.types';
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
@@ -13,7 +18,7 @@ import { History, Loader2, LogOut, Plus, Settings } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ErrorBoundary } from 'react-error-boundary';
+import { ErrorBoundary, type ErrorBoundaryFallbackProps } from 'react-error-boundary';
 import { toast } from 'sonner';
 import { useGameHandCompletion } from '@/hooks/useGameHandCompletion';
 import { cn } from '@/lib/utils';
@@ -43,7 +48,7 @@ import { useGameWebSocket } from '../hooks/useGameWebSocket';
 import { usePreAction } from '../hooks/usePreAction';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout';
 
-function Fallback({ error, resetErrorBoundary }: any) {
+function Fallback({ error, resetErrorBoundary }: ErrorBoundaryFallbackProps) {
   // Listen to club theme updates
   const [_feltColor, setFeltColor] = useState<string | null>(null);
   useEffect(() => {
@@ -59,7 +64,9 @@ function Fallback({ error, resetErrorBoundary }: any) {
   return (
     <div className="p-4 text-error">
       <p>Game UI error: {error.message}</p>
-      <button onClick={resetErrorBoundary}>Retry</button>
+      <button type="button" onClick={resetErrorBoundary}>
+        Retry
+      </button>
     </div>
   );
 }
@@ -167,7 +174,7 @@ function useGameFeedback(
 
   useEffect(() => {
     for (const [idx, seatRaw] of Object.entries(game.seats)) {
-      const seat = seatRaw as any;
+      const seat = seatRaw as Seat;
       const seatNum = Number(idx);
       const prevAction = prevSeatActions.current[seatNum];
       const currAction = seat.action?.text;
@@ -241,9 +248,9 @@ export function TablePage() {
   const search = useSearch({ from: '/table/$tableId' });
   const navigate = useNavigate();
 
-  const isObserving = (search as any)?.observe === 'true' || (search as any)?.observe === true;
-  const tournamentId = (search as any).tournamentId as string | undefined;
-  const urlBuyInRaw = (search as any)?.buyIn;
+  const isObserving = search.observe === 'true' || search.observe === true;
+  const tournamentId = search.tournamentId;
+  const urlBuyInRaw = search.buyIn;
   const urlBuyIn = urlBuyInRaw ? Number(urlBuyInRaw) : undefined;
 
   const {
@@ -300,7 +307,7 @@ export function TablePage() {
   useEffect(() => {
     if (!tableId) return;
     const matchingEntry = Object.entries(rooms).find(
-      ([, r]: [string, any]) => r.tableId === tableId,
+      ([, r]: [string, GameRoomState]) => r.tableId === tableId,
     );
     if (matchingEntry) {
       const [rId] = matchingEntry;
@@ -318,7 +325,7 @@ export function TablePage() {
         setResultsModalOpen(true);
         const userId = useAuthStore.getState().user?.id;
         if (userId) {
-          const myResult = detail.results.find((r: any) => r.user_id === userId);
+          const myResult = detail.results.find((r: TournamentResultEntry) => r.user_id === userId);
           if (myResult && myResult.prize > 0) {
             useAuthStore.getState().updateBalance(myResult.prize);
           }
@@ -469,7 +476,7 @@ export function TablePage() {
   const strength = analytics?.strength ?? 0;
 
   const heroSeatByUserId = myUserId
-    ? Object.entries(seats).find(([, s]: [string, any]) => s.user_id === myUserId)
+    ? Object.entries(seats).find(([, s]: [string, Seat]) => s.user_id === myUserId)
     : null;
   const resolvedHeroSeat: number = heroSeatByUserId ? Number(heroSeatByUserId[0]) : (heroSeat ?? 0);
 
@@ -535,7 +542,7 @@ export function TablePage() {
   const maxRaiseAmount = heroStack > 0 ? heroStack : minRaiseAmount;
   const finalMinRaise = canRaise ? minRaiseAmount : maxRaiseAmount;
 
-  const isHeroSeated = Object.values(seatsWithShowdown).some((s: any) => s.user_id === myUserId);
+  const isHeroSeated = Object.values(seatsWithShowdown).some((s: Seat) => s.user_id === myUserId);
 
   // ─── Handle notSeated error ──────────────────────────────────────────
   useEffect(() => {
@@ -769,7 +776,7 @@ export function TablePage() {
       // Find the seat of the target user
       let targetSeat = null;
       for (const [seat, player] of Object.entries(room.seats)) {
-        if ((player as any).user_id === targetUserId) {
+        if (player.user_id === targetUserId) {
           targetSeat = seat;
           break;
         }
@@ -800,7 +807,9 @@ export function TablePage() {
     setShowRebuyDialog(true);
   }, []);
 
-  const isAnyAllIn = Object.values(seatsWithShowdown).some((s: any) => s.is_all_in && !s.is_folded);
+  const isAnyAllIn = Object.values(seatsWithShowdown).some(
+    (s: Seat) => s.is_all_in && !s.is_folded,
+  );
 
   const headerActionsEl =
     typeof document !== 'undefined' ? document.getElementById('header-portal-actions') : null;
@@ -836,6 +845,7 @@ export function TablePage() {
           createPortal(
             <div className="flex items-center gap-1 md:gap-2 h-full pr-2 md:pr-4 border-r border-white/5 mr-2 md:mr-4">
               <button
+                type="button"
                 onClick={() => {
                   setShowHistory(true);
                   trigger('buttonClick');
@@ -846,6 +856,7 @@ export function TablePage() {
                 <History className="w-4 h-4" />
               </button>
               <button
+                type="button"
                 onClick={() => {
                   setShowSettings(true);
                   trigger('buttonClick');
@@ -856,6 +867,7 @@ export function TablePage() {
                 <Settings className="w-4 h-4" />
               </button>
               <button
+                type="button"
                 onClick={() => {
                   setShowLeaveDialog(true);
                   trigger('buttonClick');
@@ -1101,6 +1113,7 @@ export function TablePage() {
               </div>
             ) : (
               <button
+                type="button"
                 onClick={() => setShowRebuyDialog(true)}
                 className="mb-4 px-8 py-3 md:py-4 bg-tertiary text-on-tertiary font-label-caps text-xs md:text-sm hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg rounded-lg transition-colors"
               >
