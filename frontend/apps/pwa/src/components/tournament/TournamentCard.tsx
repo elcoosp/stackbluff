@@ -102,7 +102,6 @@ export function TournamentCard({
     buy_in,
     prize_pool,
     current_blind_level,
-    started_at,
   } = tournament;
 
   const isFull = registered >= max_players;
