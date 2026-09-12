@@ -246,11 +246,11 @@ export function HistoryDialog({ open, onClose, tableId }: HistoryDialogProps) {
                             {/* Community cards preview */}
                             {hand.community_cards && hand.community_cards.length > 0 && (
                               <div className="flex gap-1 mt-2">
-                                {hand.community_cards.map((card, idx) => {
+                                {hand.community_cards.map((card) => {
                                   const { rank, suit } = parseCard(card);
                                   return (
                                     <Card
-                                      key={idx}
+                                      key={card}
                                       rank={rank}
                                       suit={suit}
                                       size="xs"
