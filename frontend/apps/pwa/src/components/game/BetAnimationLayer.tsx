@@ -23,7 +23,7 @@ function useViewportWidth() {
 interface BetAnimationLayerProps {
   isDesktop: boolean;
   heroSeat: number;
-  lastAction: { player_id: string } | null;
+  lastAction: { player_id: string; action: string; amount: number | null } | null;
   seats: Record<number, { user_id?: string }>;
 }
 
@@ -45,7 +45,7 @@ export const BetAnimationLayer = ({
       id: string;
       from: { x: number; y: number };
       to: { x: number; y: number };
-      color: string;
+      color: ReturnType<typeof getChipColor>;
       delay: number;
       index: number;
     }>
