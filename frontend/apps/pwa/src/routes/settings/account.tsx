@@ -1,5 +1,6 @@
 import { i18n } from '@lingui/core';
-import { Trans, t } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
 import { apiClient } from '@stackbluff/shared/api/client';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { useMutation } from '@tanstack/react-query';
