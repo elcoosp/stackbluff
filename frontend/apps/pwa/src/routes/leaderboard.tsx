@@ -351,7 +351,10 @@ function LeaderboardSkeleton() {
 
       <div className="bg-white/5 border border-white/10 rounded-2xl p-2 space-y-2">
         {Array.from({ length: 7 }).map((_, i) => (
-          <Skeleton key={`skeleton-${i}`} className="h-14 w-full bg-white/5 rounded-xl" />
+          <Skeleton // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders have no stable identity
+            key={`skeleton-${i}`}
+            className="h-14 w-full bg-white/5 rounded-xl"
+          />
         ))}
       </div>
     </div>
