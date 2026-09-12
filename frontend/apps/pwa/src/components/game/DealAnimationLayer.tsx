@@ -36,7 +36,16 @@ interface DealAnimationLayerProps {
   heroSeat: number;
   heroHoleCards: Array<{ rank: string; suit: string }>;
   communityCards: Array<{ rank: string; suit: string }>;
-  seats: Record<number, { display_name: string; avatar_url?: string; is_active: boolean; position_badge?: string; is_folded?: boolean }>;
+  seats: Record<
+    number,
+    {
+      display_name: string;
+      avatar_url?: string;
+      is_active: boolean;
+      position_badge?: string;
+      is_folded?: boolean;
+    }
+  >;
 }
 
 export const DealAnimationLayer = ({
@@ -97,7 +106,7 @@ export const DealAnimationLayer = ({
       const x = (pct(pos.left) / 100) * w;
 
       // Updated Y calculation to handle bottom property
-      let y;
+      let y: number;
       if (pos.bottom) {
         y = h - parseFloat(pos.bottom);
       } else {
@@ -133,33 +142,6 @@ export const DealAnimationLayer = ({
       y: h * (isDesktop ? 0.38 : 0.35),
     };
   }, [isDesktop]);
-
-  useEffect(() => {
-    const currentCards = heroHoleCards || [];
-    const currentKey = currentCards.map((c) => `${c.rank}${c.suit}`).join('');
-
-    if (isFirstRenderRef.current) {
-      isFirstRenderRef.current = false;
-      prevHoleCardsKey.current = currentKey;
-      return;
-    }
-
-    const cardsChanged = currentKey !== prevHoleCardsKey.current;
-    const noCommunity = (communityCards || []).length === 0;
-    const hasCards = currentCards.length > 0;
-
-    if (cardsChanged && hasCards && noCommunity && !isDealing) {
-      triggerDeal();
-    }
-
-    prevHoleCardsKey.current = currentKey;
-  }, [heroHoleCards, communityCards, isDealing, triggerDeal]);
-
-  useEffect(() => {
-    if (!heroHoleCards || heroHoleCards.length === 0) {
-      prevHoleCardsKey.current = '';
-    }
-  }, [heroHoleCards]);
 
   const triggerDeal = useCallback(() => {
     dealTimersRef.current.forEach(clearTimeout);
@@ -244,6 +226,27 @@ export const DealAnimationLayer = ({
     dealTimersRef.current.push(cleanupTimer);
   }, [seats, heroSeat, startDealing, finishDealing, trigger, getTargetPixels]);
 
+  useEffect(() => {
+    const currentCards = heroHoleCards || [];
+    const currentKey = currentCards.map((c) => `${c.rank}${c.suit}`).join('');
+
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+      prevHoleCardsKey.current = currentKey;
+      return;
+    }
+
+    const cardsChanged = currentKey !== prevHoleCardsKey.current;
+    const noCommunity = (communityCards || []).length === 0;
+    const hasCards = currentCards.length > 0;
+
+    if (cardsChanged && hasCards && noCommunity && !isDealing) {
+      triggerDeal();
+    }
+
+    prevHoleCardsKey.current = currentKey;
+  }, [heroHoleCards, communityCards, isDealing, triggerDeal]);
+
   const deckPx = getDeckPixels();
 
   const cardW = isDesktop ? 30 : 22;
@@ -284,8 +287,8 @@ export const DealAnimationLayer = ({
           >
             <div className="relative" style={{ width: cardW + 8, height: cardH + 8 }}>
               {Array.from({ length: deckLayers }).map((_, i) => (
-                <div
-                  key={i}
+                <div // biome-ignore lint/suspicious/noArrayIndexKey: deck layers are positional, no stable identity
+                  key={`deck-layer-${i}`}
                   className="absolute rounded-sm overflow-hidden"
                   style={{
                     width: cardW + 2,
