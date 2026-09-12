@@ -39,13 +39,36 @@ function useAnimatedCounter(target: number, duration = 500) {
   return value;
 }
 
+interface ShowdownPlayer {
+  user_id: string;
+  display_name: string;
+  seat: number;
+  hole_cards: Array<{ rank: string; suit: string }>;
+  hand_description: string;
+  is_winner: boolean;
+  win_amount: number;
+  winning_cards: Array<{ rank: string; suit: string }>;
+}
+
+interface ShowdownRevealData {
+  players: ShowdownPlayer[];
+  community_cards: Array<{ rank: string; suit: string }>;
+  pot: number;
+}
+
+interface LastAction {
+  player_id: string;
+  action: string;
+  amount: number | null;
+}
+
 interface PotBadgeProps {
   amount: number;
   toCall?: number;
   isMobile?: boolean;
-  showdownReveal: any;
+  showdownReveal: ShowdownRevealData | null;
   potRef: React.RefObject<HTMLDivElement>;
-  lastAction?: any;
+  lastAction?: LastAction;
 }
 
 export const PotBadge = ({
@@ -56,7 +79,7 @@ export const PotBadge = ({
   potRef,
   lastAction,
 }: PotBadgeProps) => {
-  const winners = (showdownReveal?.players ?? []).filter((p: any) => p.is_winner);
+  const winners = (showdownReveal?.players ?? []).filter((p: ShowdownPlayer) => p.is_winner);
   const isShowdown = !!showdownReveal;
 
   const animatedAmount = useAnimatedCounter(amount);
@@ -81,6 +104,7 @@ export const PotBadge = ({
       xmlns="http://www.w3.org/2000/svg"
       overflow="visible"
     >
+      <title>Trophy</title>
       <defs>
         <linearGradient id="trophyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#fcd34d" />
@@ -172,8 +196,8 @@ export const PotBadge = ({
                 )}
               />
 
-              {winners.map((w: any, idx: number) => (
-                <div key={idx} className="flex items-center gap-2 flex-shrink-0">
+              {winners.map((w: ShowdownPlayer, idx: number) => (
+                <div key={w.user_id} className="flex items-center gap-2 flex-shrink-0">
                   {idx > 0 && <span className="text-white/15">+</span>}
                   <div className="flex flex-col items-start leading-tight">
                     <span
