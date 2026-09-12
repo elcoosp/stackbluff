@@ -1,5 +1,6 @@
 import {
   type ActionRequired,
+  type GameRoomState,
   type TableState,
   useGameStore,
 } from '@stackbluff/shared/stores/gameStore';
@@ -39,7 +40,7 @@ const suitDisplayMap: Record<string, string> = {
   spades: '♠',
 };
 
-function convertCard(card: any) {
+function convertCard(card: { rank: string; suit: string }) {
   if (!card) return { rank: '?', suit: '?' };
   return {
     rank: rankDisplayMap[card.rank] ?? card.rank,
@@ -47,8 +48,95 @@ function convertCard(card: any) {
   };
 }
 
+// ── Raw wire payload ──
+interface RawWsMessage {
+  type: string;
+  room_id?: string;
+  user_id?: string;
+  seat_index?: number;
+  table_id?: string;
+  players?: {
+    seat: number;
+    user_id: string;
+    display_name?: string;
+    stack?: number | string;
+    chips?: number | string;
+    bankroll?: number | string;
+    current_bet?: number | string;
+    is_all_in?: boolean;
+    is_folded?: boolean;
+    is_leaving?: boolean;
+    is_active?: boolean;
+    avatar_url?: string;
+    position_badge?: string;
+    last_action?: string | { text: string; amount?: number | null } | null;
+    stats?: import('@stackbluff/shared/stores/gameStore').PlayerStats | null;
+    // ShowdownReveal fields
+    hole_cards?: { rank: string; suit: string }[];
+    handling_description?: string;
+    hand_description?: string;
+    is_winner?: boolean;
+    win_amount?: number;
+    winning_cards?: { rank: string; suit: string }[];
+  }[];
+  community_cards?: { rank: string; suit: string }[];
+  pot?: number;
+  side_pots?: { amount: number; eligible_players: string[] }[];
+  street?: string;
+  current_hand_in_progress?: boolean;
+  current_turn_user_id?: string | null;
+  current_turn_expires_at?: number | null;
+  current_turn_timeout_ms?: number | null;
+  player_id?: string;
+  expires_at?: number;
+  timeout_ms?: number;
+  to_call?: number;
+  min_raise?: number;
+  can_check?: boolean;
+  action?: string;
+  amount?: number;
+  new_stack?: number;
+  new_pot?: number;
+  winners?: (
+    | string
+    | { user_id?: string; display_name?: string; amount?: number; hand_rank?: string }
+  )[];
+  hole_cards?: { rank: string; suit: string }[];
+  winning_cards?: { rank: string; suit: string }[];
+  display_name?: string;
+  hand_description?: string;
+  is_winner?: boolean;
+  win_amount?: number;
+  analytics?: unknown;
+  payload?: {
+    type?: string;
+    hole_cards?: { rank: string; suit: string }[];
+    analytics?: unknown;
+    [key: string]: unknown;
+  };
+  // Tournament fields
+  tournament_id?: string;
+  status?: string;
+  registered_count?: number;
+  max_players?: number;
+  prize_pool?: number;
+  blind_level?: string | number;
+  players_remaining?: number | null;
+  tables?: unknown;
+  next_blind_at?: number | null;
+  current_players?: number;
+  level?: unknown;
+  blinds?: unknown;
+  player_name?: string;
+  position?: number;
+  new_room_id?: string;
+  new_seat?: number;
+  results?: unknown;
+  [key: string]: unknown;
+}
+
 // ── Parse backend messages ──
-const parseMessage = (data: any) => {
+const parseMessage = (data: RawWsMessage) => {
   switch (data.type) {
     case 'Connected': {
       return {
@@ -69,20 +157,22 @@ const parseMessage = (data: any) => {
 
     case 'TableState': {
       if (!data.players) return null;
-      const seats: any[] = data.players.map((p: any) => ({
+      const players = data.players;
+      const seats = players.map((p) => ({
         seat: p.seat,
         user_id: p.user_id,
         display_name: p.display_name || 'Player',
         // Merge: type safety + fallback chain
-        stack: typeof p.stack === 'number' ? p.stack : (p.chips ?? p.bankroll ?? 0),
+        stack: typeof p.stack === 'number' ? p.stack : Number(p.chips ?? p.bankroll ?? 0) || 0,
         current_bet: typeof p.current_bet === 'number' ? p.current_bet : Number(p.current_bet) || 0,
-        is_all_in: p.is_all_in,
-        is_folded: p.is_folded,
+        is_all_in: p.is_all_in ?? false,
+        is_folded: p.is_folded ?? false,
         is_leaving: p.is_leaving || false,
         is_active: p.is_active ?? (!p.is_folded && !p.is_all_in), // FIX: Improved is_active logic
         avatar_url: p.avatar_url || undefined,
         position_badge: p.position_badge || undefined,
-        action: p.last_action || undefined,
+        action:
+          typeof p.last_action === 'string' ? p.last_action : (p.last_action?.text ?? undefined),
         stats: p.stats || null, // FIX: Use null instead of undefined for React stability
       }));
       const communityCards = (data.community_cards || []).map(convertCard);
@@ -136,7 +226,8 @@ const parseMessage = (data: any) => {
       return null;
 
     case 'ShowdownReveal': {
-      const players = (data.players || []).map((p: any) => ({
+      const showdownPlayers = data.players || [];
+      const players = showdownPlayers.map((p) => ({
         user_id: p.user_id,
         seat: p.seat,
         display_name: p.display_name || 'Player',
@@ -157,7 +248,8 @@ const parseMessage = (data: any) => {
     }
 
     case 'HandResult': {
-      const winners = (data.winners || []).map((w: any) => {
+      const handWinners = data.winners || [];
+      const winners = handWinners.map((w) => {
         if (typeof w === 'string') {
           return { user_id: '', display_name: w, amount: 0, hand_rank: '' };
         }
@@ -182,15 +274,22 @@ const parseMessage = (data: any) => {
         return { type: 'YourHoleCards', room_id: data.room_id, holeCards };
       }
       if (data.payload?.type === 'analytics') {
-        const analyticsData = data.payload.analytics;
+        const analyticsData = data.payload.analytics as
+          | {
+              win_prob?: number;
+              pot_odds?: number;
+              best_hand?: string;
+              strength?: number;
+            }
+          | undefined;
         return {
           type: 'Analytics',
           room_id: data.room_id,
           analytics: {
-            winProb: analyticsData.win_prob,
-            potOdds: analyticsData.pot_odds,
-            bestHand: analyticsData.best_hand,
-            strength: analyticsData.strength,
+            winProb: analyticsData?.win_prob ?? 0,
+            potOdds: analyticsData?.pot_odds ?? 0,
+            bestHand: analyticsData?.best_hand ?? '',
+            strength: analyticsData?.strength ?? 0,
           },
         };
       }
@@ -199,20 +298,22 @@ const parseMessage = (data: any) => {
 
     // ─── Tournament events ──────────────────────────────────────
     case 'TournamentState': {
-      useTournamentStore.getState().setTournamentState(data.tournament_id, {
-        status: data.status,
-        registered_count: data.registered_count,
-        max_players: data.max_players,
-        prize_pool: data.prize_pool,
-        blind_level: data.blind_level,
-        players_remaining: data.players_remaining,
-        tables: data.tables,
-        next_blind_at: data.next_blind_at,
+      const tournamentId = data.tournament_id;
+      if (!tournamentId) return null;
+      useTournamentStore.getState().setTournamentState(tournamentId, {
+        status: data.status ?? '',
+        registered_count: data.registered_count ?? 0,
+        max_players: data.max_players ?? 0,
+        prize_pool: data.prize_pool ?? 0,
+        blind_level: data.blind_level as number | undefined,
+        players_remaining: data.players_remaining ?? undefined,
+        tables: data.tables as Record<string, number> | undefined,
+        next_blind_at: data.next_blind_at ?? undefined,
       });
-      if (data.players_remaining !== undefined && data.players_remaining <= 9) {
+      if (data.players_remaining != null && data.players_remaining <= 9) {
         window.dispatchEvent(
           new CustomEvent('tournament:finalTable', {
-            detail: { tournamentId: data.tournament_id },
+            detail: { tournamentId },
           }),
         );
       }
@@ -220,43 +321,50 @@ const parseMessage = (data: any) => {
     }
 
     case 'TournamentRegistered': {
-      const store = useTournamentStore.getState();
-      store.setTournament(data.tournament_id, {
-        registered: data.current_players,
-      });
+      const tournamentId = data.tournament_id;
+      if (!tournamentId) return null;
       const userId = data.user_id;
       if (userId) {
-        store.setRegistered(data.tournament_id, userId, true);
+        useTournamentStore.getState().setTournament(tournamentId, {
+          registered: data.current_players,
+        });
+        useTournamentStore.getState().setRegistered(tournamentId, userId, true);
       }
       return null;
     }
 
     case 'TournamentStarting': {
+      const tournamentId = data.tournament_id;
+      if (!tournamentId) return null;
       window.dispatchEvent(
         new CustomEvent('tournament:starting', {
-          detail: { tournamentId: data.tournament_id, startsInSeconds: data.starts_in_seconds },
+          detail: { tournamentId, startsInSeconds: data.starts_in_seconds },
         }),
       );
       return null;
     }
 
     case 'TournamentBlindLevel': {
-      useTournamentStore.getState().setTournamentState(data.tournament_id, {
-        blind_level: data.level,
+      const tournamentId = data.tournament_id;
+      if (!tournamentId) return null;
+      useTournamentStore.getState().setTournamentState(tournamentId, {
+        blind_level: data.level as never,
       });
       window.dispatchEvent(
         new CustomEvent('tournament:blindLevel', {
-          detail: { tournamentId: data.tournament_id, level: data.level, blinds: data.blinds },
+          detail: { tournamentId, level: data.level, blinds: data.blinds },
         }),
       );
       return null;
     }
 
     case 'TournamentElimination': {
+      const tournamentId = data.tournament_id;
+      if (!tournamentId) return null;
       window.dispatchEvent(
         new CustomEvent('tournament:elimination', {
           detail: {
-            tournamentId: data.tournament_id,
+            tournamentId,
             playerName: data.player_name,
             position: data.position,
           },
@@ -266,14 +374,15 @@ const parseMessage = (data: any) => {
     }
 
     case 'TournamentTableChanged': {
-      const state = useTournamentStore.getState();
-      state.setTournamentState(data.tournament_id, {
-        my_table_id: data.new_room_id,
+      const tournamentId = data.tournament_id;
+      if (!tournamentId) return null;
+      useTournamentStore.getState().setTournamentState(tournamentId, {
+        my_table_id: data.new_room_id ?? undefined,
       });
       window.dispatchEvent(
         new CustomEvent('tournament:tableChanged', {
           detail: {
-            tournamentId: data.tournament_id,
+            tournamentId,
             newRoomId: data.new_room_id,
             newSeat: data.new_seat,
           },
@@ -283,10 +392,12 @@ const parseMessage = (data: any) => {
     }
 
     case 'TournamentResult': {
-      useTournamentStore.getState().setResults(data.tournament_id, data.results);
+      const tournamentId = data.tournament_id;
+      if (!tournamentId) return null;
+      useTournamentStore.getState().setResults(tournamentId, data.results as never);
       window.dispatchEvent(
         new CustomEvent('tournament:result', {
-          detail: { tournamentId: data.tournament_id, results: data.results },
+          detail: { tournamentId, results: data.results },
         }),
       );
       return null;
@@ -419,19 +530,20 @@ export function useGameWebSocket(tableId: string) {
               seats: {},
               communityCards: [],
               pot: 0,
-              side_pots: [],
+              sidePots: [],
               street: '',
-              current_hand_in_progress: false,
-              current_turn_user_id: null,
-              current_turn_expires_at: null,
-              current_turn_timeout_ms: null,
+              currentTurnUserId: null,
+              currentTurnExpiresAt: null,
+              currentTurnTimeoutMs: null,
               heroSeat: null,
-              heroHoleCards: [],
+              heroHoleCards: null,
               actionRequired: null,
               analytics: null,
               showdownReveal: null,
               lastAction: null,
-            } as any;
+              winners: null,
+              handInProgress: false,
+            };
             return { rooms };
           });
         }
@@ -439,11 +551,11 @@ export function useGameWebSocket(tableId: string) {
         switch (message.type) {
           case 'Connected': {
             buyInRef.current = null;
-            if (myUserIdRef.current === null) {
+            if (myUserIdRef.current === null && message.user_id) {
               myUserIdRef.current = message.user_id;
               setMyUserId(message.user_id);
             }
-            if (roomId) {
+            if (roomId && message.seat_index !== undefined) {
               store.ensureRoom(roomId);
               store.setHeroSeat(roomId, message.seat_index);
               store.setActiveRoom(roomId);
@@ -452,17 +564,25 @@ export function useGameWebSocket(tableId: string) {
           }
           case 'RoomAssigned': {
             useGameStore.setState((s) => {
-              const rooms = { ...s.rooms };
-              if (rooms[message.room_id]) {
-                rooms[message.room_id].tableId = message.table_id;
-              }
-              return { rooms };
+              const roomIdMsg = message.room_id;
+              const tableIdMsg = message.table_id;
+              if (!roomIdMsg) return {};
+              const existing = s.rooms[roomIdMsg];
+              const tableId = tableIdMsg ?? null;
+              if (!existing) return {};
+              const mergedRooms: Record<string, GameRoomState> = {
+                ...s.rooms,
+                [roomIdMsg]: { ...existing, tableId },
+              };
+              return { rooms: mergedRooms };
             });
-            store.setActiveRoom(message.room_id);
+            if (message.room_id) store.setActiveRoom(message.room_id);
             break;
           }
           case 'YourHoleCards': {
-            if (roomId) store.setHeroHoleCards(roomId, message.holeCards);
+            if (roomId && message.holeCards) {
+              store.setHeroHoleCards(roomId, message.holeCards);
+            }
             break;
           }
           case 'TableState': {
@@ -496,24 +616,24 @@ export function useGameWebSocket(tableId: string) {
             break;
           }
           case 'ActionBroadcast': {
-            if (roomId) {
+            if (roomId && message.player_id) {
               store.applyActionBroadcast(roomId, {
                 player_id: message.player_id,
-                action: message.action,
-                amount: message.amount,
-                new_stack: message.new_stack,
-                new_pot: message.new_pot,
+                action: message.action ?? '',
+                amount: message.amount ?? null,
+                new_stack: message.new_stack ?? 0,
+                new_pot: message.new_pot ?? 0,
               });
             }
             break;
           }
           case 'ShowdownReveal': {
-            if (roomId) {
+            if (roomId && message.players) {
               store.setAnalytics(roomId, null);
               store.setShowdownReveal(roomId, {
                 players: message.players,
-                community_cards: message.community_cards,
-                pot: message.pot,
+                community_cards: message.community_cards ?? [],
+                pot: message.pot ?? 0,
               });
               store.clearActionRequired(roomId);
             }
@@ -526,8 +646,30 @@ export function useGameWebSocket(tableId: string) {
             break;
           }
           case 'HandResult': {
-            if (roomId) {
-              store.setHandResult(roomId, { winners: message.winners, pot: message.pot });
+            if (roomId && message.winners) {
+              store.setHandResult(roomId, {
+                winners: message.winners.map(
+                  (
+                    w,
+                  ): {
+                    user_id: string;
+                    display_name: string;
+                    amount: number;
+                    hand_rank: string;
+                  } => {
+                    if (typeof w === 'string') {
+                      return { user_id: '', display_name: w, amount: 0, hand_rank: '' };
+                    }
+                    return {
+                      user_id: w.user_id ?? '',
+                      display_name: w.display_name ?? 'Player',
+                      amount: w.amount ?? 0,
+                      hand_rank: w.hand_rank ?? '',
+                    };
+                  },
+                ),
+                pot: message.pot ?? 0,
+              });
               store.setAnalytics(roomId, null);
               store.setHeroHoleCards(roomId, []);
             }
@@ -625,7 +767,7 @@ export function useGameWebSocket(tableId: string) {
     }
   }, []);
 
-  const sendWsMessage = useCallback((type: string, payload: Record<string, any>) => {
+  const sendWsMessage = useCallback((type: string, payload: Record<string, unknown>) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type, ...payload }));
     }
