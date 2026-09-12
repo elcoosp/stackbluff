@@ -55,7 +55,9 @@ export function AdminCreateTournament({ open, onClose, onSuccess }: AdminCreateT
   const user = useAuthStore((s) => s.user);
 
   // Admin mode: check env var OR a role from user (if we add is_admin later)
-  const isAdmin = import.meta.env.VITE_ADMIN_MODE === 'true' || (user as any)?.is_admin === true;
+  const isAdmin =
+    import.meta.env.VITE_ADMIN_MODE === 'true' ||
+    (user as { is_admin?: boolean })?.is_admin === true;
 
   const { data: templates, isLoading: templatesLoading } = useBlindTemplates();
   const [form, setForm] = useState<FormData>(DEFAULT_FORM);
@@ -104,7 +106,7 @@ export function AdminCreateTournament({ open, onClose, onSuccess }: AdminCreateT
       onSuccess?.();
       onClose();
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || t`Failed to create tournament`);
     },
   });
