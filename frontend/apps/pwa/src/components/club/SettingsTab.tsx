@@ -1,8 +1,8 @@
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
+import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
-import { useAuthStore } from '@/stores/authStore';
 
 // // import axios from "axios";
 
