@@ -6,6 +6,7 @@ import { Check, DollarSign, LogOut, Swords, TrendingUp } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { RankTierBadge } from '@/components/game/RankTierBadge';
+import type { Position } from '@/lib/seatPositions';
 import { cn } from '@/lib/utils';
 import { Card, CardBack } from './Card';
 import { PlayerAvatar } from './PlayerAvatar';
@@ -466,11 +467,11 @@ export const PlayerSpot = memo(
     isHero?: boolean;
     isMobile?: boolean;
     isDealer?: boolean;
-    seatPosition?: unknown;
+    seatPosition?: Position;
     timerRemainingMs?: number | null;
     timerTotalMs?: number | null;
     isDealing?: boolean;
-    onShowStats?: () => void;
+    onShowStats?: (userId: string) => void;
   }) => {
     const {
       display_name = seat.user_id?.slice(0, 8) || t`Player`,
@@ -493,7 +494,7 @@ export const PlayerSpot = memo(
     const isActive = is_active && !is_folded && !is_all_in;
     const isFolded = is_folded;
 
-    const showCardsFaceUp = isHero || (is_showdown_revealed && (hole_cards?.length ?? 0) > 0);
+    const showCardsFaceUp = !!(isHero || (is_showdown_revealed && (hole_cards?.length ?? 0) > 0));
     const isLargeCards = isHero || showCardsFaceUp;
 
     const isLosingPlayer = is_showdown_revealed && !is_winner;
@@ -830,7 +831,7 @@ export const PlayerSpot = memo(
                       className="ml-0.5"
                     />
                   )}
-                  <PlayerSpotBadge userId={seat.user_id} badges={seat.badges} showBadges={true} />
+                  <PlayerSpotBadge userId={seat.user_id} showBadges={true} />
                   {positionTag}
                 </div>
                 <div className="flex items-center gap-1 min-w-0">{bankrollElement}</div>
