@@ -61,7 +61,7 @@ function RegisterPage() {
     if (errs.length === 0) setStep(step + 1);
   };
   const prevStep = () => setStep(step - 1);
-  const getErrorMessage = (err: string | { message?: string }) => {
+  const getErrorMessage = (err: string | { message?: string } | undefined) => {
     if (typeof err === 'string') return err;
     if (err?.message) return err.message;
     return t`Validation error`;
@@ -129,7 +129,9 @@ function RegisterPage() {
                             className="text-xs font-data-mono text-red-400 mt-1"
                           >
                             {field.state.meta.errors
-                              .map((e: string | { message?: string }) => getErrorMessage(e))
+                              .map((e: string | { message?: string } | undefined) =>
+                                getErrorMessage(e),
+                              )
                               .join(', ')}
                           </motion.p>
                         )}
@@ -173,7 +175,9 @@ function RegisterPage() {
                             className="text-xs font-data-mono text-red-400 mt-1"
                           >
                             {field.state.meta.errors
-                              .map((e: string | { message?: string }) => getErrorMessage(e))
+                              .map((e: string | { message?: string } | undefined) =>
+                                getErrorMessage(e),
+                              )
                               .join(', ')}
                           </motion.p>
                         )}
@@ -217,7 +221,9 @@ function RegisterPage() {
                             className="text-xs font-data-mono text-red-400 mt-1"
                           >
                             {field.state.meta.errors
-                              .map((e: string | { message?: string }) => getErrorMessage(e))
+                              .map((e: string | { message?: string } | undefined) =>
+                                getErrorMessage(e),
+                              )
                               .join(', ')}
                           </motion.p>
                         )}
