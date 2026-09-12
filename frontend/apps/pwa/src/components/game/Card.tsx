@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+import { motion, type TargetAndTransition, type Transition } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 interface CardProps {
@@ -93,8 +93,8 @@ export const Card = ({
   // Determine animation state
   let filter = baseFilter;
   let boxShadow = baseShadow;
-  let animateProps: Record<string, unknown> = {};
-  let transitionProps: Record<string, unknown> = {};
+  let animateProps: TargetAndTransition = {};
+  let transitionProps: Transition = {};
 
   if (isLosing) {
     filter = losingFilter;
