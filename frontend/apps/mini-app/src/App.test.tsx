@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import App from './App';
 
 describe('Mini App', () => {
-  it('renders the app title', () => {
+  it('renders the lobby page', () => {
     render(<App />);
-    expect(screen.getByText(/StackBluff Mini App/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /lobby/i })).toBeInTheDocument();
   });
 });
