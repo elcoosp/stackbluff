@@ -9,7 +9,6 @@ interface KickVoteDialogProps {
   open: boolean;
   onClose: () => void;
   initiatorId: string;
-  targetId: string;
   targetName: string;
   kickVoteId: string;
   durationSecs: number;
@@ -21,7 +20,6 @@ interface KickVoteDialogProps {
 export function KickVoteDialog({
   open,
   onClose,
-  targetId,
   targetName,
   kickVoteId,
   durationSecs,
@@ -141,6 +139,7 @@ export function KickVoteDialog({
         ) : (
           <div className="flex gap-3 mt-2">
             <button
+              type="button"
               onClick={handleVoteYes}
               disabled={hasVoted}
               className={cn(
@@ -153,6 +152,7 @@ export function KickVoteDialog({
               {hasVoted ? <Trans>Voted ✓</Trans> : <Trans>Vote Yes</Trans>}
             </button>
             <button
+              type="button"
               onClick={onClose}
               className="flex-1 py-2 rounded-lg bg-white/5 text-white/60 hover:bg-white/10 transition-colors"
             >
