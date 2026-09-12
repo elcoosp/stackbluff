@@ -1,6 +1,7 @@
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
-import { AnimatePresence, motion } from 'framer-motion';
+import type { Seat } from '@stackbluff/shared/stores/gameStore';
+import { AnimatePresence, motion, type Variants } from 'framer-motion';
 import { Check, DollarSign, LogOut, Swords, TrendingUp } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
@@ -68,7 +69,7 @@ const getActionStyles = (text?: string) => {
   }
 };
 
-const getActionBadgeVariants = (text?: string) => {
+const getActionBadgeVariants = (text?: string): Variants => {
   switch (text) {
     case 'FOLD':
       return {
@@ -459,7 +460,18 @@ export const PlayerSpot = memo(
     timerTotalMs,
     isDealing = false,
     onShowStats,
-  }: any) => {
+  }: {
+    onKick?: (userId: string) => void;
+    seat: Seat;
+    isHero?: boolean;
+    isMobile?: boolean;
+    isDealer?: boolean;
+    seatPosition?: unknown;
+    timerRemainingMs?: number | null;
+    timerTotalMs?: number | null;
+    isDealing?: boolean;
+    onShowStats?: () => void;
+  }) => {
     const {
       display_name = seat.user_id?.slice(0, 8) || t`Player`,
       stack,
@@ -885,11 +897,13 @@ export const PlayerSpot = memo(
         {/* Kick vote button - only visible if player is sitting out and not self */}
         {!isHero && seat.sitting_out && onKick && (
           <button
+            type="button"
             onClick={() => onKick(seat.user_id)}
             className="absolute -bottom-1 right-0 z-[60] p-1 rounded-full bg-red-500/20 hover:bg-red-500/40 text-red-300 text-[10px] transition-colors"
             title={t`Kick player`}
           >
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <title>{t`Kick player`}</title>
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -911,7 +925,7 @@ export const PlayerSpot = memo(
             {showActionBadge && (
               <motion.div
                 key={`${action?.text}-${current_bet}`}
-                variants={badgeVariants as any}
+                variants={badgeVariants}
                 initial="initial"
                 animate="animate"
                 exit="exit"
