@@ -2,7 +2,7 @@ import { Trans } from '@lingui/react/macro';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 
 export function ClubCustomizer() {
-  const clubProExpiresAt = useAuthStore((s) => s.clubProExpiresAt);
+  const clubProExpiresAt = useAuthStore((s) => s.user?.club_pro_expires_at ?? null);
   const isClubProActive = clubProExpiresAt ? new Date(clubProExpiresAt) > new Date() : false;
 
   if (!isClubProActive) return null;
