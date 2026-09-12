@@ -4,13 +4,17 @@ export interface TelegramInvoiceResult {
   status: 'paid' | 'cancelled' | 'failed' | string;
 }
 
+interface TelegramWebAppWithInvoice {
+  openInvoice?: (url: string, callback: (status: string) => void) => void;
+}
+
 export function useTelegramWebApp() {
   const openInvoice = useCallback(
     (url: string, onResult: (result: TelegramInvoiceResult) => void): boolean => {
-      const tg = window.Telegram?.WebApp;
-      if (!tg || typeof (tg as any).openInvoice !== 'function') return false;
+      const tg = window.Telegram?.WebApp as TelegramWebAppWithInvoice | undefined;
+      if (!tg || typeof tg.openInvoice !== 'function') return false;
 
-      (tg as any).openInvoice(url, (status: string) => {
+      tg.openInvoice(url, (status: string) => {
         onResult({ status });
       });
       return true;
