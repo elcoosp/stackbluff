@@ -19,10 +19,30 @@ interface LogEntry {
   message: string;
   context: LogContext;
   timestamp: string;
-  extra?: Record<string, string | number | boolean | undefined>;
+  extra?: Record<string, unknown>;
 }
 
 type LogTransport = (entry: LogEntry) => void;
+
+declare global {
+  interface Window {
+    __SENTRY__?: {
+      captureException: (...args: unknown[]) => void;
+      captureMessage: (...args: unknown[]) => void;
+    };
+  }
+}
+
+/**
+ * Normalize arbitrary `extra` values into a loggable record.
+ * Objects pass through; primitives and Errors are wrapped so log entries
+ * always carry a JSON-serializable record.
+ */
+function normalizeExtra(extra: unknown): Record<string, unknown> | undefined {
+  if (extra === undefined || extra === null) return undefined;
+  if (typeof extra === 'object') return extra as Record<string, unknown>;
+  return { value: extra };
+}
 
 /**
  * Sentry transport: ships errors and warnings to Sentry.
@@ -36,12 +56,7 @@ function createSentryTransport(): LogTransport | null {
   // Lazy-load Sentry to avoid bundling it in development
   try {
     // Dynamic import would be ideal, but for sync logging we check if it's available
-    const Sentry = window.__SENTRY__ as
-      | {
-          captureException: (...args: unknown[]) => void;
-          captureMessage: (...args: unknown[]) => void;
-        }
-      | undefined;
+    const Sentry = window.__SENTRY__;
     if (!Sentry) return null;
 
     return (entry: LogEntry) => {
@@ -88,18 +103,17 @@ class Logger {
     this.transports = transports;
   }
 
-  private formatMessage(level: LogLevel, message: string, extra?: any): string {
-    const timestamp = new Date().toISOString();
+  private formatMessage(level: LogLevel, message: string, extra?: Record<string, unknown>): string {
     const contextStr =
       Object.keys(this.context).length > 0 ? ` [${JSON.stringify(this.context)}]` : '';
     const extraStr = extra ? ` ${this.safeStringify(extra)}` : '';
-    return `${timestamp} [${level.toUpperCase()}]${contextStr} ${message}${extraStr}`;
+    return `${new Date().toISOString()} [${level.toUpperCase()}]${contextStr} ${message}${extraStr}`;
   }
 
   /**
    * Safe stringify that handles Error objects properly.
    */
-  private safeStringify(obj: any): string {
+  private safeStringify(obj: Record<string, unknown>): string {
     if (obj instanceof Error) {
       return JSON.stringify({
         name: obj.name,
@@ -114,7 +128,7 @@ class Logger {
     }
   }
 
-  private log(level: LogLevel, message: string, extra?: any): void {
+  private log(level: LogLevel, message: string, extra?: Record<string, unknown>): void {
     const entry: LogEntry = {
       level,
       message,
@@ -154,24 +168,24 @@ class Logger {
     }
   }
 
-  debug(message: string, extra?: any): void {
-    this.log('debug', message, extra);
+  debug(message: string, extra?: unknown): void {
+    this.log('debug', message, normalizeExtra(extra));
   }
 
-  info(message: string, extra?: any): void {
-    this.log('info', message, extra);
+  info(message: string, extra?: unknown): void {
+    this.log('info', message, normalizeExtra(extra));
   }
 
-  warn(message: string, extra?: any): void {
-    this.log('warn', message, extra);
+  warn(message: string, extra?: unknown): void {
+    this.log('warn', message, normalizeExtra(extra));
   }
 
-  error(message: string, error?: Error | any, extra?: any): void {
+  error(message: string, error?: unknown, extra?: unknown): void {
     const errorInfo =
       error instanceof Error
         ? { message: error.message, stack: error.stack, name: error.name }
         : error;
-    this.log('error', message, { ...extra, error: errorInfo });
+    this.log('error', message, { ...normalizeExtra(extra), error: errorInfo });
   }
 
   child(additionalContext: LogContext): Logger {
