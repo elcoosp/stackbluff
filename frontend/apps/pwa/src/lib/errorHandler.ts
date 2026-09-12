@@ -164,7 +164,7 @@ export function handleApiError(error: unknown, context: Record<string, unknown> 
   const loggerWithContext = logger.child({ ...context, correlationId });
 
   const userMessage = getUserFriendlyMessage(error);
-  let _statusCode;
+  let _statusCode: number | undefined;
 
   if (error instanceof AppError) {
     _statusCode = error.statusCode;
