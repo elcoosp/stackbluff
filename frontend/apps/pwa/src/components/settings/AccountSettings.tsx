@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 
 export function AccountSettings() {
-  const { user, loadUser } = useAuthStore();
+  const { user } = useAuthStore();
   const [isResending, setIsResending] = useState(false);
 
   const isEmailVerified = user?.email_verified_at != null;
