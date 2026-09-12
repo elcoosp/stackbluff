@@ -16,6 +16,11 @@ interface TournamentHUDProps {
   heroStack?: number;
 }
 
+interface TournamentBlindDetail {
+  tournamentId: string;
+  blinds: { smallBlind: number; bigBlind: number } | null;
+}
+
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -61,32 +66,11 @@ export function TournamentHUD({
     }
   }, [tournamentId, payouts, setPayouts]);
 
-  if (!state) {
-    return (
-      <div className="bg-surface-container/80 backdrop-blur-md border border-white/10 rounded-xl px-4 py-3 min-w-[200px]">
-        <div className="animate-pulse h-8 w-full bg-white/5 rounded" />
-      </div>
-    );
-  }
-
-  const {
-    registered_count,
-    max_players,
-    prize_pool,
-    blind_level,
-    players_remaining,
-    next_blind_at,
-  } = state;
-
-  const playersLeft = players_remaining ?? registered_count;
-  const totalPlayers = max_players;
-  const progress = totalPlayers > 0 ? (playersLeft / totalPlayers) * 100 : 100;
-
+  // ── Blind level updates (event-driven) ──
   const [blinds, setBlinds] = useState<{ smallBlind: number; bigBlind: number } | null>(null);
-
   useEffect(() => {
     const handler = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
+      const detail = (e as CustomEvent<TournamentBlindDetail>).detail;
       if (detail.tournamentId === tournamentId && detail.blinds) {
         setBlinds(detail.blinds);
       }
@@ -95,25 +79,41 @@ export function TournamentHUD({
     return () => window.removeEventListener('tournament:blind_level', handler as EventListener);
   }, [tournamentId]);
 
-  const blindText = blinds
-    ? `${blinds.smallBlind}/${blinds.bigBlind}`
-    : t`Level ${blind_level || '?'}`;
-
+  // ── Blind countdown timer ──
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+  const nextBlindAt = state?.next_blind_at ?? null;
   useEffect(() => {
-    if (!next_blind_at) {
+    if (!nextBlindAt) {
       setTimeRemaining(null);
       return;
     }
     const update = () => {
       const now = Date.now();
-      const remaining = Math.max(0, next_blind_at - now);
+      const remaining = Math.max(0, nextBlindAt - now);
       setTimeRemaining(remaining);
     };
     update();
     const interval = setInterval(update, 200);
     return () => clearInterval(interval);
-  }, [next_blind_at]);
+  }, [nextBlindAt]);
+
+  if (!state) {
+    return (
+      <div className="bg-surface-container/80 backdrop-blur-md border border-white/10 rounded-xl px-4 py-3 min-w-[200px]">
+        <div className="animate-pulse h-8 w-full bg-white/5 rounded" />
+      </div>
+    );
+  }
+
+  const { registered_count, max_players, prize_pool, blind_level, players_remaining } = state;
+
+  const playersLeft = players_remaining ?? registered_count;
+  const totalPlayers = max_players;
+  const progress = totalPlayers > 0 ? (playersLeft / totalPlayers) * 100 : 100;
+
+  const blindText = blinds
+    ? `${blinds.smallBlind}/${blinds.bigBlind}`
+    : t`Level ${blind_level || '?'}`;
 
   return (
     <motion.div
