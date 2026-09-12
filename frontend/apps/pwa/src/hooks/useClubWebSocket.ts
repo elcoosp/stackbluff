@@ -2,7 +2,7 @@ type WebSocketConnectionStatus = 'connected' | 'reconnecting' | 'disconnected';
 
 import { getToken } from '@stackbluff/shared/auth/token';
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { WEBSOCKET } from '../lib/constants';
 import { logger } from '../lib/logger';
@@ -16,7 +16,7 @@ function useWebSocketConnection(clubId: string) {
   const [connectionStatus, setConnectionStatus] =
     useState<WebSocketConnectionStatus>('disconnected');
 
-  const connect = () => {
+  const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
     const token = getToken();
@@ -75,7 +75,7 @@ function useWebSocketConnection(clubId: string) {
     ws.onerror = (err) => {
       logger.error('Club WebSocket error', err instanceof Error ? err : undefined, { clubId });
     };
-  };
+  }, [clubId]);
 
   useEffect(() => {
     connect();
