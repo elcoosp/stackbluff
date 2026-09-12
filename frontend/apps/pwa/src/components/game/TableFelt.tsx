@@ -39,7 +39,7 @@ export const TableRail = ({ isMobile }: { isMobile?: boolean }) => {
   );
 };
 
-export const TableFelt = ({ isMobile, ...props }: { isMobile?: boolean }) => {
+export const TableFelt = ({ isMobile }: { isMobile?: boolean }) => {
   const r = isMobile ? '28px' : '100px';
 
   /* Mobile: radial gradient kept but softened — doesn't go to near-black.
