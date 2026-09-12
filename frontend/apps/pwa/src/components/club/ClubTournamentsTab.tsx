@@ -50,7 +50,7 @@ function TournamentCard({
   isRegistering: boolean;
   isUnregistering: boolean;
 }) {
-  const startDate = new Date(tournament.scheduled_start);
+  const startDate = tournament.scheduled_start ? new Date(tournament.scheduled_start) : null;
   const isFull = tournament.current_registrations >= tournament.max_players;
   const spotsLeft = tournament.max_players - tournament.current_registrations;
 
@@ -69,8 +69,9 @@ function TournamentCard({
                   <Trans>Date & Time</Trans>
                 </p>
                 <p className="text-on-surface font-medium text-sm mt-0.5">
-                  {startDate.toLocaleDateString()} at{' '}
-                  {startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {startDate
+                    ? `${startDate.toLocaleDateString()} at ${startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                    : '—'}
                 </p>
               </div>
             </div>
@@ -292,7 +293,9 @@ export function ClubTournamentsTab({ clubId, isOwner }: ClubTournamentsTabProps)
                 <div>
                   <p className="text-on-surface font-medium text-sm">{tournament.name}</p>
                   <p className="text-on-surface-variant text-xs mt-1">
-                    {new Date(tournament.scheduled_start).toLocaleDateString()}
+                    {tournament.scheduled_start
+                      ? new Date(tournament.scheduled_start).toLocaleDateString()
+                      : '—'}
                   </p>
                 </div>
                 <span className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant px-3 py-1 bg-white/5 rounded-full border border-white/10">
