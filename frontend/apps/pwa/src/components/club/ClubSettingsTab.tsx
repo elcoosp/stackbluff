@@ -97,9 +97,12 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
     mutationFn: async (data: {
       name: string;
       telegram_group_id: string | null;
-      banner_url: string | null;
-      chip_design: string | null;
-      felt_color: string | null;
+      logo_url: string | null;
+      pro_settings?: {
+        banner_url: string | null;
+        chip_preset: string;
+        felt_colour: string;
+      };
     }) => {
       return apiClient(`/clubs/${club.id}`, {
         method: 'PATCH',
@@ -177,9 +180,12 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
     const payload: {
       name: string;
       telegram_group_id: string | null;
-      banner_url: string | null;
-      chip_design: string | null;
-      felt_color: string | null;
+      logo_url: string | null;
+      pro_settings?: {
+        banner_url: string | null;
+        chip_preset: string;
+        felt_colour: string;
+      };
     } = {
       name: formData.name.trim(),
       telegram_group_id: formData.telegram_group_id.trim() || null,
