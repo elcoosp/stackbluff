@@ -38,8 +38,8 @@ export function usePurchaseFlow() {
       }
 
       shop.setDialogOpen(false);
-    } catch (error: any) {
-      const message = error.message || 'Purchase failed';
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Purchase failed';
       shop.setError(message);
       toast.error(message);
     } finally {
