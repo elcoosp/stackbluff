@@ -34,7 +34,7 @@ export function trackEvent(
   const plausible = window.plausible;
   if (typeof plausible === 'function') {
     try {
-      plausible(eventName, { ...options, props: enrichedProps });
+      plausible(eventName, { props: enrichedProps });
       analyticsLogger.debug('Plausible event fired', { eventName });
     } catch (error) {
       analyticsLogger.error('Failed to fire Plausible event', error, { eventName });
@@ -89,8 +89,11 @@ export function setAnalyticsUserContext(context: {
 // Extend Window type
 declare global {
   interface Window {
-    plausible?: (eventName: string, options?: Record<string, string | number | boolean>) => void;
+    plausible?: (
+      eventName: string,
+      options?: { props?: Record<string, string | number | boolean | undefined> },
+    ) => void;
     dataLayer?: unknown[];
-    __USER_CONTEXT__?: Record<string, string | number | boolean>;
+    __USER_CONTEXT__?: Record<string, string | number | boolean | undefined>;
   }
 }
