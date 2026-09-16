@@ -64,6 +64,7 @@ interface RawWsMessage {
     bankroll?: number | string;
     current_bet?: number | string;
     is_all_in?: boolean;
+    is_bot?: boolean;
     is_folded?: boolean;
     is_leaving?: boolean;
     is_active?: boolean;
@@ -166,6 +167,7 @@ const parseMessage = (data: RawWsMessage) => {
         stack: typeof p.stack === 'number' ? p.stack : Number(p.chips ?? p.bankroll ?? 0) || 0,
         current_bet: typeof p.current_bet === 'number' ? p.current_bet : Number(p.current_bet) || 0,
         is_all_in: p.is_all_in ?? false,
+        is_bot: p.is_bot ?? false,
         is_folded: p.is_folded ?? false,
         is_leaving: p.is_leaving || false,
         is_active: p.is_active ?? (!p.is_folded && !p.is_all_in), // FIX: Improved is_active logic
