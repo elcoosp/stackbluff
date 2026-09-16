@@ -3,7 +3,7 @@ import { Trans } from '@lingui/react/macro';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { motion } from 'framer-motion';
-import { Calendar, ChevronRight, Crown, Medal, Sparkles, TrendingUp, Trophy } from 'lucide-react';
+import { Calendar, ChevronRight, Crown, Medal, TrendingUp, Trophy } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { trackGameEvent } from '@/lib/customAnalytics';
@@ -90,9 +90,9 @@ function LeaderboardPage() {
   const podiumStyles = [
     {
       height: 'h-36',
-      color: 'text-slate-300',
-      bg: 'bg-slate-400/10',
-      border: 'border-slate-400/30',
+      color: 'text-on-surface-variant',
+      bg: 'bg-white/[0.06]',
+      border: 'border-white/20',
       icon: <Medal className="w-6 h-6" />,
     },
     {
@@ -104,9 +104,9 @@ function LeaderboardPage() {
     },
     {
       height: 'h-28',
-      color: 'text-orange-400',
-      bg: 'bg-orange-500/10',
-      border: 'border-orange-500/30',
+      color: 'text-on-surface-variant',
+      bg: 'bg-white/[0.04]',
+      border: 'border-white/15',
       icon: <Medal className="w-6 h-6" />,
     },
   ];
@@ -114,8 +114,8 @@ function LeaderboardPage() {
   return (
     <div className="relative max-w-5xl mx-auto p-4 md:p-8 pb-32 space-y-8">
       {/* Ambient Background Lighting */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-yellow-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-tertiary/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-tertiary/[0.06] rounded-full blur-[120px] pointer-events-none -z-10" />
 
       {/* Header */}
       <motion.div
@@ -123,12 +123,6 @@ function LeaderboardPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       >
-        <div className="flex items-center gap-2 mb-1">
-          <Sparkles className="w-4 h-4 text-yellow-400" />
-          <span className="text-xs font-data-mono uppercase tracking-widest text-yellow-400">
-            <Trans>Top Players</Trans>
-          </span>
-        </div>
         <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface">
           <Trans>Leaderboard</Trans>
         </h1>
@@ -142,7 +136,7 @@ function LeaderboardPage() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.1 }}
-        className="flex gap-1.5 p-1.5 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-xl w-fit"
+        className="flex gap-1.5 p-1.5 raised-panel rounded-2xl w-fit"
       >
         {(Object.keys(periodLabels) as Period[]).map((p) => (
           <button
@@ -214,11 +208,11 @@ function LeaderboardPage() {
               {/* Podium Block */}
               <div
                 className={cn(
-                  'w-full rounded-t-xl border-t-2 backdrop-blur-xl flex items-start justify-center pt-3 transition-colors cursor-pointer',
+                  'w-full rounded-t-xl border-t backdrop-blur-xl flex items-start justify-center pt-3 transition-colors cursor-pointer',
                   style.height,
                   style.bg,
                   style.border,
-                  'bg-white/5 hover:bg-white/10',
+                  'hover:bg-white/[0.07]',
                   isCurrentUser && 'ring-2 ring-tertiary ring-offset-2 ring-offset-surface',
                 )}
               >
@@ -236,7 +230,7 @@ function LeaderboardPage() {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="bg-white/5 border border-white/10 backdrop-blur-xl rounded-2xl shadow-xl p-2"
+        className="raised-panel rounded-2xl p-2"
       >
         {rest.map((entry, index) => {
           const rank = index + 4;
@@ -296,7 +290,7 @@ function LeaderboardPage() {
         >
           <Link
             to="/profile"
-            className="bg-surface/90 backdrop-blur-xl border border-tertiary/30 rounded-2xl px-6 py-4 shadow-2xl shadow-black/50 flex items-center justify-between gap-4 hover:border-tertiary/50 transition-colors group"
+            className="raised-panel rounded-2xl border-tertiary/30 px-6 py-4 flex items-center justify-between gap-4 hover:border-tertiary/50 transition-colors group"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-tertiary/10 border border-tertiary/30 flex items-center justify-center text-tertiary font-bold text-sm">
@@ -329,7 +323,7 @@ function LeaderboardPage() {
 function LeaderboardSkeleton() {
   return (
     <div className="relative max-w-5xl mx-auto p-4 md:p-8 pb-32 space-y-8 animate-pulse">
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-yellow-500/5 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-tertiary/[0.04] rounded-full blur-[120px] pointer-events-none -z-10" />
 
       <div className="space-y-2">
         <Skeleton className="h-4 w-32 bg-white/5" />
