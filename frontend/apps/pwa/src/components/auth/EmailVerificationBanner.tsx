@@ -34,18 +34,18 @@ export function EmailVerificationBanner() {
   };
 
   return (
-    <div className="relative bg-yellow-500/10 border-b border-yellow-500/20 px-4 py-3 text-center text-sm">
+    <div className="relative bg-tertiary/10 border-b border-tertiary/20 px-4 py-3 text-center text-sm">
       <button
         type="button"
         onClick={() => setIsDismissed(true)}
-        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white/80 transition-colors"
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant/60 hover:text-on-surface transition-colors"
         aria-label="Dismiss banner"
       >
         <X className="w-4 h-4" />
       </button>
       <div className="flex items-center justify-center gap-2 flex-wrap">
-        <Mail className="w-4 h-4 text-yellow-400" />
-        <span className="text-yellow-200">
+        <Mail className="w-4 h-4 text-tertiary" />
+        <span className="text-on-surface">
           Please verify your email address to unlock all features.
         </span>
         <div>
@@ -53,14 +53,14 @@ export function EmailVerificationBanner() {
             type="button"
             onClick={handleResend}
             disabled={isResending}
-            className="text-yellow-400 hover:text-yellow-300 underline-offset-2 underline font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-tertiary hover:text-tertiary-fixed underline-offset-2 underline font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isResending ? 'Sending...' : 'Resend verification email'}
           </button>
-          <span className="text-yellow-200/60"> | </span>
+          <span className="text-on-surface-variant/60"> | </span>
           <Link
             to="/settings"
-            className="text-yellow-400 hover:text-yellow-300 underline-offset-2 underline"
+            className="text-tertiary hover:text-tertiary-fixed underline-offset-2 underline"
           >
             Settings
           </Link>
