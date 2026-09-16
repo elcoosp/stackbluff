@@ -57,7 +57,7 @@ export function CreateClubModal({ open, onClose }: CreateClubModalProps) {
     <Dialog
       open={open}
       onClose={onClose}
-      className="max-w-lg p-6 md:p-8 bg-surface-container border border-white/10 backdrop-blur-2xl rounded-3xl"
+      className="raised-panel rounded-3xl max-w-lg p-6 md:p-8"
     >
       <motion.form
         onSubmit={handleSubmit}
@@ -129,7 +129,7 @@ export function CreateClubModal({ open, onClose }: CreateClubModalProps) {
           <Button
             type="submit"
             disabled={mutation.isPending || !name.trim()}
-            className="flex items-center gap-2 px-4 py-3 bg-tertiary text-on-tertiary font-label-caps text-xs hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg shadow-emerald-500/10 rounded-xl w-full sm:flex-1 justify-center disabled:opacity-40"
+            className="flex items-center gap-2 px-4 py-3 font-label-caps text-xs uppercase tracking-wider w-full sm:flex-1 justify-center disabled:opacity-40"
           >
             {mutation.isPending ? (
               <>
