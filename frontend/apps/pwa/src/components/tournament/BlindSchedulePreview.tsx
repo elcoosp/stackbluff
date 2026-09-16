@@ -24,7 +24,7 @@ export function BlindSchedulePreview({
   if (!levels || levels.length === 0) return null;
 
   return (
-    <Card className={cn('overflow-hidden', className)}>
+    <Card className={cn('raised-panel rounded-2xl overflow-hidden', className)}>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-semibold">
           <Trans>Blind Schedule</Trans>
@@ -33,7 +33,7 @@ export function BlindSchedulePreview({
       <CardContent className="p-0">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-white/5 border-b border-white/10">
+            <thead className="bg-white/[0.04] border-b border-white/10">
               <tr>
                 <th className="text-left py-2 px-3 text-[10px] font-mono text-on-surface-variant uppercase tracking-wider">
                   <Trans>Level</Trans>
