@@ -10,7 +10,6 @@ import {
   Coins,
   Crown,
   Gem,
-  Sparkles,
   Swords,
   Target,
   TrendingUp,
@@ -23,7 +22,6 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUserBadges } from '@/hooks/useBadges';
-import { cn } from '@/lib/utils';
 import type { PlayerStats } from '@/types/player-stats';
 
 export const Route = createFileRoute('/players/$userId')({
@@ -81,7 +79,7 @@ function PublicProfilePage() {
   if (statsError || !stats) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-6">
-        <Card className="max-w-md w-full p-8 text-center bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl">
+        <Card className="max-w-md w-full p-8 text-center raised-panel rounded-2xl">
           <div className="w-16 h-16 mx-auto rounded-full bg-red-500/10 flex items-center justify-center mb-4">
             <Users className="w-8 h-8 text-red-400" />
           </div>
@@ -116,8 +114,8 @@ function PublicProfilePage() {
   return (
     <div className="relative max-w-5xl mx-auto p-4 md:p-8 space-y-6">
       {/* Background Ambient Effects */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-tertiary/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-tertiary/[0.06] rounded-full blur-[120px] pointer-events-none -z-10" />
 
       {/* Back Button */}
       <motion.div
@@ -128,7 +126,7 @@ function PublicProfilePage() {
         <button
           type="button"
           onClick={() => window.history.back()}
-          className="flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-on-surface-variant hover:text-on-surface transition-colors w-fit"
+          className="flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl border border-white/10 bg-white/[0.04] hover:border-tertiary/30 hover:bg-white/[0.08] text-on-surface-variant hover:text-on-surface transition-colors w-fit"
         >
           <ArrowLeft className="w-4 h-4" />
           Back
@@ -143,8 +141,8 @@ function PublicProfilePage() {
       >
         {/* Profile Header Card */}
         <motion.div variants={itemVariants}>
-          <Card className="p-6 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl shadow-xl overflow-hidden relative">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-tertiary/5 rounded-full blur-3xl pointer-events-none" />
+          <Card className="p-6 raised-panel rounded-2xl overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-tertiary/[0.06] rounded-full blur-3xl pointer-events-none" />
             <div className="flex flex-col md:flex-row items-start md:items-center gap-6 relative z-10">
               <Avatar className="w-24 h-24 border-2 border-tertiary/30">
                 <AvatarImage src={avatarUrl} />
@@ -154,12 +152,6 @@ function PublicProfilePage() {
               </Avatar>
 
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <Sparkles className="w-4 h-4 text-tertiary" />
-                  <span className="text-xs font-data-mono uppercase tracking-widest text-tertiary">
-                    Player Profile
-                  </span>
-                </div>
                 <div className="flex items-center gap-3 flex-wrap">
                   <h1 className="font-display-lg text-3xl text-on-surface">{displayName}</h1>
                   {hasFoundingMember && (
@@ -193,7 +185,7 @@ function PublicProfilePage() {
                 </p>
                 <div className="flex flex-wrap gap-4 mt-3">
                   <div className="flex items-center gap-1.5 text-sm font-data-mono bg-black/20 px-3 py-1.5 rounded-lg border border-white/5">
-                    <Users className="w-4 h-4 text-blue-400" />
+                    <Users className="w-4 h-4 text-tertiary" />
                     <span className="text-on-surface font-bold">
                       {handsPlayed.toLocaleString()}
                     </span>
@@ -206,7 +198,7 @@ function PublicProfilePage() {
                 <Button
                   onClick={() => navigate({ to: '/profile' })}
                   variant="outline"
-                  className="bg-white/5 border-white/10 hover:bg-white/10 rounded-xl px-4 py-2 text-sm"
+                  className="rounded-xl px-4 py-2 text-sm"
                 >
                   View Full Profile
                 </Button>
@@ -221,32 +213,24 @@ function PublicProfilePage() {
             label="Hands Played"
             value={handsPlayed.toLocaleString()}
             icon={<Target className="w-4 h-4" />}
-            color="text-blue-400"
-            bg="bg-blue-500/10"
             variants={itemVariants}
           />
           <StatCard
             label="Win Rate"
             value={`${(winRate * 100).toFixed(1)}%`}
             icon={<TrendingUp className="w-4 h-4" />}
-            color="text-tertiary"
-            bg="bg-tertiary/10"
             variants={itemVariants}
           />
           <StatCard
             label="Net Profit"
             value={`${netProfit >= 0 ? '+' : ''}${netProfit.toLocaleString()}`}
             icon={<Coins className="w-4 h-4" />}
-            color="text-yellow-400"
-            bg="bg-yellow-500/10"
             variants={itemVariants}
           />
           <StatCard
             label="Biggest Pot"
             value={biggestPot.toLocaleString()}
             icon={<Gem className="w-4 h-4" />}
-            color="text-purple-400"
-            bg="bg-purple-500/10"
             variants={itemVariants}
           />
         </div>
@@ -254,10 +238,10 @@ function PublicProfilePage() {
         {/* Detailed Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <motion.div variants={itemVariants}>
-            <Card className="p-6 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl shadow-xl h-full">
+            <Card className="p-6 raised-panel rounded-2xl h-full">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-                  <Target className="w-4 h-4 text-blue-400" />
+                <div className="w-8 h-8 rounded-full bg-tertiary/10 flex items-center justify-center border border-tertiary/20">
+                  <Target className="w-4 h-4 text-tertiary" />
                 </div>
                 <h3 className="font-headline-md text-base text-on-surface">Preflop Aggression</h3>
               </div>
@@ -274,10 +258,10 @@ function PublicProfilePage() {
           </motion.div>
 
           <motion.div variants={itemVariants}>
-            <Card className="p-6 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl shadow-xl h-full">
+            <Card className="p-6 raised-panel rounded-2xl h-full">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
-                  <Swords className="w-4 h-4 text-purple-400" />
+                <div className="w-8 h-8 rounded-full bg-tertiary/10 flex items-center justify-center border border-tertiary/20">
+                  <Swords className="w-4 h-4 text-tertiary" />
                 </div>
                 <h3 className="font-headline-md text-base text-on-surface">Showdowns</h3>
               </div>
@@ -296,10 +280,10 @@ function PublicProfilePage() {
 
         {/* Badges Section */}
         <motion.div variants={itemVariants}>
-          <Card className="p-6 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl shadow-xl">
+          <Card className="p-6 raised-panel rounded-2xl">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-8 h-8 rounded-full bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20">
-                <Award className="w-4 h-4 text-yellow-400" />
+              <div className="w-8 h-8 rounded-full bg-tertiary/10 flex items-center justify-center border border-tertiary/20">
+                <Award className="w-4 h-4 text-tertiary" />
               </div>
               <h3 className="font-headline-md text-base text-on-surface">Badges</h3>
             </div>
@@ -332,27 +316,17 @@ function StatCard({
   label,
   value,
   icon,
-  color,
-  bg,
   variants,
 }: {
   label: string;
   value: string | number;
   icon: React.ReactNode;
-  color: string;
-  bg: string;
   variants: Variants;
 }) {
   return (
     <motion.div variants={variants}>
-      <Card className="p-5 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl shadow-xl h-full hover:bg-white/[0.07] transition-colors">
-        <div
-          className={cn(
-            'w-8 h-8 rounded-full flex items-center justify-center mb-3 border border-white/10',
-            bg,
-            color,
-          )}
-        >
+      <Card className="p-5 raised-panel rounded-2xl h-full hover:border-tertiary/25 transition-colors">
+        <div className="w-8 h-8 rounded-full bg-tertiary/10 border border-tertiary/20 text-tertiary flex items-center justify-center mb-3">
           {icon}
         </div>
         <div className="text-2xl font-bold font-data-mono text-on-surface truncate">{value}</div>
@@ -405,7 +379,7 @@ function StatBar({
 function PublicProfileSkeleton() {
   return (
     <div className="relative max-w-5xl mx-auto p-4 md:p-8 space-y-6 animate-pulse">
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/5 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-tertiary/[0.04] rounded-full blur-[120px] pointer-events-none -z-10" />
 
       <Skeleton className="h-10 w-24 bg-white/5 rounded-xl" />
 
