@@ -50,7 +50,7 @@ function PurchaseHistoryPage() {
   if (error || !purchases) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-6">
-        <Card className="max-w-md w-full p-6 text-center">
+        <Card className="max-w-md w-full p-6 text-center raised-panel rounded-2xl">
           <h2 className="text-xl font-semibold text-red-400 mb-2">
             <Trans>Error</Trans>
           </h2>
@@ -77,7 +77,7 @@ function PurchaseHistoryPage() {
             <Trans>Purchase History</Trans>
           </h1>
         </div>
-        <Card className="p-12 text-center">
+        <Card className="p-12 text-center raised-panel rounded-2xl">
           <Coins className="w-12 h-12 text-on-surface-variant/30 mx-auto mb-4" />
           <p className="text-on-surface-variant">
             <Trans>No purchases yet.</Trans>
@@ -124,7 +124,7 @@ function PurchaseHistoryPage() {
           return (
             <Card
               key={purchase.id}
-              className="p-4 bg-white/5 border-white/10 hover:border-tertiary/30 transition-colors"
+              className="p-4 raised-panel rounded-2xl hover:border-tertiary/30 transition-colors"
             >
               <div className="flex flex-col md:flex-row md:items-center gap-4">
                 <div className="flex-1 min-w-0">
