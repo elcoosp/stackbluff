@@ -144,7 +144,7 @@ export function AdminCreateTournament({ open, onClose, onSuccess }: AdminCreateT
         <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/5 shrink-0">
           <div>
             <h2 className="text-lg font-semibold text-on-surface flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-yellow-400" />
+              <Trophy className="w-5 h-5 text-on-surface-variant" />
               <Trans>Create Tournament</Trans>
             </h2>
             <p className="text-[11px] text-on-surface-variant mt-0.5">
@@ -371,7 +371,7 @@ export function AdminCreateTournament({ open, onClose, onSuccess }: AdminCreateT
           <Button
             type="submit"
             disabled={mutation.isPending}
-            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-medium"
+            className="bg-gradient-to-b from-tertiary to-tertiary-container text-on-tertiary hover:from-tertiary-fixed hover:to-tertiary font-label-caps font-medium"
           >
             {mutation.isPending ? (
               <>
