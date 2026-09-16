@@ -32,7 +32,7 @@ function getStatusColor(status: string): string {
     case 'Registering':
       return 'text-tertiary border-tertiary/40';
     case 'Running':
-      return 'text-blue-400 border-blue-400/40';
+      return 'text-tertiary border-tertiary/40';
     case 'Completed':
       return 'text-gray-400 border-gray-400/40';
     default:
@@ -129,7 +129,7 @@ export function TournamentCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="flex flex-col lg:grid lg:grid-cols-12 items-start lg:items-center px-4 lg:px-8 py-4 lg:py-5 border border-white/10 rounded-xl razor-highlight group hover:border-tertiary/40 transition-all duration-300 gap-3 lg:gap-0 overflow-hidden relative"
+      className="flex flex-col lg:grid lg:grid-cols-12 items-start lg:items-center px-4 lg:px-8 py-4 lg:py-5 raised-panel rounded-2xl group hover:border-tertiary/30 transition-all duration-300 gap-3 lg:gap-0 overflow-hidden relative"
     >
       {/* Background Image Layer - Blurs by default, unblurs on hover */}
       <div
