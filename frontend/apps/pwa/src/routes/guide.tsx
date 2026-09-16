@@ -9,7 +9,6 @@ import {
   Crown,
   Gem,
   ListChecks,
-  Sparkles,
   Target,
   Users,
 } from 'lucide-react';
@@ -122,8 +121,8 @@ function GuidePage() {
   return (
     <div className="relative max-w-5xl mx-auto p-4 md:p-8 space-y-8">
       {/* Background Ambient Effects */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-tertiary/8 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-tertiary/5 rounded-full blur-[120px] pointer-events-none -z-10" />
 
       {/* Header */}
       <motion.div
@@ -131,12 +130,6 @@ function GuidePage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       >
-        <div className="flex items-center gap-2 mb-1">
-          <Sparkles className="w-4 h-4 text-blue-400" />
-          <span className="text-xs font-data-mono uppercase tracking-widest text-blue-400">
-            <Trans>Learn & Master</Trans>
-          </span>
-        </div>
         <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface flex items-center gap-3">
           <Trans>Poker Guide</Trans>
         </h1>
@@ -188,10 +181,10 @@ function GuidePage() {
                 <motion.div key={hand.name} variants={itemVariants}>
                   <Card
                     className={cn(
-                      'p-5 border backdrop-blur-xl rounded-2xl transition-all duration-300 hover:bg-white/[0.07] group relative overflow-hidden',
+                      'p-5 rounded-2xl transition-all duration-300 group relative overflow-hidden',
                       isTop
-                        ? 'bg-gradient-to-br from-yellow-500/10 to-orange-500/5 border-yellow-500/20'
-                        : 'bg-white/5 border-white/10',
+                        ? 'bg-gradient-to-br from-yellow-500/10 to-orange-500/5 border border-yellow-500/20 hover:border-yellow-500/30'
+                        : 'raised-panel hover:bg-white/[0.07]',
                     )}
                   >
                     <div className="flex items-center gap-4">
@@ -235,7 +228,7 @@ function GuidePage() {
           >
             {POSITIONS.map((pos) => (
               <motion.div key={pos.name} variants={itemVariants}>
-                <Card className="p-5 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl h-full hover:bg-white/[0.07] transition-colors">
+                <Card className="p-5 raised-panel rounded-2xl h-full hover:bg-white/[0.05] transition-colors">
                   <div className="flex items-center gap-3 mb-2">
                     <div
                       className={cn(
@@ -268,7 +261,7 @@ function GuidePage() {
           >
             {TERMS.map((item, _idx) => (
               <motion.div key={item.term} variants={itemVariants}>
-                <Card className="p-4 bg-white/5 border-white/10 backdrop-blur-xl rounded-xl flex items-center gap-4 hover:bg-white/[0.07] transition-colors">
+                <Card className="p-4 raised-panel rounded-xl flex items-center gap-4 hover:bg-white/[0.07] transition-colors">
                   <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10 flex-shrink-0">
                     <ChevronRight className="w-4 h-4 text-tertiary" />
                   </div>
@@ -293,10 +286,10 @@ function GuidePage() {
             className="grid grid-cols-1 md:grid-cols-2 gap-6"
           >
             <motion.div variants={itemVariants}>
-              <Card className="p-6 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl h-full">
+              <Card className="p-6 raised-panel rounded-2xl h-full">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-                    <Target className="w-5 h-5 text-blue-400" />
+                  <div className="w-10 h-10 rounded-full bg-tertiary/10 flex items-center justify-center border border-tertiary/20">
+                    <Target className="w-5 h-5 text-tertiary" />
                   </div>
                   <h3 className="font-headline-md text-base text-on-surface">
                     <Trans>Preflop Basics</Trans>
@@ -321,10 +314,10 @@ function GuidePage() {
             </motion.div>
 
             <motion.div variants={itemVariants}>
-              <Card className="p-6 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl h-full">
+              <Card className="p-6 raised-panel rounded-2xl h-full">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
-                    <Gem className="w-5 h-5 text-purple-400" />
+                  <div className="w-10 h-10 rounded-full bg-tertiary/10 flex items-center justify-center border border-tertiary/20">
+                    <Gem className="w-5 h-5 text-tertiary" />
                   </div>
                   <h3 className="font-headline-md text-base text-on-surface">
                     <Trans>Postflop Fundamentals</Trans>
