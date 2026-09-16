@@ -70,11 +70,16 @@ export function Header() {
     <nav className="fixed top-0 w-full z-[100] flex justify-between items-center px-2 sm:px-4 md:px-8 h-16 border-b border-white/10 bg-black/80 backdrop-blur-md">
       <Link
         to="/"
-        className="font-display-lg text-xl md:text-2xl tracking-tighter uppercase"
+        className="group font-display-lg text-xl md:text-2xl tracking-tighter uppercase transition-colors"
         style={{ color: '#e2e2e2' }}
       >
         <span className="md:hidden">SB</span>
-        <span className="hidden md:inline">STACKBLUFF</span>
+        <span className="hidden md:inline">
+          STACKBLUFF
+          <span className="inline-block ml-1 text-tertiary opacity-70 group-hover:opacity-100 transition-opacity">
+            .
+          </span>
+        </span>
       </Link>
 
       <div className="flex items-center gap-2 md:gap-4 h-full">
@@ -132,7 +137,7 @@ export function Header() {
                       animate="animate"
                       exit="exit"
                       variants={dropdownVariants}
-                      className="absolute right-0 top-full mt-2 w-56 max-w-[calc(100vw-1rem)] bg-surface-container border border-outline-variant rounded-lg shadow-xl py-2 z-[2000] backdrop-blur-md origin-top-right"
+                      className="absolute right-0 top-full mt-2 w-56 max-w-[calc(100vw-1rem)] raised-panel rounded-xl py-2 z-[2000] origin-top-right"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="px-4 py-2 border-b border-outline-variant mb-1">
@@ -331,7 +336,7 @@ function MenuItem({
     <button
       type="button"
       onClick={onClick}
-      className="w-full flex items-center gap-3 px-4 py-2 text-on-surface hover:bg-surface-container-high rounded-lg transition-colors"
+      className="w-full flex items-center gap-3 px-4 py-2 text-on-surface hover:bg-white/[0.06] rounded-lg transition-colors"
     >
       {icon}
       <span className="font-label-caps text-xs">{label}</span>
