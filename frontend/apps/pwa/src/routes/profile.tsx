@@ -16,7 +16,6 @@ import {
   Gem,
   History,
   Settings,
-  Sparkles,
   Swords,
   Target,
   TrendingUp,
@@ -106,8 +105,8 @@ function ProfilePage() {
   return (
     <div className="relative max-w-5xl mx-auto p-4 md:p-8 space-y-6">
       {/* Background Ambient Effects */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-tertiary/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-tertiary/[0.06] rounded-full blur-[120px] pointer-events-none -z-10" />
 
       <motion.div
         variants={containerVariants}
@@ -117,20 +116,14 @@ function ProfilePage() {
       >
         {/* Profile Header Card */}
         <motion.div variants={itemVariants}>
-          <Card className="p-6 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl shadow-xl overflow-hidden relative">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-tertiary/5 rounded-full blur-3xl pointer-events-none" />
+          <Card className="raised-panel rounded-2xl p-6 overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-tertiary/[0.06] rounded-full blur-3xl pointer-events-none" />
             <div className="flex flex-col md:flex-row items-start md:items-center gap-6 relative z-10">
               <AvatarUpload onAvatarUpdated={() => window.location.reload()} />
 
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <Sparkles className="w-4 h-4 text-tertiary" />
-                  <span className="text-xs font-data-mono uppercase tracking-widest text-tertiary">
-                    <Trans>Player Profile</Trans>
-                  </span>
-                </div>
                 <div className="flex items-center gap-3 flex-wrap">
-                  <h1 className="font-display-lg text-3xl text-on-surface">{displayName}</h1>
+                  <h1 className="font-display-lg text-3xl text-on-surface tracking-tight">{displayName}</h1>
                   {hasFoundingMember && (
                     <Badge
                       variant="outline"
@@ -153,8 +146,8 @@ function ProfilePage() {
                   <Trans>Member since {new Date().toLocaleDateString()}</Trans>
                 </p>
                 <div className="flex flex-wrap gap-4 mt-3">
-                  <div className="flex items-center gap-1.5 text-sm font-data-mono bg-black/20 px-3 py-1.5 rounded-lg border border-white/5">
-                    <Coins className="w-4 h-4 text-yellow-400" />
+                  <div className="flex items-center gap-1.5 text-sm font-data-mono bg-black/30 px-3 py-1.5 rounded-lg border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+                    <Coins className="w-4 h-4 text-tertiary" />
                     <span className="text-on-surface font-bold">{balance.toLocaleString()}</span>
                     <span className="text-on-surface-variant text-xs">
                       <Trans>chips</Trans>
@@ -166,7 +159,7 @@ function ProfilePage() {
               <Button
                 onClick={() => navigate({ to: '/settings' })}
                 variant="outline"
-                className="bg-white/5 border-white/10 hover:bg-white/10 rounded-xl px-4 py-2 text-sm"
+                className="border-white/15 hover:border-tertiary/50 hover:text-tertiary hover:bg-tertiary/10 rounded-xl px-4 py-2 text-sm"
               >
                 <Edit className="w-4 h-4 mr-2" />
                 <Trans>Edit Profile</Trans>
@@ -188,7 +181,7 @@ function ProfilePage() {
             <Link
               key={link.to}
               to={link.to}
-              className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-on-surface-variant hover:text-on-surface transition-colors"
+              className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-xl bg-white/[0.05] border border-white/10 hover:bg-white/[0.08] hover:border-tertiary/30 text-on-surface-variant hover:text-on-surface transition-colors"
             >
               <link.icon className="w-4 h-4" />
               {link.label}
@@ -202,8 +195,8 @@ function ProfilePage() {
             label={t`Hands Played`}
             value={handsPlayed.toLocaleString()}
             icon={<Target className="w-4 h-4" />}
-            color="text-blue-400"
-            bg="bg-blue-500/10"
+            color="text-tertiary"
+            bg="bg-tertiary/10"
             variants={itemVariants}
           />
           <StatCard
@@ -218,16 +211,16 @@ function ProfilePage() {
             label={t`Net Profit`}
             value={`${netProfit >= 0 ? '+' : ''}${netProfit.toLocaleString()}`}
             icon={<Coins className="w-4 h-4" />}
-            color="text-yellow-400"
-            bg="bg-yellow-500/10"
+            color="text-tertiary"
+            bg="bg-tertiary/10"
             variants={itemVariants}
           />
           <StatCard
             label={t`Biggest Pot`}
             value={biggestPot.toLocaleString()}
             icon={<Gem className="w-4 h-4" />}
-            color="text-purple-400"
-            bg="bg-purple-500/10"
+            color="text-tertiary"
+            bg="bg-tertiary/10"
             variants={itemVariants}
           />
         </div>
@@ -235,10 +228,10 @@ function ProfilePage() {
         {/* Detailed Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <motion.div variants={itemVariants}>
-            <Card className="p-6 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl shadow-xl h-full">
+            <Card className="p-6 raised-panel rounded-2xl h-full">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-                  <Target className="w-4 h-4 text-blue-400" />
+                <div className="w-8 h-8 rounded-full bg-tertiary/10 flex items-center justify-center border border-tertiary/20">
+                  <Target className="w-4 h-4 text-tertiary" />
                 </div>
                 <h3 className="font-headline-md text-base text-on-surface">
                   <Trans>Preflop Aggression</Trans>
@@ -261,10 +254,10 @@ function ProfilePage() {
           </motion.div>
 
           <motion.div variants={itemVariants}>
-            <Card className="p-6 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl shadow-xl h-full">
+            <Card className="p-6 raised-panel rounded-2xl h-full">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
-                  <Swords className="w-4 h-4 text-purple-400" />
+                <div className="w-8 h-8 rounded-full bg-tertiary/10 flex items-center justify-center border border-tertiary/20">
+                  <Swords className="w-4 h-4 text-tertiary" />
                 </div>
                 <h3 className="font-headline-md text-base text-on-surface">
                   <Trans>Showdowns</Trans>
@@ -285,10 +278,10 @@ function ProfilePage() {
 
         {/* Badges Section */}
         <motion.div variants={itemVariants}>
-          <Card className="p-6 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl shadow-xl">
+          <Card className="p-6 raised-panel rounded-2xl">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-8 h-8 rounded-full bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20">
-                <Award className="w-4 h-4 text-yellow-400" />
+              <div className="w-8 h-8 rounded-full bg-tertiary/10 flex items-center justify-center border border-tertiary/20">
+                <Award className="w-4 h-4 text-tertiary" />
               </div>
               <h3 className="font-headline-md text-base text-on-surface">
                 <Trans>Badges</Trans>
@@ -317,7 +310,7 @@ function ProfilePage() {
 
         {/* Season Cards Section */}
         <motion.div variants={itemVariants}>
-          <Card className="p-6 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl shadow-xl">
+          <Card className="p-6 raised-panel rounded-2xl">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-8 h-8 rounded-full bg-tertiary/10 flex items-center justify-center border border-tertiary/20">
                 <Calendar className="w-4 h-4 text-tertiary" />
@@ -351,11 +344,10 @@ function StatCard({
 }) {
   return (
     <motion.div variants={variants}>
-      <Card className="p-5 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl shadow-xl h-full hover:bg-white/[0.07] transition-colors">
+      <Card className="raised-panel rounded-2xl p-5 h-full hover:border-tertiary/25 transition-colors">
         <div
           className={cn(
-            'w-8 h-8 rounded-full flex items-center justify-center mb-3 border border-white/10',
-            bg,
+            'w-8 h-8 rounded-full flex items-center justify-center mb-3 border border-tertiary/20 bg-tertiary/10 text-tertiary',
             color,
           )}
         >
@@ -411,7 +403,7 @@ function StatBar({
 function ProfileSkeleton() {
   return (
     <div className="relative max-w-5xl mx-auto p-4 md:p-8 space-y-6 animate-pulse">
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/5 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-tertiary/[0.04] rounded-full blur-[120px] pointer-events-none -z-10" />
 
       <Skeleton className="h-40 bg-white/5 rounded-2xl" />
 
