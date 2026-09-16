@@ -50,10 +50,10 @@ export function OfflineIndicator() {
           exit={{ y: -100, opacity: 0 }}
           transition={{ type: 'spring', damping: 30, stiffness: 400 }}
           className={cn(
-            'fixed top-16 left-0 right-0 z-[6000] p-3 text-center text-sm font-medium backdrop-blur-md border-b transition-colors',
+            'fixed top-16 left-0 right-0 z-[6000] p-3 text-center text-sm font-medium backdrop-blur-xl border-b transition-colors',
             isOffline
-              ? 'bg-red-500/20 border-red-500/30 text-red-400'
-              : 'bg-green-500/20 border-green-500/30 text-green-400',
+              ? 'bg-red-500/10 border-red-500/20 text-red-400'
+              : 'bg-tertiary/10 border-tertiary/20 text-tertiary',
           )}
         >
           <div className="max-w-md mx-auto flex items-center justify-center gap-3">
