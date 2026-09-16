@@ -4,7 +4,6 @@ import { authApi } from '@stackbluff/shared/auth/api';
 import { setToken } from '@stackbluff/shared/auth/token';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { GlassPanel } from '@stackbluff/shared/ui/GlassPanel';
-import { LiquidMetalButton } from '@stackbluff/shared/ui/LiquidMetalButton';
 import { useForm } from '@tanstack/react-form';
 import { useMutation } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect, useNavigate } from '@tanstack/react-router';
@@ -13,6 +12,7 @@ import { Lock, Mail } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { trackGameEvent } from '@/lib/customAnalytics';
@@ -107,9 +107,6 @@ function LoginPage() {
           <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter">
             <Trans>STACKBLUFF</Trans>
           </h1>
-          <p className="font-data-mono text-xs text-outline mt-2 tracking-widest">
-            <Trans>SECURE LOGIN</Trans>
-          </p>
         </div>
         <GlassPanel>
           <form
@@ -121,15 +118,15 @@ function LoginPage() {
           >
             {isMiniApp && (
               <div className="space-y-4">
-                <LiquidMetalButton
+                <Button
                   type="button"
                   onClick={handleTelegramLogin}
                   disabled={telegramMutation.isPending}
-                  variant="emerald"
-                  className="w-full"
+                  variant="default"
+                  className="w-full h-11 rounded-xl font-data-mono tracking-[0.2em] uppercase"
                 >
                   {telegramMutation.isPending ? t`AUTHENTICATING...` : t`LOGIN WITH TELEGRAM`}
-                </LiquidMetalButton>
+                </Button>
                 <div className="relative my-4">
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t border-white/10" />
@@ -239,14 +236,14 @@ function LoginPage() {
                   </div>
                 )}
 
-                <LiquidMetalButton
+                <Button
                   type="submit"
                   disabled={loginMutation.isPending || isLocked}
-                  variant="silver"
-                  className="w-full"
+                  variant="default"
+                  className="w-full h-11 rounded-xl font-data-mono tracking-[0.2em] uppercase"
                 >
                   {loginMutation.isPending ? t`AUTHENTICATING...` : t`SIGN IN`}
-                </LiquidMetalButton>
+                </Button>
               </>
             )}
 
