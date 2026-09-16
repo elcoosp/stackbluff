@@ -93,7 +93,7 @@ export function ClubPage() {
   if (!club) {
     return (
       <div className="relative max-w-5xl mx-auto p-4 md:p-8">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-tertiary/10 rounded-full blur-[120px] pointer-events-none -z-10" />
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -123,8 +123,8 @@ export function ClubPage() {
     <ErrorBoundary>
       <div className="relative max-w-5xl mx-auto p-4 md:p-8 space-y-8">
         {/* Background Ambient Effects */}
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-tertiary/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-tertiary/[0.06] rounded-full blur-[120px] pointer-events-none -z-10" />
 
         <motion.div
           variants={containerVariants}
@@ -138,7 +138,7 @@ export function ClubPage() {
 
           <motion.div variants={itemVariants}>
             <ClubTabs tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab}>
-              <GlassPanel className="p-6 md:p-8 bg-white/5 border border-white/10 backdrop-blur-xl rounded-2xl relative overflow-hidden">
+              <GlassPanel className="p-6 md:p-8 raised-panel rounded-2xl relative overflow-hidden">
                 {activeTab === 'leaderboard' && <ClubLeaderboardTab clubId={clubId} />}
                 {activeTab === 'tournaments' && (
                   <ClubTournamentsTab clubId={clubId} isOwner={club.is_owner} />
