@@ -92,10 +92,10 @@ function SettingsPage() {
             <Link
               key={section.to}
               to={section.to}
-              className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 hover:border-tertiary/30 transition-all group"
+              className="flex items-center justify-between p-4 raised-panel rounded-xl hover:border-tertiary/30 transition-all group"
             >
               <div className="flex items-center gap-4">
-                <div className="p-2 bg-white/5 rounded-lg">
+                <div className="p-2 bg-tertiary/10 border border-tertiary/15 rounded-lg">
                   <Icon className="w-5 h-5 text-tertiary" />
                 </div>
                 <div>
