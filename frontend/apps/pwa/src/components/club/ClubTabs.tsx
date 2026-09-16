@@ -22,7 +22,7 @@ export function ClubTabs({ tabs, activeTab, onTabChange, children }: ClubTabsPro
   return (
     <>
       {/* Tab Navigation */}
-      <div className="flex w-full gap-1 bg-white/5 border border-white/10 rounded-2xl p-1.5 backdrop-blur-xl h-auto mb-6">
+      <div className="flex w-full gap-1 raised-panel rounded-2xl p-1.5 h-auto mb-6">
         {visibleTabs.map((tab) => (
           <button
             type="button"
@@ -31,8 +31,8 @@ export function ClubTabs({ tabs, activeTab, onTabChange, children }: ClubTabsPro
             className={cn(
               'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all',
               activeTab === tab.key
-                ? 'bg-white/10 text-on-surface shadow-sm'
-                : 'text-on-surface-variant hover:text-on-surface',
+                ? 'bg-surface-container-high text-on-surface shadow-[0_1px_0_rgba(255,255,255,0.06)_inset,0_2px_6px_rgba(0,0,0,0.3)]'
+                : 'text-on-surface-variant hover:text-on-surface hover:bg-white/[0.05]',
             )}
           >
             {tab.label}
