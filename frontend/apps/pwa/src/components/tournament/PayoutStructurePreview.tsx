@@ -39,10 +39,10 @@ export function PayoutStructurePreview({
   const sorted = [...entries].sort((a, b) => a.position - b.position);
 
   return (
-    <Card className={cn('overflow-hidden', className)}>
+    <Card className={cn('raised-panel rounded-2xl overflow-hidden', className)}>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-semibold flex items-center gap-2">
-          <Trophy className="w-4 h-4 text-yellow-400" />
+          <Trophy className="w-4 h-4 text-on-surface-variant" />
           <Trans>Payout Structure</Trans>
         </CardTitle>
       </CardHeader>
