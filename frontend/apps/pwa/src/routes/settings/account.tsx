@@ -135,7 +135,7 @@ function AccountSettingsPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <Card>
+        <Card className="raised-panel rounded-2xl">
           <CardHeader>
             <CardTitle className="text-sm font-semibold text-on-surface">
               <Trans>Display Name</Trans>
@@ -151,7 +151,7 @@ function AccountSettingsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="raised-panel rounded-2xl">
           <CardHeader>
             <CardTitle className="text-sm font-semibold text-on-surface">
               <Trans>Change Password</Trans>
@@ -188,7 +188,7 @@ function AccountSettingsPage() {
         </Card>
 
         {/* Language Selector */}
-        <Card>
+        <Card className="raised-panel rounded-2xl">
           <CardHeader>
             <CardTitle className="text-sm font-semibold text-on-surface flex items-center gap-2">
               <Globe className="w-4 h-4 text-tertiary" />
