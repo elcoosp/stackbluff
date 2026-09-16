@@ -107,7 +107,7 @@ function PrivacySettingsPage() {
       </p>
 
       {/* Data Export */}
-      <Card>
+      <Card className="raised-panel rounded-2xl">
         <CardHeader>
           <CardTitle className="text-sm font-semibold text-on-surface flex items-center gap-2">
             <Download className="w-4 h-4 text-tertiary" />
@@ -149,7 +149,7 @@ function PrivacySettingsPage() {
       </Card>
 
       {/* Account Deletion */}
-      <Card className="border-red-500/20 bg-red-500/5">
+      <Card className="raised-panel rounded-2xl border-red-500/20 bg-red-500/5">
         <CardHeader>
           <CardTitle className="text-sm font-semibold text-red-400 flex items-center gap-2">
             <Trash2 className="w-4 h-4" />
@@ -214,7 +214,7 @@ function PrivacySettingsPage() {
       {/* Confirmation Dialog */}
       {isDeletionDialogOpen && (
         <div className="fixed inset-0 z-[1000] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <Card className="max-w-md w-full p-6 bg-surface-container border border-white/10">
+          <Card className="max-w-md w-full p-6 raised-panel rounded-2xl">
             <h3 className="text-lg font-semibold text-on-surface mb-2">
               <Trans>Confirm Account Deletion</Trans>
             </h3>
