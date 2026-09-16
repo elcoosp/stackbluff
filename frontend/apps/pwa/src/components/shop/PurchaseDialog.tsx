@@ -34,7 +34,7 @@ export function PurchaseDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-surface-container border border-white/10 rounded-xl max-w-md p-6">
+      <DialogContent className="raised-panel rounded-2xl max-w-md p-6">
         <DialogHeader>
           <DialogTitle className="text-on-surface text-xl font-semibold text-center">
             <Trans>Confirm Purchase</Trans>
