@@ -20,7 +20,7 @@ function PrivacyPage() {
         </h1>
       </div>
 
-      <Card>
+      <Card className="raised-panel rounded-2xl">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-on-surface">
             <Trans>1. Information We Collect</Trans>
@@ -37,7 +37,7 @@ function PrivacyPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="raised-panel rounded-2xl">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-on-surface">
             <Trans>2. How We Use Your Information</Trans>
@@ -61,7 +61,7 @@ function PrivacyPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="raised-panel rounded-2xl">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-on-surface">
             <Trans>3. Data Retention</Trans>
@@ -77,7 +77,7 @@ function PrivacyPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="raised-panel rounded-2xl">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-on-surface">
             <Trans>4. Cookies and Tracking</Trans>
@@ -93,7 +93,7 @@ function PrivacyPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="raised-panel rounded-2xl">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-on-surface">
             <Trans>5. Data Sharing</Trans>
@@ -110,7 +110,7 @@ function PrivacyPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="raised-panel rounded-2xl">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-on-surface">
             <Trans>6. Your Rights</Trans>
@@ -139,7 +139,7 @@ function PrivacyPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="raised-panel rounded-2xl">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-on-surface">
             <Trans>7. Security</Trans>
@@ -155,7 +155,7 @@ function PrivacyPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="raised-panel rounded-2xl">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-on-surface">
             <Trans>8. Changes to This Policy</Trans>
@@ -171,7 +171,7 @@ function PrivacyPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="raised-panel rounded-2xl">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-on-surface">
             <Trans>9. Contact Us</Trans>
