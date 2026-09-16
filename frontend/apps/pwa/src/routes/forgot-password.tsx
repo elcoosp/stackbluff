@@ -2,7 +2,6 @@ import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import { authApi } from '@stackbluff/shared/auth/api';
 import { GlassPanel } from '@stackbluff/shared/ui/GlassPanel';
-import { LiquidMetalButton } from '@stackbluff/shared/ui/LiquidMetalButton';
 import { useForm } from '@tanstack/react-form';
 import { useMutation } from '@tanstack/react-query';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
@@ -11,6 +10,7 @@ import { ArrowLeft, Mail } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
@@ -51,9 +51,6 @@ function ForgotPasswordPage() {
             <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter">
               <Trans>STACKBLUFF</Trans>
             </h1>
-            <p className="font-data-mono text-xs text-outline mt-2 tracking-widest">
-              <Trans>PASSWORD RESET</Trans>
-            </p>
           </div>
           <GlassPanel>
             <div className="space-y-6 p-2">
@@ -65,15 +62,15 @@ function ForgotPasswordPage() {
                   <Trans>If the email exists, we've sent a password reset link.</Trans>
                 </p>
               </div>
-              <LiquidMetalButton
+              <Button
                 type="button"
-                variant="silver"
-                className="w-full"
+                variant="default"
+                className="w-full h-11 rounded-xl font-data-mono tracking-[0.2em] uppercase"
                 onClick={() => navigate({ to: '/login' })}
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 <Trans>Back to Sign In</Trans>
-              </LiquidMetalButton>
+              </Button>
             </div>
           </GlassPanel>
         </div>
@@ -89,9 +86,6 @@ function ForgotPasswordPage() {
           <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter">
             <Trans>STACKBLUFF</Trans>
           </h1>
-          <p className="font-data-mono text-xs text-outline mt-2 tracking-widest">
-            <Trans>RESET PASSWORD</Trans>
-          </p>
         </div>
         <GlassPanel>
           <form
@@ -143,14 +137,14 @@ function ForgotPasswordPage() {
               )}
             </form.Field>
 
-            <LiquidMetalButton
+            <Button
               type="submit"
               disabled={mutation.isPending}
-              variant="silver"
-              className="w-full"
+              variant="default"
+              className="w-full h-11 rounded-xl font-data-mono tracking-[0.2em] uppercase"
             >
               {mutation.isPending ? t`SENDING...` : t`SEND RESET LINK`}
-            </LiquidMetalButton>
+            </Button>
 
             <div className="text-center pt-4">
               <Link
