@@ -115,7 +115,7 @@ export function NotificationPreferences() {
 
   if (isLoading) {
     return (
-      <section className="p-6 rounded-xl bg-white/5 border border-white/10">
+      <section className="p-6 raised-panel rounded-2xl">
         <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
           <Bell className="w-5 h-5 text-tertiary" />
           <Trans>Notification Preferences</Trans>
@@ -130,12 +130,12 @@ export function NotificationPreferences() {
   }
 
   return (
-    <section className="p-6 rounded-xl bg-white/5 border border-white/10">
+    <section className="p-6 raised-panel rounded-2xl">
       <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
         <Bell className="w-5 h-5 text-tertiary" />
         <Trans>Notification Preferences</Trans>
       </h3>
-      <p className="text-sm text-gray-400 mb-4">
+      <p className="text-sm text-on-surface-variant mb-4">
         <Trans>Choose which notifications you receive. Changes are saved to your account.</Trans>
       </p>
 
