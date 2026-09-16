@@ -137,12 +137,7 @@ export function InstallPrompt() {
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 100, opacity: 0 }}
         transition={{ type: 'spring', damping: 30, stiffness: 400 }}
-        className="fixed bottom-0 left-0 right-0 z-[6000] p-4 bg-surface-container border-t border-white/10 shadow-2xl backdrop-blur-md"
-        style={{
-          background: 'rgba(10, 10, 10, 0.92)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-        }}
+        className="fixed bottom-0 left-0 right-0 z-[6000] p-4 raised-panel rounded-t-2xl border-t border-tertiary/25 shadow-[0_-16px_60px_rgba(0,0,0,0.55)]"
       >
         <div className="max-w-md mx-auto">
           <div className="flex items-start gap-4">
