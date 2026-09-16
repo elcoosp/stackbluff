@@ -150,7 +150,7 @@ export default function ShopPage() {
                 'px-5 py-2 rounded-lg text-sm font-label-caps uppercase tracking-wider transition-all duration-200',
                 category === cat
                   ? 'bg-tertiary text-on-tertiary shadow-lg shadow-emerald-500/20'
-                  : 'text-outline hover:text-on-surface hover:bg-white/5 border border-transparent hover:border-white/10',
+                  : 'text-outline hover:text-on-surface hover:bg-white/5 border border-transparent hover:border-tertiary/30',
               )}
             >
               {CATEGORY_LABELS[cat]}
@@ -161,7 +161,7 @@ export default function ShopPage() {
         {/* Products Grid */}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredProducts.length === 0 ? (
-            <div className="col-span-full flex flex-col items-center justify-center py-24 text-on-surface-variant border border-dashed border-white/10 rounded-xl">
+            <div className="col-span-full flex flex-col items-center justify-center py-24 text-on-surface-variant border border-dashed border-white/15 bg-white/[0.02] rounded-xl">
               <ShoppingBag className="w-12 h-12 mb-4 text-outline" />
               <p className="font-label-caps uppercase tracking-widest">
                 <Trans>No products available in this category.</Trans>
