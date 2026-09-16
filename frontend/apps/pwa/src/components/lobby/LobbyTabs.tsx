@@ -14,7 +14,7 @@ export function LobbyTabs() {
   ];
 
   return (
-    <div className="flex gap-1 bg-surface-container p-1 rounded-xl border border-outline-variant self-start md:self-auto">
+    <div className="flex gap-1 bg-white/[0.05] backdrop-blur-md border border-white/[0.08] p-1 rounded-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] self-start md:self-auto">
       {tabs.map((tab) => (
         <button
           type="button"
@@ -23,8 +23,8 @@ export function LobbyTabs() {
           className={cn(
             'px-3 md:px-6 py-1.5 md:py-2 rounded-lg font-label-caps text-xs md:text-sm transition-all',
             location.pathname === tab.path
-              ? 'bg-surface-container-highest text-tertiary'
-              : 'text-on-surface-variant hover:text-on-surface',
+              ? 'bg-surface-container-high text-on-surface shadow-[0_1px_0_rgba(255,255,255,0.06)_inset,0_2px_6px_rgba(0,0,0,0.3)]'
+              : 'text-on-surface-variant hover:text-on-surface hover:bg-white/[0.05]',
           )}
         >
           {tab.label}
