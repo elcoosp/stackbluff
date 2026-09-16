@@ -13,7 +13,6 @@ import {
   Gift,
   RotateCcw,
   Share2,
-  Sparkles,
   Target,
   TrendingUp,
 } from 'lucide-react';
@@ -41,10 +40,10 @@ interface Mission {
 }
 
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
-  easy: <Target className="w-5 h-5 text-green-400" />,
-  medium: <TrendingUp className="w-5 h-5 text-yellow-400" />,
-  viral: <Share2 className="w-5 h-5 text-purple-400" />,
-  weekly: <Calendar className="w-5 h-5 text-blue-400" />,
+  easy: <Target className="w-5 h-5 text-on-surface-variant" />,
+  medium: <TrendingUp className="w-5 h-5 text-on-surface-variant" />,
+  viral: <Share2 className="w-5 h-5 text-on-surface-variant" />,
+  weekly: <Calendar className="w-5 h-5 text-on-surface-variant" />,
 };
 
 const containerVariants = {
@@ -137,7 +136,7 @@ function MissionsPage() {
     <div className="relative max-w-4xl mx-auto p-4 md:p-8 space-y-8">
       {/* Background Ambient Effects */}
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-tertiary/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-tertiary/10 rounded-full blur-[120px] pointer-events-none -z-10" />
 
       {/* Header */}
       <motion.div
@@ -147,13 +146,7 @@ function MissionsPage() {
         className="flex flex-col md:flex-row md:items-center justify-between gap-6"
       >
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Sparkles className="w-4 h-4 text-tertiary" />
-            <span className="text-xs font-data-mono uppercase tracking-widest text-tertiary">
-              <Trans>Daily Objectives</Trans>
-            </span>
-          </div>
-          <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface flex items-center gap-3">
+          <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface">
             <Trans>Missions</Trans>
           </h1>
           <p className="text-on-surface-variant text-sm mt-1 max-w-md">
@@ -191,7 +184,7 @@ function MissionsPage() {
         className="grid grid-cols-1 md:grid-cols-3 gap-4"
       >
         {/* Progress Card */}
-        <Card className="md:col-span-2 p-6 bg-white/5 backdrop-blur-xl border-white/10 shadow-xl rounded-2xl">
+        <Card className="md:col-span-2 p-6 raised-panel rounded-2xl">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-medium text-on-surface-variant flex items-center gap-2">
               <Target className="w-4 h-4" /> <Trans>Overall Progress</Trans>
@@ -221,17 +214,17 @@ function MissionsPage() {
         </Card>
 
         {/* Streak Card */}
-        <Card className="p-6 bg-gradient-to-br from-orange-500/10 to-red-500/5 backdrop-blur-xl border-orange-500/20 shadow-xl rounded-2xl">
+        <Card className="p-6 raised-panel rounded-2xl">
           <div className="flex flex-col h-full justify-between">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-on-surface-variant">
                 <Trans>Streak</Trans>
               </span>
-              <Flame className="w-5 h-5 text-orange-400" />
+              <Flame className="w-5 h-5 text-tertiary" />
             </div>
             <div className="mt-2">
               <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-bold font-data-mono text-orange-400">7</span>
+                <span className="text-3xl font-bold font-data-mono text-tertiary">7</span>
                 <span className="text-sm text-on-surface-variant">
                   <Trans>days</Trans>
                 </span>
@@ -262,10 +255,10 @@ function MissionsPage() {
               <motion.div key={mission.id} variants={itemVariants} layout>
                 <Card
                   className={cn(
-                    'p-5 border transition-all duration-300 hover:bg-white/[0.07] backdrop-blur-xl group rounded-2xl relative overflow-hidden',
+                    'p-5 border transition-all duration-300 group rounded-2xl relative overflow-hidden raised-panel',
                     isCompleted
-                      ? 'border-tertiary/30 bg-tertiary/[0.05] shadow-lg shadow-tertiary/10'
-                      : 'border-white/10 bg-white/5 shadow-xl',
+                      ? 'border-tertiary/30 bg-tertiary/10 shadow-lg shadow-tertiary/10'
+                      : 'hover:border-tertiary/30',
                   )}
                 >
                   {/* Hover accent line */}
@@ -309,7 +302,7 @@ function MissionsPage() {
 
                       <div className="flex items-center gap-4 mt-2">
                         {/* Reward */}
-                        <div className="flex items-center gap-1.5 text-sm font-data-mono text-yellow-400/90">
+                        <div className="flex items-center gap-1.5 text-sm font-data-mono text-tertiary">
                           <Coins className="w-4 h-4" />
                           <span>+{mission.reward_chips.toLocaleString()}</span>
                         </div>
@@ -330,7 +323,7 @@ function MissionsPage() {
                             'absolute top-0 left-0 h-full rounded-full',
                             isCompleted
                               ? 'bg-gradient-to-r from-tertiary to-emerald-400'
-                              : 'bg-gradient-to-r from-blue-400 to-purple-400',
+                              : 'bg-tertiary/40',
                           )}
                         />
                       </div>
