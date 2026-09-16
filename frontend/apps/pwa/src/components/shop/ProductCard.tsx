@@ -61,7 +61,7 @@ export function ProductCard({ product, onPurchase, className }: ProductCardProps
     // biome-ignore lint/a11y/noStaticElementInteractions: card is interactive via Button below; this wrapper handles hover state only
     <div
       className={cn(
-        'relative overflow-hidden rounded-xl border border-white/10 transition-all duration-300 group hover:scale-[1.02] hover:border-tertiary/40 hover:shadow-xl hover:shadow-emerald-500/10',
+        'relative overflow-hidden rounded-2xl border border-white/10 transition-all duration-300 group hover:scale-[1.02] hover:border-tertiary/40 hover:shadow-xl hover:shadow-emerald-500/10',
         className,
       )}
       onMouseEnter={() => setIsHovered(true)}
