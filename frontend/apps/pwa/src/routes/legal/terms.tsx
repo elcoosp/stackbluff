@@ -20,7 +20,7 @@ function TermsPage() {
         </h1>
       </div>
 
-      <Card>
+      <Card className="raised-panel rounded-2xl">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-on-surface">
             <Trans>1. Acceptance of Terms</Trans>
@@ -36,7 +36,7 @@ function TermsPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="raised-panel rounded-2xl">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-on-surface">
             <Trans>2. Eligibility</Trans>
@@ -52,7 +52,7 @@ function TermsPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="raised-panel rounded-2xl">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-on-surface">
             <Trans>3. Account Responsibility</Trans>
@@ -69,7 +69,7 @@ function TermsPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="raised-panel rounded-2xl">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-on-surface">
             <Trans>4. Prohibited Conduct</Trans>
@@ -96,7 +96,7 @@ function TermsPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="raised-panel rounded-2xl">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-on-surface">
             <Trans>5. Intellectual Property</Trans>
@@ -113,7 +113,7 @@ function TermsPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="raised-panel rounded-2xl">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-on-surface">
             <Trans>6. Limitation of Liability</Trans>
@@ -130,7 +130,7 @@ function TermsPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="raised-panel rounded-2xl">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-on-surface">
             <Trans>7. Changes to Terms</Trans>
@@ -146,7 +146,7 @@ function TermsPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="raised-panel rounded-2xl">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-on-surface">
             <Trans>8. Governing Law</Trans>
