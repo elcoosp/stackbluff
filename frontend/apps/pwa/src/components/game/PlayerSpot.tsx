@@ -475,6 +475,7 @@ export const PlayerSpot = memo(
   }) => {
     const {
       display_name = seat.user_id?.slice(0, 8) || t`Player`,
+      is_bot,
       stack,
       current_bet,
       is_all_in,
@@ -823,6 +824,18 @@ export const PlayerSpot = memo(
                   >
                     {display_name}
                   </span>
+                  {is_bot && (
+                    <span
+                      className={cn(
+                        'inline-flex items-center font-mono font-bold uppercase leading-none',
+                        'h-[14px] px-1 rounded-[3px]',
+                        isMobile ? 'text-[6px]' : 'text-[7px]',
+                        'text-blue-400 bg-blue-400/10 border border-blue-400/30 backdrop-blur-sm',
+                      )}
+                    >
+                      🤖
+                    </span>
+                  )}
                   {rank_tier && (
                     <RankTierBadge
                       tier={rank_tier}
