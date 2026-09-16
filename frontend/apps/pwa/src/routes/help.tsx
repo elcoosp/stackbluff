@@ -9,7 +9,6 @@ import {
   HelpCircle,
   MessageCircle,
   Send,
-  Sparkles,
   Users,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -124,8 +123,8 @@ function HelpPage() {
   return (
     <div className="relative max-w-4xl mx-auto p-4 md:p-8 space-y-8">
       {/* Background Ambient Effects */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-tertiary/8 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-tertiary/5 rounded-full blur-[120px] pointer-events-none -z-10" />
 
       {/* Header */}
       <motion.div
@@ -133,12 +132,6 @@ function HelpPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       >
-        <div className="flex items-center gap-2 mb-1">
-          <Sparkles className="w-4 h-4 text-cyan-400" />
-          <span className="text-xs font-data-mono uppercase tracking-widest text-cyan-400">
-            <Trans>Assistance</Trans>
-          </span>
-        </div>
         <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface">
           <Trans>Help & Support</Trans>
         </h1>
@@ -157,9 +150,9 @@ function HelpPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <motion.div variants={itemVariants}>
             <Link to="/guide" className="block h-full">
-              <Card className="p-5 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl hover:bg-white/[0.07] hover:border-white/20 transition-all duration-300 group h-full">
+              <Card className="p-5 raised-panel rounded-2xl hover:bg-white/[0.07] hover:border-white/20 transition-all duration-300 group h-full">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 transition-transform duration-300 group-hover:scale-110">
+                  <div className="p-3 rounded-xl bg-tertiary/10 border border-tertiary/20 text-tertiary transition-transform duration-300 group-hover:scale-110">
                     <BookOpen className="w-6 h-6" />
                   </div>
                   <div className="flex-1">
@@ -178,9 +171,9 @@ function HelpPage() {
 
           <motion.div variants={itemVariants}>
             <a href="https://discord.gg/stackbluff" className="block h-full">
-              <Card className="p-5 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl hover:bg-white/[0.07] hover:border-white/20 transition-all duration-300 group h-full">
+              <Card className="p-5 raised-panel rounded-2xl hover:bg-white/[0.07] hover:border-white/20 transition-all duration-300 group h-full">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 transition-transform duration-300 group-hover:scale-110">
+                  <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-on-surface-variant transition-transform duration-300 group-hover:scale-110">
                     <Users className="w-6 h-6" />
                   </div>
                   <div className="flex-1">
@@ -205,7 +198,7 @@ function HelpPage() {
               }
               className="w-full h-full text-left"
             >
-              <Card className="p-5 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl hover:bg-white/[0.07] hover:border-white/20 transition-all duration-300 group h-full">
+              <Card className="p-5 raised-panel rounded-2xl hover:bg-white/[0.07] hover:border-white/20 transition-all duration-300 group h-full">
                 <div className="flex items-center gap-4">
                   <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 transition-transform duration-300 group-hover:scale-110">
                     <Bug className="w-6 h-6" />
@@ -227,11 +220,11 @@ function HelpPage() {
 
         {/* FAQ Section */}
         <motion.div variants={itemVariants}>
-          <Card className="bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl shadow-xl overflow-hidden">
+          <Card className="raised-panel rounded-2xl shadow-xl overflow-hidden">
             <div className="p-6 pb-4 border-b border-white/5">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20">
-                  <HelpCircle className="w-5 h-5 text-cyan-400" />
+                <div className="w-10 h-10 rounded-full bg-tertiary/10 flex items-center justify-center border border-tertiary/20">
+                  <HelpCircle className="w-5 h-5 text-tertiary" />
                 </div>
                 <h3 className="font-headline-md text-base text-on-surface">
                   <Trans>Frequently Asked Questions</Trans>
@@ -296,7 +289,7 @@ function HelpPage() {
 
         {/* Contact Form */}
         <motion.div variants={itemVariants} id="contact-form">
-          <Card className="bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl shadow-xl overflow-hidden">
+          <Card className="raised-panel rounded-2xl shadow-xl overflow-hidden">
             <div className="p-6 pb-4 border-b border-white/5">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-tertiary/10 flex items-center justify-center border border-tertiary/20">
