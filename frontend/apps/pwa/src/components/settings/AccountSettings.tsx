@@ -40,7 +40,7 @@ export function AccountSettings() {
 
       {/* Email Verification Section */}
       {hasEmail && (
-        <div className="p-4 rounded-lg bg-surface-container-high border border-outline-variant">
+        <div className="p-4 raised-panel rounded-xl">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-on-surface">
@@ -92,7 +92,7 @@ export function AccountSettings() {
       )}
 
       {/* Additional account settings can go here */}
-      <div className="p-4 rounded-lg bg-surface-container-high border border-outline-variant">
+      <div className="p-4 raised-panel rounded-xl">
         <p className="text-sm text-on-surface">
           <Trans>Account ID:</Trans> {user?.id || t`Not logged in`}
         </p>
