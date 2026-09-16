@@ -17,7 +17,6 @@ import {
   Settings,
   Share2,
   ShoppingBag,
-  Sparkles,
   Target,
   TrendingUp,
   Trophy,
@@ -152,13 +151,13 @@ function LobbyPage() {
   return (
     <div className="flex min-h-screen w-full relative">
       {/* Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 bg-surface-container-low border-r border-outline-variant py-gutter sticky top-0 h-screen">
+      <aside className="hidden md:flex flex-col w-64 bg-black/40 backdrop-blur-xl border-r border-white/[0.06] py-gutter sticky top-0 h-screen">
         <div className="px-6 pt-6 mb-8">
-          <div className="p-4 rounded-lg bg-surface-container-highest razor-highlight border border-outline-variant">
-            <h3 className="font-headline-md text-headline-md text-on-surface mb-1">
+          <div className="p-4 rounded-xl raised-panel border-tertiary/20">
+            <h3 className="font-headline-md text-headline-md text-on-surface mb-0.5">
               <Trans>StackBluff Elite</Trans>
             </h3>
-            <p className="font-label-caps text-[10px] text-tertiary">
+            <p className="font-label-caps text-[10px] text-tertiary tracking-[0.18em] uppercase">
               <Trans>Tier: Obsidian</Trans>
             </p>
           </div>
@@ -167,7 +166,7 @@ function LobbyPage() {
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto min-h-0">
           <Link
             to="/lobby"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-tertiary font-bold font-label-caps text-label-caps"
+            className="group flex items-center gap-3 px-4 py-3 rounded-lg text-tertiary bg-tertiary/[0.08] border border-tertiary/15 font-label-caps text-label-caps"
           >
             <LayoutGrid className="w-5 h-5" />
             <span className="font-label-caps text-label-caps">
@@ -177,9 +176,9 @@ function LobbyPage() {
           <button
             type="button"
             onClick={() => navigate({ to: '/tournaments' })}
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left"
+            className="group flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-white/[0.06] font-label-caps text-label-caps transition-colors w-full text-left"
           >
-            <Trophy className="w-5 h-5 text-yellow-400" />
+            <Trophy className="w-5 h-5 text-on-surface-variant/70 group-hover:text-tertiary transition-colors" />
             <span className="font-label-caps text-label-caps">
               <Trans>Tournaments</Trans>
             </span>
@@ -187,9 +186,9 @@ function LobbyPage() {
           <button
             type="button"
             onClick={() => navigate({ to: '/clubs' })}
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left"
+            className="group flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-white/[0.06] font-label-caps text-label-caps transition-colors w-full text-left"
           >
-            <Users className="w-5 h-5 text-purple-400" />
+            <Users className="w-5 h-5 text-on-surface-variant/70 group-hover:text-tertiary transition-colors" />
             <span className="font-label-caps text-label-caps">
               <Trans>Clubs</Trans>
             </span>
@@ -197,9 +196,9 @@ function LobbyPage() {
           <button
             type="button"
             onClick={() => navigate({ to: '/leaderboard' })}
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left"
+            className="group flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-white/[0.06] font-label-caps text-label-caps transition-colors w-full text-left"
           >
-            <TrendingUp className="w-5 h-5 text-cyan-400" />
+            <TrendingUp className="w-5 h-5 text-on-surface-variant/70 group-hover:text-tertiary transition-colors" />
             <span className="font-label-caps text-label-caps">
               <Trans>Leaderboard</Trans>
             </span>
@@ -207,20 +206,20 @@ function LobbyPage() {
           <button
             type="button"
             onClick={() => navigate({ to: '/shop' })}
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left"
+            className="group flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-white/[0.06] font-label-caps text-label-caps transition-colors w-full text-left"
           >
-            <ShoppingBag className="w-5 h-5 text-pink-400" />
+            <ShoppingBag className="w-5 h-5 text-on-surface-variant/70 group-hover:text-tertiary transition-colors" />
             <span className="font-label-caps text-label-caps">
               <Trans>Shop</Trans>
             </span>
           </button>
-          <div className="border-t border-outline-variant/50 my-2"></div>
+          <div className="border-t border-white/[0.07] my-2"></div>
           <button
             type="button"
             onClick={() => navigate({ to: '/missions' })}
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left"
+            className="group flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-white/[0.06] font-label-caps text-label-caps transition-colors w-full text-left"
           >
-            <Target className="w-5 h-5 text-orange-400" />
+            <Target className="w-5 h-5 text-on-surface-variant/70 group-hover:text-tertiary transition-colors" />
             <span className="font-label-caps text-label-caps">
               <Trans>Missions</Trans>
             </span>
@@ -228,9 +227,9 @@ function LobbyPage() {
           <button
             type="button"
             onClick={() => navigate({ to: '/referrals' })}
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left"
+            className="group flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-white/[0.06] font-label-caps text-label-caps transition-colors w-full text-left"
           >
-            <Share2 className="w-5 h-5 text-blue-400" />
+            <Share2 className="w-5 h-5 text-on-surface-variant/70 group-hover:text-tertiary transition-colors" />
             <span className="font-label-caps text-label-caps">
               <Trans>Referrals</Trans>
             </span>
@@ -238,9 +237,9 @@ function LobbyPage() {
           <button
             type="button"
             onClick={() => navigate({ to: '/replays' })}
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left"
+            className="group flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-white/[0.06] font-label-caps text-label-caps transition-colors w-full text-left"
           >
-            <History className="w-5 h-5 text-indigo-400" />
+            <History className="w-5 h-5 text-on-surface-variant/70 group-hover:text-tertiary transition-colors" />
             <span className="font-label-caps text-label-caps">
               <Trans>Replays</Trans>
             </span>
@@ -248,20 +247,20 @@ function LobbyPage() {
           <button
             type="button"
             onClick={() => navigate({ to: '/history' })}
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left"
+            className="group flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-white/[0.06] font-label-caps text-label-caps transition-colors w-full text-left"
           >
-            <FileText className="w-5 h-5 text-sky-400" />
+            <FileText className="w-5 h-5 text-on-surface-variant/70 group-hover:text-tertiary transition-colors" />
             <span className="font-label-caps text-label-caps">
               <Trans>Hand History</Trans>
             </span>
           </button>
-          <div className="border-t border-outline-variant/50 my-2"></div>
+          <div className="border-t border-white/[0.07] my-2"></div>
           <button
             type="button"
             onClick={() => navigate({ to: '/guide' })}
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left"
+            className="group flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-white/[0.06] font-label-caps text-label-caps transition-colors w-full text-left"
           >
-            <BookOpen className="w-5 h-5 text-emerald-400" />
+            <BookOpen className="w-5 h-5 text-on-surface-variant/70 group-hover:text-tertiary transition-colors" />
             <span className="font-label-caps text-label-caps">
               <Trans>Guide</Trans>
             </span>
@@ -269,9 +268,9 @@ function LobbyPage() {
           <button
             type="button"
             onClick={() => navigate({ to: '/help' })}
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left"
+            className="group flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-white/[0.06] font-label-caps text-label-caps transition-colors w-full text-left"
           >
-            <HelpCircle className="w-5 h-5 text-red-400" />
+            <HelpCircle className="w-5 h-5 text-on-surface-variant/70 group-hover:text-tertiary transition-colors" />
             <span className="font-label-caps text-label-caps">
               <Trans>Help & Support</Trans>
             </span>
@@ -279,19 +278,19 @@ function LobbyPage() {
           <button
             type="button"
             onClick={() => navigate({ to: '/settings' })}
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-outline hover:text-on-surface font-label-caps text-label-caps transition-colors w-full text-left"
+            className="group flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-white/[0.06] font-label-caps text-label-caps transition-colors w-full text-left"
           >
-            <Settings className="w-5 h-5 text-slate-400" />
+            <Settings className="w-5 h-5 text-on-surface-variant/70 group-hover:text-tertiary transition-colors" />
             <span className="font-label-caps text-label-caps">
               <Trans>Settings</Trans>
             </span>
           </button>
         </nav>
 
-        <div className="px-4 pt-6 border-t border-outline-variant">
+        <div className="px-4 pt-6 border-t border-white/[0.07]">
           <Button
             onClick={() => setModalOpen(true)}
-            className="w-full mb-4 py-3 rounded-lg bg-tertiary text-on-tertiary hover:bg-tertiary-fixed font-label-caps text-label-caps active:scale-95 transition-transform uppercase shadow-lg shadow-emerald-500/10"
+            className="group w-full mb-4 py-3 rounded-lg bg-gradient-to-b from-tertiary to-tertiary-container text-on-tertiary hover:from-tertiary-fixed hover:to-tertiary font-label-caps text-label-caps shadow-[0_1px_0_rgba(255,255,255,0.15)_inset,0_8px_24px_rgba(16,185,129,0.25)] transition-all uppercase"
           >
             <Plus className="w-4 h-4 mr-2" /> <Trans>New Table</Trans>
           </Button>
@@ -302,7 +301,7 @@ function LobbyPage() {
               logout();
               navigate({ to: '/login' });
             }}
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:bg-red-500/10 w-full transition-colors font-label-caps text-label-caps"
+            className="group flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:bg-red-500/10 w-full transition-colors font-label-caps text-label-caps"
           >
             <LogOut className="w-5 h-5" />
             <span className="font-label-caps text-label-caps">
@@ -329,16 +328,10 @@ function LobbyPage() {
             className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6"
           >
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Sparkles className="w-4 h-4 text-emerald-400" />
-                <span className="text-xs font-data-mono uppercase tracking-widest text-emerald-400">
-                  <Trans>Play & Profit</Trans>
-                </span>
-              </div>
-              <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface flex items-center gap-3">
+              <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface tracking-tight">
                 <Trans>Game Lobby</Trans>
               </h1>
-              <p className="text-on-surface-variant text-sm mt-1 max-w-md">
+              <p className="text-on-surface-variant text-sm mt-2 max-w-md">
                 <Trans>
                   Join high-stakes rooms or competitive tournaments. Precision poker for the
                   sophisticated player.
@@ -408,7 +401,7 @@ function LobbyPage() {
                   layout
                   key={table.table_id}
                   variants={itemVariants}
-                  className="flex flex-col lg:grid lg:grid-cols-12 items-start lg:items-center px-4 lg:px-8 py-4 lg:py-5 border border-white/10 rounded-2xl razor-highlight group hover:border-tertiary/40 transition-all duration-300 gap-3 lg:gap-0 overflow-hidden relative bg-white/5 backdrop-blur-xl"
+                  className="flex flex-col lg:grid lg:grid-cols-12 items-start lg:items-center px-4 lg:px-8 py-4 lg:py-5 raised-panel rounded-2xl group hover:border-tertiary/30 transition-all duration-300 gap-3 lg:gap-0 overflow-hidden relative"
                 >
                   {/* Background Image Layer - Blurs by default, unblurs on hover */}
                   <div
