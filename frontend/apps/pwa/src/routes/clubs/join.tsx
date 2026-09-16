@@ -162,7 +162,7 @@ function JoinClubPage() {
               className="w-16 h-16 rounded-full object-cover"
             />
           ) : (
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-2xl">
+            <div className="w-16 h-16 rounded-full bg-tertiary/15 border border-tertiary/25 flex items-center justify-center text-tertiary font-bold text-2xl">
               {club.name.charAt(0).toUpperCase()}
             </div>
           )}
@@ -173,7 +173,7 @@ function JoinClubPage() {
               {club.members_count} <Trans>members</Trans>
             </p>
             {club.is_owner && (
-              <p className="text-xs text-yellow-400 flex items-center gap-1">
+              <p className="text-xs text-tertiary flex items-center gap-1">
                 <Crown className="w-3 h-3" />
                 <Trans>You are the owner</Trans>
               </p>
@@ -189,7 +189,7 @@ function JoinClubPage() {
 
         {club.is_member ? (
           <Button
-            className="w-full bg-tertiary text-on-tertiary hover:bg-tertiary-fixed"
+            className="w-full"
             onClick={() => navigate({ to: '/clubs/$clubId', params: { clubId: club.id } })}
           >
             <Trans>View Club</Trans>
@@ -198,7 +198,7 @@ function JoinClubPage() {
           <Button
             onClick={handleJoin}
             disabled={joinMutation.isPending}
-            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-medium"
+            className="w-full"
           >
             {joinMutation.isPending ? (
               <>
