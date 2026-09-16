@@ -165,7 +165,7 @@ function PuzzlePage() {
     return (
       <div className="relative max-w-4xl mx-auto p-4 md:p-8 space-y-8">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-tertiary/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-tertiary/5 rounded-full blur-[120px] pointer-events-none -z-10" />
         <div className="space-y-3">
           <Skeleton className="h-4 w-32 bg-white/5" />
           <Skeleton className="h-10 w-64 bg-white/5" />
@@ -242,7 +242,7 @@ function PuzzlePage() {
     <div className="relative max-w-4xl mx-auto p-4 md:p-8 space-y-8">
       {/* Background Ambient Effects */}
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-tertiary/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-tertiary/5 rounded-full blur-[120px] pointer-events-none -z-10" />
 
       {/* Header */}
       <motion.div
