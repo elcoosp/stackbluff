@@ -4,7 +4,6 @@ import { authApi } from '@stackbluff/shared/auth/api';
 import { setToken } from '@stackbluff/shared/auth/token';
 import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { GlassPanel } from '@stackbluff/shared/ui/GlassPanel';
-import { LiquidMetalButton } from '@stackbluff/shared/ui/LiquidMetalButton';
 import { useForm } from '@tanstack/react-form';
 import { useMutation } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect, useNavigate } from '@tanstack/react-router';
@@ -13,6 +12,7 @@ import { Lock, Mail, User } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { trackGameEvent } from '@/lib/customAnalytics';
@@ -75,9 +75,6 @@ function RegisterPage() {
           <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter">
             <Trans>STACKBLUFF</Trans>
           </h1>
-          <p className="font-data-mono text-xs text-outline mt-2 tracking-widest">
-            <Trans>CREATE ACCOUNT</Trans>
-          </p>
         </div>
         <GlassPanel>
           <div className="flex gap-2 mb-8">
@@ -256,21 +253,21 @@ function RegisterPage() {
                     }`}
                   >
                     {step > 1 && (
-                      <LiquidMetalButton
+                      <Button
                         type="button"
                         onClick={prevStep}
-                        variant="silver"
+                        variant="outline"
                         className="flex-1 md:flex-none px-6 text-[10px] whitespace-nowrap"
                       >
                         <Trans>BACK</Trans>
-                      </LiquidMetalButton>
+                      </Button>
                     )}
                     {step < 3 ? (
-                      <LiquidMetalButton
+                      <Button
                         type="button"
                         onClick={nextStep}
                         disabled={!canContinue}
-                        variant="silver"
+                        variant="default"
                         className={
                           step > 1
                             ? 'flex-1 md:flex-none px-6 text-[10px] whitespace-nowrap'
@@ -278,16 +275,16 @@ function RegisterPage() {
                         }
                       >
                         <Trans>CONTINUE</Trans>
-                      </LiquidMetalButton>
+                      </Button>
                     ) : (
-                      <LiquidMetalButton
+                      <Button
                         type="submit"
                         disabled={mutation.isPending || !canContinue}
-                        variant="silver"
+                        variant="default"
                         className="flex-1 text-[10px] whitespace-nowrap"
                       >
                         {mutation.isPending ? t`INITIALIZING...` : t`CREATE ACCOUNT`}
-                      </LiquidMetalButton>
+                      </Button>
                     )}
                   </div>
                 );
