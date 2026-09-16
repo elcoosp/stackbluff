@@ -1,5 +1,7 @@
 import { Component, type ReactNode } from 'react';
+import { RefreshCw } from 'lucide-react';
 import { logger } from '../lib/logger';
+import { Button } from './ui/button';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -34,10 +36,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       }
 
       return (
-        <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 to-gray-800">
-          <div className="max-w-md mx-auto p-8 bg-white/5 backdrop-blur-lg rounded-xl border border-white/10 shadow-2xl">
+        <div className="flex items-center justify-center min-h-screen p-6">
+          <div className="max-w-md mx-auto p-8 raised-panel rounded-2xl">
             <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-4 bg-red-500/20 rounded-full flex items-center justify-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-red-500/10 rounded-full flex items-center justify-center border border-red-500/20">
                 <svg
                   className="w-8 h-8 text-red-400"
                   fill="none"
@@ -53,17 +55,13 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                   />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold text-white mb-2">Something went wrong</h2>
-              <p className="text-white/60 mb-6">
+              <h2 className="text-2xl font-bold text-on-surface mb-2">Something went wrong</h2>
+              <p className="text-on-surface-variant mb-6">
                 An unexpected error occurred. Please try refreshing the page.
               </p>
-              <button
-                type="button"
-                onClick={() => window.location.reload()}
-                className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-lg text-white font-medium transition-all shadow-lg"
-              >
-                Refresh Page
-              </button>
+              <Button onClick={() => window.location.reload()}>
+                <RefreshCw className="w-4 h-4 mr-2" /> Refresh Page
+              </Button>
             </div>
           </div>
         </div>
