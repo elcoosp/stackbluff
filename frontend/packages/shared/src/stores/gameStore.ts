@@ -38,6 +38,7 @@ export interface Seat {
   winningCards?: Card[];
   winning_cards?: Card[];
   sitting_out?: boolean;
+  is_bot?: boolean;
   stats?: PlayerStats;
   action?: { text: string; amount?: number | null };
   rank_tier?: string;
