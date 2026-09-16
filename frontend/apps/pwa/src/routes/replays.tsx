@@ -17,7 +17,6 @@ import {
   Link2,
   MoreHorizontal,
   Share2,
-  Sparkles,
   Table,
   Trophy,
   X,
@@ -236,8 +235,8 @@ function ReplaysPage() {
   return (
     <div className="relative max-w-5xl mx-auto p-4 md:p-8 space-y-8">
       {/* Background Ambient Effects */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-yellow-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-tertiary/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-tertiary/[0.06] rounded-full blur-[120px] pointer-events-none -z-10" />
 
       {/* Header */}
       <motion.div
@@ -245,13 +244,7 @@ function ReplaysPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       >
-        <div className="flex items-center gap-2 mb-1">
-          <Sparkles className="w-4 h-4 text-yellow-400" />
-          <span className="text-xs font-data-mono uppercase tracking-widest text-yellow-400">
-            <Trans>Your Highlights</Trans>
-          </span>
-        </div>
-        <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface flex items-center gap-3">
+        <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface">
           <Trans>Replay Cards</Trans>
         </h1>
         <p className="text-on-surface-variant text-sm mt-1 max-w-md">
@@ -271,19 +264,16 @@ function ReplaysPage() {
             icon={Layers}
             label={t`Total Replays`}
             value={totalReplays.toLocaleString()}
-            tint="blue"
           />
           <StatCard
             icon={Coins}
             label={t`Total Won`}
             value={`$${totalWinnings.toLocaleString()}`}
-            tint="tertiary"
           />
           <StatCard
             icon={Crown}
             label={t`Biggest Pot`}
             value={`$${biggestPot.toLocaleString()}`}
-            tint="yellow"
           />
         </motion.div>
       )}
@@ -295,11 +285,11 @@ function ReplaysPage() {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.4 }}
         >
-          <Card className="p-12 text-center bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 to-purple-500/5 pointer-events-none" />
+          <Card className="p-12 text-center raised-panel rounded-2xl relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-tertiary/10 to-transparent pointer-events-none" />
             <div className="relative">
-              <div className="w-16 h-16 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center mx-auto mb-4">
-                <Share2 className="w-8 h-8 text-yellow-400" />
+              <div className="w-16 h-16 rounded-2xl bg-tertiary/10 border border-tertiary/20 flex items-center justify-center mx-auto mb-4">
+                <Share2 className="w-8 h-8 text-tertiary" />
               </div>
               <h3 className="font-headline-md text-lg text-on-surface mb-1">
                 <Trans>No replay cards yet</Trans>
@@ -344,27 +334,15 @@ function StatCard({
   icon: Icon,
   label,
   value,
-  tint,
 }: {
   icon: typeof Layers;
   label: string;
   value: string;
-  tint: 'blue' | 'tertiary' | 'yellow';
 }) {
-  const tints = {
-    blue: 'bg-blue-500/10 border-blue-500/20 text-blue-400',
-    tertiary: 'bg-tertiary/10 border-tertiary/20 text-tertiary',
-    yellow: 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400',
-  };
   return (
-    <Card className="p-4 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl hover:bg-white/[0.07] transition-colors h-full">
+    <Card className="p-4 raised-panel rounded-2xl hover:border-tertiary/25 transition-colors h-full">
       <div className="flex items-center gap-3">
-        <div
-          className={cn(
-            'w-10 h-10 rounded-xl flex items-center justify-center border flex-shrink-0',
-            tints[tint],
-          )}
-        >
+        <div className="w-10 h-10 rounded-xl bg-tertiary/10 border border-tertiary/20 text-tertiary flex items-center justify-center flex-shrink-0">
           <Icon className="w-5 h-5" />
         </div>
         <div className="min-w-0">
@@ -451,20 +429,20 @@ function ReplayCardItem({
 
   return (
     <>
-      <Card className="p-5 bg-gradient-to-br from-yellow-500/5 to-transparent border-white/10 backdrop-blur-xl rounded-2xl transition-all duration-300 hover:bg-white/[0.07] group relative overflow-hidden h-full flex flex-col">
+      <Card className="p-5 raised-panel rounded-2xl transition-all duration-300 hover:border-tertiary/25 group relative overflow-hidden h-full flex flex-col bg-gradient-to-br from-tertiary/10 to-transparent border-tertiary/20">
         {/* Subtle glow accent */}
-        <div className="absolute -top-12 -right-12 w-32 h-32 bg-yellow-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -top-12 -right-12 w-32 h-32 bg-tertiary/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative flex flex-col gap-4 h-full">
           {/* Top Section */}
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-full bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center flex-shrink-0 font-data-mono text-sm font-bold text-yellow-400">
+              <div className="w-10 h-10 rounded-full bg-tertiary/10 border border-tertiary/20 flex items-center justify-center flex-shrink-0 font-data-mono text-sm font-bold text-tertiary">
                 {String(index + 1).padStart(2, '0')}
               </div>
               <div className="min-w-0">
                 <h3 className="font-headline-md text-base text-on-surface truncate flex items-center gap-2">
-                  <Trophy className="w-4 h-4 text-yellow-400 flex-shrink-0" />
+                  <Trophy className="w-4 h-4 text-tertiary flex-shrink-0" />
                   {replay.hand_description}
                 </h3>
                 <p className="text-xs text-on-surface-variant mt-0.5 truncate">
@@ -479,7 +457,7 @@ function ReplayCardItem({
             </div>
             <Badge
               variant="outline"
-              className="border-yellow-500/30 text-yellow-400 bg-yellow-500/10 font-mono text-[10px] flex-shrink-0"
+              className="border-tertiary/30 text-tertiary bg-tertiary/10 font-mono text-[10px] flex-shrink-0"
             >
               ${replay.pot.toLocaleString()}
             </Badge>
@@ -550,7 +528,7 @@ function ReplayCardItem({
                   params: { handId: replay.id },
                 })
               }
-              className="flex-1 bg-white/5 border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-white/10 rounded-xl group/btn"
+              className="flex-1 rounded-xl group/btn"
             >
               <Eye className="w-4 h-4 mr-1.5 transition-transform group-hover/btn:scale-110" />
               <Trans>View Hand</Trans>
@@ -560,7 +538,7 @@ function ReplayCardItem({
               variant="outline"
               size="sm"
               onClick={() => setIsShareOpen(true)}
-              className="bg-white/5 border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-white/10 rounded-xl px-3"
+              className="rounded-xl px-3"
             >
               <Share2 className="w-4 h-4" />
             </Button>
@@ -584,7 +562,7 @@ function ReplayCardItem({
               exit={{ scale: 0.95, y: 10, opacity: 0 }}
               transition={{ ease: [0.22, 1, 0.36, 1], duration: 0.2 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-zinc-900 border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl relative"
+              className="raised-panel rounded-2xl p-6 w-full max-w-md relative"
             >
               <button
                 type="button"
@@ -609,7 +587,7 @@ function ReplayCardItem({
                     href={url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex flex-col items-center gap-2 p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all group"
+                    className="flex flex-col items-center gap-2 p-3 rounded-xl border border-white/10 bg-white/[0.04] hover:border-tertiary/30 hover:bg-white/[0.08] transition-all group"
                   >
                     <Icon className="w-5 h-5 text-on-surface-variant group-hover:text-on-surface transition-colors" />
                     <span className="text-[10px] font-data-mono text-on-surface-variant group-hover:text-on-surface transition-colors">
@@ -620,7 +598,7 @@ function ReplayCardItem({
               </div>
 
               {/* Copy Link Input */}
-              <div className="flex items-center gap-2 p-1 pl-3 bg-black/30 border border-white/10 rounded-xl mb-3">
+              <div className="flex items-center gap-2 p-1 pl-3 border border-white/10 bg-white/[0.04] rounded-xl mb-3">
                 <Link2 className="w-4 h-4 text-on-surface-variant flex-shrink-0" />
                 <input
                   readOnly
@@ -668,8 +646,8 @@ function ReplayCardItem({
 function ReplaysSkeleton() {
   return (
     <div className="relative max-w-5xl mx-auto p-4 md:p-8 space-y-8">
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-yellow-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-tertiary/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-tertiary/[0.06] rounded-full blur-[120px] pointer-events-none -z-10" />
       <div className="animate-pulse space-y-8">
         <div className="space-y-2">
           <Skeleton className="h-3 w-28 bg-white/5" />
