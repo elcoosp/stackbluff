@@ -5,7 +5,7 @@ import { useAuthStore } from '@stackbluff/shared/stores/authStore';
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { motion } from 'framer-motion';
-import { ChevronRight, Crown, Plus, Sparkles, Users } from 'lucide-react';
+import { ChevronRight, Crown, Plus, Users } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { CreateClubModal } from '@/components/club/CreateClubModal';
@@ -84,8 +84,8 @@ function ClubsListPage() {
   return (
     <div className="relative max-w-5xl mx-auto p-4 md:p-8 space-y-8">
       {/* Background Ambient Effects */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-tertiary/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-tertiary/[0.06] rounded-full blur-[120px] pointer-events-none -z-10" />
 
       {/* Header */}
       <motion.div
@@ -95,12 +95,6 @@ function ClubsListPage() {
         className="flex flex-col md:flex-row md:items-end justify-between gap-4"
       >
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Sparkles className="w-4 h-4 text-purple-400" />
-            <span className="text-xs font-data-mono uppercase tracking-widest text-purple-400">
-              <Trans>Community & Play</Trans>
-            </span>
-          </div>
           <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface flex items-center gap-3">
             <Trans>Poker Clubs</Trans>
           </h1>
@@ -123,7 +117,7 @@ function ClubsListPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.1 }}
       >
-        <Card className="p-4 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl flex flex-col sm:flex-row items-center gap-3">
+        <Card className="p-4 raised-panel rounded-2xl flex flex-col sm:flex-row items-center gap-3">
           <input
             type="text"
             placeholder={t`Enter invite code`}
@@ -156,7 +150,7 @@ function ClubsListPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.2 }}
         >
-          <Card className="p-12 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl text-center flex flex-col items-center">
+          <Card className="p-12 raised-panel rounded-2xl text-center flex flex-col items-center">
             <Users className="w-12 h-12 text-on-surface-variant/30 mx-auto mb-4" />
             <p className="text-on-surface-variant">
               <Trans>You haven't joined any clubs yet.</Trans>
@@ -183,7 +177,7 @@ function ClubsListPage() {
           {clubs?.map((club) => (
             <motion.div key={club.id} variants={itemVariants}>
               <Card
-                className="p-5 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl hover:bg-white/[0.07] transition-colors cursor-pointer group"
+                className="p-5 raised-panel rounded-2xl hover:border-tertiary/25 transition-colors cursor-pointer group"
                 onClick={() => navigate({ to: '/clubs/$clubId', params: { clubId: club.id } })}
               >
                 <div className="flex items-center gap-4">
@@ -194,7 +188,7 @@ function ClubsListPage() {
                       className="w-14 h-14 rounded-full object-cover border border-white/10 flex-shrink-0"
                     />
                   ) : (
-                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-500/80 to-pink-500/80 flex items-center justify-center text-white font-bold text-xl border border-white/10 flex-shrink-0">
+                    <div className="w-14 h-14 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface font-bold text-xl border border-white/10 flex-shrink-0">
                       {club.name.charAt(0).toUpperCase()}
                     </div>
                   )}
@@ -206,7 +200,7 @@ function ClubsListPage() {
                       {club.is_owner && (
                         <Badge
                           variant="outline"
-                          className="border-yellow-500/30 text-yellow-400 bg-yellow-500/10 font-mono flex-shrink-0"
+                          className="border-tertiary/30 text-tertiary bg-tertiary/10 font-mono flex-shrink-0"
                         >
                           <Crown className="w-3 h-3 mr-1" /> <Trans>Owner</Trans>
                         </Badge>
