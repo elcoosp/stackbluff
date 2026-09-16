@@ -14,7 +14,6 @@ import {
   Link as LinkIcon,
   MessageCircle,
   Send,
-  Sparkles,
   TrendingUp,
   Users,
   X,
@@ -159,8 +158,8 @@ function ReferralsPage() {
   return (
     <div className="relative max-w-4xl mx-auto p-4 md:p-8 space-y-8">
       {/* Background Ambient Effects */}
-      <div className="absolute top-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-      <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-yellow-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute top-0 right-1/4 w-96 h-96 bg-tertiary/8 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-tertiary/5 rounded-full blur-[120px] pointer-events-none -z-10" />
 
       {/* Header */}
       <motion.div
@@ -168,12 +167,6 @@ function ReferralsPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       >
-        <div className="flex items-center gap-2 mb-1">
-          <Sparkles className="w-4 h-4 text-purple-400" />
-          <span className="text-xs font-data-mono uppercase tracking-widest text-purple-400">
-            <Trans>Viral Rewards</Trans>
-          </span>
-        </div>
         <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface flex items-center gap-3">
           <Trans>Referrals</Trans>
         </h1>
@@ -191,13 +184,13 @@ function ReferralsPage() {
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <motion.div variants={itemVariants}>
-            <Card className="p-6 bg-white/5 backdrop-blur-xl border-white/10 shadow-xl rounded-2xl h-full">
+            <Card className="p-6 raised-panel rounded-2xl h-full">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">
                   <Trans>Total Referrals</Trans>
                 </span>
-                <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
-                  <Users className="w-4 h-4 text-blue-400" />
+                <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center">
+                  <Users className="w-4 h-4 text-on-surface-variant" />
                 </div>
               </div>
               <div className="text-3xl font-bold font-data-mono text-on-surface">
@@ -210,7 +203,7 @@ function ReferralsPage() {
           </motion.div>
 
           <motion.div variants={itemVariants}>
-            <Card className="p-6 bg-white/5 backdrop-blur-xl border-white/10 shadow-xl rounded-2xl h-full">
+            <Card className="p-6 raised-panel rounded-2xl h-full">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">
                   <Trans>Bonus Earned</Trans>
@@ -229,7 +222,7 @@ function ReferralsPage() {
           </motion.div>
 
           <motion.div variants={itemVariants}>
-            <Card className="p-6 bg-white/5 backdrop-blur-xl border-white/10 shadow-xl rounded-2xl h-full">
+            <Card className="p-6 raised-panel rounded-2xl h-full">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wider">
                   <Trans>Pending Bonus</Trans>
@@ -321,7 +314,7 @@ function ReferralsPage() {
 
         {/* Referral Link & Share */}
         <motion.div variants={itemVariants}>
-          <Card className="p-6 bg-white/5 backdrop-blur-xl border-white/10 shadow-xl rounded-2xl">
+          <Card className="p-6 raised-panel rounded-2xl">
             <div className="flex flex-col md:flex-row md:items-center gap-4">
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-on-surface-variant uppercase tracking-wider mb-2">
@@ -376,10 +369,10 @@ function ReferralsPage() {
 
         {/* Referred Friends List */}
         <motion.div variants={itemVariants}>
-          <Card className="bg-white/5 backdrop-blur-xl border-white/10 shadow-xl rounded-2xl overflow-hidden">
+          <Card className="raised-panel rounded-2xl overflow-hidden">
             <div className="p-6 pb-4 border-b border-white/5">
               <h3 className="font-headline-md text-base text-on-surface flex items-center gap-2">
-                <Users className="w-5 h-5 text-purple-400" />
+                <Users className="w-5 h-5 text-tertiary" />
                 <Trans>Referred Friends</Trans>
               </h3>
               <p className="text-xs text-on-surface-variant mt-1">
@@ -396,7 +389,7 @@ function ReferralsPage() {
                       className="flex items-center justify-between p-3 bg-white/[0.03] border border-white/5 rounded-xl hover:bg-white/[0.06] transition-colors"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center text-xs font-bold text-purple-300 flex-shrink-0">
+                        <div className="w-9 h-9 rounded-full bg-tertiary/15 border border-tertiary/20 flex items-center justify-center text-xs font-bold text-tertiary flex-shrink-0">
                           {(ref.display_name || 'P').charAt(0).toUpperCase()}
                         </div>
                         <div className="min-w-0">
@@ -451,7 +444,7 @@ function ReferralsPage() {
 function ReferralsSkeleton() {
   return (
     <div className="relative max-w-4xl mx-auto p-4 md:p-8 space-y-8 animate-pulse">
-      <div className="absolute top-0 right-1/4 w-96 h-96 bg-purple-500/5 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute top-0 right-1/4 w-96 h-96 bg-tertiary/5 rounded-full blur-[120px] pointer-events-none -z-10" />
 
       <div className="space-y-2">
         <Skeleton className="h-4 w-32 bg-white/5" />
