@@ -11,7 +11,6 @@ import {
   Play,
   SkipBack,
   SkipForward,
-  Sparkles,
   Table,
   Trophy,
   Users,
@@ -291,8 +290,8 @@ function HandDetailPage() {
   return (
     <div className="relative max-w-5xl mx-auto p-4 md:p-8 space-y-6">
       {/* Background Ambient Effects */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-tertiary/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-tertiary/[0.06] rounded-full blur-[120px] pointer-events-none -z-10" />
 
       {/* Header */}
       <motion.div
@@ -303,17 +302,11 @@ function HandDetailPage() {
       >
         <Link
           to="/history"
-          className="p-2.5 rounded-xl bg-white/5 border border-white/10 backdrop-blur-xl hover:bg-white/10 transition-colors"
+          className="p-2.5 rounded-xl border border-white/10 bg-white/[0.04] hover:border-tertiary/30 hover:bg-white/[0.08] transition-colors"
         >
           <ArrowLeft className="w-5 h-5 text-on-surface-variant" />
         </Link>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <Sparkles className="w-4 h-4 text-blue-400" />
-            <span className="text-xs font-data-mono uppercase tracking-widest text-blue-400">
-              Hand Replay
-            </span>
-          </div>
           <h1 className="font-display-lg text-2xl md:text-3xl text-on-surface truncate">
             Hand #{handId ? handId.slice(0, 8) : '...'}
           </h1>
@@ -345,12 +338,12 @@ function HandDetailPage() {
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.4, delay: 0.1 }}
       >
-        <Card className="p-5 bg-gradient-to-br from-yellow-500/5 to-transparent border-white/10 backdrop-blur-xl rounded-2xl relative overflow-hidden">
-          <div className="absolute -top-12 -right-12 w-32 h-32 bg-yellow-500/10 rounded-full blur-3xl pointer-events-none" />
+        <Card className="p-5 raised-panel rounded-2xl relative overflow-hidden bg-gradient-to-br from-tertiary/10 to-transparent border-tertiary/20">
+          <div className="absolute -top-12 -right-12 w-32 h-32 bg-tertiary/10 rounded-full blur-3xl pointer-events-none" />
           <div className="relative flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center">
-                <Coins className="w-6 h-6 text-yellow-400" />
+              <div className="w-12 h-12 rounded-xl bg-tertiary/10 border border-tertiary/20 flex items-center justify-center">
+                <Coins className="w-6 h-6 text-tertiary" />
               </div>
               <div>
                 <p className="text-[10px] font-data-mono uppercase tracking-wider text-on-surface-variant">
@@ -363,7 +356,7 @@ function HandDetailPage() {
             </div>
             <div className="flex flex-col items-start md:items-end gap-1">
               <p className="text-[10px] font-data-mono uppercase tracking-wider text-on-surface-variant flex items-center gap-1">
-                <Trophy className="w-3 h-3 text-yellow-400" />
+                <Trophy className="w-3 h-3 text-tertiary" />
                 Winner
               </p>
               {winners.length > 0 ? (
@@ -374,7 +367,7 @@ function HandDetailPage() {
                     </span>
                     <Badge
                       variant="outline"
-                      className="border-yellow-500/30 text-yellow-400 bg-yellow-500/10 font-mono text-[10px]"
+                      className="border-tertiary/30 text-tertiary bg-tertiary/10 font-mono text-[10px]"
                     >
                       {w.hand_description}
                     </Badge>
@@ -390,7 +383,7 @@ function HandDetailPage() {
 
       {/* Street Navigation & Controls */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
-        <div className="flex-1 flex w-full gap-1 bg-white/5 border border-white/10 rounded-2xl p-1.5 backdrop-blur-xl">
+        <div className="flex-1 flex w-full gap-1 raised-panel rounded-2xl p-1.5">
           {streets.map((street) => {
             const hasActions = (actionsByStreet[street] || []).length > 0;
             const isActive = street === currentStreet;
@@ -430,7 +423,7 @@ function HandDetailPage() {
           })}
         </div>
 
-        <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-2xl p-1.5 backdrop-blur-xl">
+        <div className="flex items-center gap-2 raised-panel rounded-2xl p-1.5">
           <Button
             variant="ghost"
             size="sm"
@@ -494,7 +487,7 @@ function HandDetailPage() {
       </motion.div>
 
       {/* Actions Timeline */}
-      <Card className="p-5 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl">
+      <Card className="p-5 raised-panel rounded-2xl">
         <h3 className="font-headline-md text-base text-on-surface mb-4 flex items-center gap-2">
           {STREET_LABELS[currentStreet]} Actions
         </h3>
@@ -515,21 +508,17 @@ function HandDetailPage() {
               const displayName = getPlayerName(action.player_id);
               const type = action.action_type?.toLowerCase() || 'action';
 
-              let actionColor = 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20';
+              let actionColor = 'bg-white/5 text-on-surface-variant border-white/10';
               if (type.includes('fold') || type.includes('muck'))
                 actionColor = 'bg-red-500/10 text-red-400 border-red-500/20';
-              else if (type.includes('check') || type.includes('call'))
-                actionColor = 'bg-blue-500/10 text-blue-400 border-blue-500/20';
               else if (type.includes('bet') || type.includes('raise'))
                 actionColor = 'bg-tertiary/10 text-tertiary border-tertiary/20';
-              else if (type.includes('blind'))
-                actionColor = 'bg-purple-500/10 text-purple-400 border-purple-500/20';
 
               return (
                 <motion.div
                   key={action.timestamp_ms}
                   variants={itemVariants}
-                  className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-colors"
+                  className="flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-white/[0.04] hover:border-tertiary/30 transition-colors"
                 >
                   <span className="text-[10px] font-data-mono text-on-surface-variant/50 w-6 text-right">
                     {index + 1}
@@ -563,8 +552,8 @@ function HandDetailPage() {
 function HandDetailSkeleton() {
   return (
     <div className="relative max-w-5xl mx-auto p-4 md:p-8 space-y-6">
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-tertiary/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-tertiary/[0.06] rounded-full blur-[120px] pointer-events-none -z-10" />
       <div className="animate-pulse space-y-6">
         <div className="flex items-center gap-4">
           <Skeleton className="h-11 w-11 bg-white/5 rounded-xl" />
