@@ -217,14 +217,9 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
           <div className="w-10 h-10 rounded-full bg-tertiary/10 flex items-center justify-center border border-tertiary/20">
             <Settings className="w-5 h-5 text-tertiary" />
           </div>
-          <div>
-            <span className="text-xs font-data-mono uppercase tracking-widest text-tertiary">
-              <Trans>Configuration</Trans>
-            </span>
-            <h3 className="font-headline-md text-base text-on-surface">
-              <Trans>Basic Information</Trans>
-            </h3>
-          </div>
+          <h3 className="font-headline-md text-base text-on-surface">
+            <Trans>Basic Information</Trans>
+          </h3>
         </div>
 
         <div className="space-y-2">
@@ -269,17 +264,12 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
       {/* Branding */}
       <motion.div variants={itemVariants} className="space-y-5">
         <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-            <ImageIcon className="w-5 h-5 text-blue-400" />
+          <div className="w-10 h-10 rounded-full bg-tertiary/10 flex items-center justify-center border border-tertiary/20">
+            <ImageIcon className="w-5 h-5 text-tertiary" />
           </div>
-          <div>
-            <span className="text-xs font-data-mono uppercase tracking-widest text-blue-400">
-              <Trans>Assets</Trans>
-            </span>
-            <h3 className="font-headline-md text-base text-on-surface">
-              <Trans>Branding</Trans>
-            </h3>
-          </div>
+          <h3 className="font-headline-md text-base text-on-surface">
+            <Trans>Branding</Trans>
+          </h3>
         </div>
 
         <div className="flex items-start gap-4 p-4 bg-white/5 border border-white/10 rounded-xl">
@@ -327,20 +317,15 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
       {hasClubPro && (
         <motion.div
           variants={itemVariants}
-          className="space-y-5 p-6 border border-yellow-500/20 rounded-2xl bg-gradient-to-br from-yellow-500/10 to-orange-500/5"
+          className="space-y-5 p-6 raised-panel rounded-2xl border-tertiary/20"
         >
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center border border-yellow-500/30">
-              <Crown className="w-5 h-5 text-yellow-400" />
+            <div className="w-10 h-10 rounded-full bg-tertiary/10 flex items-center justify-center border border-tertiary/20">
+              <Crown className="w-5 h-5 text-tertiary" />
             </div>
-            <div>
-              <span className="text-xs font-data-mono uppercase tracking-widest text-yellow-400">
-                <Trans>Premium</Trans>
-              </span>
-              <h3 className="font-headline-md text-base text-on-surface">
-                <Trans>Club Pro Customization</Trans>
-              </h3>
-            </div>
+            <h3 className="font-headline-md text-base text-on-surface">
+              <Trans>Club Pro Customization</Trans>
+            </h3>
           </div>
 
           {/* Banner Upload */}
@@ -449,7 +434,7 @@ export function ClubSettingsTab({ club }: ClubSettingsTabProps) {
         <Button
           type="submit"
           disabled={updateMutation.isPending}
-          className="flex items-center gap-2 px-6 py-3 bg-tertiary text-on-tertiary font-label-caps text-xs hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg shadow-emerald-500/10 rounded-xl disabled:opacity-40"
+          className="flex items-center gap-2 px-6 py-3 font-label-caps text-xs uppercase tracking-wider disabled:opacity-40"
         >
           {updateMutation.isPending ? (
             <>
