@@ -39,7 +39,7 @@ export function SeasonPassTimer({ expiresAt }: SeasonPassTimerProps) {
   const hours = Math.floor((remaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
 
   return (
-    <span className="text-sm text-emerald-400">
+    <span className="text-sm text-tertiary">
       <Trans>
         {days}d {hours}h remaining
       </Trans>
