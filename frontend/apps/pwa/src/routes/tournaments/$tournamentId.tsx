@@ -176,7 +176,7 @@ function TournamentDetailPage() {
       <div className="flex items-start justify-between flex-wrap gap-4 mb-6">
         <div>
           <h1 className="font-display-lg text-3xl text-on-surface flex items-center gap-2">
-            <Trophy className="w-8 h-8 text-yellow-400" />
+            <Trophy className="w-8 h-8 text-on-surface-variant" />
             {tournament.name || `${tournament.tournament_type} <Trans>Tournament</Trans>`}
           </h1>
           <div className="flex items-center gap-3 mt-2 flex-wrap">
@@ -255,7 +255,7 @@ function TournamentDetailPage() {
 
       {/* Progress / Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <Card className="p-4 bg-white/5 border-white/10">
+        <Card className="p-4 raised-panel rounded-2xl">
           <div className="flex items-center gap-2 text-on-surface-variant text-sm">
             <Users className="w-4 h-4" />
             <Trans>Registrations</Trans>
@@ -272,7 +272,7 @@ function TournamentDetailPage() {
           </div>
         </Card>
 
-        <Card className="p-4 bg-white/5 border-white/10">
+        <Card className="p-4 raised-panel rounded-2xl">
           <div className="flex items-center gap-2 text-on-surface-variant text-sm">
             <Coins className="w-4 h-4" />
             <Trans>Prize Pool</Trans>
@@ -289,7 +289,7 @@ function TournamentDetailPage() {
           </div>
         </Card>
 
-        <Card className="p-4 bg-white/5 border-white/10">
+        <Card className="p-4 raised-panel rounded-2xl">
           <div className="flex items-center gap-2 text-on-surface-variant text-sm">
             <Clock className="w-4 h-4" />
             <Trans>Status</Trans>
@@ -327,7 +327,7 @@ function TournamentDetailPage() {
 
       {/* Results if completed */}
       {isCompleted && results && results.length > 0 && (
-        <Card className="p-4 bg-white/5 border-white/10">
+        <Card className="p-4 raised-panel rounded-2xl">
           <h3 className="font-semibold text-on-surface mb-3 flex items-center gap-2">
             <Medal className="w-5 h-5 text-yellow-400" />
             <Trans>Final Results</Trans>
@@ -336,7 +336,7 @@ function TournamentDetailPage() {
             {results.map((result) => (
               <div
                 key={result.user_id}
-                className="flex items-center justify-between px-3 py-1.5 bg-white/5 rounded-lg text-sm"
+                className="flex items-center justify-between px-3 py-1.5 rounded-xl border border-white/10 bg-white/[0.04] text-sm"
               >
                 <div className="flex items-center gap-3">
                   <span className="text-on-surface-variant w-8 text-center">
