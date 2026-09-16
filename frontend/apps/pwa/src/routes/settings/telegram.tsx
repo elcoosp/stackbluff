@@ -34,7 +34,7 @@ function TelegramSettingsPage() {
         </h1>
       </div>
 
-      <Card>
+      <Card className="raised-panel rounded-2xl">
         <CardHeader>
           <CardTitle className="text-sm font-semibold text-on-surface flex items-center gap-2">
             <Send className="w-4 h-4 text-tertiary" />
