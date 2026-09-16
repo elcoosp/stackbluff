@@ -1,7 +1,7 @@
 import { Trans } from '@lingui/react/macro';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, RotateCcw, Trophy } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -99,12 +99,6 @@ export function ClubLeaderboardTab({ clubId }: ClubLeaderboardTabProps) {
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Trophy className="w-4 h-4 text-yellow-400" />
-            <span className="text-xs font-data-mono uppercase tracking-widest text-yellow-400">
-              <Trans>Rankings</Trans>
-            </span>
-          </div>
           <h2 className="font-headline-md text-xl text-on-surface">
             <Trans>Club Leaderboard</Trans>
           </h2>
@@ -139,20 +133,14 @@ export function ClubLeaderboardTab({ clubId }: ClubLeaderboardTabProps) {
               'flex items-center gap-4 p-4 rounded-xl border transition-colors',
               entry.rank === 1
                 ? 'bg-yellow-500/5 border-yellow-500/20'
-                : 'bg-white/5 border-white/10 hover:bg-white/[0.07]',
+                : 'bg-white/[0.04] border-white/10 hover:border-tertiary/30',
             )}
           >
             <div className="flex-shrink-0 w-10 text-center">
               <span
                 className={cn(
                   'text-lg font-bold',
-                  entry.rank === 1
-                    ? 'text-yellow-400'
-                    : entry.rank === 2
-                      ? 'text-gray-300'
-                      : entry.rank === 3
-                        ? 'text-orange-400'
-                        : 'text-on-surface-variant',
+                  entry.rank === 1 ? 'text-yellow-400' : 'text-on-surface-variant',
                 )}
               >
                 #{entry.rank}
@@ -167,7 +155,7 @@ export function ClubLeaderboardTab({ clubId }: ClubLeaderboardTabProps) {
                   className="w-12 h-12 rounded-full object-cover border border-white/10"
                 />
               ) : (
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500/80 to-pink-500/80 flex items-center justify-center text-white font-bold text-lg border border-white/10">
+                <div className="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface font-bold text-lg border border-white/10">
                   {entry.username.charAt(0).toUpperCase()}
                 </div>
               )}
