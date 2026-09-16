@@ -9,7 +9,7 @@ import type {
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { motion } from 'framer-motion';
-import { Calendar, ChevronRight, Coins, LogIn, Sparkles, Trophy, Users } from 'lucide-react';
+import { Calendar, ChevronRight, Coins, LogIn, Trophy, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -80,25 +80,19 @@ function TournamentHistoryPage() {
   if (!userId) {
     return (
       <div className="relative max-w-5xl mx-auto p-4 md:p-8 space-y-8">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-orange-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-tertiary/10 rounded-full blur-[120px] pointer-events-none -z-10" />
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         >
-          <div className="flex items-center gap-2 mb-1">
-            <Sparkles className="w-4 h-4 text-orange-400" />
-            <span className="text-xs font-data-mono uppercase tracking-widest text-orange-400">
-              <Trans>Past Events</Trans>
-            </span>
-          </div>
           <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface">
             <Trans>Tournament History</Trans>
           </h1>
         </motion.div>
         <div className="flex flex-col items-center justify-center min-h-[40vh] p-6">
-          <Card className="max-w-md w-full p-12 text-center bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl">
-            <Trophy className="w-12 h-12 text-orange-400 mx-auto mb-4" />
+          <Card className="max-w-md w-full p-12 text-center raised-panel rounded-2xl">
+            <Trophy className="w-12 h-12 text-on-surface-variant mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-on-surface mb-2">
               <Trans>Sign In Required</Trans>
             </h2>
@@ -124,24 +118,18 @@ function TournamentHistoryPage() {
   if (error) {
     return (
       <div className="relative max-w-5xl mx-auto p-4 md:p-8 space-y-8">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-red-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-tertiary/[0.06] rounded-full blur-[120px] pointer-events-none -z-10" />
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         >
-          <div className="flex items-center gap-2 mb-1">
-            <Sparkles className="w-4 h-4 text-red-400" />
-            <span className="text-xs font-data-mono uppercase tracking-widest text-red-400">
-              <Trans>Error</Trans>
-            </span>
-          </div>
           <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface">
             <Trans>Tournament History</Trans>
           </h1>
         </motion.div>
         <div className="flex flex-col items-center justify-center min-h-[40vh] p-6">
-          <Card className="max-w-md w-full p-12 text-center bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl">
+          <Card className="max-w-md w-full p-12 text-center raised-panel rounded-2xl">
             <h2 className="text-xl font-semibold text-red-400 mb-2">
               <Trans>Failed to Load</Trans>
             </h2>
@@ -163,8 +151,8 @@ function TournamentHistoryPage() {
   return (
     <div className="relative max-w-5xl mx-auto p-4 md:p-8 space-y-8">
       {/* Background Ambient Effects */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-orange-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-yellow-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-tertiary/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-tertiary/[0.06] rounded-full blur-[120px] pointer-events-none -z-10" />
 
       {/* Header */}
       <motion.div
@@ -172,12 +160,6 @@ function TournamentHistoryPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       >
-        <div className="flex items-center gap-2 mb-1">
-          <Sparkles className="w-4 h-4 text-orange-400" />
-          <span className="text-xs font-data-mono uppercase tracking-widest text-orange-400">
-            <Trans>Past Events</Trans>
-          </span>
-        </div>
         <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface flex items-center gap-3">
           <Trans>Tournament History</Trans>
         </h1>
@@ -192,7 +174,7 @@ function TournamentHistoryPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
         >
-          <Card className="p-12 text-center bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl flex flex-col items-center">
+          <Card className="p-12 text-center raised-panel rounded-2xl flex flex-col items-center">
             <Trophy className="w-12 h-12 text-on-surface-variant mx-auto mb-4" />
             <p className="text-on-surface-variant">
               <Trans>You haven't participated in any completed tournaments yet.</Trans>
@@ -214,7 +196,7 @@ function TournamentHistoryPage() {
         >
           {tournaments.map((tournament) => (
             <motion.div key={tournament.id} variants={itemVariants}>
-              <Card className="p-5 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl hover:bg-white/[0.07] transition-colors group">
+              <Card className="p-5 raised-panel rounded-2xl hover:border-tertiary/25 transition-colors group">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <h3 className="font-headline-md text-base text-on-surface flex items-center gap-2">
@@ -227,15 +209,15 @@ function TournamentHistoryPage() {
                     </h3>
                     <div className="flex flex-wrap gap-4 mt-2 text-xs text-on-surface-variant">
                       <span className="flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5 text-orange-400" />
+                        <Calendar className="w-3.5 h-3.5 text-on-surface-variant" />
                         {new Date(tournament.completed_at).toLocaleDateString()}
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <Users className="w-3.5 h-3.5 text-orange-400" />
+                        <Users className="w-3.5 h-3.5 text-on-surface-variant" />
                         {tournament.results.length} <Trans>participants</Trans>
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <Coins className="w-3.5 h-3.5 text-orange-400" />
+                        <Coins className="w-3.5 h-3.5 text-yellow-400" />
                         <Trans>${tournament.prize_pool.toLocaleString()} prize</Trans>
                       </span>
                     </div>
@@ -260,7 +242,7 @@ function TournamentHistoryPage() {
                       {tournament.results.slice(0, 3).map((result) => (
                         <div
                           key={result.user_id}
-                          className="flex items-center justify-between px-4 py-2 bg-black/20 border border-white/5 rounded-lg text-sm"
+                          className="flex items-center justify-between px-4 py-2 rounded-xl border border-white/10 bg-white/[0.04] text-sm"
                         >
                           <div className="flex items-center gap-3">
                             {result.position <= 3 ? (
@@ -301,7 +283,7 @@ function TournamentHistoryPage() {
 function HistorySkeleton() {
   return (
     <div className="relative max-w-5xl mx-auto p-4 md:p-8 space-y-8">
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-orange-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-tertiary/[0.06] rounded-full blur-[120px] pointer-events-none -z-10" />
       <div className="space-y-2">
         <Skeleton className="h-4 w-24 bg-white/5 rounded" />
         <Skeleton className="h-8 w-64 bg-white/5 rounded" />
