@@ -72,8 +72,48 @@ html {
 body {
     color: var(--color-on-surface);
     background: var(--color-background);
+    background-image: radial-gradient(ellipse 120% 80% at 50% -10%, #1b1d1c 0%, #141414 42%, #0b0b0b 100%);
+    background-attachment: fixed;
 }
 
+::selection {
+    background: rgba(78, 222, 163, 0.28);
+    color: var(--color-on-surface);
+}
+
+/* ── Scrollbars: slim, glassy ─────────────────────────────── */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+}
+*::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+*::-webkit-scrollbar-track {
+    background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.22);
+    background-clip: padding-box;
+    border: 2px solid transparent;
+}
+
+/* ── Focus ring: emerald, matching the table's action glow ── */
+:focus-visible {
+    outline: 2px solid rgba(78, 222, 163, 0.55);
+    outline-offset: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LIQUID METAL — silver / emerald primary CTAs
+   ═══════════════════════════════════════════════════════════ */
 .liquid-metal {
     background: linear-gradient(135deg, #d4d4dc 0%, #a1a1aa 50%, #71717a 100%);
     color: #0a0a0a !important;
@@ -91,6 +131,10 @@ body {
     box-shadow: 0 4px 24px rgba(0, 0, 0, .6), inset 0 1px 0 rgba(255, 255, 255, .2);
 }
 
+.liquid-metal:active {
+    transform: scale(.97);
+}
+
 .liquid-metal-emerald {
     background: linear-gradient(135deg, #4edea3 0%, #10b981 50%, #059669 100%);
     color: #022c22 !important;
@@ -101,6 +145,15 @@ body {
     border-top-color: rgba(111, 251, 190, .5);
     box-shadow: 0 4px 20px rgba(78, 222, 163, .2), inset 0 1px 0 rgba(255, 255, 255, .1);
     transition: all .2s;
+}
+
+.liquid-metal-emerald:hover {
+    background: linear-gradient(135deg, #6ffbbe 0%, #34d399 50%, #10b981 100%);
+    box-shadow: 0 4px 24px rgba(78, 222, 163, .3), inset 0 1px 0 rgba(255, 255, 255, .15);
+}
+
+.liquid-metal-emerald:active {
+    transform: scale(.97);
 }
 
 @keyframes shimmer {
@@ -115,4 +168,125 @@ body {
 
 .animate-shimmer {
     animation: shimmer 2s infinite linear;
+}
+
+/* Skeleton scanning light */
+.shimmer-bar {
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.05) 40%,
+            rgba(255, 255, 255, 0.09) 50%,
+            rgba(255, 255, 255, 0.05) 60%,
+            transparent 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.8s infinite linear;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   OBSIDIAN STEEL SURFACE KIT — shared glass material
+   Hand-rolled components, not Tailwind utilities, so shared
+   markup (Header, GlassPanel) renders identically everywhere.
+   ═══════════════════════════════════════════════════════════ */
+@layer components {
+    /* Glass hub: the base glass material used across the app.
+       Mirrors the mini-app definition so shared components
+       (Header balance pill, GlassHub) style correctly in the PWA. */
+    .glass-hub {
+        backdrop-filter: blur(16px);
+        background: rgba(10, 10, 10, .85);
+        border: 1px solid rgba(255, 255, 255, .1);
+        border-top-color: rgba(255, 255, 255, .15);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, .8);
+        color: var(--color-on-surface);
+    }
+
+    /* Razor highlight: a crisp top-edge catch-light — the same
+       rim lighting the table rail uses. Pairs with a surface tint. */
+    .razor-highlight {
+        position: relative;
+    }
+
+    .razor-highlight::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg,
+                transparent 0%,
+                rgba(255, 255, 255, .28) 20%,
+                rgba(255, 255, 255, .34) 50%,
+                rgba(255, 255, 255, .28) 80%,
+                transparent 100%);
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    /* Carbon-bg: the card-room felt texture behind content.
+       A fine diagonal weave at near-zero contrast over the page. */
+    .carbon-bg {
+        background-image:
+            repeating-linear-gradient(45deg, transparent 0, transparent 2px, rgba(255, 255, 255, 0.012) 2px, rgba(255, 255, 255, 0.012) 4px),
+            radial-gradient(ellipse 90% 70% at 50% -10%, rgba(255, 255, 255, 0.035) 0%, transparent 55%);
+    }
+
+    /* Status LED: lit emerald dot with soft bloom, as on the table rail. */
+    .status-led {
+        box-shadow: 0 0 6px 1px rgba(78, 222, 163, 0.55);
+    }
+
+    /* Page gutter: consistent vertical rhythm for sidebars. */
+    .py-gutter {
+        padding-block: 1.5rem;
+    }
+
+    /* Raised panel: deep glass, top catch-light, inner sheen.
+       One material for cards and dialogs across the app. */
+    .raised-panel {
+        position: relative;
+        border: 1px solid rgba(255, 255, 255, .09);
+        border-top-color: rgba(255, 255, 255, .14);
+        background: linear-gradient(180deg, rgba(255, 255, 255, .04) 0%, rgba(255, 255, 255, .012) 100%);
+        backdrop-filter: blur(20px) saturate(1.2);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .05);
+    }
+
+    .raised-panel::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg,
+                transparent 0%,
+                rgba(255, 255, 255, .3) 20%,
+                rgba(255, 255, 255, .4) 50%,
+                rgba(255, 255, 255, .3) 80%,
+                transparent 100%);
+        pointer-events: none;
+    }
+
+    /* Data strip: mono readout used for values, odds, counts. */
+    .data-strip {
+        font-family: var(--font-data-mono);
+        letter-spacing: 0.02em;
+    }
+
+    /* Headline underline ornament for page titles. */
+    .page-title {
+        position: relative;
+        display: inline-block;
+    }
+
+    .page-title::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: -0.35rem;
+        height: 1px;
+        background: linear-gradient(90deg, rgba(78, 222, 163, .65), rgba(78, 222, 163, 0));
+    }
 }
