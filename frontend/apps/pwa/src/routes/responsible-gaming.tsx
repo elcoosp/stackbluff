@@ -31,7 +31,7 @@ function ResponsibleGamingPage() {
         </h1>
       </div>
 
-      <Card className="border-tertiary/20 bg-tertiary/5">
+      <Card className="raised-panel rounded-2xl border-tertiary/25">
         <CardContent className="p-6 text-center">
           <AlertTriangle className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
           <h2 className="text-lg font-semibold text-on-surface">
