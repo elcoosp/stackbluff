@@ -7,7 +7,7 @@ import type { TournamentSummary } from '@stackbluff/shared/types/tournament.type
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { motion } from 'framer-motion';
-import { History, Sparkles } from 'lucide-react';
+import { History } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { LobbyTabs } from '@/components/lobby/LobbyTabs';
@@ -199,8 +199,8 @@ function TournamentsPage() {
   return (
     <div className="relative max-w-5xl mx-auto p-4 md:p-8 space-y-8">
       {/* Background Ambient Effects */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-yellow-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-orange-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-tertiary/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-tertiary/[0.06] rounded-full blur-[120px] pointer-events-none -z-10" />
 
       {/* Header */}
       <motion.div
@@ -210,12 +210,6 @@ function TournamentsPage() {
         className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6"
       >
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Sparkles className="w-4 h-4 text-yellow-400" />
-            <span className="text-xs font-data-mono uppercase tracking-widest text-yellow-400">
-              <Trans>Compete & Win</Trans>
-            </span>
-          </div>
           <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface flex items-center gap-3">
             <Trans>Tournaments</Trans>
           </h1>
