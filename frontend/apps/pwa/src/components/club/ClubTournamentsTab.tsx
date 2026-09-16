@@ -55,7 +55,7 @@ function TournamentCard({
   const spotsLeft = tournament.max_players - tournament.current_registrations;
 
   return (
-    <Card className="p-6 bg-white/5 border border-white/10 backdrop-blur-xl rounded-2xl hover:bg-white/[0.07] transition-colors">
+    <Card className="p-6 raised-panel rounded-2xl hover:border-tertiary/25 transition-colors">
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
         <div className="flex-grow space-y-4">
           <h3 className="font-headline-md text-lg text-on-surface">{tournament.name}</h3>
@@ -90,7 +90,7 @@ function TournamentCard({
             </div>
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
-                <Users className="w-4 h-4 text-blue-400" />
+                <Users className="w-4 h-4 text-on-surface-variant" />
               </div>
               <div>
                 <p className="text-xs font-data-mono uppercase tracking-widest text-on-surface-variant">
@@ -104,9 +104,9 @@ function TournamentCard({
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
                 {tournament.status === 'Registering' ? (
-                  <CheckCircle className="w-4 h-4 text-emerald-400" />
+                  <CheckCircle className="w-4 h-4 text-tertiary" />
                 ) : (
-                  <RotateCcw className="w-4 h-4 text-purple-400" />
+                  <RotateCcw className="w-4 h-4 text-on-surface-variant" />
                 )}
               </div>
               <div>
@@ -116,7 +116,7 @@ function TournamentCard({
                 <p
                   className={cn(
                     'font-medium text-sm mt-0.5',
-                    tournament.status === 'Registering' ? 'text-emerald-400' : 'text-purple-400',
+                    tournament.status === 'Registering' ? 'text-tertiary' : 'text-on-surface-variant',
                   )}
                 >
                   {tournament.status}
@@ -141,7 +141,7 @@ function TournamentCard({
             <Button
               onClick={() => onRegister(tournament.id, tournament.name)}
               disabled={isFull || isRegistering}
-              className="w-full px-4 py-3 bg-tertiary text-on-tertiary font-label-caps text-xs hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg shadow-emerald-500/10 rounded-xl justify-center disabled:opacity-40"
+              className="w-full px-4 py-3 font-label-caps text-xs uppercase tracking-wider justify-center disabled:opacity-40"
             >
               {isRegistering ? (
                 <>
@@ -220,12 +220,6 @@ export function ClubTournamentsTab({ clubId, isOwner }: ClubTournamentsTabProps)
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Calendar className="w-4 h-4 text-tertiary" />
-            <span className="text-xs font-data-mono uppercase tracking-widest text-tertiary">
-              <Trans>Events</Trans>
-            </span>
-          </div>
           <h2 className="font-headline-md text-xl text-on-surface">
             <Trans>Tournaments</Trans>
           </h2>
@@ -239,7 +233,7 @@ export function ClubTournamentsTab({ clubId, isOwner }: ClubTournamentsTabProps)
         {isOwner && (
           <Button
             onClick={() => setIsDialogOpen(true)}
-            className="flex items-center gap-2 px-4 py-3 bg-tertiary text-on-tertiary font-label-caps text-xs hover:bg-tertiary-fixed uppercase tracking-wider shadow-lg shadow-emerald-500/10 rounded-xl w-full sm:w-auto justify-center"
+            className="flex items-center gap-2 px-4 py-3 font-label-caps text-xs uppercase tracking-wider w-full sm:w-auto justify-center"
           >
             <Plus className="w-4 h-4" />
             <Trans>Schedule Tournament</Trans>
@@ -248,7 +242,7 @@ export function ClubTournamentsTab({ clubId, isOwner }: ClubTournamentsTabProps)
       </div>
 
       {upcomingTournaments.length === 0 ? (
-        <div className="text-center py-16 bg-white/5 border border-white/10 rounded-2xl">
+        <div className="text-center py-16 raised-panel rounded-2xl">
           <p className="text-on-surface-variant">
             <Trans>No upcoming tournaments scheduled</Trans>
           </p>
@@ -288,7 +282,7 @@ export function ClubTournamentsTab({ clubId, isOwner }: ClubTournamentsTabProps)
             {pastTournaments.slice(0, 5).map((tournament: Tournament) => (
               <div
                 key={tournament.id}
-                className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl opacity-70 hover:opacity-100 transition-opacity"
+                className="flex items-center justify-between p-4 rounded-xl border border-white/10 bg-white/[0.04] opacity-70 hover:opacity-100 hover:border-tertiary/30 transition-all"
               >
                 <div>
                   <p className="text-on-surface font-medium text-sm">{tournament.name}</p>
