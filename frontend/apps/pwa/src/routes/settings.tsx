@@ -10,7 +10,6 @@ import {
   Palette,
   Send,
   Shield,
-  Sparkles,
   User,
   Volume2,
 } from 'lucide-react';
@@ -62,71 +61,71 @@ function SettingsPage() {
       description: t`Profile, password, and email`,
       icon: User,
       to: '/settings/account',
-      color: 'text-blue-400',
-      bg: 'bg-blue-500/10',
-      gradient: 'from-blue-500/10 to-transparent',
+      color: 'text-on-surface-variant',
+      bg: 'bg-tertiary/10',
+      gradient: 'from-tertiary/10 to-transparent',
     },
     {
       title: t`Notifications`,
       description: t`Push alerts and preferences`,
       icon: Bell,
       to: '/settings/notifications',
-      color: 'text-yellow-400',
-      bg: 'bg-yellow-500/10',
-      gradient: 'from-yellow-500/10 to-transparent',
+      color: 'text-on-surface-variant',
+      bg: 'bg-tertiary/10',
+      gradient: 'from-tertiary/10 to-transparent',
     },
     {
       title: t`Appearance`,
       description: t`Theme and visual preferences`,
       icon: Palette,
       to: '/settings/appearance',
-      color: 'text-purple-400',
-      bg: 'bg-purple-500/10',
-      gradient: 'from-purple-500/10 to-transparent',
+      color: 'text-on-surface-variant',
+      bg: 'bg-tertiary/10',
+      gradient: 'from-tertiary/10 to-transparent',
     },
     {
       title: t`Audio`,
       description: t`Sound effects and haptics`,
       icon: Volume2,
       to: '/settings/audio',
-      color: 'text-pink-400',
-      bg: 'bg-pink-500/10',
-      gradient: 'from-pink-500/10 to-transparent',
+      color: 'text-on-surface-variant',
+      bg: 'bg-tertiary/10',
+      gradient: 'from-tertiary/10 to-transparent',
     },
     {
       title: t`Privacy & Data`,
       description: t`GDPR and account deletion`,
       icon: Shield,
       to: '/settings/privacy',
-      color: 'text-red-400',
-      bg: 'bg-red-500/10',
-      gradient: 'from-red-500/10 to-transparent',
+      color: 'text-on-surface-variant',
+      bg: 'bg-tertiary/10',
+      gradient: 'from-tertiary/10 to-transparent',
     },
     {
       title: t`Payments`,
       description: t`Purchase history and invoices`,
       icon: CreditCard,
       to: '/settings/payments',
-      color: 'text-emerald-400',
-      bg: 'bg-emerald-500/10',
-      gradient: 'from-emerald-500/10 to-transparent',
+      color: 'text-on-surface-variant',
+      bg: 'bg-tertiary/10',
+      gradient: 'from-tertiary/10 to-transparent',
     },
     {
       title: t`Telegram`,
       description: t`Link account for notifications`,
       icon: Send,
       to: '/settings/telegram',
-      color: 'text-cyan-400',
-      bg: 'bg-cyan-500/10',
-      gradient: 'from-cyan-500/10 to-transparent',
+      color: 'text-on-surface-variant',
+      bg: 'bg-tertiary/10',
+      gradient: 'from-tertiary/10 to-transparent',
     },
   ];
 
   return (
     <div className="relative max-w-5xl mx-auto p-4 md:p-8 space-y-8">
       {/* Ambient Background Lighting */}
-      <div className="absolute top-0 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-      <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute top-0 right-1/4 w-96 h-96 bg-tertiary/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-tertiary/[0.06] rounded-full blur-[120px] pointer-events-none -z-10" />
 
       {/* Header */}
       <motion.div
@@ -136,12 +135,6 @@ function SettingsPage() {
         className="flex flex-col md:flex-row md:items-center justify-between gap-4"
       >
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Sparkles className="w-4 h-4 text-blue-400" />
-            <span className="text-xs font-data-mono uppercase tracking-widest text-blue-400">
-              <Trans>Configuration</Trans>
-            </span>
-          </div>
           <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface flex items-center gap-3">
             <Trans>Settings</Trans>
           </h1>
@@ -172,7 +165,7 @@ function SettingsPage() {
               <motion.div key={section.to} variants={itemVariants}>
                 <Link
                   to={section.to as never}
-                  className="block relative overflow-hidden h-full p-6 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl transition-colors duration-300 hover:border-white/20 group"
+                  className="block relative overflow-hidden h-full p-6 raised-panel rounded-2xl transition-colors duration-300 hover:border-tertiary/25 group"
                 >
                   {/* Hover Gradient Background */}
                   <div
@@ -186,15 +179,15 @@ function SettingsPage() {
                     <div className="flex items-start justify-between mb-4">
                       <div
                         className={cn(
-                          'p-3 rounded-xl border border-white/10 transition-transform duration-300 group-hover:scale-110',
+                          'p-3 rounded-xl border border-tertiary/15 transition-transform duration-300 group-hover:scale-110',
                           section.bg,
                           section.color,
                         )}
                       >
                         <Icon className="w-6 h-6" />
                       </div>
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-white/5 border border-white/5 group-hover:bg-white/10 transition-colors">
-                        <ChevronRight className="w-4 h-4 text-on-surface-variant group-hover:text-on-surface transition-colors duration-300" />
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-tertiary/10 border border-tertiary/15 group-hover:bg-tertiary/20 transition-colors">
+                        <ChevronRight className="w-4 h-4 text-on-surface-variant group-hover:text-tertiary transition-colors duration-300" />
                       </div>
                     </div>
 
