@@ -13,7 +13,6 @@ import {
   Crown,
   Eye,
   Layers,
-  Sparkles,
   Table,
   TrendingUp,
   Trophy,
@@ -211,8 +210,8 @@ function HistoryPage() {
   return (
     <div className="relative max-w-5xl mx-auto p-4 md:p-8 space-y-8">
       {/* Background Ambient Effects */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-tertiary/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-tertiary/[0.06] rounded-full blur-[120px] pointer-events-none -z-10" />
 
       {/* Header */}
       <motion.div
@@ -220,13 +219,7 @@ function HistoryPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       >
-        <div className="flex items-center gap-2 mb-1">
-          <Sparkles className="w-4 h-4 text-blue-400" />
-          <span className="text-xs font-data-mono uppercase tracking-widest text-blue-400">
-            <Trans>Your Sessions</Trans>
-          </span>
-        </div>
-        <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface flex items-center gap-3">
+        <h1 className="font-display-lg text-3xl md:text-4xl text-on-surface">
           <Trans>Hand History</Trans>
         </h1>
         <p className="text-on-surface-variant text-sm mt-1 max-w-md">
@@ -248,26 +241,22 @@ function HistoryPage() {
             icon={Layers}
             label={t`Total Hands`}
             value={total.toLocaleString()}
-            tint="blue"
           />
           <StatCard
             icon={Trophy}
             label={t`Win Rate`}
             value={`${winRate}%`}
             sub={`${wins}W / ${losses}L`}
-            tint="tertiary"
           />
           <StatCard
             icon={Coins}
             label={t`Winnings`}
             value={`$${totalWinnings.toLocaleString()}`}
-            tint="yellow"
           />
           <StatCard
             icon={Crown}
             label={t`Biggest Pot`}
             value={`$${biggestPot.toLocaleString()}`}
-            tint="purple"
           />
         </motion.div>
       )}
@@ -279,11 +268,11 @@ function HistoryPage() {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.4 }}
         >
-          <Card className="p-12 text-center bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 pointer-events-none" />
+          <Card className="p-12 text-center raised-panel rounded-2xl relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-tertiary/10 to-transparent pointer-events-none" />
             <div className="relative">
-              <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto mb-4">
-                <Table className="w-8 h-8 text-blue-400" />
+              <div className="w-16 h-16 rounded-2xl bg-tertiary/10 border border-tertiary/20 flex items-center justify-center mx-auto mb-4">
+                <Table className="w-8 h-8 text-tertiary" />
               </div>
               <h3 className="font-headline-md text-lg text-on-surface mb-1">
                 <Trans>No hands played yet</Trans>
@@ -307,7 +296,7 @@ function HistoryPage() {
 
       {/* Filter Tabs */}
       {histories.length > 0 && (
-        <div className="flex w-full gap-1 bg-white/5 border border-white/10 rounded-2xl p-1.5 backdrop-blur-xl">
+        <div className="flex w-full gap-1 raised-panel rounded-2xl p-1.5">
           {FILTERS.map(({ value, label, icon: Icon }) => {
             const count = value === 'wins' ? wins : value === 'losses' ? losses : histories.length;
             const active = filter === value;
@@ -343,7 +332,7 @@ function HistoryPage() {
       {histories.length > 0 && (
         <>
           {filtered.length === 0 ? (
-            <Card className="p-10 text-center bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl">
+            <Card className="p-10 text-center raised-panel rounded-2xl">
               <p className="text-on-surface-variant text-sm">
                 <Trans>No {filter === 'wins' ? 'wins' : 'losses'} in your loaded history.</Trans>
               </p>
@@ -371,7 +360,7 @@ function HistoryPage() {
                 onClick={() => fetchNextPage()}
                 disabled={isFetchingNextPage}
                 variant="outline"
-                className="border-white/10 bg-white/5 backdrop-blur-xl text-on-surface-variant hover:text-on-surface hover:bg-white/10 rounded-xl px-6"
+                className="rounded-xl px-6"
               >
                 {isFetchingNextPage ? (
                   <>
@@ -404,30 +393,17 @@ function StatCard({
   label,
   value,
   sub,
-  tint,
 }: {
   icon: typeof Layers;
   label: string;
   value: string;
   sub?: string;
-  tint: 'blue' | 'tertiary' | 'yellow' | 'purple';
 }) {
-  const tints = {
-    blue: 'bg-blue-500/10 border-blue-500/20 text-blue-400',
-    tertiary: 'bg-tertiary/10 border-tertiary/20 text-tertiary',
-    yellow: 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400',
-    purple: 'bg-purple-500/10 border-purple-500/20 text-purple-400',
-  };
   return (
     <motion.div variants={itemVariants}>
-      <Card className="p-4 bg-white/5 border-white/10 backdrop-blur-xl rounded-2xl hover:bg-white/[0.07] transition-colors h-full">
+      <Card className="p-4 raised-panel rounded-2xl hover:border-tertiary/25 transition-colors h-full">
         <div className="flex items-center gap-3">
-          <div
-            className={cn(
-              'w-10 h-10 rounded-xl flex items-center justify-center border flex-shrink-0',
-              tints[tint],
-            )}
-          >
+          <div className="w-10 h-10 rounded-xl bg-tertiary/10 border border-tertiary/20 text-tertiary flex items-center justify-center flex-shrink-0">
             <Icon className="w-5 h-5" />
           </div>
           <div className="min-w-0">
@@ -469,10 +445,10 @@ function HandHistoryCard({
   return (
     <Card
       className={cn(
-        'p-5 border backdrop-blur-xl rounded-2xl transition-all duration-300 hover:bg-white/[0.07] group relative overflow-hidden',
+        'p-5 rounded-2xl transition-all duration-300 group relative overflow-hidden',
         isWin
-          ? 'bg-gradient-to-br from-tertiary/10 to-transparent border-tertiary/20'
-          : 'bg-white/5 border-white/10',
+          ? 'raised-panel bg-gradient-to-br from-tertiary/10 to-transparent border-tertiary/20'
+          : 'raised-panel hover:border-tertiary/25',
       )}
     >
       {/* Subtle glow accent for wins */}
@@ -584,8 +560,8 @@ function HandHistoryCard({
 function HistorySkeleton() {
   return (
     <div className="relative max-w-5xl mx-auto p-4 md:p-8 space-y-8">
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-tertiary/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-tertiary/[0.06] rounded-full blur-[120px] pointer-events-none -z-10" />
       <div className="animate-pulse space-y-8">
         <div className="space-y-2">
           <Skeleton className="h-3 w-28 bg-white/5" />
