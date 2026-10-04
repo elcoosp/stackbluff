@@ -444,6 +444,15 @@ impl MttDirector {
             return;
         }
 
+        // T-1 FIX: the registry broadcasts every table's HandCompleted to a
+        // SINGLE global channel. Without this filter, a player who busts a
+        // cash-game table while multi-tabling would be eliminated from the
+        // tournament, and two concurrent tournaments sharing a player would
+        // cross-eliminate each other. Only react to hands this director owns.
+        if !self.tables.iter().any(|t| t.table_id == event.room_id) {
+            return;
+        }
+
         for (user_id, _) in &event.busted_players {
             if self.survivors.contains(user_id) {
                 let position = self.survivors.len() as u32;
