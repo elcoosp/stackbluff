@@ -339,10 +339,21 @@ async fn handle_client_message(
             };
 
             let seat_opt = parsed.get("seat").and_then(|s| s.as_u64()).map(|s| s as u8);
-            let buy_in: i64 = parsed
-                .get("buy_in")
-                .and_then(|b| b.as_i64())
-                .unwrap_or(1000);
+            // B-18 FIX: require an explicit buy_in. The old default of 1000
+            // was silently applied when the field was missing (e.g. the
+            // mini-app does not send one) producing a buy-in the user never
+            // chose and possibly violating the table's min/max.
+            let buy_in: i64 = match parsed.get("buy_in").and_then(|b| b.as_i64()) {
+                Some(v) => v,
+                None => {
+                    let err = serde_json::json!({
+                        "type": "Error",
+                        "room_id": null,
+                        "message": "Missing required field 'buy_in'"
+                    });
+                    return send_json_to_client(client_tx, err);
+                }
+            };
 
             let stack = match ChipAmount::new(buy_in) {
                 Some(s) => s,
@@ -775,26 +786,29 @@ async fn handle_client_message(
                 .await
             {
                 Ok(()) => {
-                    let user_id = *user_id;
-                    let client_tx = client_tx.clone();
+                    // B-1 FIX: the refund channel carries the *target's*
+                    // remaining stack. The previous code credited the vote
+                    // initiator's `*user_id` wallet with it — direct chip
+                    // theft (two colluders could farm it). We now credit
+                    // the target. The authoritative fix is to move the
+                    // credit into the table actor; until then, at least
+                    // nobody is robbed.
+                    let target_id = target_id;
                     let user_repo = state.user_repo.clone();
                     tokio::spawn(async move {
                         if let Ok(refund) = refund_rx.await
                             && refund > ChipAmount::new(0).unwrap()
                         {
-                            let ctx = RequestContext::new(Uuid::new_v4(), Some(user_id));
-                            if let Ok(new_balance) = user_repo
-                                .update_chip_balance(ctx, user_id, refund.as_i64())
+                            let ctx = RequestContext::new(Uuid::new_v4(), Some(target_id));
+                            if let Err(e) = user_repo
+                                .update_chip_balance(ctx, target_id, refund.as_i64())
                                 .await
                             {
-                                let balance_msg = serde_json::json!({
-                                    "type": "BalanceUpdated",
-                                    "balance": new_balance
-                                });
-                                let _ = client_tx.send(axum::extract::ws::Message::Text(
-                                    balance_msg.to_string().into(),
-                                ));
+                                tracing::error!(%target_id, error = ?e,
+                                    "kick-vote refund: failed to credit target");
                             }
+                            // The target's own client_tx is not in this scope;
+                            // its balance updates on the next WS message.
                         }
                     });
                 }
