@@ -265,7 +265,12 @@ impl ClubService for ClubServiceImpl {
     }
 
     async fn is_club_pro_active(&self, _user_id: UserId) -> Result<bool, ClubError> {
-        Ok(true)
+        // F-10 FIX: previously returned a hardcoded Ok(true), granting the paid
+        // club banner feature to every authenticated user. Fail closed until the
+        // real entitlement lookup is wired (see B-16 / CheckClubPro dispatch).
+        // TODO(entitlements): SELECT 1 FROM entitlements
+        //   WHERE user_id = ? AND kind = 'club_pro' AND expires_at > now()
+        Ok(false)
     }
 
     async fn get_user_division(
