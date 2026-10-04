@@ -14,12 +14,18 @@ pub struct AuthUser(pub Uuid);
 impl<S: Send + Sync> FromRequestParts<S> for AuthUser {
     type Rejection = axum::http::StatusCode;
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        // S-1 FIX (partial): the previous version fell back to a fresh random
+        // UUID when the X-User-Id header was missing, so the route accepted
+        // anonymous callers with no session at all. That was one of two bugs
+        // here — the other is that X-User-Id is itself attacker-controlled.
+        // Full fix (verify the JWT via sb_auth::middleware::auth_middleware_with_context
+        // and drop this extractor entirely) is scheduled for the next round.
         let user_id = parts
             .headers
             .get("X-User-Id")
             .and_then(|v| v.to_str().ok())
             .and_then(|s| Uuid::parse_str(s).ok())
-            .unwrap_or_else(Uuid::new_v4);
+            .ok_or(axum::http::StatusCode::UNAUTHORIZED)?;
         Ok(AuthUser(user_id))
     }
 }
