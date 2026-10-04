@@ -149,6 +149,13 @@ impl GameState {
 
         if idx == self.current_player_index {
             self.advance_turn();
+        } else if self.round_complete() {
+            // E-7 FIX: a non-current force-fold could leave the round in a
+            // state where everyone still "pending" has already folded. The
+            // engine only reliably detects that for the current player. Add
+            // the safety net so a future caller (leave, sit-out, timeout)
+            // cannot hang the hand.
+            self.end_round();
         }
 
         let active_count = self.players.iter().filter(|p| !p.has_folded).count();
