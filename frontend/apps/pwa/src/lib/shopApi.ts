@@ -43,7 +43,11 @@ export type CreateIntentResponse = z.infer<typeof CreateIntentResponseSchema>;
 
 export async function createPaymentIntent(req: CreateIntentRequest): Promise<CreateIntentResponse> {
   const validated = CreateIntentRequestSchema.parse(req);
-  const res = await fetch('/payments/create-intent', {
+  // F-3 FIX: the backend never had a /payments/create-intent route; the real
+  // endpoint is POST /api/shop/purchase (sb-rest-router/src/shop_routes.rs).
+  // Route through the shared api client so the /api prefix and auth header
+  // are applied consistently.
+  const res = await fetch('/api/shop/purchase', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(validated),
