@@ -89,6 +89,17 @@ impl AuthServiceImpl {
     }
 
     fn validate_telegram_init_data(&self, init_data: &str) -> Result<serde_json::Value, AppError> {
+        // S-4 FIX: an empty bot token means the HMAC key is derived from the
+        // publicly known constant "WebAppData" — anyone can self-sign a valid
+        // `user` field for any Telegram id. Refuse to validate while the
+        // token is unset; the correct place to harden this is at the request
+        // boundary, not at process startup.
+        if self.config.bot_token_str().is_empty() {
+            return Err(AppError::Unauthorized(
+                "Telegram login is disabled (S-4: TELEGRAM_BOT_TOKEN not configured)".into(),
+            ));
+        }
+
         let parsed: Vec<(String, String)> = form_urlencoded::parse(init_data.as_bytes())
             .into_owned()
             .collect();
