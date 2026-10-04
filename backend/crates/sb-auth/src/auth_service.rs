@@ -357,8 +357,29 @@ impl AuthService for AuthServiceImpl {
     async fn verify_token(&self, token: &str) -> Result<TokenClaims, AppError> {
         let claims = verify_jwt(token, self.config.jwt_secret_str())
             .map_err(|e| AppError::Unauthorized(format!("Invalid token: {}", e)))?;
+        let user_id = UserId(claims.sub);
+
+        // S-5 FIX: reject tokens that were minted before the user's last
+        // password change. Previously `verify_token` only checked `exp`,
+        // so a stolen token survived a password reset for up to
+        // JWT_EXPIRY_DAYS (default 30 days). The `sessions` table was also
+        // never consulted — this is the minimum fix; a per-request cache
+        // of `password_changed_at` (60s) is the obvious next step if this
+        // DB lookup becomes a hotspot.
+        let ctx = RequestContext::new(Uuid::new_v4(), Some(user_id));
+        if let Ok(profile) = self.user_repo.get_user_profile(ctx, user_id).await {
+            if let Some(changed_at) = profile.password_changed_at {
+                let changed_ts = changed_at.timestamp() as usize;
+                if claims.iat <= changed_ts {
+                    return Err(AppError::Unauthorized(
+                        "token revoked — please sign in again".into(),
+                    ));
+                }
+            }
+        }
+
         Ok(TokenClaims {
-            user_id: UserId(claims.sub),
+            user_id,
             platform: claims.platform,
         })
     }
