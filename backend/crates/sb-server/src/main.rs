@@ -570,7 +570,17 @@ async fn run_app() {
     let cors = CorsLayer::new()
         .allow_origin(allowed_origins.clone())
         .allow_credentials(true)
-        .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+        // B-14 FIX: the API serves DELETE/PUT/PATCH (e.g. DELETE /users/me, GDPR);
+        // browsers preflight those and previously rejected them because they
+        // were missing from the CORS allow-list.
+        .allow_methods([
+            Method::GET,
+            Method::POST,
+            Method::PUT,
+            Method::DELETE,
+            Method::PATCH,
+            Method::OPTIONS,
+        ])
         .allow_headers([header::CONTENT_TYPE, header::COOKIE, header::AUTHORIZATION])
         .max_age(Duration::from_secs(86400));
 
