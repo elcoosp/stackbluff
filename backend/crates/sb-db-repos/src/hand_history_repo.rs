@@ -440,11 +440,17 @@ pub async fn spawn_hand_history_cleanup(db: DatabaseConnection) {
             .ok()
             .and_then(|s| s.parse().ok())
             .unwrap_or(30);
-        let cutoff = chrono::Utc::now() - chrono::Duration::days(retention_days);
-
+        // B-22 FIX: previously `cutoff` was computed once before the loop,
+        // so after the first pass no new rows ever fell below it and
+        // retention silently stopped working until the next process
+        // restart. Recompute inside the loop instead.
         let mut interval = tokio::time::interval(std::time::Duration::from_secs(3600));
         loop {
             interval.tick().await;
+
+            // B-22 FIX: recompute inside the loop so newly-aged rows are
+            // eventually deleted. The outer computation was removed above.
+            let cutoff = chrono::Utc::now() - chrono::Duration::days(retention_days);
 
             let result = hand_history::Entity::delete_many()
                 .filter(hand_history::Column::PlayedAt.lt(cutoff))
