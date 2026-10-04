@@ -310,7 +310,16 @@ impl Registry {
             .map_err(|_| TableError::ActorError("timeout sending Leave".to_string()))?
             .map_err(|_| TableError::ActorError("actor dropped".to_string()))?;
 
-        let result = tokio::time::timeout(Duration::from_secs(15), rx)
+        // B-6 FIX: a mid-hand leave is deferred until the hand completes.
+        // The previous 15-second budget was shorter than a typical hand, so
+        // the oneshot receiver was dropped before the actor could send the
+        // refund, the actor's `respond_to.send(..)` failed silently (`let _`),
+        // and the player's stack was destroyed. A hand that runs longer than
+        // 10 minutes is a server-level failure anyway.
+        //
+        // A truly durable fix (have the actor write the refund itself)
+        // requires injecting a UserRepo into TableActor; deferred.
+        let result = tokio::time::timeout(Duration::from_secs(600), rx)
             .await
             .map_err(|_| TableError::ActorError("timeout waiting for Leave response".to_string()))?
             .map_err(|_| TableError::ActorError("actor dropped".to_string()));
