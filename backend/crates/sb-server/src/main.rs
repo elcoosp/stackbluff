@@ -129,7 +129,8 @@ async fn request_context_middleware(mut req: Request, next: Next) -> Response {
         .headers()
         .get("x-forwarded-for")
         .and_then(|v| v.to_str().ok())
-        .and_then(|s| s.split(',').next())
+        .and_then(|s| s.split(',').last()) // B-29 FIX: take the rightmost hop (the one closest to us)
+                // instead of the leftmost, which was attacker-controlled.
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "0.0.0.0".to_string());
