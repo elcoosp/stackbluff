@@ -501,6 +501,24 @@ async fn handle_client_message(
                 }
             };
 
+            // B-5 FIX: pre-validate with the actor BEFORE debiting. The old
+            // order (debit → enqueue) destroyed chips whenever the actor
+            // rejected the rebuy (already has chips, in tournament mode,
+            // is_leaving, wrong range): `send_rebuy` returning Ok only meant
+            // the command was queued, not that it was accepted.
+            if let Err(e) = state
+                .registry
+                .validate_rebuy(room_id, *user_id, stack)
+                .await
+            {
+                let err = serde_json::json!({
+                    "type": "Error",
+                    "room_id": room_id,
+                    "message": format!("Rebuy rejected: {}", e)
+                });
+                return send_json_to_client(client_tx, err);
+            }
+
             let ctx = RequestContext::new(Uuid::new_v4(), Some(*user_id));
             match state
                 .user_repo
