@@ -8,6 +8,26 @@ use std::sync::Arc;
 use tracing::{error, info};
 use uuid::Uuid;
 
+
+/// B-28 FIX: escape Markdown control characters in user-derived strings
+/// (club names, tournament names, reminder text) before interpolating them
+/// into a `parse_mode: Markdown` body. Unescaped user content could inject
+/// links (`[click](https://evil)`) or break rendering with unbalanced
+/// `*`/`_`. Prefer HTML mode going forward, but this is the minimum fix.
+pub fn md_escape(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        if matches!(
+            c,
+            '_' | '*' | '[' | ']' | '(' | ')' | '~' | '`' | '>' | '#' | '+' | '-'
+                | '=' | '|' | '{' | '}' | '.' | '!'
+        ) {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    out
+}
 pub struct TelegramNotificationService {
     bot_token: String,
     http_client: Client,
