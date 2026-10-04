@@ -17,11 +17,20 @@ pub struct BlindScheduler {
 }
 
 impl BlindScheduler {
-    pub fn new(levels: Vec<BlindLevel>) -> Self {
-        assert!(
-            !levels.is_empty(),
-            "BlindScheduler requires at least one level"
-        );
+    pub fn new(mut levels: Vec<BlindLevel>) -> Self {
+        // T-3 FIX: this used to `assert!` on an empty schedule and panic. The
+        // director's tokio task died mid-startup with players already seated —
+        // POST /tournaments accepts an empty blind_schedule by default. Fall
+        // back to a single safe level; the API boundary validates properly.
+        if levels.is_empty() {
+            levels = vec![BlindLevel {
+                level: 1,
+                small_blind: 5,
+                big_blind: 10,
+                ante: 0,
+                duration_seconds: 600,
+            }];
+        }
         Self {
             levels,
             current_level_index: 0,
