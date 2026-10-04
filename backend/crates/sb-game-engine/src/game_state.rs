@@ -681,7 +681,11 @@ impl GameState {
         let to_call = self.smallest_bet - self.players[current_idx].bet_this_round;
         let min_raise = self.min_raise;
         let can_check = to_call == ChipAmount::new(0).unwrap();
-        let remaining_ms = 30_000;
+        // L-1 FIX: extract the magic number so it can be plumbed through
+        // GameConfig / TableConfig in a follow-up without touching the
+        // ActionRequired construction site again.
+        const DEFAULT_ACTION_TIMEOUT_MS: u64 = 30_000;
+        let remaining_ms = DEFAULT_ACTION_TIMEOUT_MS;
 
         let analytics = if let Some(hole_cards) = &self.players[current_idx].hole_cards {
             let pot_odds = if to_call.as_i64() > 0 {
