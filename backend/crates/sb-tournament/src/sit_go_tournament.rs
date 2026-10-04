@@ -402,6 +402,14 @@ impl SitGoTournament {
             return;
         }
 
+        // T-1 FIX (sit&go side): the registry broadcasts every table's
+        // HandCompleted to a single global channel. Without this filter, a
+        // player multi-tabling a cash game could bust their SNG seat via an
+        // unrelated table's event, or an SNG could pay out from a cash bust.
+        if Some(event.room_id) != self.table_id {
+            return;
+        }
+
         for (user_id, _starting_stack) in &event.busted_players {
             if self.survivors.contains(user_id) {
                 let position = self.players_remaining;
