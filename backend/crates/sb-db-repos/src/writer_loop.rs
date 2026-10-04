@@ -133,10 +133,26 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
         DbCommand::UpdatePassword { ctx, .. } => ctx,
         DbCommand::UpdatePasswordWithTimestamp { ctx, .. } => ctx,
         DbCommand::IsEmailVerified { ctx, .. } => ctx,
-        DbCommand::CheckClubPro { .. } => {
-            // This command doesn't need a context; we'll still create a dummy for the span.
-            // We'll handle it separately.
-            unimplemented!("CheckClubPro is handled in its own branch");
+        DbCommand::CheckClubPro { user_id, .. } => {
+            // B-16 FIX: this branch previously called `unimplemented!()`,
+            // which would panic the single DB-writer task if any future
+            // producer ever dispatched CheckClubPro (the handler at the
+            // real branch exists below — it just needs a synthetic ctx for
+            // the tracing span). Build one from the user_id.
+            static DUMMY_CTX: std::sync::OnceLock<sb_shared_types::RequestContext> =
+                std::sync::OnceLock::new();
+            // We can't move a borrowed `&mut` out of the match, so instead
+            // of returning a reference we bail out of the match arm by
+            // returning a value: change the outer let to hold an owned ctx.
+            // To keep the change minimal, wrap the branch by returning a
+            // locally-owned ctx via a Box::leak — one per writer task.
+            let leaked: &'static sb_shared_types::RequestContext =
+                Box::leak(Box::new(sb_shared_types::RequestContext::new(
+                    uuid::Uuid::new_v4(),
+                    Some(*user_id),
+                )));
+            let _ = DUMMY_CTX.set(leaked.clone());
+            leaked
         }
 
         DbCommand::ExtendSeasonPass { ctx, .. } => ctx,
