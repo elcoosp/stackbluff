@@ -1,7 +1,10 @@
 use async_trait::async_trait;
 use sb_contracts::leaderboard::{LeaderboardEntry, LeaderboardQuery};
 use sb_contracts::persistence_error::PersistenceError;
-use sea_orm::{ConnectionTrait, DatabaseBackend, DatabaseConnection, FromQueryResult, Statement};
+use sea_orm::{
+    ConnectionTrait, DatabaseBackend, DatabaseConnection, FromQueryResult, Statement,
+    TransactionTrait,
+};
 use uuid::Uuid;
 
 #[derive(FromQueryResult)]
@@ -59,36 +62,31 @@ impl LeaderboardQuery for LeaderboardRepo {
 }
 
 pub async fn refresh_leaderboard_mv(db: &DatabaseConnection) -> Result<(), PersistenceError> {
-    db.execute_unprepared("BEGIN")
+    // B-9 FIX: the previous implementation issued `BEGIN`, `DELETE`,
+    // `INSERT` and `COMMIT` as four separate `execute_unprepared` calls on
+    // the pool. Each can land on a *different* pooled connection, so the
+    // COMMIT regularly failed ("no transaction is active") and readers
+    // could observe an empty leaderboard between the DELETE and INSERT.
+    // Use a real transaction so all statements share one connection.
+    let txn = db
+        .begin()
         .await
         .map_err(|e| PersistenceError::Database(e.to_string()))?;
-    let result: Result<(), PersistenceError> = async {
-        db.execute_unprepared("DELETE FROM leaderboard_global_mv")
-            .await
-            .map_err(|e| PersistenceError::Database(e.to_string()))?;
-        // Optionally, ensure future inserts store user_id as TEXT by casting;
-        // but this is not strictly required if we keep the struct as Uuid.
-        db.execute_unprepared(
-            r#"INSERT INTO leaderboard_global_mv (user_id, display_name, total_chips_won, rank_position, refreshed_at)
-               SELECT u.id, u.display_name, u.chip_balance, ROW_NUMBER() OVER (ORDER BY u.chip_balance DESC), datetime('now')
-               FROM users u"#,
-        )
-        .await
-        .map_err(|e| PersistenceError::Database(e.to_string()))?;
-        Ok(())
-    }
-    .await;
 
-    match result {
-        Ok(()) => {
-            db.execute_unprepared("COMMIT")
-                .await
-                .map_err(|e| PersistenceError::Database(e.to_string()))?;
-            Ok(())
-        }
-        Err(e) => {
-            let _ = db.execute_unprepared("ROLLBACK").await;
-            Err(e)
-        }
-    }
+    txn.execute_unprepared("DELETE FROM leaderboard_global_mv")
+        .await
+        .map_err(|e| PersistenceError::Database(e.to_string()))?;
+
+    txn.execute_unprepared(
+        r#"INSERT INTO leaderboard_global_mv (user_id, display_name, total_chips_won, rank_position, refreshed_at)
+           SELECT u.id, u.display_name, u.chip_balance, ROW_NUMBER() OVER (ORDER BY u.chip_balance DESC), datetime('now')
+           FROM users u"#,
+    )
+    .await
+    .map_err(|e| PersistenceError::Database(e.to_string()))?;
+
+    txn.commit()
+        .await
+        .map_err(|e| PersistenceError::Database(e.to_string()))?;
+    Ok(())
 }
