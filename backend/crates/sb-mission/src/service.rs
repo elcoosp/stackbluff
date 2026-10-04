@@ -54,7 +54,8 @@ impl MissionServiceImpl {
         let existing = daily_mission::Entity::find()
             .filter(daily_mission::Column::UserId.eq(user_id.0))
             .filter(daily_mission::Column::AssignedDate.eq(date))
-            .all(self.db.as_ref())
+            
+            .order_by_asc(daily_mission::Column::MissionType).all(self.db.as_ref())
             .await
             .map_err(|e| AppError::from(e.to_string()))?;
 
