@@ -3,6 +3,12 @@ use sb_contracts::tournament_api::PayoutStructure;
 /// Pure function: calculates prize distribution for a given prize pool.
 /// Remainder chips go to the first position.
 pub fn calculate_payouts(prize_pool: i64, structure: &PayoutStructure) -> Vec<(u32, i64)> {
+    // T-2 FIX: never index into an empty structure. Previously `payouts[0]`
+    // panicked when `entries` was empty, killing the director task mid-payout.
+    if structure.entries.is_empty() || prize_pool <= 0 {
+        return vec![];
+    }
+
     let mut payouts = Vec::new();
     let mut total_distributed: i64 = 0;
 
@@ -15,7 +21,10 @@ pub fn calculate_payouts(prize_pool: i64, structure: &PayoutStructure) -> Vec<(u
     // Give remainder to first position
     let remainder = prize_pool - total_distributed;
     if remainder > 0 {
-        payouts[0].1 += remainder;
+        // T-2 FIX: only touch payouts[0] if it exists.
+        if let Some(first) = payouts.first_mut() {
+            first.1 += remainder;
+        }
     }
 
     payouts
