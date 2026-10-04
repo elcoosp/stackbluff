@@ -334,6 +334,38 @@ impl Registry {
         }
     }
 
+    /// B-5 FIX: ask the actor whether a rebuy would be accepted, WITHOUT
+    /// enqueueing the mutation. The WS handler calls this before debiting
+    /// the wallet. Replaces the previous order (debit → enqueue) which
+    /// silently destroyed chips on any actor-side rejection.
+    pub async fn validate_rebuy(
+        &self,
+        room_id: TableId,
+        user_id: UserId,
+        stack: ChipAmount,
+    ) -> Result<(), TableError> {
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        let cmd_tx = {
+            let guard = self.rooms.read().await;
+            let entry = guard.get(&room_id).ok_or(TableError::NotFound(room_id))?;
+            entry.cmd_tx.clone()
+        };
+        cmd_tx
+            .send(InternalCommand::ValidateRebuy {
+                user_id,
+                stack,
+                respond_to: tx,
+            })
+            .await
+            .map_err(|e| TableError::ActorError(e.to_string()))?;
+        match tokio::time::timeout(std::time::Duration::from_secs(5), rx).await {
+            Ok(Ok(Ok(()))) => Ok(()),
+            Ok(Ok(Err(msg))) => Err(TableError::ActorError(msg)),
+            Ok(Err(_)) => Err(TableError::ActorError("rebuy validator dropped".into())),
+            Err(_) => Err(TableError::ActorError("rebuy validate timeout".into())),
+        }
+    }
+
     pub async fn send_rebuy(
         &self,
         room_id: TableId,
