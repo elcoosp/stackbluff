@@ -37,7 +37,9 @@ export const authApi = {
   register: (data: RegisterData) =>
     request<AuthResponse>('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
   forgotPassword: async (email: string) => {
-    const response = await fetch('/auth/forgot-password', {
+    // F-5 FIX: use the same /api prefix as request(); the raw fetch bypassed
+    // it and hit the frontend origin, 404ing in dev and prod.
+    const response = await fetch(`${API_BASE}/auth/forgot-password`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email }),
@@ -48,7 +50,7 @@ export const authApi = {
     return response.json();
   },
   resetPassword: async (token: string, new_password: string) => {
-    const response = await fetch('/auth/reset-password', {
+    const response = await fetch(`${API_BASE}/auth/reset-password`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token, new_password }),
@@ -59,7 +61,7 @@ export const authApi = {
     return response.json();
   },
   verifyEmail: async (token: string) => {
-    const response = await fetch(`/auth/verify-email?token=${encodeURIComponent(token)}`);
+    const response = await fetch(`${API_BASE}/auth/verify-email?token=${encodeURIComponent(token)}`);
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Verification failed' }));
       throw new Error(error.message || 'Verification failed');
@@ -67,7 +69,7 @@ export const authApi = {
     return response.json();
   },
   resendVerification: async () => {
-    const response = await fetch('/auth/resend-verification', {
+    const response = await fetch(`${API_BASE}/auth/resend-verification`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
     });
@@ -80,7 +82,7 @@ export const authApi = {
     return response.json();
   },
   telegramAuth: async (initData: string) => {
-    const response = await fetch('/auth/telegram', {
+    const response = await fetch(`${API_BASE}/auth/telegram`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ init_data: initData }),
