@@ -30,7 +30,20 @@ impl AuthConfig {
                 std::env::var("JWT_SECRET").expect("JWT_SECRET must be set"),
             ),
             bot_token: SecretString::from(
-                std::env::var("TELEGRAM_BOT_TOKEN").unwrap_or_else(|_| "".into()),
+                // S-4 FIX: previously defaulted to an empty string, which made
+                // the HMAC over "WebAppData" with a known key — anyone could
+                // self-sign a valid `user` field for any Telegram id. Fail fast
+                // outside tests; tests still get an empty token for fixtures.
+                std::env::var("TELEGRAM_BOT_TOKEN").unwrap_or_else(|_| {
+                    if cfg!(test) {
+                        String::new()
+                    } else {
+                        panic!(
+                            "TELEGRAM_BOT_TOKEN must be set (S-4: empty default made \
+                             Telegram initData signatures forgeable)"
+                        )
+                    }
+                }),
             ),
             jwt_expiry_days: std::env::var("JWT_EXPIRY_DAYS")
                 .ok()
