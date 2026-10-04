@@ -696,7 +696,8 @@ async fn handle_client_message(
                     return send_json_to_client(client_tx, err);
                 }
             };
-            if let Err(e) = state.registry.start_hand(room_id).await {
+            // B-35 FIX: pass the caller so the actor can reject non-seated callers.
+            if let Err(e) = state.registry.start_hand(room_id, Some(*user_id)).await {
                 error!(%user_id, %room_id, error = ?e, "Start hand failed");
                 let err = serde_json::json!({
                     "type": "Error",
