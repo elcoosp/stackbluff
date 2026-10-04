@@ -13,7 +13,11 @@ use uuid::Uuid;
 const CENT_TO_CHIP_DIVISOR: i64 = 100;
 
 pub async fn stripe_webhook(
-    State(state): State<RealPaymentService>,
+    // B-4 FIX: use Arc so this handler can be mounted on a sub-router via
+    // `.with_state(Arc<RealPaymentService>)` from main.rs. Previously the
+    // function took the bare struct, which made it impossible to merge
+    // into the shared router.
+    State(state): State<std::sync::Arc<RealPaymentService>>,
     headers: axum::http::HeaderMap,
     body: String,
 ) -> impl IntoResponse {
@@ -164,7 +168,7 @@ pub async fn stripe_webhook(
 }
 
 pub async fn telegram_stars_webhook(
-    State(state): State<RealPaymentService>,
+    State(state): State<std::sync::Arc<RealPaymentService>>,
     headers: axum::http::HeaderMap,
     body: String,
 ) -> impl IntoResponse {
