@@ -431,7 +431,7 @@ impl MttDirector {
 
         // FIXED: Send StartHand command after ResumeHand to actually deal the hand
         for table in &self.tables {
-            let _ = table.cmd_tx.send(TableCommand::StartHand).await;
+            let _ = table.cmd_tx.send(TableCommand::StartHand { user_id: None }).await;
         }
 
         self.broadcast_state();
@@ -524,7 +524,7 @@ impl MttDirector {
 
         // FIXED: Send StartHand to deal the next hand
         for table in &self.tables {
-            let _ = table.cmd_tx.send(TableCommand::StartHand).await;
+            let _ = table.cmd_tx.send(TableCommand::StartHand { user_id: None }).await;
         }
 
         self.broadcast_state();
