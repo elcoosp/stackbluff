@@ -77,23 +77,49 @@ pub async fn stripe_webhook(
             }
         };
         let user_id = UserId::new(user_uuid);
+
+        // P-1 FIX: award the advertised chip grant from metadata, not
+        // `amount_cents / 100`. Fall back to the legacy cents/100 formula
+        // only when the metadata is absent (rows written before the fix).
         let amount_cents = session.amount_total.unwrap_or(0);
-        // Convert cents back to chips
-        let chips = amount_cents / CENT_TO_CHIP_DIVISOR;
+        let chips: i64 = metadata
+            .get("chips")
+            .and_then(|s| s.parse::<i64>().ok())
+            .unwrap_or_else(|| amount_cents / CENT_TO_CHIP_DIVISOR);
+
+        // P-3 FIX: idempotent confirmation. `try_mark_succeeded` returns
+        // true only on the call that actually flipped pending -> succeeded,
+        // so a redelivery of the same event cannot re-award chips.
         let start = std::time::Instant::now();
-        if let Err(e) = state
-            .confirm_payment(&payment_id, "stripe", "succeeded", Some(chrono::Utc::now()))
+        let first_time = match state
+            .confirm_payment_idempotent(&payment_id, Some(chrono::Utc::now()))
             .await
         {
-            error!(request_id = %request_id, payment_id = %payment_id, error = %e, "Failed to confirm payment");
-            metrics::record_webhook_failure();
-            return (StatusCode::INTERNAL_SERVER_ERROR, "Internal error").into_response();
-        }
+            Ok(v) => v,
+            Err(e) => {
+                error!(request_id = %request_id, payment_id = %payment_id, error = %e, "Failed to confirm payment");
+                metrics::record_webhook_failure();
+                return (StatusCode::INTERNAL_SERVER_ERROR, "Internal error").into_response();
+            }
+        };
         metrics::record_confirmation_duration("stripe", start.elapsed());
-        if let Err(e) = state
-            .award_chips_on_success(user_id, ChipAmount::new(chips).unwrap_or_default())
-            .await
-        {
+
+        if !first_time {
+            info!(request_id = %request_id, payment_id = %payment_id, "Duplicate Stripe webhook — chips already awarded, ignoring");
+            metrics::record_webhook_success();
+            return (StatusCode::OK, Json(json!({ "status": "ok" }))).into_response();
+        }
+
+        // Now we own the transition — award exactly once.
+        let chip_amount = match ChipAmount::new(chips) {
+            Some(a) => a,
+            None => {
+                error!(request_id = %request_id, payment_id = %payment_id, chips, "Invalid chip amount — refusing to award");
+                metrics::record_webhook_failure();
+                return (StatusCode::INTERNAL_SERVER_ERROR, "Invalid chip amount").into_response();
+            }
+        };
+        if let Err(e) = state.award_chips_on_success(user_id, chip_amount).await {
             error!(request_id = %request_id, payment_id = %payment_id, user_id = %user_id.as_uuid(), error = %e, "Failed to award chips");
         } else {
             info!(request_id = %request_id, payment_id = %payment_id, user_id = %user_id.as_uuid(), cents = amount_cents, chips = chips, "Chips awarded successfully");
@@ -198,25 +224,37 @@ pub async fn telegram_stars_webhook(
         let stars = pre_checkout["total_amount"].as_i64().unwrap_or(0);
         // Assume 1 star = 1 chip (or could use a configurable ratio)
         let chips = stars;
+
+        // P-3 FIX: same idempotent gate as the Stripe path.
         let start = std::time::Instant::now();
-        if let Err(e) = state
-            .confirm_payment(
-                payment_id,
-                "telegram_stars",
-                "succeeded",
-                Some(chrono::Utc::now()),
-            )
+        let first_time = match state
+            .confirm_payment_idempotent(payment_id, Some(chrono::Utc::now()))
             .await
         {
-            error!(request_id = %request_id, payment_id = %payment_id, error = %e, "Failed to confirm Telegram payment");
-            metrics::record_webhook_failure();
-            return (StatusCode::INTERNAL_SERVER_ERROR, "Internal error").into_response();
-        }
+            Ok(v) => v,
+            Err(e) => {
+                error!(request_id = %request_id, payment_id = %payment_id, error = %e, "Failed to confirm Telegram payment");
+                metrics::record_webhook_failure();
+                return (StatusCode::INTERNAL_SERVER_ERROR, "Internal error").into_response();
+            }
+        };
         metrics::record_confirmation_duration("telegram", start.elapsed());
-        if let Err(e) = state
-            .award_chips_on_success(user_id, ChipAmount::new(chips).unwrap_or_default())
-            .await
-        {
+
+        if !first_time {
+            info!(request_id = %request_id, payment_id = %payment_id, "Duplicate Telegram webhook — ignoring");
+            metrics::record_webhook_success();
+            return (StatusCode::OK, "OK").into_response();
+        }
+
+        let chip_amount = match ChipAmount::new(chips) {
+            Some(a) => a,
+            None => {
+                error!(request_id = %request_id, payment_id = %payment_id, chips, "Invalid chip amount — refusing to award");
+                metrics::record_webhook_failure();
+                return (StatusCode::INTERNAL_SERVER_ERROR, "Invalid chip amount").into_response();
+            }
+        };
+        if let Err(e) = state.award_chips_on_success(user_id, chip_amount).await {
             error!(request_id = %request_id, payment_id = %payment_id, user_id = %user_id.as_uuid(), error = %e, "Failed to award chips from Telegram");
         } else {
             info!(request_id = %request_id, payment_id = %payment_id, user_id = %user_id.as_uuid(), stars = stars, chips = chips, "Telegram chips awarded");
