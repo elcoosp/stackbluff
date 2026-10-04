@@ -725,8 +725,14 @@ impl GameState {
         let remaining_ms = DEFAULT_ACTION_TIMEOUT_MS;
 
         let analytics = if let Some(hole_cards) = &self.players[current_idx].hole_cards {
+            // E-4 FIX: pot odds are `call / (pot + call)`, not `pot / call / 10`.
+            // The old formula made a pot-sized bet look like "1.0", so bots
+            // called almost anything and the player HUD displayed a meaningless
+            // number. (See also sb-poker-bots for the same bug.)
             let pot_odds = if to_call.as_i64() > 0 {
-                (self.pot.as_i64() as f32 / to_call.as_i64() as f32) / 10.0
+                let call = to_call.as_i64() as f32;
+                let pot_after_call = (self.pot.as_i64() as f32) + call;
+                call / pot_after_call
             } else {
                 0.0
             };
