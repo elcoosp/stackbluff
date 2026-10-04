@@ -53,6 +53,28 @@ impl PaymentRepo {
         Ok(model)
     }
 
+    /// P-3 FIX: atomic "only the first caller flips this row to succeeded".
+    /// Returns `true` when the status transitioned from `pending` on this
+    /// call. Callers use that to gate any side effect (award chips, extend
+    /// entitlements) so a Stripe webhook redelivery cannot double-credit.
+    pub async fn try_mark_succeeded(
+        db: &DatabaseConnection,
+        payment_id: &str,
+        completed_at: Option<DateTime<Utc>>,
+    ) -> Result<bool, AppError> {
+        use sea_orm::sea_query::Expr;
+        let res = PaymentIntentEntity::update_many()
+            .col_expr(crate::models::Column::Status, Expr::value("succeeded"))
+            .col_expr(crate::models::Column::UpdatedAt, Expr::value(Utc::now()))
+            .col_expr(crate::models::Column::CompletedAt, Expr::value(completed_at))
+            .filter(crate::models::Column::PaymentId.eq(payment_id))
+            .filter(crate::models::Column::Status.eq("pending"))
+            .exec(db)
+            .await
+            .map_err(|e| AppError::Database(e.to_string()))?;
+        Ok(res.rows_affected > 0)
+    }
+
     pub async fn update_status(
         db: &DatabaseConnection,
         payment_id: &str,
