@@ -457,7 +457,9 @@ impl TournamentService for TournamentServiceImpl {
                 name: r.name.clone(),
                 tournament_type: r.config.tournament_type,
                 status: r.status,
-                registered: 0,
+                // T-10 FIX: populate the real entrant count instead of a constant 0,
+                // which made every lobby show zero entrants and hid joinable SNGs.
+                registered: self.repo.count_registrations(r.id).await.unwrap_or(0),
                 max_players: r.config.max_players,
                 buy_in: r.config.buy_in,
                 prize_pool: r.prize_pool,
