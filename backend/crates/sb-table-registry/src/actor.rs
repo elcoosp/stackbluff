@@ -239,7 +239,13 @@ pub enum InternalCommand {
         kick_vote_id: Uuid,
     },
 
-    StartHand,
+    // B-35 FIX: carry the caller so the actor can verify they're seated
+    // (or the table owner) before starting a hand. Previously any
+    // authenticated WS client could force-start a hand in any room whose
+    // UUID they had seen in a broadcast.
+    StartHand {
+        user_id: Option<sb_shared_types::UserId>,
+    },
     Timeout {
         user_id: UserId,
     },
@@ -716,7 +722,21 @@ impl TableActor {
                 action_type,
                 amount,
             } => self.process_action(user_id, action_type, amount).await,
-            InternalCommand::StartHand => self.start_new_hand().await,
+            InternalCommand::StartHand { user_id } => {
+                // B-35 FIX: verify the caller is a seated player (or an
+                // explicit internal caller with `None`). The command used to
+                // be unauthenticated so any WS client could force-start any
+                // table's hand — griefing sit-out players and rebuy flows.
+                if let Some(uid) = user_id {
+                    if !self.players.contains_key(&uid) {
+                        tracing::warn!(%uid, "StartHand rejected: caller not seated");
+                        // B-35 FIX (follow-up): `handle_command` returns bool,
+                        // so the rejection must produce a value.
+                        return false;
+                    }
+                }
+                self.start_new_hand().await
+            }
             InternalCommand::Timeout { user_id } => self.handle_timeout(user_id).await,
             InternalCommand::ShowdownComplete => self.finalize_hand_after_reveal().await,
             InternalCommand::ClearLastActions => {
