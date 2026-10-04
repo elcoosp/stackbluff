@@ -589,7 +589,40 @@ async fn run_app() {
         r2: r2.clone(),
     });
 
-    let metrics_route = axum::Router::new().route("/metrics", axum::routing::get(metrics_handler));
+    // B-26 FIX: /metrics exposes operational internals (route counters,
+    // queue sizes). Require a bearer token set via METRICS_TOKEN; if unset,
+    // leave the route mounted so dev still works, but log a warning.
+    let metrics_route = match std::env::var("METRICS_TOKEN") {
+        Ok(token) if !token.is_empty() => {
+            let token: &'static str = Box::leak(token.into_boxed_str());
+            axum::Router::new().route(
+                "/metrics",
+                axum::routing::get(
+                    move |headers: axum::http::HeaderMap| async move {
+                        let ok = headers
+                            .get(axum::http::header::AUTHORIZATION)
+                            .and_then(|v| v.to_str().ok())
+                            .and_then(|s| s.strip_prefix("Bearer "))
+                            .map(|s| s == token)
+                            .unwrap_or(false);
+                        if !ok {
+                            return (
+                                axum::http::StatusCode::UNAUTHORIZED,
+                                String::from("unauthorized\n"),
+                            );
+                        }
+                        (axum::http::StatusCode::OK, metrics_handler().await)
+                    },
+                ),
+            )
+        }
+        _ => {
+            tracing::warn!(
+                "B-26: METRICS_TOKEN is not set — /metrics is PUBLIC. Set it in production."
+            );
+            axum::Router::new().route("/metrics", axum::routing::get(metrics_handler))
+        }
+    };
 
     let mission_router = sb_mission::mission_routes(Arc::new(db.clone()), user_svc.clone());
 
