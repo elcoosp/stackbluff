@@ -208,6 +208,15 @@ pub enum InternalCommand {
         user_id: UserId,
         stack: ChipAmount,
     },
+    // B-5 FIX: pre-flight validation before the wallet debit. Without this,
+    // every actor-side rejection (still have chips, in tournament mode,
+    // wrong range, is_leaving, …) happened AFTER the WS handler had already
+    // debited the wallet and there was no refund path — chips vanished.
+    ValidateRebuy {
+        user_id: UserId,
+        stack: ChipAmount,
+        respond_to: tokio::sync::oneshot::Sender<Result<(), String>>,
+    },
     Action {
         user_id: UserId,
         action_type: ActionType,
@@ -694,6 +703,14 @@ impl TableActor {
                 force,
             } => self.leave_player(user_id, respond_to, force).await,
             InternalCommand::Rebuy { user_id, stack } => self.process_rebuy(user_id, stack).await,
+            InternalCommand::ValidateRebuy {
+                user_id,
+                stack,
+                respond_to,
+            } => {
+                let result = self.check_rebuy(&user_id, stack);
+                let _ = respond_to.send(result);
+            }
             InternalCommand::Action {
                 user_id,
                 action_type,
@@ -1088,9 +1105,34 @@ impl TableActor {
         let _ = respond_to.send(true);
     }
 
-    async fn process_rebuy(&mut self, user_id: UserId, stack: ChipAmount) {
+    /// B-5 FIX: pure validation, no mutation and no side-channel error sends.
+    /// Used by `ValidateRebuy` so the WS handler can decide whether to debit
+    /// the wallet *before* the actor commits anything.
+    fn check_rebuy(&self, user_id: &UserId, stack: ChipAmount) -> Result<(), String> {
         if let TableMode::Tournament { .. } = &self.mode {
-            self.send_error_to(&user_id, "No rebuys in tournament mode");
+            return Err("No rebuys in tournament mode".into());
+        }
+        let player = match self.players.get(user_id) {
+            Some(p) => p,
+            None => return Err("Not seated at this table".into()),
+        };
+        if player.is_leaving {
+            return Err("You are in the process of leaving the table".into());
+        }
+        if player.stack > zero() {
+            return Err("You still have chips, cannot rebuy".into());
+        }
+        if stack < self.config.min_buy_in || stack > self.config.max_buy_in {
+            return Err("Rebuy amount out of range".into());
+        }
+        Ok(())
+    }
+
+    async fn process_rebuy(&mut self, user_id: UserId, stack: ChipAmount) {
+        // B-5 FIX: route through the shared helper first so the paths can
+        // never diverge.
+        if let Err(msg) = self.check_rebuy(&user_id, stack) {
+            self.send_error_to(&user_id, &msg);
             return;
         }
         if let Some(player) = self.players.get_mut(&user_id) {
