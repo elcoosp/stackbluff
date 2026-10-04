@@ -712,7 +712,11 @@ impl MttDirector {
         let completed_at = Utc::now();
 
         let survivor_user = self.survivors.iter().copied().next();
-        let total_players = self.config.max_players;
+        // T-4 FIX: use the ACTUAL entrant count, not the tournament capacity.
+        // Previous code recorded the first bust as position `max_players`,
+        // so an MTT that started with 20 of 500 entries paid almost no one
+        // (the payout loop only looks up positions 1..N).
+        let total_players = self.players.len() as u32;
 
         let mut position_map: HashMap<u32, UserId> = HashMap::new();
         for (i, (user_id, _)) in self.elimination_order.iter().enumerate() {
