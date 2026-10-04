@@ -89,11 +89,25 @@ async fn subscribe(
 
 async fn unsubscribe(
     State(state): State<Arc<NotificationState>>,
+    Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<UnsubscribeRequest>,
 ) -> Result<StatusCode, (StatusCode, String)> {
+    // B-27 FIX: require a valid session. Previously this endpoint had no
+    // AuthUser at all, so anyone who learned a subscription endpoint URL
+    // (they leak in logs, browser storage, etc.) could silence any user's
+    // push notifications.
+    //
+    // TODO: use a user-scoped delete once the repo exposes one
+    // (`PushSubscriptionRepo::delete_by_user_and_endpoint`); for now the
+    // auth requirement alone stops anonymous abuse.
+    let user_id = UserId::new(
+        uuid::Uuid::parse_str(&auth_user.user_id)
+            .map_err(|_| (StatusCode::UNAUTHORIZED, "invalid user id".to_string()))?,
+    );
     tracing::info!(
-        "Received push unsubscribe request for endpoint {}",
-        req.endpoint
+        %user_id,
+        endpoint = %req.endpoint,
+        "Received push unsubscribe request"
     );
     let repo = PushSubscriptionRepoImpl {
         db: state.db.clone(),
