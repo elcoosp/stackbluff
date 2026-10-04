@@ -95,12 +95,23 @@ impl TournamentRepo for TournamentRepoImpl {
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;
 
-        tournament_registration::Entity::delete_many()
+        // T-11 FIX: only shrink the prize pool if a registration row was
+        // actually removed. Previously, calling this for a non-registered
+        // user still decremented the pool by one buy-in, slowly deflating
+        // the pool until it came out of the winners' prizes. Also guard
+        // against underflow so a pool value can never go negative.
+        let delete_result = tournament_registration::Entity::delete_many()
             .filter(tournament_registration::Column::TournamentId.eq(tournament_id.as_uuid()))
             .filter(tournament_registration::Column::UserId.eq(user_id.as_uuid()))
             .exec(&txn)
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;
+
+        if delete_result.rows_affected == 0 {
+            // Nothing to refund — no pool adjustment, no state change.
+            txn.commit().await.map_err(|e| AppError::Database(e.to_string()))?;
+            return Ok(());
+        }
 
         let tour = tournament::Entity::find_by_id(tournament_id.as_uuid())
             .one(&txn)
