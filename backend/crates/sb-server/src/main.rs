@@ -619,8 +619,12 @@ async fn run_app() {
             },
         )))
         .merge(club_router)
-        .layer(axum::Extension(app_state.clone()))
+        // B-25 FIX: merge BEFORE the Extension layer. Axum layers only apply
+        // to routes registered *before* them, so the analytics handler's
+        // Extension<Arc<AppState>> extractor previously could never be
+        // satisfied — every /api/analytics/event call returned 500.
         .merge(sb_rest_router::analytics_routes::analytics_routes())
+        .layer(axum::Extension(app_state.clone()))
         .layer(
             tower::ServiceBuilder::new()
                 .layer(NewSentryLayer::<axum::http::Request<axum::body::Body>>::new_from_top())
@@ -669,7 +673,15 @@ async fn run_app() {
     spawn_gdpr_scheduler(app_state);
 
     let app = app.layer(CompressionLayer::new()).layer(rate_limit_layer());
-    axum::serve(listener, app).await.expect("server error");
+    // S-2b FIX: provide ConnectInfo so the rate limiter can key on the client
+    // IP. Without this the extension never exists and every request shares the
+    // "unknown" bucket — one global counter, effectively no per-IP limit.
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+    )
+    .await
+    .expect("server error");
 }
 
 async fn load_existing_tournaments(
