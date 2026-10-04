@@ -22,12 +22,38 @@ pub async fn settle_crashed_tournaments(
             "settling crashed tournament..."
         );
 
-        // Get results to avoid double-refunding
+        // B-8 FIX: flip the status FIRST and only refund if the flip
+        // actually changed it. The previous ordering (refund -> flip)
+        // meant a crash or a failed `set_status` between the two steps
+        // refunded the same registrations again on the next restart —
+        // minting chips every startup. Flipping first makes the whole
+        // operation idempotent: after the first transition Running ->
+        // Cancelled, later startups skip. Worst case on crash we lose
+        // refunds, but we never create chips out of nothing.
+        //
+        // The preferred long-term fix is a single transaction that marks
+        // each registration `refunded = true` and credits chips inside
+        // it, plus a `chip_committed` column (see B-3).
+        match repo
+            .set_status(tournament.id, TournamentStatus::Cancelled, None)
+            .await
+        {
+            Ok(()) => {}
+            Err(e) => {
+                error!(
+                    tournament_id = %tournament.id,
+                    error = ?e,
+                    "Skipping refund: could not flip crashed tournament to Cancelled"
+                );
+                continue;
+            }
+        }
+
+        // Now that we own the transition, refund non-winners.
         let results = repo.list_results(tournament.id).await?;
         let result_user_ids: std::collections::HashSet<_> =
             results.iter().map(|r| r.user_id).collect();
 
-        // Get all registrations and refund buy-ins only if not already paid out
         let registrations = repo.list_registrations(tournament.id).await?;
         for reg in &registrations {
             if result_user_ids.contains(&reg.user_id) {
@@ -50,18 +76,6 @@ pub async fn settle_crashed_tournaments(
                     "Failed to refund crashed tournament buy-in"
                 );
             }
-        }
-
-        // Mark as cancelled
-        if let Err(e) = repo
-            .set_status(tournament.id, TournamentStatus::Cancelled, None)
-            .await
-        {
-            error!(
-                tournament_id = %tournament.id,
-                error = ?e,
-                "Failed to mark crashed tournament as cancelled"
-            );
         }
 
         info!(
