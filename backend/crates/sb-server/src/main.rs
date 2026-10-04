@@ -368,6 +368,10 @@ async fn run_app() {
         // handler also needs it as a `ClubNotifier`, which Telegram's
         // service does not (yet) implement. The trait-object override
         // applies only to `notification_service`.
+        // `notif` stays as the concrete InMemory type: the bot handler
+        // also needs it as a `ClubNotifier`. `notification_service` is the
+        // trait object used by everything else (tournaments, clubs, etc.)
+        // and is the only piece overridden by the Telegram service.
         let notif = Arc::new(InMemoryNotificationService::new());
         let notification_service: Arc<dyn sb_contracts::notification_api::NotificationService> =
             match std::env::var("TELEGRAM_BOT_TOKEN") {
@@ -381,8 +385,6 @@ async fn run_app() {
                     notif.clone() as Arc<dyn sb_contracts::notification_api::NotificationService>
                 }
             };
-        let notification_service =
-            notif.clone() as Arc<dyn sb_contracts::notification_api::NotificationService>;
         let bot_handler = Some(notif as Arc<dyn sb_contracts::notification_api::ClubNotifier>);
         (notification_service, bot_handler)
     };
