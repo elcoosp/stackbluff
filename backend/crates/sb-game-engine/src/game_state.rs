@@ -345,35 +345,62 @@ impl GameState {
                 self.advance_turn();
             }
             Action::Raise(raise_amount) => {
+                // E-2 FIX: previous code unconditionally set `smallest_bet =
+                // total_bet` and `min_raise = raise_amount`, which let a
+                // partial all-in raise (a) lower the current bet level
+                // backwards and (b) hand out a smaller-than-legal min-raise
+                // and reopen action for players who had already acted.
+                //
+                // Correct rules:
+                //   * A raise must be at least the size of the last full raise
+                //     unless it is an all-in for less.
+                //   * The current bet level only ever moves upward.
+                //   * Only a full raise updates the increment the next raise
+                //     must match and re-opens action for players who already
+                //     called.
                 let total_bet = self.round_bets[idx] + raise_amount;
                 let required = self.smallest_bet + self.min_raise;
-                if total_bet < required && self.players[idx].stack != raise_amount {
+                let stack = self.players[idx].stack;
+                let is_all_in = raise_amount == stack;
+
+                if total_bet < required && !is_all_in {
                     return Err(ActionError::InvalidRaise {
                         attempted: raise_amount,
                         min: self.min_raise,
                     });
                 }
-                if self.players[idx].stack < raise_amount {
+                if stack < raise_amount {
                     return Err(ActionError::InsufficientStack {
                         action: "raise".into(),
                         needed: raise_amount,
                     });
                 }
+
                 self.add_bet(idx, raise_amount);
-                self.smallest_bet = total_bet;
-                self.min_raise = raise_amount;
-                self.last_aggressor_index = Some(idx);
+
+                if total_bet > self.smallest_bet {
+                    let raise_size = total_bet - self.smallest_bet;
+                    self.smallest_bet = total_bet;
+                    let full_raise = raise_size >= self.min_raise;
+                    if full_raise {
+                        self.min_raise = raise_size;
+                        self.last_aggressor_index = Some(idx);
+                    }
+                    // A full raise reopens action for every eligible player.
+                    // A sub-minimum all-in raise only leaves pending players
+                    // pending — players who already acted keep their status.
+                    for (i, p) in self.players.iter_mut().enumerate() {
+                        if i != idx && !p.has_folded && !p.is_all_in {
+                            if full_raise || !p.acted_this_round {
+                                p.acted_this_round = false;
+                            }
+                        }
+                    }
+                }
 
                 // Track raised preflop
                 if self.current_round == BettingRound::Preflop {
                     self.raised_preflop.insert(player_id);
-                }
-
-                // Reset acted_this_round for all OTHER active players
-                for (i, p) in self.players.iter_mut().enumerate() {
-                    if i != idx && !p.has_folded && !p.is_all_in {
-                        p.acted_this_round = false;
-                    }
                 }
 
                 self.players[idx].acted_this_round = true;
@@ -782,11 +809,24 @@ impl GameState {
             }];
         }
 
-        let total_bets: Vec<(PlayerId, ChipAmount)> = active
+        // E-1 FIX: size the pots from EVERY contribution — folded players'
+        // dead money included. Eligibility is filtered by the folder set
+        // inside the helper. The previous code passed only the *active*
+        // players' bets, so folders' chips were credited to no one and
+        // disappeared from the economy on every multiway showdown.
+        let all_bets: Vec<(PlayerId, ChipAmount)> = self
+            .players
             .iter()
-            .map(|&i| (self.players[i].player_id, self.players[i].total_bet))
+            .filter(|p| p.total_bet.as_i64() > 0)
+            .map(|p| (p.player_id, p.total_bet))
             .collect();
-        let pots = compute_side_pots(&total_bets);
+        let folded: std::collections::HashSet<PlayerId> = self
+            .players
+            .iter()
+            .filter(|p| p.has_folded)
+            .map(|p| p.player_id)
+            .collect();
+        let pots = crate::pot::compute_side_pots_with_dead_money(&all_bets, &folded);
         let mut winners = Vec::new();
 
         for pot in pots {
@@ -812,12 +852,15 @@ impl GameState {
             }
             if self.community_cards.len() < 5 {
                 warn!("Showdown with incomplete community cards – splitting pot");
-                let share_val = pot.amount.as_i64() / eligible_indices.len() as i64;
-                let share = ChipAmount::new(share_val).expect("share positive");
-                for idx in eligible_indices {
+                // E-3 FIX: distribute odd chips instead of dropping them.
+                let n = eligible_indices.len() as i64;
+                let share_val = pot.amount.as_i64() / n;
+                let remainder = (pot.amount.as_i64() % n) as usize;
+                for (k, idx) in eligible_indices.into_iter().enumerate() {
+                    let extra = if k < remainder { 1 } else { 0 };
                     winners.push(Winner {
                         player_id: self.players[idx].player_id,
-                        amount: share,
+                        amount: ChipAmount::new(share_val + extra).expect("share positive"),
                         hand_rank: HandRank::HighCard,
                     });
                 }
@@ -841,12 +884,19 @@ impl GameState {
                     best_indices = vec![idx];
                 }
             }
-            let share_val = pot.amount.as_i64() / best_indices.len() as i64;
-            let share = ChipAmount::new(share_val).expect("share positive");
-            for idx in best_indices {
+            // E-3 FIX: distribute the remainder chip(s) instead of truncating
+            // them away. Integer division used to silently destroy up to
+            // (n - 1) chips per pot on a split. Real poker awards the odd
+            // chips by position; we award them in player-index order, which
+            // matches the seat order best_indices was built in.
+            let n = best_indices.len() as i64;
+            let share_val = pot.amount.as_i64() / n;
+            let remainder = (pot.amount.as_i64() % n) as usize;
+            for (k, idx) in best_indices.into_iter().enumerate() {
+                let extra = if k < remainder { 1 } else { 0 };
                 winners.push(Winner {
                     player_id: self.players[idx].player_id,
-                    amount: share,
+                    amount: ChipAmount::new(share_val + extra).expect("share positive"),
                     hand_rank: best_strength.as_ref().unwrap().rank,
                 });
             }
