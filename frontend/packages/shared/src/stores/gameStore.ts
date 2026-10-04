@@ -217,16 +217,18 @@ export const useGameStore = create<GameState>((set, _get) => ({
 
   setHeroHoleCards: (roomId, cards) =>
     set((state) => {
-      if (!state.rooms[roomId]) return {};
-      if (cards && cards.length === 2) {
-        return {
-          rooms: {
-            ...state.rooms,
-            [roomId]: { ...state.rooms[roomId], heroHoleCards: cards as [Card, Card] },
-          },
-        };
-      }
-      return {};
+      // F-2 FIX: the previous version guarded on `cards.length === 2`, so
+      // clearing the hero's hole cards (cards = []) hit the early return and
+      // nothing happened. Between hands the previous hand's cards stayed
+      // face-up on the table UI. Set `heroHoleCards` to the new value or
+      // null on clear.
+      const next = cards && cards.length === 2 ? cards : null;
+      return {
+        rooms: {
+          ...state.rooms,
+          [roomId]: { ...state.rooms[roomId], heroHoleCards: next },
+        },
+      };
     }),
 
   setActionRequired: (roomId, req) =>
