@@ -144,7 +144,30 @@ pub async fn update_club_settings(
     Path(club_id): Path<ClubId>,
     Json(req): Json<UpdateClubSettingsRequest>,
 ) -> Result<Json<ClubProSettings>, (StatusCode, String)> {
-    let _user_id = extract_user_id(&ctx)?;
+    let user_id = extract_user_id(&ctx)?;
+
+    // F-9 FIX: verify ownership before letting the caller mutate the club.
+    // Previously the handler only confirmed there *was* a RequestContext;
+    // any authenticated user could rename any club, hijack its
+    // telegram_group_id (silently redirecting club notifications to an
+    // attacker-controlled chat) and change Pro theme settings.
+    match state.service.get_club(&ctx, club_id).await {
+        Ok(club) if club.created_by == user_id => {}
+        Ok(_) => {
+            return Err((
+                StatusCode::FORBIDDEN,
+                "not the club owner".to_string(),
+            ));
+        }
+        Err(e) => {
+            tracing::error!(?e, "Failed to load club for ownership check");
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal error".to_string(),
+            ));
+        }
+    }
+
     match state.service.update_pro_settings(&ctx, club_id, req).await {
         Ok(settings) => {
             // Broadcast club updated event
