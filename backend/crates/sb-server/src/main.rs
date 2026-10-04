@@ -657,6 +657,29 @@ async fn run_app() {
     let club_router =
         club_router(club_state).layer(axum::middleware::from_fn(auth_middleware_with_context));
 
+    // B-4 FIX: mount the Stripe webhook so completed checkouts actually
+    // credit chips. Previously `stripe_webhook` was fully implemented but
+    // never routed, and `start_expiry_task` was never spawned — users
+    // paid and nothing happened. The Telegram Stars webhook (P-2) is left
+    // unmounted until that flow is rewritten; only the Stripe path is
+    // enabled here.
+    let stripe_webhook_router = axum::Router::new()
+        .route(
+            "/webhooks/stripe",
+            axum::routing::post(sb_payment::webhooks::stripe_webhook),
+        )
+        .with_state(payment_service.clone());
+
+    // Spawn the entitlement expiry loop once.
+    {
+        let db = db.clone();
+        let payment_service_clone = payment_service.clone();
+        tokio::spawn(async move {
+            let _ = payment_service_clone; // keep the Arc alive for future use
+            sb_payment::expiry::start_expiry_task(db, 10).await;
+        });
+    }
+
     let app = Router::new()
         .merge(metrics_route)
         .merge(rest_router)
@@ -677,6 +700,7 @@ async fn run_app() {
             },
         )))
         .merge(club_router)
+        .merge(stripe_webhook_router) // B-4 FIX: Stripe webhook now reachable
         // B-25 FIX: merge BEFORE the Extension layer. Axum layers only apply
         // to routes registered *before* them, so the analytics handler's
         // Extension<Arc<AppState>> extractor previously could never be
