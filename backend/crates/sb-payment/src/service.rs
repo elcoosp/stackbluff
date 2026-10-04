@@ -29,6 +29,17 @@ pub struct RealPaymentService {
 }
 
 impl RealPaymentService {
+    /// P-3 FIX: atomic "confirm this payment once" entry point used by the
+    /// webhooks. Returns `true` only when THIS call performed the transition
+    /// `pending -> succeeded`; retries see `false` and must skip awarding.
+    pub async fn confirm_payment_idempotent(
+        &self,
+        payment_id: &str,
+        completed_at: Option<chrono::DateTime<chrono::Utc>>,
+    ) -> Result<bool, AppError> {
+        crate::db::PaymentRepo::try_mark_succeeded(&self.db, payment_id, completed_at).await
+    }
+
     pub fn new(
         db: DatabaseConnection,
         stripe_secret_key: String,
@@ -186,15 +197,129 @@ impl PaymentService for RealPaymentService {
             .map_err(|e| AppError::Database(e.to_string()))?
             .ok_or_else(|| AppError::NotFound("Product not found".into()))?;
 
-        let amount = ChipAmount::new(product.price)
-            .ok_or_else(|| AppError::InvalidInput("Invalid product price".into()))?;
+        // P-1 FIX:
+        //  * `product.price` is stored in CENTS already (499 = €4.99). The
+        //    old code treated it as a chip amount and multiplied by 100
+        //    inside `create_intent`, charging 100x the advertised price.
+        //  * The advertised chip grant lives in `product.metadata["chips"]`,
+        //    not in the price. The old flow derived chips from
+        //    `amount_cents / 100`, awarding `price/100` chips.
+        //
+        // This rewrite bypasses `create_intent` and passes `product.price`
+        // as `unit_amount` directly, and stores the chip grant in both the
+        // pending payment record and the Stripe session metadata so the
+        // webhook can use it.
+        let chips_amount: i64 = product
+            .metadata
+            .get("chips")
+            .and_then(|v| v.as_i64())
+            .unwrap_or(0);
+        let duration_days: i64 = product
+            .metadata
+            .get("duration_days")
+            .and_then(|v| v.as_i64())
+            .unwrap_or(0);
         let currency = product.currency.clone();
-        let mut meta = metadata;
-        meta["product_id"] = serde_json::to_value(product_id).unwrap_or_default();
-        meta["product_type"] = serde_json::to_value(product.product_type).unwrap_or_default();
 
-        self.create_intent(user_id, amount, currency, provider, meta)
-            .await
+        let mut meta: serde_json::Value = metadata;
+        meta["product_id"] = serde_json::to_value(product_id).unwrap_or_default();
+        meta["product_type"] = serde_json::to_value(product.product_type.clone()).unwrap_or_default();
+        meta["chips"] = serde_json::json!(chips_amount);
+        meta["duration_days"] = serde_json::json!(duration_days);
+
+        match provider.as_str() {
+            "stripe" => {
+                let currency_enum = currency_from_str(&currency)?;
+
+                // Metadata for Stripe must be HashMap<String, String>.
+                let mut metadata_map: HashMap<String, String> = HashMap::new();
+                metadata_map.insert("user_id".into(), user_id.as_uuid().to_string());
+                metadata_map.insert("product_id".into(), product_id.to_string());
+                metadata_map.insert("product_type".into(), product.product_type.clone());
+                metadata_map.insert("chips".into(), chips_amount.to_string());
+                metadata_map.insert("duration_days".into(), duration_days.to_string());
+
+                // P-1 FIX: cents directly — no multiply.
+                let amount_cents: i64 = product.price;
+
+                let product_data = ProductData::new(product.name.clone());
+                let price_data = CreateCheckoutSessionLineItemsPriceData {
+                    currency: currency_enum.clone(),
+                    product_data: Some(product_data),
+                    unit_amount: Some(amount_cents),
+                    product: None,
+                    recurring: None,
+                    tax_behavior: None,
+                    unit_amount_decimal: None,
+                };
+                let line_item = CreateCheckoutSessionLineItems {
+                    price_data: Some(price_data),
+                    quantity: Some(1),
+                    adjustable_quantity: None,
+                    dynamic_tax_rates: None,
+                    metadata: None,
+                    price: None,
+                    tax_rates: None,
+                };
+
+                let session = CreateCheckoutSession::new()
+                    .success_url(&self.config.stripe_success_url)
+                    .cancel_url(&self.config.stripe_cancel_url)
+                    .payment_method_types(vec![CreateCheckoutSessionPaymentMethodTypes::Card])
+                    .mode(CheckoutSessionMode::Payment)
+                    .line_items(vec![line_item])
+                    .metadata(metadata_map.clone())
+                    .send(&self.stripe_client)
+                    .await
+                    .map_err(|e| AppError::External(e.to_string()))?;
+
+                let payment_id = session.id.clone();
+                let client_secret = session
+                    .client_secret
+                    .ok_or_else(|| AppError::Internal("No client secret".into()))?;
+                let checkout_url = session.url.clone();
+
+                // Store the CHIPS amount (not the price) in `amount` so the
+                // confirmation path can award the correct quantity even for
+                // legacy rows created before this fix.
+                PaymentRepo::insert_pending(
+                    &self.db,
+                    &payment_id,
+                    user_id.as_uuid(),
+                    chips_amount,
+                    &currency_enum.to_string(),
+                    "stripe",
+                    serde_json::to_value(&metadata_map).unwrap_or_default(),
+                )
+                .await?;
+
+                info!(
+                    payment_id = %payment_id,
+                    user_id = %user_id.as_uuid(),
+                    chips = chips_amount,
+                    cents = amount_cents,
+                    product_id = %product_id,
+                    "Created Stripe Checkout Session for product"
+                );
+
+                Ok(serde_json::json!({
+                    "client_secret": client_secret,
+                    "checkout_url": checkout_url
+                })
+                .to_string())
+            }
+            "telegram_stars" => {
+                // Telegram Stars has its own price column (`stars_price`).
+                // Defer to create_intent for the shape; the whole path is
+                // currently broken by P-2 and is slated for a full rewrite.
+                let stars = product.stars_price as i64;
+                let amount = ChipAmount::new(stars)
+                    .ok_or_else(|| AppError::InvalidInput("Invalid stars price".into()))?;
+                self.create_intent(user_id, amount, currency, provider, meta)
+                    .await
+            }
+            _ => Err(AppError::InvalidInput("Unsupported provider".into())),
+        }
     }
 
     async fn confirm_payment(
