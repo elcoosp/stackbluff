@@ -105,6 +105,18 @@ impl AuthServiceImpl {
 
         let hash = hash.ok_or_else(|| AppError::InvalidInput("Missing hash".into()))?;
 
+        // S-3 FIX: reject stale initData. Telegram recommends a ~1h window.
+        // Without this, one captured payload is a permanent login credential.
+        let auth_date: i64 = params
+            .iter()
+            .find(|(k, _)| k == "auth_date")
+            .and_then(|(_, v)| v.parse().ok())
+            .ok_or_else(|| AppError::Unauthorized("initData missing auth_date".into()))?;
+        let now = Utc::now().timestamp();
+        if now.saturating_sub(auth_date) > 3600 {
+            return Err(AppError::Unauthorized("initData expired".into()));
+        }
+
         params.sort_by(|a, b| a.0.cmp(&b.0));
         let data_check_string = params
             .iter()
