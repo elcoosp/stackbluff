@@ -716,10 +716,16 @@ impl Registry {
 
     /// Remove a user from a room's broadcast.
     pub async fn unsubscribe_from_room(&self, room_id: TableId, user_id: UserId) {
-        if let Some(set) = self.user_room_map.write().await.get_mut(&user_id) {
+        // B-2 FIX: single lock acquisition; tokio::sync::RwLock is not reentrant.
+        // The previous implementation held the write guard from the outer
+        // `.write().await` and then tried to acquire it a second time when the
+        // last room for a user was removed, deadlocking the task while holding
+        // the map lock — every other registry operation then stalled.
+        let mut map = self.user_room_map.write().await;
+        if let Some(set) = map.get_mut(&user_id) {
             set.remove(&room_id);
             if set.is_empty() {
-                self.user_room_map.write().await.remove(&user_id);
+                map.remove(&user_id);
             }
         }
     }
