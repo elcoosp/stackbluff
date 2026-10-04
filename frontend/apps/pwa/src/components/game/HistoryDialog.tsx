@@ -101,9 +101,13 @@ export function HistoryDialog({ open, onClose, tableId }: HistoryDialogProps) {
   });
 
   const items = virtualizer.getVirtualItems();
+  // F-12 FIX: calling fetchNextPage() synchronously during render triggers
+  // "Cannot update a component while rendering a different component",
+  // duplicate fetches under StrictMode, and occasionally a render loop.
+  // Defer to the next tick so React can finish committing.
   const lastItem = items[items.length - 1];
   if (lastItem && lastItem.index >= allHistory.length - 1 && hasNextPage && !isFetchingNextPage) {
-    fetchNextPage();
+    queueMicrotask(() => fetchNextPage());
   }
 
   if (typeof document === 'undefined' || !open) return null;
