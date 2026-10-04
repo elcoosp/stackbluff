@@ -67,6 +67,14 @@ async fn writer_loop(
             _ = shutdown_rx.changed() => {
                 if *shutdown_rx.borrow() {
                     info!("Shutdown signal received, processing remaining {} commands", batch.len());
+                    // B-15 FIX: drain whatever is still queued so pending
+                    // chip movements (the writer is the single sink for
+                    // every balance change) are not dropped on shutdown.
+                    // The current batch alone used to be flushed; anything
+                    // still sitting in the channel was lost.
+                    while let Ok(cmd) = rx.try_recv() {
+                        batch.push(cmd);
+                    }
                     if !batch.is_empty() {
                         process_batch(&mut batch, &db).await;
                     }
