@@ -251,12 +251,12 @@ impl MissionApi for MissionServiceImpl {
         let today = Utc::now().date_naive();
         let assignments = self.ensure_daily_assignments(user_id, today).await?;
 
-        if assignments.iter().any(|a| !a.completed || a.reward_claimed) {
-            return Err(AppError::from(
-                "Not all missions completed or reward already claimed",
-            ));
-        }
-
+        // H-1 FIX: the "all completed and unclaimed" precheck is only a
+        // hint — two concurrent calls can both see reward_claimed=false,
+        // and the check happens before the txn begins. Do the real gate
+        // inside the transaction with a conditional UPDATE that only
+        // succeeds on the row that is still unclaimed; if any mission
+        // turns out to be already claimed (or incomplete), roll back.
         let pool = all_mission_definitions();
         let mut total_chips: i64 = 0;
         let txn = self
@@ -266,11 +266,24 @@ impl MissionApi for MissionServiceImpl {
             .map_err(|e| AppError::from(e.to_string()))?;
 
         for a in assignments.iter() {
-            let mut active: daily_mission::ActiveModel = a.clone().into();
-            active.reward_claimed = Set(true);
-            ActiveModelTrait::update(active, &txn)
+            use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
+            let res = daily_mission::Entity::update_many()
+                .col_expr(
+                    daily_mission::Column::RewardClaimed,
+                    sea_orm::sea_query::Expr::value(true),
+                )
+                .filter(daily_mission::Column::Id.eq(a.id))
+                .filter(daily_mission::Column::RewardClaimed.eq(false))
+                .filter(daily_mission::Column::Completed.eq(true))
+                .exec(&txn)
                 .await
                 .map_err(|e| AppError::from(e.to_string()))?;
+            if res.rows_affected == 0 {
+                let _ = txn.rollback().await;
+                return Err(AppError::from(
+                    "Not all missions completed or reward already claimed",
+                ));
+            }
             if let Some((_, _, reward, _, _)) =
                 pool.iter().find(|(t, _, _, _, _)| t == &a.mission_type)
             {
@@ -294,12 +307,19 @@ impl MissionApi for MissionServiceImpl {
             });
 
         let last_date = streak_model.last_completion_date;
+        // H-2 FIX: track whether the streak just broke (i.e. the previous
+        // completion was before yesterday). If so we must reset the
+        // weekly-bonus watermark, otherwise the 7-day bonus can never be
+        // earned again: after reaching 14, missing a day resets the streak
+        // to 1, and `7 > 14` stays false forever.
+        let mut streak_broken = false;
         let today_streak: i32 = if let Some(last) = last_date {
             if today == last.succ_opt().unwrap_or(last) {
                 streak_model.current_streak + 1
             } else if today.succ_opt() == Some(last) {
                 streak_model.current_streak
             } else {
+                streak_broken = true;
                 1
             }
         } else {
@@ -323,6 +343,10 @@ impl MissionApi for MissionServiceImpl {
             Set(streak_active.streak_shield_available.unwrap() + shield_gain);
         if weekly_bonus {
             streak_active.weekly_bonus_awarded_streak = Set(today_streak);
+        } else if streak_broken {
+            // H-2 FIX: clear the watermark on a break so the next full
+            // 7-day run can earn the bonus again.
+            streak_active.weekly_bonus_awarded_streak = Set(0);
         }
         ActiveModelTrait::update(streak_active, &txn)
             .await
