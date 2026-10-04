@@ -1178,6 +1178,12 @@ impl TableActor {
 
         if !self.players.contains_key(&user_id) {
             debug!(%user_id, "Leave failed: player not found");
+            // B-32 FIX: also drop the broadcast channel entry. Previously
+            // reconnect-while-not-seated inserted a channel that was never
+            // removed on the not-found leave path, so every subsequent
+            // broadcast marked it dead and spawned a doomed task (map
+            // growth + per-message task churn).
+            self.user_senders.remove(&user_id);
             let _ = respond_to.send(LeaveResult::Refunded(zero()));
             return;
         }
