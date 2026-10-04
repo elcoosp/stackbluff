@@ -805,7 +805,13 @@ impl MttDirector {
                 tournament_id: self.tournament_id,
                 status: match self.state {
                     DirectorState::Registering => "Registering".into(),
-                    _ => "Running".into(),
+                    DirectorState::Running => "Running".into(),
+                    DirectorState::Pausing => "Pausing".into(),
+                    DirectorState::Rebalancing => "Running".into(),
+                    // T-7 FIX: previously every state that wasn't Registering
+                    // reported "Running", so completed MTTs stayed visible in
+                    // the lobby as live tournaments forever.
+                    DirectorState::Completed => "Completed".into(),
                 },
                 registered_count: self.players.len() as u32,
                 max_players: self.config.max_players,
@@ -829,7 +835,11 @@ impl MttDirector {
             tournament_type: TournamentType::Mtt,
             status: match self.state {
                 DirectorState::Registering => TournamentStatus::Registering,
-                _ => TournamentStatus::Running,
+                DirectorState::Running => TournamentStatus::Running,
+                DirectorState::Pausing => TournamentStatus::Running,
+                DirectorState::Rebalancing => TournamentStatus::Running,
+                // T-7 FIX: proper terminal state
+                DirectorState::Completed => TournamentStatus::Completed,
             },
             registered: self.players.len() as u32,
             max_players: self.config.max_players,
