@@ -1,6 +1,9 @@
 use crate::deck::Deck;
 use crate::evaluate::evaluate_hand_strength;
 use crate::hand_rank::HandRank;
+// NOTE: `compute_side_pots` is now only used by tests. The production path
+// calls `compute_side_pots_with_dead_money` to preserve folded dead money.
+#[allow(unused_imports)]
 use crate::pot::compute_side_pots;
 use sb_shared_types::UserId;
 use sb_shared_types::game_types::SidePot;
