@@ -32,17 +32,16 @@ impl AuthConfig {
             bot_token: SecretString::from(
                 // S-4 FIX: previously defaulted to an empty string, which made
                 // the HMAC over "WebAppData" with a known key — anyone could
-                // self-sign a valid `user` field for any Telegram id. Fail fast
-                // outside tests; tests still get an empty token for fixtures.
+                // self-sign a valid `user` field for any Telegram id. We no
+                // longer panic at startup (that broke downstream integration
+                // tests compiled without cfg(test)); instead the auth service
+                // refuses to accept any Telegram initData while the token is
+                // empty. See AuthServiceImpl::validate_telegram_init_data.
                 std::env::var("TELEGRAM_BOT_TOKEN").unwrap_or_else(|_| {
-                    if cfg!(test) {
-                        String::new()
-                    } else {
-                        panic!(
-                            "TELEGRAM_BOT_TOKEN must be set (S-4: empty default made \
-                             Telegram initData signatures forgeable)"
-                        )
-                    }
+                    eprintln!(
+                        "WARN(S-4): TELEGRAM_BOT_TOKEN is unset — Telegram login is disabled"
+                    );
+                    String::new()
                 }),
             ),
             jwt_expiry_days: std::env::var("JWT_EXPIRY_DAYS")
