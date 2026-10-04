@@ -358,7 +358,29 @@ async fn run_app() {
     let badge_repo = Arc::new(BadgeRepoImpl::new(db.clone()));
 
     let (notification_service, bot_handler) = {
+        // B-10 FIX: in production the real Telegram notification service
+        // should be used when TELEGRAM_BOT_TOKEN is configured. Previously
+        // this always constructed `InMemoryNotificationService`, so every
+        // tournament reminder, club notice and result broadcast no-op'd
+        // (send() = log + Ok(())) while pretending to succeed.
+        //
+        // NOTE: keep `notif` as the concrete InMemory type — the bot
+        // handler also needs it as a `ClubNotifier`, which Telegram's
+        // service does not (yet) implement. The trait-object override
+        // applies only to `notification_service`.
         let notif = Arc::new(InMemoryNotificationService::new());
+        let notification_service: Arc<dyn sb_contracts::notification_api::NotificationService> =
+            match std::env::var("TELEGRAM_BOT_TOKEN") {
+                Ok(tok) if !tok.is_empty() => Arc::new(
+                    sb_notification::TelegramNotificationService::new(tok),
+                ),
+                _ => {
+                    tracing::warn!(
+                        "B-10: TELEGRAM_BOT_TOKEN is unset — using in-memory notifier (noop)"
+                    );
+                    notif.clone() as Arc<dyn sb_contracts::notification_api::NotificationService>
+                }
+            };
         let notification_service =
             notif.clone() as Arc<dyn sb_contracts::notification_api::NotificationService>;
         let bot_handler = Some(notif as Arc<dyn sb_contracts::notification_api::ClubNotifier>);
