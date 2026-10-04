@@ -37,6 +37,8 @@ pub struct RegisterRequest {
     pub user_id: UserId,
 }
 
+use sb_auth::middleware::AuthUser as AuthedUser;
+
 #[derive(Clone)]
 pub struct TournamentState {
     pub tournament_service: Arc<TournamentServiceImpl>,
@@ -55,6 +57,12 @@ pub fn tournament_routes(state: Arc<TournamentState>) -> Router {
         .route("/tournaments/{tournament_id}/unregister", post(unregister))
         .route("/tournaments/{tournament_id}/results", get(get_results))
         .route("/tournaments/{tournament_id}/my-table", get(get_my_table))
+        // B-7 FIX: layer the JWT auth middleware so AuthedUser is populated
+        // from a verified token (previously the router was merged without
+        // auth). This is the same treatment club_router receives in main.rs.
+        .layer(axum::middleware::from_fn(
+            sb_auth::middleware::auth_middleware_with_context,
+        ))
         .with_state(state)
 }
 
@@ -173,13 +181,26 @@ async fn get_tournament(
 
 async fn register(
     State(state): State<Arc<TournamentState>>,
+    AuthedUser { user_id: user_id_str }: AuthedUser,
     Path(tournament_id): Path<TournamentId>,
-    Json(req): Json<RegisterRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let ctx = sb_shared_types::RequestContext::new(uuid::Uuid::new_v4(), Some(req.user_id));
+    // B-7 FIX: the previous version trusted `req.user_id` from the body, so
+    // any authenticated (or even unauthenticated) caller could register any
+    // victim into any tournament. Now identity comes from the verified JWT.
+    // AuthUser::user_id is a String (see sb_auth::middleware), so parse it.
+    let user_id = match uuid::Uuid::parse_str(&user_id_str) {
+        Ok(u) => sb_shared_types::UserId::new(u),
+        Err(_) => {
+            return Err((
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({"error": "Invalid user id in token"})),
+            ));
+        }
+    };
+    let ctx = sb_shared_types::RequestContext::new(uuid::Uuid::new_v4(), Some(user_id));
     state
         .tournament_service
-        .register(&ctx, tournament_id, req.user_id)
+        .register(&ctx, tournament_id, user_id)
         .await
         .map_err(|e| match e {
             AppError::TournamentFull => (
@@ -200,13 +221,23 @@ async fn register(
 
 async fn unregister(
     State(state): State<Arc<TournamentState>>,
+    AuthedUser { user_id: user_id_str }: AuthedUser,
     Path(tournament_id): Path<TournamentId>,
-    Json(req): Json<RegisterRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let ctx = sb_shared_types::RequestContext::new(uuid::Uuid::new_v4(), Some(req.user_id));
+    // B-7 FIX: identity from the verified JWT, not the request body.
+    let user_id = match uuid::Uuid::parse_str(&user_id_str) {
+        Ok(u) => sb_shared_types::UserId::new(u),
+        Err(_) => {
+            return Err((
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({"error": "Invalid user id in token"})),
+            ));
+        }
+    };
+    let ctx = sb_shared_types::RequestContext::new(uuid::Uuid::new_v4(), Some(user_id));
     state
         .tournament_service
-        .unregister(&ctx, tournament_id, req.user_id)
+        .unregister(&ctx, tournament_id, user_id)
         .await
         .map_err(|e| {
             (
