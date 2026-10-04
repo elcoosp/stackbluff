@@ -67,6 +67,11 @@ pub struct ArchiveState {
 pub fn router(state: Arc<ArchiveState>) -> Router {
     Router::new()
         .route("/hands/{id}", get(get_hand))
+        // B-12 FIX: require a valid JWT so a leaked hand UUID does not
+        // expose every seat's hole cards to unauthenticated callers.
+        .layer(axum::middleware::from_fn(
+            sb_auth::middleware::auth_middleware_with_context,
+        ))
         .with_state(state)
 }
 
