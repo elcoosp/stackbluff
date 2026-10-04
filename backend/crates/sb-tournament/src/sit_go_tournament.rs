@@ -390,7 +390,7 @@ impl SitGoTournament {
         let _ = rx.await;
 
         // FIXED: Send StartHand command after ResumeHand to actually deal the hand
-        let _ = cmd_tx.send(TableCommand::StartHand).await;
+        let _ = cmd_tx.send(TableCommand::StartHand { user_id: None }).await;
 
         self.broadcast_state();
         info!(tournament_id = %self.tournament_id, "Tournament running");
@@ -475,7 +475,7 @@ impl SitGoTournament {
             let _ = rx.await;
 
             // FIXED: Send StartHand to deal the next hand
-            let _ = cmd_tx.send(TableCommand::StartHand).await;
+            let _ = cmd_tx.send(TableCommand::StartHand { user_id: None }).await;
         }
 
         self.broadcast_state();
