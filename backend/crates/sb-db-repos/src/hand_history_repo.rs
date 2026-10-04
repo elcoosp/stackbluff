@@ -94,7 +94,11 @@ impl HandHistoryRepository for HandHistoryRepoImpl {
             );
         }
 
+        // B-21 FIX: push the limit into SQL. Previously we fetched the
+        // entire result set and paginated in memory, scanning an unindexed
+        // participants CSV on every call.
         let models = query
+            .limit((limit as u64) + 1)
             .all(&self.db)
             .await
             .map_err(|e| PersistenceError::Database(e.to_string()))?;
@@ -234,7 +238,11 @@ impl HandHistoryRepository for HandHistoryRepoImpl {
             );
         }
 
+        // B-21 FIX: push the limit into SQL. Previously we fetched the
+        // entire result set and paginated in memory, scanning an unindexed
+        // participants CSV on every call.
         let models = query
+            .limit((limit as u64) + 1)
             .all(&self.db)
             .await
             .map_err(|e| PersistenceError::Database(e.to_string()))?;
