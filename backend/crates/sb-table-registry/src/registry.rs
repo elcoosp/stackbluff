@@ -416,14 +416,18 @@ impl Registry {
             .map_err(|e| TableError::ActorError(e.to_string()))
     }
 
-    pub async fn start_hand(&self, room_id: TableId) -> Result<(), TableError> {
+    pub async fn start_hand(
+    &self,
+    room_id: TableId,
+    caller: Option<sb_shared_types::UserId>,
+) -> Result<(), TableError> {
         let cmd_tx = {
             let guard = self.rooms.read().await;
             let entry = guard.get(&room_id).ok_or(TableError::NotFound(room_id))?;
             entry.cmd_tx.clone()
         };
         cmd_tx
-            .send(InternalCommand::StartHand)
+            .send(InternalCommand::StartHand { user_id: caller })
             .await
             .map_err(|e| TableError::ActorError(e.to_string()))
     }
