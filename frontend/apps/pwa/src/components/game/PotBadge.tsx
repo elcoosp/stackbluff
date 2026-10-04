@@ -91,7 +91,9 @@ export const PotBadge = ({
   const [effectKey, setEffectKey] = useState(0);
 
   useEffect(() => {
-    if (lastAction && ['bet', 'raise', 'call', 'all-in'].includes(lastAction.action)) {
+    // F-13 FIX: parseMessage upper-cases `action`, so the lowercase list never
+// matched. Normalize both spellings ("allin" is what the server sends in places).
+if (lastAction && ['bet', 'raise', 'call', 'all-in', 'allin'].includes(lastAction.action.toLowerCase())) {
       setEffectKey((prev) => prev + 1);
     }
   }, [lastAction]);
