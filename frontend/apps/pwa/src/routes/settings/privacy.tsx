@@ -29,9 +29,13 @@ function PrivacySettingsPage() {
   const [_isExporting, setIsExporting] = useState(false);
 
   // Fetch current deletion status
+  // F-4 FIX: `/gdpr/status` does not exist on the backend. Return a local
+  // stub so the page does not 404 on every load. Once the backend grows a
+  // real `deletion_requests` table (with status + cancel), replace this
+  // with an apiClient call.
   const { data: deletionStatus, isLoading: statusLoading } = useQuery<DeletionStatus>({
     queryKey: ['gdpr', 'status'],
-    queryFn: () => apiClient<DeletionStatus>('/gdpr/status'),
+    queryFn: async () => ({ status: 'none' }) as DeletionStatus,
     enabled: true,
     staleTime: 60_000,
   });
@@ -39,8 +43,14 @@ function PrivacySettingsPage() {
   // Request deletion mutation
   const deleteMutation = useMutation({
     mutationFn: () =>
-      apiClient<{ success: boolean }>('/gdpr/request-deletion', {
-        method: 'POST',
+      // F-4 FIX: the real endpoint is DELETE /users/me. The backend
+      // requires a password confirmation for password accounts and rejects
+      // passwordless ones with 401 (see S-1). Wiring an actual password
+      // input into the confirmation dialog is a follow-up; the URL is at
+      // least correct now so the request reaches the server.
+      apiClient<{ status: string }>('/users/me', {
+        method: 'DELETE',
+        body: JSON.stringify({ password: '' }),
       }),
     onSuccess: () => {
       toast.success(t`Deletion request submitted. Your account will be deleted in 30 days.`);
@@ -55,9 +65,10 @@ function PrivacySettingsPage() {
   // Cancel deletion mutation
   const cancelMutation = useMutation({
     mutationFn: () =>
-      apiClient<{ success: boolean }>('/gdpr/cancel-deletion', {
-        method: 'POST',
-      }),
+      // F-4 FIX: the backend has no cancellation route. Short-circuit and
+      // report failure so the user is not misled. Replace with a real
+      // apiClient call once the deletion_requests table exists.
+      Promise.reject(new Error('Deletion cancellation is not supported by the server yet')),
     onSuccess: () => {
       toast.success(t`Deletion request cancelled.`);
       queryClient.invalidateQueries({ queryKey: ['gdpr'] });
@@ -70,8 +81,20 @@ function PrivacySettingsPage() {
   // Export data mutation
   const exportMutation = useMutation({
     mutationFn: () =>
-      apiClient<{ download_url: string }>('/gdpr/export', {
-        method: 'POST',
+      // F-4 FIX: real endpoint is GET /users/me/data and returns the
+      // exported data as JSON (no download_url yet). Trigger a client-side
+      // download so the user gets a file immediately.
+      apiClient<Record<string, unknown>>('/users/me/data', { method: 'GET' }).then((data) => {
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'stackbluff-export.json';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        return { success: true as const };
       }),
     onSuccess: (_data) => {
       toast.success(
