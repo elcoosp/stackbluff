@@ -159,13 +159,14 @@ function useGameFeedback(
   }, [isMyTurn, trigger, resolvedHeroSeat]);
 
   useEffect(() => {
-    if (
-      game.currentTurnUserId &&
-      game.currentTurnUserId !== prevCurrentTurn.current &&
-      String(game.currentTurnUserId) !== String(resolvedHeroSeat)
-    ) {
+    if (game.currentTurnUserId && game.currentTurnUserId !== prevCurrentTurn.current) {
+      // F-19 FIX: previously this compared the turn *user id* (a UUID)
+      // against `resolvedHeroSeat` (0-8). They can never be equal, so the
+      // "skip my own turn" guard was always true and the chip-clink cue
+      // fired on the hero's own turn. Resolve the turn's seat and compare
+      // seat numbers instead.
       const seatIdx = getSeatByUserId(game.currentTurnUserId);
-      if (seatIdx !== undefined) {
+      if (seatIdx !== undefined && seatIdx !== resolvedHeroSeat) {
         trigger('chipClink', { seatIndex: seatIdx });
       }
     }
@@ -269,6 +270,10 @@ export function TablePage() {
 
   const game = useActiveRoom();
   const activeRoomId = useGameStore((s) => s.activeRoomId);
+  // F-8 FIX: read the current room's big blind from the store.
+  const bigBlind = useGameStore((s) =>
+    s.activeRoomId ? s.rooms[s.activeRoomId]?.bigBlind ?? 10 : 10,
+  );
 
   const rooms = useGameStore((s) => s.rooms);
   const roomIds = useMemo(() => Object.keys(rooms), [rooms]);
@@ -300,9 +305,26 @@ export function TablePage() {
 
   useEffect(() => {
     if (urlBuyIn && urlBuyIn > 0) {
-      useGameStore.setState({ rooms: {}, activeRoomId: null });
+      // F-16 FIX: reset ONLY the target room. The previous version wiped
+      // `rooms: {}` so opening a lobby "Buy In" link mid-session destroyed
+      // every other seat the user held on other tables — even though the
+      // backend keeps those seats alive. Multi-tabling is the app's
+      // advertised feature.
+      const store = useGameStore.getState();
+      // Remove the room matching this tableId if present, then clear
+      // activeRoomId so the join flow can re-create it fresh.
+      const match = Object.entries(store.rooms).find(
+        ([, r]: [string, any]) => r.tableId === tableId,
+      );
+      if (match) {
+        const [rid] = match;
+        store.removeRoom(rid);
+        if (store.activeRoomId === rid) {
+          useGameStore.setState({ activeRoomId: null });
+        }
+      }
     }
-  }, [urlBuyIn]);
+  }, [urlBuyIn, tableId]);
 
   useEffect(() => {
     if (!tableId) return;
@@ -550,7 +572,19 @@ export function TablePage() {
       setHasJoined(false);
       setShowRebuyDialog(false);
       if (!isObserving) {
-        useGameStore.setState({ rooms: {}, activeRoomId: null });
+        // F-16 FIX (second site): reset only the room we're sitting at,
+        // not every open room the user has.
+        const store = useGameStore.getState();
+        const match = Object.entries(store.rooms).find(
+          ([, r]: [string, any]) => r.tableId === tableId,
+        );
+        if (match) {
+          const [rid] = match;
+          store.removeRoom(rid);
+          if (store.activeRoomId === rid) {
+            useGameStore.setState({ activeRoomId: null });
+          }
+        }
         // Only show buy-in dialog for cash games, not tournaments
         if (!isTournament) {
           setShowRebuyDialog(true);
@@ -1137,6 +1171,9 @@ export function TablePage() {
               heroTimerTotalMs={heroTimerTotalMs}
               canRaise={canRaise}
               heroStack={heroStack}
+              // F-8 FIX: pass the room's actual big blind instead of relying
+              // on ActionBar's hardcoded 10.
+              bigBlind={bigBlind}
             />
           </div>
         )}
