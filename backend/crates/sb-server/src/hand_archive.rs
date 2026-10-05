@@ -108,38 +108,68 @@ pub async fn run_archival_with_r2(
     r2: &dyn R2Storage,
     cutoff: DateTime<Utc>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let hands = HandHistory::find()
-        .filter(Column::PlayedAt.lt(cutoff))
-        .filter(Column::IsArchived.eq(false))
-        .all(db)
-        .await?;
+    // L-9 FIX: previously this fetched EVERY unarchived hand into memory in
+    // one query. On a busy deployment that is tens of thousands of JSON
+    // rows all live at once. We now page by primary key in bounded
+    // batches. The filter is `is_archived = false AND played_at < cutoff`,
+    // and each successfully archived row is flipped to `is_archived = true`
+    // so the next query naturally advances.
+    use sea_orm::QueryOrder;
+    use sea_orm::QuerySelect;
+    use sea_orm::ColumnTrait;
+    const PAGE_SIZE: u64 = 500;
 
-    for hand in hands {
-        let json = serde_json::json!({
-            "id": hand.id,
-            "table_id": hand.table_id,
-            "played_at": hand.played_at,
-            "players": hand.players_json.seats,
-            "actions": hand.actions_json.actions,
-            "result": hand.result_json,
-        });
+    loop {
+        let hands = HandHistory::find()
+            .filter(Column::PlayedAt.lt(cutoff))
+            .filter(Column::IsArchived.eq(false))
+            .order_by_asc(Column::PlayedAt)
+            .order_by_asc(Column::Id)
+            .limit(PAGE_SIZE)
+            .all(db)
+            .await?;
 
-        let key = format!(
-            "hands/{}/{:02}/hand_{}.json",
-            hand.played_at.format("%Y"),
-            hand.played_at.format("%m"),
-            hand.id
-        );
+        if hands.is_empty() {
+            break;
+        }
+        let fetched = hands.len();
 
-        match r2.put_object(&key, json.to_string().into_bytes()).await {
-            Ok(_) => {
-                let mut active: ActiveModel = hand.clone().into();
-                active.is_archived = Set(true);
-                HandHistory::update(active).exec(db).await?;
+        for hand in hands {
+            let json = serde_json::json!({
+                "id": hand.id,
+                "table_id": hand.table_id,
+                "played_at": hand.played_at,
+                "players": hand.players_json.seats,
+                "actions": hand.actions_json.actions,
+                "result": hand.result_json,
+            });
+
+            let key = format!(
+                "hands/{}/{:02}/hand_{}.json",
+                hand.played_at.format("%Y"),
+                hand.played_at.format("%m"),
+                hand.id
+            );
+
+            match r2.put_object(&key, json.to_string().into_bytes()).await {
+                Ok(_) => {
+                    let mut active: ActiveModel = hand.clone().into();
+                    active.is_archived = Set(true);
+                    HandHistory::update(active).exec(db).await?;
+                }
+                Err(e) => {
+                    eprintln!("Failed to upload hand {}: {e}", hand.id);
+                    // Do NOT flip is_archived on failure, so the next pass
+                    // (or next cycle) retries. To avoid an infinite loop on a
+                    // permanently-failing row we continue; the row will be
+                    // picked up again on the next run.
+                }
             }
-            Err(e) => {
-                eprintln!("Failed to upload hand {}: {e}", hand.id);
-            }
+        }
+
+        if (fetched as u64) < PAGE_SIZE {
+            // Last partial page — nothing more to do.
+            break;
         }
     }
     Ok(())
