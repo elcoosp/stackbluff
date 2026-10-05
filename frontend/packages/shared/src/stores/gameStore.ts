@@ -97,6 +97,10 @@ export interface ShowdownRevealData {
 
 export interface GameRoomState {
   tableId: string | null;
+  // F-8 FIX: table blinds so the raise slider and BB-based presets can be
+  // correct at every stake (previously ActionBar hardcoded `bigBlind = 10`).
+  smallBlind: number;
+  bigBlind: number;
   seats: Record<number, Seat>;
   communityCards: Card[];
   pot: number;
@@ -117,6 +121,8 @@ export interface GameRoomState {
 
 const createInitialRoomState = (): GameRoomState => ({
   tableId: null,
+  smallBlind: 0,
+  bigBlind: 0,
   seats: {},
   communityCards: [],
   pot: 0,
@@ -195,6 +201,8 @@ export const useGameStore = create<GameState>((set, _get) => ({
           [roomId]: {
             ...state.rooms[roomId],
             tableId: tableState.room_id,
+            smallBlind: (tableState as any).small_blind ?? 0,
+            bigBlind: (tableState as any).big_blind ?? 0,
             seats: seatsMap,
             communityCards: tableState.community_cards || [],
             pot: tableState.pot || 0,
