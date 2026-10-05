@@ -493,7 +493,18 @@ async fn run_app() {
 
     let fingerprint_repo: Arc<dyn sb_anti_cheat::FingerprintRepository> =
         Arc::new(sb_anti_cheat::SeaFingerprintRepository { db: db.clone() });
-    let anti_cheat_state = Arc::new(anti_cheat_routes::AntiCheatState { fingerprint_repo });
+    // B-11 FIX: build the anti-cheat service so its methods are reachable.
+    // The engine (`check_transfer`, `record_heads_up`, rate limits) was
+    // fully implemented but never instantiated — every call site was dead.
+    let anti_cheat_service: Arc<dyn sb_contracts::service_api::AntiCheatService + Send + Sync> =
+        Arc::new(sb_anti_cheat::AntiCheatServiceImpl::new(
+            db.clone(),
+            Arc::new(sb_anti_cheat::rate_limiter::RateLimiter::new()),
+        ));
+    let anti_cheat_state = Arc::new(anti_cheat_routes::AntiCheatState {
+        fingerprint_repo,
+        service: anti_cheat_service.clone(),
+    });
 
     let rest_router = create_router(app_state.clone())
         .merge(player_stats_routes(stats_repo.clone(), user_repo.clone()));
