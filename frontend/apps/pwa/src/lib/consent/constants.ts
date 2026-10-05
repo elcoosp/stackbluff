@@ -11,8 +11,8 @@ export const FIRST_HAND_PLAYED_KEY = 'has_played_first_hand';
 export const MAYBE_LATER_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 // API endpoints
-export const NOTIFICATIONS_SUBSCRIBE_ENDPOINT = '/notifications/subscribe';
-export const NOTIFICATIONS_UNSUBSCRIBE_ENDPOINT = '/notifications/unsubscribe';
+export const NOTIFICATIONS_SUBSCRIBE_ENDPOINT = '/api/notifications/subscribe';
+export const NOTIFICATIONS_UNSUBSCRIBE_ENDPOINT = '/api/notifications/unsubscribe';
 
 // VAPID configuration
 export const VAPID_PUBLIC_KEY_ENV = 'VITE_VAPID_PUBLIC_KEY';
