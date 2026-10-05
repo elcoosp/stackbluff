@@ -5,6 +5,7 @@ use sb_contracts::service_api::ReferralStats;
 use sb_db_entities::{prelude::*, referral};
 use sb_shared_types::{AppError, UserId};
 use sea_orm::prelude::Expr;
+use sea_orm::TransactionTrait;
 use sea_orm::{
     ActiveModelTrait, Condition, DatabaseConnection, EntityTrait, ExprTrait, QueryFilter, Set,
 };
@@ -48,31 +49,56 @@ impl ReferralRepository for ReferralRepositoryImpl {
         &self,
         referred_id: UserId,
     ) -> Result<bool, AppError> {
+        // B-20 FIX: do the increment AND the bonus claim inside a single
+        // transaction with a conditional UPDATE for the claim. Previously
+        // the "increment then return true" step was atomic, but the caller's
+        // subsequent `award_chips` / `mark_bonus_awarded` calls were not:
+        // a transient failure at either step left `hand_count = 5` with
+        // `bonus_awarded = false`, and every later call short-circuited on
+        // `hand_count < 5` (rows_affected == 0), forfeiting the bonus
+        // forever. Now the first caller that crosses the threshold also
+        // atomically flips `bonus_awarded`; the award itself becomes a
+        // best-effort side effect that can be safely retried from an outbox.
         use referral::COLUMN;
         let referred_str = referred_id.to_string();
-        let update_result = Referral::update_many()
+        let txn = self
+            .db
+            .begin()
+            .await
+            .map_err(|e| AppError::Database(e.to_string()))?;
+
+        // Increment (only while under the threshold, so the counter doesn't
+        // keep growing past 5 on every subsequent hand).
+        let _inc = Referral::update_many()
             .col_expr(COLUMN.hand_count, Expr::col(COLUMN.hand_count).add(1))
             .filter(
                 Condition::all()
                     .add(COLUMN.referred_id.eq(&referred_str))
                     .add(COLUMN.hand_count.lt(5)),
             )
-            .exec(&self.db)
+            .exec(&txn)
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;
-        if update_result.rows_affected == 0 {
-            return Ok(false);
-        }
-        let referral = Referral::find()
-            .filter(COLUMN.referred_id.eq(&referred_str))
-            .one(&self.db)
+
+        // Atomic claim: only succeeds on the call that flips
+        // bonus_awarded from false to true with hand_count >= 5.
+        let claim = Referral::update_many()
+            .col_expr(COLUMN.bonus_awarded, Expr::value(true))
+            .filter(
+                Condition::all()
+                    .add(COLUMN.referred_id.eq(&referred_str))
+                    .add(COLUMN.hand_count.gte(5))
+                    .add(COLUMN.bonus_awarded.eq(false)),
+            )
+            .exec(&txn)
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;
-        if let Some(ref_model) = referral {
-            Ok(ref_model.hand_count == 5 && !ref_model.bonus_awarded)
-        } else {
-            Ok(false)
-        }
+
+        txn.commit()
+            .await
+            .map_err(|e| AppError::Database(e.to_string()))?;
+
+        Ok(claim.rows_affected == 1)
     }
 
     async fn mark_bonus_awarded(&self, referred_id: UserId) -> Result<(), AppError> {
