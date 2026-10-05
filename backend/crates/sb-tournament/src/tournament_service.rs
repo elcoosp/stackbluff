@@ -211,6 +211,13 @@ impl TournamentServiceImpl {
             info!(%tournament_id, %club_id, "Club tournament completed");
         }
 
+        // T-7 FIX: release the actor handles now that the tournament is
+        // over. `remove_actor` existed but had no callers, so completed
+        // MTTs kept their `mtt_actors` entries (and their command senders)
+        // alive forever. Subsequent register/unregister calls would route
+        // to a dead actor.
+        self.remove_actor(tournament_id);
+
         Ok(())
     }
 }
