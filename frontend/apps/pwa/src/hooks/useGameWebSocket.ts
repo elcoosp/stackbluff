@@ -170,6 +170,9 @@ const parseMessage = (data: RawWsMessage) => {
         is_bot: p.is_bot ?? false,
         is_folded: p.is_folded ?? false,
         is_leaving: p.is_leaving || false,
+        // F-11 FIX: previously `sitting_out` was never parsed from the wire,
+        // so the sit-out button and indicator never reflected server state.
+        sitting_out: p.sitting_out ?? false,
         is_active: p.is_active ?? (!p.is_folded && !p.is_all_in), // FIX: Improved is_active logic
         avatar_url: p.avatar_url || undefined,
         position_badge: p.position_badge || undefined,
