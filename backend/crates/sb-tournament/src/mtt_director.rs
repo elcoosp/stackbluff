@@ -170,6 +170,15 @@ impl MttDirector {
                 }
                 else => break,
             }
+            // T-7 FIX: exit once the tournament reaches a terminal state.
+            // Previously the director kept polling forever after
+            // `end_tournament()` (its command sender was still held by the
+            // service), so the actor task leaked and the lobby showed the
+            // tournament as running. The service's completion handler
+            // calls `remove_actor` right after this task ends.
+            if matches!(self.state, DirectorState::Completed) {
+                break;
+            }
         }
         info!(tournament_id = %self.tournament_id, "MttDirector terminated");
     }
