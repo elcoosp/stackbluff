@@ -106,6 +106,9 @@ pub struct TournamentRegistration {
     pub tournament_id: TournamentId,
     pub user_id: UserId,
     pub registered_at: DateTime<Utc>,
+    /// B-3/B-8 follow-up: whether the buy-in was actually debited from
+    /// the player's wallet.
+    pub chip_committed: bool,
 }
 
 // ── Service trait ────────────────────────────────────────────────────────────
