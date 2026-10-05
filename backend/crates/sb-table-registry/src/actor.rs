@@ -265,6 +265,10 @@ pub enum InternalCommand {
     SetBlinds {
         small: ChipAmount,
         big: ChipAmount,
+        // T-8 FIX: the tournament director parsed the ante but never sent
+        // it to the table — the HUD showed antes that were never collected
+        // and equity math was wrong from level 2 on.
+        ante: ChipAmount,
     },
     PauseHand {
         respond_to: tokio::sync::oneshot::Sender<()>,
@@ -553,7 +557,8 @@ pub struct TableActor {
     mode: TableMode,
     broker: Option<Arc<ConnectionBroker>>,
     tournament_room_id: Option<TableId>, // ADDED: To broadcast to the correct tournament room
-    current_blinds: Option<(ChipAmount, ChipAmount)>,
+    // T-8: (small, big, ante)
+    current_blinds: Option<(ChipAmount, ChipAmount, ChipAmount)>,
     paused: bool,
     timeout_handle: Option<tokio::task::JoinHandle<()>>,
     busted_players_cache: Option<Vec<(UserId, ChipAmount)>>,
@@ -797,8 +802,8 @@ impl TableActor {
                 self.broker = Some(broker);
                 self.tournament_room_id = Some(TableId::new(parent.as_uuid())); // ADDED: store tournament ID
             }
-            InternalCommand::SetBlinds { small, big } => {
-                self.current_blinds = Some((small, big));
+            InternalCommand::SetBlinds { small, big, ante } => {
+                self.current_blinds = Some((small, big, ante));
             }
             InternalCommand::PauseHand { respond_to } => {
                 self.paused = true;
@@ -1344,11 +1349,18 @@ impl TableActor {
             Some(idx) => (idx + 1) % active_players_count,
             None => 0,
         };
-        let (sb, bb) = match &self.mode {
-            TableMode::Cash => blinds_for_stake(self.config.stake_level),
-            TableMode::Tournament { .. } => self
-                .current_blinds
-                .unwrap_or_else(|| (ChipAmount::new(1).unwrap(), ChipAmount::new(2).unwrap())),
+        let (sb, bb, ante) = match &self.mode {
+            TableMode::Cash => {
+                let (sb, bb) = blinds_for_stake(self.config.stake_level);
+                (sb, bb, ChipAmount::new(0).unwrap())
+            }
+            TableMode::Tournament { .. } => self.current_blinds.unwrap_or_else(|| {
+                (
+                    ChipAmount::new(1).unwrap(),
+                    ChipAmount::new(2).unwrap(),
+                    ChipAmount::new(0).unwrap(),
+                )
+            }),
         };
 
         struct PlayerInfo {
@@ -1393,7 +1405,7 @@ impl TableActor {
         }
 
         let dealer_pid = players_for_engine[dealer_index].0;
-        let state =
+        let mut state =
             match GameState::new_hand(self.table_id, players_for_engine, dealer_index, (sb, bb)) {
                 Ok(s) => s,
                 Err(e) => {
@@ -1401,6 +1413,17 @@ impl TableActor {
                     return;
                 }
             };
+
+        // T-8 FIX: post antes after the hand is created. The engine's
+        // `post_ante` deducts from each player's stack and credits the pot
+        // without touching `bet_this_round`, so the preflop betting math
+        // is unaffected.
+        if ante.as_i64() > 0 {
+            if let Err(e) = state.post_ante(ante) {
+                error!(error = %e, "Failed to post antes");
+                return;
+            }
+        }
 
         for player in self.players.values_mut() {
             if let Some(engine_stack) = state.player_stack(player.player_id) {
@@ -2354,11 +2377,11 @@ impl TableActor {
         // sets `current_blinds` via SetBlinds; cash games derive them from
         // the stake level. Fall back to the stake-level derivation before
         // the first hand starts so the payload is always populated.
-        let (small_blind, big_blind) = match self.current_blinds {
-            Some((sb, bb)) => (sb.as_i64() as u64, bb.as_i64() as u64),
+        let (small_blind, big_blind, ante) = match self.current_blinds {
+            Some((sb, bb, ante)) => (sb.as_i64() as u64, bb.as_i64() as u64, ante.as_i64() as u64),
             None => {
                 let (sb, bb) = blinds_for_stake(self.config.stake_level);
-                (sb.as_i64() as u64, bb.as_i64() as u64)
+                (sb.as_i64() as u64, bb.as_i64() as u64, 0u64)
             }
         };
 
@@ -2366,6 +2389,7 @@ impl TableActor {
             room_id: self.room_id,
             small_blind,
             big_blind,
+            ante,
             players: players_state,
             current_hand_in_progress: self.current_hand.is_some(),
             community_cards: community,
