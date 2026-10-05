@@ -228,6 +228,21 @@ pub async fn upload_banner(
     mut multipart: Multipart,
 ) -> Result<Json<String>, (StatusCode, String)> {
     let user_id = extract_user_id(&ctx)?;
+
+    // F-9 (banner path) FIX: enforce the same ownership rule that
+    // update_club_settings uses. Previously ANY user with an active
+    // Club Pro subscription could upload a banner for ANY club.
+    match state.service.get_club(&ctx, club_id).await {
+        Ok(club) if club.created_by == user_id => {}
+        Ok(_) => {
+            return Err((StatusCode::FORBIDDEN, "not the club owner".to_string()));
+        }
+        Err(e) => {
+            tracing::error!(?e, "Failed to load club for banner ownership check");
+            return Err((StatusCode::INTERNAL_SERVER_ERROR, "internal error".to_string()));
+        }
+    }
+
     match state.service.is_club_pro_active(user_id).await {
         Ok(false) | Err(_) => return Err((StatusCode::FORBIDDEN, "Club Pro required".to_string())),
         Ok(true) => {}
