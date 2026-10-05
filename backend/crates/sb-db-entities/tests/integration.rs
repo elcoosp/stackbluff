@@ -34,7 +34,8 @@ async fn test_migration_and_basic_ops() {
         push_subscription: sea_orm::ActiveValue::Set(None),
                 is_bot: Set(false),
             bot_profile: Set(None),
-            bot_bankroll: Set(Some(0)),
+            // L-10 follow-up: entity now uses a non-optional i64.
+            bot_bankroll: Set(0),
 };
     let user = user_active.insert(&db).await.unwrap();
 
