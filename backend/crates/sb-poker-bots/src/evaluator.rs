@@ -7,6 +7,14 @@ use sb_shared_types::{Card, Rank, Suit};
 
 /// Calculates a fast proxy for equity (0.0 to 1.0).
 pub fn fast_equity(hole_cards: &[Card], community_cards: &[Card]) -> f32 {
+    // B-34 FIX: return a neutral equity instead of panicking when hole
+    // cards are missing (reconnect before YourHoleCards, mid-hand
+    // subscribe, tests that forget to seed the actor). Callers should
+    // still guard at the site, but the evaluator must not be able to
+    // crash the bot task.
+    if hole_cards.len() < 2 {
+        return 0.5;
+    }
     if community_cards.is_empty() {
         return preflop_equity(hole_cards);
     }
