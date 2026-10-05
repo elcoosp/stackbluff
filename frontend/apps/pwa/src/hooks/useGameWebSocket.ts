@@ -67,6 +67,9 @@ interface RawWsMessage {
     is_bot?: boolean;
     is_folded?: boolean;
     is_leaving?: boolean;
+    // F-11 FIX: wire field was never declared, so the parser could not
+    // copy it into the store's Seat type.
+    sitting_out?: boolean;
     is_active?: boolean;
     avatar_url?: string;
     position_badge?: string;
