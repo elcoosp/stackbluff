@@ -101,6 +101,8 @@ export interface GameRoomState {
   // correct at every stake (previously ActionBar hardcoded `bigBlind = 10`).
   smallBlind: number;
   bigBlind: number;
+  // T-8: tournament ante (0 for cash games).
+  ante: number;
   seats: Record<number, Seat>;
   communityCards: Card[];
   pot: number;
@@ -123,6 +125,7 @@ const createInitialRoomState = (): GameRoomState => ({
   tableId: null,
   smallBlind: 0,
   bigBlind: 0,
+  ante: 0,
   seats: {},
   communityCards: [],
   pot: 0,
@@ -203,6 +206,7 @@ export const useGameStore = create<GameState>((set, _get) => ({
             tableId: tableState.room_id,
             smallBlind: (tableState as any).small_blind ?? 0,
             bigBlind: (tableState as any).big_blind ?? 0,
+            ante: (tableState as any).ante ?? 0,
             seats: seatsMap,
             communityCards: tableState.community_cards || [],
             pot: tableState.pot || 0,
