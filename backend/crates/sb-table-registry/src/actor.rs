@@ -2345,8 +2345,22 @@ impl TableActor {
             (0, vec![])
         };
 
+        // F-8: expose the current blind level to clients. Tournament mode
+        // sets `current_blinds` via SetBlinds; cash games derive them from
+        // the stake level. Fall back to the stake-level derivation before
+        // the first hand starts so the payload is always populated.
+        let (small_blind, big_blind) = match self.current_blinds {
+            Some((sb, bb)) => (sb.as_i64() as u64, bb.as_i64() as u64),
+            None => {
+                let (sb, bb) = blinds_for_stake(self.config.stake_level);
+                (sb.as_i64() as u64, bb.as_i64() as u64)
+            }
+        };
+
         let msg = RoomMessage::TableState(TableStateUpdate {
             room_id: self.room_id,
+            small_blind,
+            big_blind,
             players: players_state,
             current_hand_in_progress: self.current_hand.is_some(),
             community_cards: community,
