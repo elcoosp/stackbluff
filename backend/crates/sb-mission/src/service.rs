@@ -221,19 +221,39 @@ impl MissionApi for MissionServiceImpl {
             }
         }
 
-        // Get all definitions and filter out those already assigned
+        // B-19 FIX: also filter out mission types the progress handler
+        // does not implement — the previous filter only excluded the ones
+        // already assigned today, so a reroll could land on another dead
+        // type. Restrict to the same IMPLEMENTABLE_DAILY list used by
+        // `ensure_daily_assignments`, and exclude the current mission's
+        // own type so a reroll never reassigns the identical mission
+        // (which would reset progress while consuming the reroll).
+        let current_type = assignments[idx].mission_type.clone();
         let pool = all_mission_definitions();
         let mut candidates: Vec<_> = pool
             .iter()
-            .filter(|(t, _, _, _, _)| !assigned_types.contains(t))
+            .filter(|(t, _, _, _, _)| {
+                IMPLEMENTABLE_DAILY.contains(&t.as_str())
+                    && !assigned_types.contains(t.as_str())
+                    && *t != current_type
+            })
             .collect();
 
         if candidates.is_empty() {
-            // Fallback: use "play_10_hands"
+            // Fallback: reroll to a mission type that is not the current
+            // one and is still implementable.
             candidates = pool
                 .iter()
-                .filter(|(t, _, _, _, _)| *t == "play_10_hands")
+                .filter(|(t, _, _, _, _)| {
+                    IMPLEMENTABLE_DAILY.contains(&t.as_str()) && *t != current_type
+                })
                 .collect();
+            if candidates.is_empty() {
+                candidates = pool
+                    .iter()
+                    .filter(|(t, _, _, _, _)| IMPLEMENTABLE_DAILY.contains(&t.as_str()))
+                    .collect();
+            }
             if candidates.is_empty() {
                 return Err(AppError::from("No available mission types to reroll to"));
             }
