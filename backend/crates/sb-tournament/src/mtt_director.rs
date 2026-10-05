@@ -21,7 +21,7 @@ use sb_table_registry::registry::Registry;
 
 use crate::blind_scheduler::BlindScheduler;
 use crate::payout_calculator::calculate_payouts;
-use crate::rebalancer::{compute_final_table_moves, compute_rebalance_moves};
+use crate::rebalancer::{compute_final_table_moves, compute_rebalance_moves_with_capacity};
 
 pub enum MttCommand {
     Register {
@@ -548,7 +548,11 @@ impl MttDirector {
             table_states.push(stacks);
         }
 
-        let moves = compute_rebalance_moves(&table_states);
+        let moves = compute_rebalance_moves_with_capacity(
+            &table_states,
+            // T-9: 9-max tables, hard cap.
+            crate::rebalancer::DEFAULT_TABLE_CAPACITY,
+        );
 
         self.state = DirectorState::Rebalancing;
         info!(tournament_id = %self.tournament_id, moves = moves.len(), "Rebalancing");
