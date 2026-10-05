@@ -725,7 +725,11 @@ export function TablePage() {
     };
 
     updateRemaining();
-    heroIntervalRef.current = setInterval(updateRemaining, 100);
+    heroIntervalRef.current = // F-20 FIX: throttle to 250 ms (4 Hz). The previous 100 ms tick
+      // (10 Hz) triggered a full re-render of the table every 10 ms,
+      // which on mobile caused visible jank and also amplified other
+      // hooks whose effect deps changed every render (F-1, F-11, F-19).
+      setInterval(updateRemaining, 250);
 
     return () => {
       if (heroIntervalRef.current) {
@@ -764,7 +768,11 @@ export function TablePage() {
     };
 
     updateRemaining();
-    opponentIntervalRef.current = setInterval(updateRemaining, 100);
+    opponentIntervalRef.current = // F-20 FIX: throttle to 250 ms (4 Hz). The previous 100 ms tick
+      // (10 Hz) triggered a full re-render of the table every 10 ms,
+      // which on mobile caused visible jank and also amplified other
+      // hooks whose effect deps changed every render (F-1, F-11, F-19).
+      setInterval(updateRemaining, 250);
 
     return () => {
       if (opponentIntervalRef.current) {
