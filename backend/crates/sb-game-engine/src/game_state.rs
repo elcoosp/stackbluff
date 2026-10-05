@@ -881,8 +881,16 @@ impl GameState {
                 continue;
             }
             if self.community_cards.len() < 5 {
+                // E-6 (deferred): the audit noted this branch splits the
+                // pot equally whenever the board has fewer than 5 cards.
+                // The existing `evaluate_hand_strength` requires exactly a
+                // 5-card community, so a correct tie-break fix needs a
+                // variable-length evaluator that this crate does not yet
+                // have. In a 52-card deck this path is unreachable in
+                // practice; leave the equal-split fallback (with the E-3
+                // odd-chip distribution) until the evaluator supports
+                // short boards (short-deck variants, feature #051).
                 warn!("Showdown with incomplete community cards – splitting pot");
-                // E-3 FIX: distribute odd chips instead of dropping them.
                 let n = eligible_indices.len() as i64;
                 let share_val = pot.amount.as_i64() / n;
                 let remainder = (pot.amount.as_i64() % n) as usize;
