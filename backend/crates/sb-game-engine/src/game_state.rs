@@ -273,6 +273,39 @@ impl GameState {
         })
     }
 
+    /// T-8 FIX: post antes for every active player at the start of a hand.
+    /// Called by the table actor after `new_hand` succeeds. The ante is
+    /// deducted from each player's stack, added to `total_bet` (so it
+    /// counts toward side-pot math) and credited to `self.pot`. Players
+    /// who cannot afford the ante go all-in for what they have.
+    ///
+    /// This matches the standard tournament ante (each player posts);
+    /// for "big blind ante" variants a single post from the BB is
+    /// performed by the caller instead.
+    pub fn post_ante(&mut self, amount: ChipAmount) -> Result<(), &'static str> {
+        if amount.as_i64() <= 0 {
+            return Ok(());
+        }
+        for p in self.players.iter_mut() {
+            if p.has_folded {
+                continue;
+            }
+            let actual = if p.stack < amount { p.stack } else { amount };
+            if actual.as_i64() <= 0 {
+                continue;
+            }
+            p.stack = p.stack - actual;
+            p.total_bet = p.total_bet + actual;
+            // NOTE: antes do NOT go into `bet_this_round` — they don't count
+            // toward the current street's call amount.
+            self.pot = self.pot + actual;
+            if p.stack == ChipAmount::new(0).unwrap() {
+                p.is_all_in = true;
+            }
+        }
+        Ok(())
+    }
+
     fn post_blind(
         player: &mut PlayerHandState,
         amount: ChipAmount,
