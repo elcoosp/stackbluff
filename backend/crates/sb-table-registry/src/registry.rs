@@ -49,10 +49,31 @@ pub struct Registry {
     stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
     #[allow(clippy::type_complexity)]
     table_metadata: Arc<RwLock<HashMap<TableId, (UserId, Option<String>)>>>,
+    /// B-6 FIX: passed to spawned table actors so they can settle deferred
+    /// leave refunds. Optional so tests can keep using `Registry::new`.
+    user_repo: Option<Arc<dyn sb_contracts::repo_api::UserRepo + Send + Sync>>,
 }
 
 impl Registry {
+    /// B-6 FIX: preferred constructor in production — passes a `UserRepo` to
+    /// each spawned `TableActor` so deferred leave refunds are written
+    /// durably instead of being lost on a dropped oneshot.
+    pub fn with_user_repo(
+        stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
+        user_repo: Arc<dyn sb_contracts::repo_api::UserRepo + Send + Sync>,
+    ) -> Self {
+        Self::build(stats_repo, Some(user_repo))
+    }
+
+    /// Test-friendly constructor — no user_repo, no durable leave refunds.
     pub fn new(stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>) -> Self {
+        Self::build(stats_repo, None)
+    }
+
+    fn build(
+        stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync>,
+        user_repo: Option<Arc<dyn sb_contracts::repo_api::UserRepo + Send + Sync>>,
+    ) -> Self {
         let (event_tx, _) = tokio::sync::broadcast::channel(1024);
         Self {
             table_configs: Arc::new(RwLock::new(HashMap::new())),
@@ -65,6 +86,7 @@ impl Registry {
             event_tx,
             stats_repo,
             table_metadata: Arc::new(RwLock::new(HashMap::new())),
+            user_repo,
         }
     }
 
@@ -155,7 +177,8 @@ impl Registry {
             active_players: active_players.clone(),
             created_by,
             chat_id,
-        });
+                user_repo: self.user_repo.clone(),
+            });
 
         let room_entry = RoomEntry {
             table_id,
@@ -634,7 +657,8 @@ impl Registry {
             active_players: active_players.clone(),
             created_by,
             chat_id,
-        });
+                user_repo: self.user_repo.clone(),
+            });
 
         cmd_tx
             .send(InternalCommand::EnterTournamentMode {
