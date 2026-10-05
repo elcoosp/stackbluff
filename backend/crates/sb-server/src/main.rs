@@ -733,7 +733,7 @@ async fn run_app() {
     }
 
     let app = Router::new()
-        .merge(metrics_route)
+        // B-26: /metrics is served on its own internal listener below, not here.
         .merge(rest_router)
         .merge(ws_router)
         .merge(auth_router(auth_service.clone()))
@@ -777,6 +777,38 @@ async fn run_app() {
         .expect("failed to bind port");
 
     tracing::info!("server listening on {}", listener.local_addr().unwrap());
+
+    // B-26 deployment follow-up: serve /metrics on its own listener bound
+    // to an internal address. Default is `127.0.0.1:9090`; override with
+    // METRICS_BIND only if you have a separate scrape network. The
+    // bearer-token gate above still applies when METRICS_TOKEN is set, so
+    // either mechanism alone is sufficient.
+    {
+        let metrics_bind = std::env::var("METRICS_BIND")
+            .unwrap_or_else(|_| "127.0.0.1:9090".to_string());
+        match tokio::net::TcpListener::bind(&metrics_bind).await {
+            Ok(metrics_listener) => {
+                let addr = metrics_listener
+                    .local_addr()
+                    .map(|a| a.to_string())
+                    .unwrap_or_else(|_| metrics_bind.clone());
+                tracing::info!("metrics endpoint listening on {}/metrics", addr);
+                let metrics_app = metrics_route;
+                tokio::spawn(async move {
+                    if let Err(e) = axum::serve(metrics_listener, metrics_app).await {
+                        tracing::error!(error = %e, "metrics server error");
+                    }
+                });
+            }
+            Err(e) => {
+                tracing::error!(
+                    error = %e,
+                    bind = %metrics_bind,
+                    "failed to bind metrics listener; /metrics is not exposed"
+                );
+            }
+        }
+    }
     let scheduler_state = archive_state.clone();
     tokio::spawn(async move {
         if let Err(e) = hand_archive::start_archival_scheduler(scheduler_state).await {
