@@ -1206,6 +1206,25 @@ impl TableActor {
     ) {
         debug!(%user_id, force, "Handling leave_player");
 
+        // B-17 FIX: refuse a forced leave when a live connection is still
+        // registered for this user. The disconnect path in ws-handler
+        // spawns a fire-and-forget `Leave { force: true }` task on socket
+        // close; a mobile blip that reconnects quickly installs a fresh
+        // `msg_tx` in `user_senders` before that spawned task runs, and
+        // the old code force-removed the just-reconnected player mid-hand,
+        // crediting their stack to the wallet. A user's sender is closed
+        // when their previous socket's send task aborts; a live sender
+        // therefore means "please do not leave".
+        if force {
+            if let Some(tx) = self.user_senders.get(&user_id) {
+                if !tx.is_closed() {
+                    debug!(%user_id, "Force-leave refused: live connection present");
+                    let _ = respond_to.send(LeaveResult::Cancelled);
+                    return;
+                }
+            }
+        }
+
         if !self.players.contains_key(&user_id) {
             debug!(%user_id, "Leave failed: player not found");
             // B-32 FIX: also drop the broadcast channel entry. Previously
