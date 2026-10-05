@@ -10,12 +10,31 @@ pub struct PlayerMove {
     pub to_table_idx: usize,
 }
 
+/// Default capacity for the MTT rebalancer. Every tournament table is 9-max
+/// (see `MttDirector::handle_hand_completed` for the `total_active <= 9`
+/// final-table threshold). The rebalancer should never move a player onto a
+/// table that has already reached this size.
+pub const DEFAULT_TABLE_CAPACITY: usize = 9;
+
 /// Given the current state of tables (list of (player_id, user_id, stack) per table),
 /// compute the moves needed to rebalance. The algorithm:
 /// 1. Collect all players from tables with ≤2 active players.
-/// 2. Distribute them evenly among the remaining tables (those with >2 players).
+/// 2. Distribute them evenly among the remaining tables (those with >2 players),
+///    respecting each target table's per-seat capacity.
 /// 3. Close empty source tables after moves.
-pub fn compute_rebalance_moves(tables: &[Vec<(PlayerId, UserId, ChipAmount)>]) -> Vec<PlayerMove> {
+///
+/// T-9 FIX: the round-robin loop used to pick the least-loaded target with
+/// no cap. TransferPlayerIn then rejected the move with `TournamentFull`
+/// and the director silently dropped the error (while still retaining/
+/// closing the source table), so players could disappear from the
+/// tournament's managed tables. We now cap loads at `capacity` and stop
+/// adding moves once no target has room. Leftover players stay where they
+/// are — a smaller imbalance is far better than a missing seat.
+pub fn compute_rebalance_moves_with_capacity(
+    tables: &[Vec<(PlayerId, UserId, ChipAmount)>],
+    capacity: usize,
+) -> Vec<PlayerMove> {
+    let cap = capacity.max(1);
     let total_players: usize = tables.iter().map(|t| t.len()).sum();
     let _ = total_players; // total_players used for debugging/logging
 
@@ -42,20 +61,35 @@ pub fn compute_rebalance_moves(tables: &[Vec<(PlayerId, UserId, ChipAmount)>]) -
         }
     }
 
-    // Distribute source players round-robin to target tables
+    // Distribute source players round-robin to target tables, capped at
+    // `capacity` per table.
     let mut moves = Vec::new();
     let mut target_loads: Vec<usize> = target_indices.iter().map(|&i| tables[i].len()).collect();
 
-    for (src_idx, pid, uid, stack) in source_players {
-        // Find target with smallest load
+    let total_source = source_players.len();
+    for (idx, (src_idx, pid, uid, stack)) in source_players.into_iter().enumerate() {
+        // Find target with smallest load that still has room.
         let mut min_load = usize::MAX;
-        let mut best_target_idx = 0;
+        let mut best_target_idx: Option<usize> = None;
         for (j, &load) in target_loads.iter().enumerate() {
+            if load >= cap {
+                continue;
+            }
             if load < min_load {
                 min_load = load;
-                best_target_idx = j;
+                best_target_idx = Some(j);
             }
         }
+        let Some(best_target_idx) = best_target_idx else {
+            // No target with spare capacity — leave the remaining source
+            // players seated where they are. Never plan an overfull move.
+            tracing::warn!(
+                remaining_source = total_source - idx,
+                capacity = cap,
+                "rebalancer: no target with spare capacity; leaving players in place"
+            );
+            break;
+        };
         let actual_table_idx = target_indices[best_target_idx];
         moves.push(PlayerMove {
             user_id: uid,
@@ -68,6 +102,11 @@ pub fn compute_rebalance_moves(tables: &[Vec<(PlayerId, UserId, ChipAmount)>]) -
     }
 
     moves
+}
+
+/// Backwards-compatible wrapper that uses the default 9-max capacity.
+pub fn compute_rebalance_moves(tables: &[Vec<(PlayerId, UserId, ChipAmount)>]) -> Vec<PlayerMove> {
+    compute_rebalance_moves_with_capacity(tables, DEFAULT_TABLE_CAPACITY)
 }
 
 /// Compute the final table merge: collect all remaining players and
@@ -138,6 +177,28 @@ mod tests {
         for m in &moves {
             assert_eq!(m.to_table_idx, 1, "All should move to table 1");
         }
+    }
+
+    #[test]
+    fn test_rebalance_never_exceeds_capacity() {
+        // One source table of 2, one target already at capacity 9.
+        // No moves should be produced because the only target is full.
+        let tables = vec![
+            make_table(&[(1, 101, 1000), (2, 102, 1000)]),
+            make_table(&[
+                (3, 103, 1000),
+                (4, 104, 1000),
+                (5, 105, 1000),
+                (6, 106, 1000),
+                (7, 107, 1000),
+                (8, 108, 1000),
+                (9, 109, 1000),
+                (10, 110, 1000),
+                (11, 111, 1000),
+            ]),
+        ];
+        let moves = compute_rebalance_moves_with_capacity(&tables, 9);
+        assert!(moves.is_empty(), "must not move onto a full table");
     }
 
     #[test]
