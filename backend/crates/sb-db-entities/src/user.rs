@@ -16,7 +16,12 @@ pub struct Model {
     pub chip_balance: i64,
     pub is_bot: bool,
     pub bot_profile: Option<String>,
-    pub bot_bankroll: Option<i64>,
+    // L-10 FIX: the migration defines `bot_bankroll NOT NULL DEFAULT 0`,
+    // but the entity declared it as `Option<i64>`. That drift caused
+    // confusing None handling in the bot economy and made the migration
+    // seed bots with an "unset" bankroll. Keep the type aligned with the
+    // schema so future writes/reads are unambiguous.
+    pub bot_bankroll: i64,
     pub streak_count: i32,
     pub created_at: DateTimeUtc,
     pub updated_at: DateTimeUtc,
