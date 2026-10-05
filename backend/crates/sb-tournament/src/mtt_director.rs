@@ -696,9 +696,18 @@ impl MttDirector {
             self.tables.truncate(1);
         }
 
-        let dealer_seat = {
+        let dealer_seat: u8 = {
+            // T-6 FIX: the previous code called
+            // `rng.random_range(0..self.config.max_players as u8)`, which
+            // sampled over the tournament capacity (up to 500). ResumeHand
+            // validates `seat < 9` and discarded the error, so the random-
+            // dealer feature silently no-oped whenever max_players > 9.
+            //
+            // The final table is always 9-max (see `total_active <= 9`
+            // below), so sample from 0..9 directly.
+            const FINAL_TABLE_SIZE: u8 = 9;
             let mut rng = rand::rng();
-            rng.random_range(0..self.config.max_players as u8)
+            rng.random_range(0..FINAL_TABLE_SIZE)
         };
         for table in &self.tables {
             let (tx, rx) = oneshot::channel();
