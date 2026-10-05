@@ -373,9 +373,10 @@ impl SitGoTournament {
         self.survivors = shuffled.iter().map(|p| p.user_id).collect();
 
         let mut scheduler = BlindScheduler::new(self.config.blind_schedule.levels.clone());
-        let (sb, bb, _ante) = scheduler.current_blinds();
+        let (sb, bb, ante_i64) = scheduler.current_blinds();
+        let ante_chips = ChipAmount::new(ante_i64).unwrap_or_default();
         let _ = cmd_tx
-            .send(TableCommand::SetBlinds { small: sb, big: bb })
+            .send(TableCommand::SetBlinds { small: sb, big: bb, ante: ante_chips })
             .await;
         scheduler.start_timer();
         self.blind_scheduler = Some(scheduler);
@@ -449,8 +450,9 @@ impl SitGoTournament {
             && let Some((level, sb, bb, ante)) = scheduler.on_hand_completed()
         {
             if let Some(cmd_tx) = &self.table_cmd_tx {
+                let ante_chips = ChipAmount::new(ante).unwrap_or_default();
                 let _ = cmd_tx
-                    .send(TableCommand::SetBlinds { small: sb, big: bb })
+                    .send(TableCommand::SetBlinds { small: sb, big: bb, ante: ante_chips })
                     .await;
             }
             let msg = sb_table_registry::game_room::RoomMessage::TournamentBlindLevel {
