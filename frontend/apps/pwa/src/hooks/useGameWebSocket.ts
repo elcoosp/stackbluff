@@ -547,6 +547,12 @@ export function useGameWebSocket(tableId: string) {
             const rooms = { ...s.rooms };
             rooms[roomId] = {
               tableId: tableId,
+              // F-8 FIX: seed blinds to 0 here; the next TableState from the
+              // server will populate them. Without this field TS rejects
+              // the assignment to GameRoomState after the store type was
+              // extended to track blinds.
+              smallBlind: 0,
+              bigBlind: 0,
               seats: {},
               communityCards: [],
               pot: 0,
