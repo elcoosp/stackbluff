@@ -77,6 +77,7 @@ impl MigratorTrait for Migrator {
             // 4. Tournament tables
             Box::new(m20260624_create_tournament_tables::Migration),
             Box::new(m20260628_add_scheduled_start_to_tournaments::Migration),
+            Box::new(m20260717_add_chip_committed_to_registrations::Migration),
             // 5. Seed data (LAST)
             Box::new(m20260616_seed_base_tables::Migration),
             Box::new(m20250702_add_tournament_name::Migration),
@@ -93,3 +94,5 @@ impl MigratorTrait for Migrator {
 }
 
 pub mod m20260628_000001_create_puzzle_submissions;
+
+pub mod m20260717_add_chip_committed_to_registrations;
