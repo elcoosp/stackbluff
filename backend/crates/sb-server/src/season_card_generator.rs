@@ -57,18 +57,27 @@ impl SeasonCardGenerator {
     }
 
     pub async fn process_season(&self, season_id: i32) -> Result<(), AppError> {
-        let txn = self
-            .db
-            .begin()
-            .await
-            .map_err(|e| AppError::Internal(format!("Txn error: {e}")))?;
+        // B-24 FIX: the previous implementation held a single DB transaction
+        // across N × (PNG render + R2 upload), and the reset-row insert
+        // could fail with a PK conflict when `next_season_id` already had
+        // rows — leaving `processed = false` so the same season was retried
+        // every hour forever.
+        //
+        // The new shape:
+        //   1. Fetch everything we need *outside* any transaction.
+        //   2. Generate and upload card images with no txn open.
+        //   3. Open a SHORT transaction to (a) upsert reset rows and
+        //      (b) mark the season processed.
+        // This makes the whole operation cheap to retry and idempotent
+        // even if the process dies mid-card-generation.
 
         let ranks = player_rank::Entity::find()
             .filter(player_rank::Column::SeasonId.eq(season_id))
-            .all(&txn)
+            .all(&self.db)
             .await
             .map_err(|e| AppError::Internal(format!("DB error: {e}")))?;
 
+        // 1) Generate the season cards outside any transaction.
         for rank in &ranks {
             match self
                 .generate_and_store_card(rank.user_id, season_id, rank.rank_tier.clone())
@@ -78,19 +87,27 @@ impl SeasonCardGenerator {
                     tracing::info!("Generated card for user {}: {}", rank.user_id, url);
                 }
                 Err(e) => {
+                    // Card failures are non-fatal — the rank reset still
+                    // needs to happen, and an idempotent retry can fill in
+                    // the missing cards on the next pass.
                     tracing::error!("Card generation failed for user {}: {}", rank.user_id, e);
                 }
             }
         }
 
-        // Find the current season to get its starts_at
+        // 2) Short transaction for the DB-side season rollover.
+        let txn = self
+            .db
+            .begin()
+            .await
+            .map_err(|e| AppError::Internal(format!("Txn error: {e}")))?;
+
         let current_season = season::Entity::find_by_id(season_id)
             .one(&txn)
             .await
             .map_err(|e| AppError::Internal(format!("DB error: {e}")))?
             .ok_or_else(|| AppError::Internal("Season not found".to_string()))?;
 
-        // Find the next season by starts_at > current season's starts_at
         let next_season = season::Entity::find()
             .filter(season::Column::StartsAt.gt(current_season.starts_at))
             .order_by_asc(season::Column::StartsAt)
@@ -100,6 +117,8 @@ impl SeasonCardGenerator {
 
         let next_season_id = next_season.map(|s| s.id).unwrap_or(season_id + 1);
 
+        // B-24: idempotent reset-row insert — skip rows that already exist
+        // for (user_id, next_season_id). ON CONFLICT DO NOTHING.
         for rank in &ranks {
             let new_tier = rank.rank_tier.reset_rank();
             let active = player_rank::ActiveModel {
@@ -108,18 +127,24 @@ impl SeasonCardGenerator {
                 rank_tier: Set(new_tier),
                 rank_points: Set(0),
             };
+            // `on_conflict_do_nothing` mirrors the primary key constraint
+            // (user_id, season_id) and makes a retry safe.
+            use sea_orm::sea_query::OnConflict;
             player_rank::Entity::insert(active)
+                .on_conflict(
+                    OnConflict::columns([
+                        player_rank::Column::UserId,
+                        player_rank::Column::SeasonId,
+                    ])
+                    .do_nothing()
+                    .to_owned(),
+                )
                 .exec(&txn)
                 .await
                 .map_err(|e| AppError::Internal(format!("Insert error: {e}")))?;
         }
 
-        let season_model = season::Entity::find_by_id(season_id)
-            .one(&txn)
-            .await
-            .map_err(|e| AppError::Internal(format!("DB error: {e}")))?
-            .ok_or_else(|| AppError::Internal("Season not found".to_string()))?;
-        let mut season_active: season::ActiveModel = season_model.into();
+        let mut season_active: season::ActiveModel = current_season.into();
         season_active.processed = Set(true);
         season_active
             .update(&txn)
