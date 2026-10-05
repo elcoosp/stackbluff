@@ -8,7 +8,7 @@ use rand::{RngExt, SeedableRng};
 use tokio::sync::mpsc;
 use tracing::{info, warn};
 
-use sb_shared_types::{Card, ChipAmount, Rank, Suit, TableId, UserId};
+use sb_shared_types::{Card, ChipAmount, Rank, Suit, TableId, UserId, ActionType};
 use sb_table_registry::game_room::{
     ActionRequired, HandResult as RoomHandResult, PrivatePayload, RoomMessage, TableStateUpdate,
 };
@@ -156,10 +156,32 @@ impl BotActor {
         };
         tokio::time::sleep(human_delay).await;
 
+        // B-34 FIX: an ActionRequired can arrive before YourHoleCards (a
+        // reconnect or mid-hand subscribe leaves `self.hole_cards` empty).
+        // `fast_equity(&[], ...)` indexes `hole_cards[0]`/`[1]` and panics,
+        // taking down the bot task and never crediting its reserved
+        // bankroll. Fold rather than crash.
+        if self.hole_cards.len() < 2 {
+            tracing::warn!(
+                target: "bot_safety",
+                bot_id = %self.user_id,
+                "ActionRequired before hole cards — folding defensively"
+            );
+            let _ = self
+                .table_client
+                .send_action(self.table_id, self.user_id, ActionType::Fold, None)
+                .await;
+            return;
+        }
+
         let equity = fast_equity(&self.hole_cards, &self.community_cards);
 
+        // B-34 FIX: same pot-odds bug as E-4. Correct definition is
+        // call / (pot + call).
         let pot_odds = if req.to_call > 0 {
-            (req.pot as f32 / req.to_call as f32) / 10.0
+            let call = req.to_call as f32;
+            let pot_after_call = req.pot as f32 + call;
+            call / pot_after_call
         } else {
             0.0
         };
