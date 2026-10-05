@@ -7,6 +7,21 @@ use std::sync::Arc;
 use crate::web_push::{WebPushSender, SendOutcome};
 use serde::Serialize;
 
+/// B-28 FIX: local Markdown escape for user-derived content. Mirrors
+/// telegram::md_escape. Interpolating club names, tournament names, etc.
+/// into `parse_mode: Markdown` bodies could inject links or break
+/// rendering with unbalanced `*`/`_`.
+fn escape_md(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        if matches!(c, '_' | '*' | '[' | ']' | '(' | ')' | '~' | '`' | '>' | '#' | '+' | '-' | '=' | '|' | '{' | '}' | '.' | '!') {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    out
+}
+
 #[derive(Serialize)]
 struct PushPayload {
     title: String,
