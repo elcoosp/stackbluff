@@ -29,6 +29,11 @@ struct RoomEntry {
     active_players: Arc<AtomicU8>,
     #[allow(dead_code)]
     is_tournament: bool,
+    // B-31 FIX: track when the room was created. The reaper used to kill
+    // ANY room with active_players == 0 on its next 60s tick, including a
+    // freshly assigned room whose join hadn't landed yet, and
+    // spectator-only rooms. We now require an age threshold before reaping.
+    created_at: std::time::Instant,
 }
 
 #[derive(Clone)]
@@ -157,6 +162,7 @@ impl Registry {
             cmd_tx,
             active_players,
             is_tournament: false,
+            created_at: std::time::Instant::now(),
         };
 
         rooms.insert(new_room_id, room_entry);
@@ -643,6 +649,7 @@ impl Registry {
             cmd_tx: cmd_tx.clone(),
             active_players,
             is_tournament: true,
+            created_at: std::time::Instant::now(),
         };
 
         self.rooms.write().await.insert(room_id, room_entry);
@@ -671,14 +678,24 @@ impl Registry {
 
     pub async fn spawn_room_reaper(registry: Arc<Registry>) {
         tokio::spawn(async move {
+            // B-31 FIX: an empty room must be at least this old before the
+            // reaper touches it. Prevents killing a freshly assigned room
+            // whose `Join` hasn't been processed yet (assign_room returns
+            // before the actor commits the seat) and lets spectator-only
+            // rooms survive while clients are attached.
+            const REAP_MIN_AGE: Duration = Duration::from_secs(600);
             let mut interval = tokio::time::interval(Duration::from_secs(60));
             loop {
                 interval.tick().await;
+                let now = std::time::Instant::now();
                 let mut rooms_to_remove = Vec::new();
                 let rooms = registry.rooms.read().await;
                 for (room_id, entry) in rooms.iter() {
-                    // Only reap non-tournament empty rooms
-                    if entry.active_players.load(Ordering::Relaxed) == 0 && !entry.is_tournament {
+                    // Only reap non-tournament empty rooms that are old enough.
+                    if entry.active_players.load(Ordering::Relaxed) == 0
+                        && !entry.is_tournament
+                        && now.duration_since(entry.created_at) >= REAP_MIN_AGE
+                    {
                         rooms_to_remove.push(*room_id);
                     }
                 }
