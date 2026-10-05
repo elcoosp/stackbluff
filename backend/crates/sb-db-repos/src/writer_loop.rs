@@ -249,6 +249,16 @@ async fn run_command_in_savepoint<C: ConnectionTrait>(
                 let mut active: user::ActiveModel = model.into();
                 let current = active.chip_balance.take().unwrap_or(0);
                 let new_balance = current + *delta;
+                // L-8 FIX: the writer-loop path previously had no
+                // negative-balance check while `update_chip_balance_with_conn`
+                // did, so a large debit could drive the balance below zero
+                // depending on which code path was taken. Enforce the same
+                // rule here so the two implementations agree.
+                if new_balance < 0 {
+                    return Err(PersistenceError::Database(
+                        "Insufficient balance".into(),
+                    ));
+                }
                 active.chip_balance = Set(new_balance);
                 sea_orm::ActiveModelTrait::update(active, conn)
                     .await
