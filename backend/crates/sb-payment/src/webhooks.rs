@@ -1,7 +1,6 @@
 use crate::metrics;
 use crate::service::RealPaymentService;
 use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
-use hmac::KeyInit;
 use sb_contracts::service_api::PaymentService;
 use sb_shared_types::{ChipAmount, UserId};
 use serde_json::{Value, json};
