@@ -32,6 +32,9 @@ export const Route = createFileRoute('/login')({
 
 function LoginPage() {
   const navigate = useNavigate();
+  // L-5 FIX: authGuard sets `?redirect=/path` when it kicks a user to /login.
+  // Previously login always navigated to '/', losing the destination.
+  const search = Route.useSearch() as { redirect?: string };
   const setAuth = useAuthStore((s) => s.setAuth);
   const isMiniApp = typeof window !== 'undefined' && !!window.Telegram?.WebApp;
 
@@ -62,7 +65,11 @@ function LoginPage() {
       setToken(data.token);
       setAuth(data.user, data.token, data.balance || 0);
       trackGameEvent('login_success', { platform: 'email' });
-      navigate({ to: '/' });
+      // L-5 FIX: honor the redirect search param when present and it is
+      // a safe in-app path (leading '/').
+      const dest =
+        search?.redirect && search.redirect.startsWith('/') ? search.redirect : '/';
+      navigate({ to: dest });
     },
     onError: (error) => {
       toast.error(error.message || t`Invalid credentials`);
@@ -75,7 +82,11 @@ function LoginPage() {
       setToken(data.token);
       setAuth(data.user, data.token, data.balance || 0);
       trackGameEvent('login_success', { platform: 'telegram' });
-      navigate({ to: '/' });
+      // L-5 FIX: honor the redirect search param when present and it is
+      // a safe in-app path (leading '/').
+      const dest =
+        search?.redirect && search.redirect.startsWith('/') ? search.redirect : '/';
+      navigate({ to: dest });
     },
     onError: (error) => {
       toast.error(error.message || t`Telegram authentication failed`);
