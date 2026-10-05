@@ -33,7 +33,7 @@ class ClubWebSocketManager {
     const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`;
 
     try {
-      this.ws = new WebSocket(wsUrl);
+      this.ws = new WebSocket(wsUrl + (getToken() ? `?token=${encodeURIComponent(getToken()!)}` : ''));
 
       this.ws.onopen = () => {
         console.log('Club WebSocket connected');
@@ -97,6 +97,8 @@ class ClubWebSocketManager {
   }
 
   disconnect() {
+    intentionallyClosed = true;
+
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);
     }
