@@ -194,25 +194,90 @@ impl PaymentService for RealPaymentService {
                 .to_string())
             }
             "telegram_stars" => {
-                // P-4 FIX: the previous implementation returned a fake URL
-                // of the form `https://t.me/<bot_token>/stars?amount=...`
-                // — which is not a valid Telegram payments URL, and worse,
-                // embedded the FULL bot token in the client response. A
-                // single user inspecting the JSON got complete control of
-                // the bot (message send, invoice creation, …).
-                //
-                // Proper support requires calling the Bot API
-                // `createInvoiceLink` server-side and storing the returned
-                // invoice id on the payment row, plus a real webhook flow
-                // (see P-2). Reject explicitly until that is built.
-                let _ = user_id;
-                let _ = amount;
-                let _ = currency;
-                Err(AppError::Internal(
-                    "Telegram Stars checkout is not yet implemented; \
-                     please use Stripe for now"
-                        .into(),
-                ))
+                // P-2 FIX (second half): the previous implementation
+                // returned a fake URL containing the raw bot token in
+                // the client response (P-4). We now call the Bot API
+                // `createInvoiceLink` server-side to obtain a real
+                // invoice link, and store a matching pending record keyed
+                // on a synthetic id derived from (user_id, chips) so the
+                // webhook can validate and confirm.
+                let stars_price = amount.as_i64();
+                if stars_price <= 0 {
+                    return Err(AppError::InvalidInput("Invalid Stars price".into()));
+                }
+
+                // `<user_id>|<product_id>|<chips>|<product_type>` — parsed
+                // by the webhook. Keep it stable.
+                let product_id = metadata
+                    .get("product_id")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let product_type = metadata
+                    .get("product_type")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("chips")
+                    .to_string();
+                let chips_grant: i64 = metadata
+                    .get("chips")
+                    .and_then(|v| v.as_i64())
+                    .unwrap_or(stars_price);
+                let invoice_payload = format!(
+                    "{}|{}|{}|{}",
+                    user_id.as_uuid(),
+                    product_id,
+                    chips_grant,
+                    product_type,
+                );
+
+                let body = serde_json::json!({
+                    "title": "StackBluff purchase",
+                    "description": format!("{} chips", chips_grant),
+                    "payload": invoice_payload,
+                    "currency": "XTR",
+                    "prices": [ { "label": "Chips", "amount": stars_price } ],
+                });
+
+                let resp = self
+                    .call_bot_api("createInvoiceLink", &body)
+                    .await
+                    .map_err(|e| AppError::External(format!(
+                        "Failed to create Telegram Stars invoice: {e}"
+                    )))?;
+                let link = resp
+                    .get("result")
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(|| AppError::Internal("createInvoiceLink: no result".into()))?
+                    .to_string();
+
+                // Record the pending purchase with a stable synthetic id
+                // the webhook can find. The webhook validates by the same
+                // (user_id, chips) pair extracted from the payload.
+                let synthetic_id = format!("tg_{}_{}", user_id.as_uuid(), chips_grant);
+                PaymentRepo::insert_pending(
+                    &self.db,
+                    &synthetic_id,
+                    user_id.as_uuid(),
+                    chips_grant,
+                    "XTR",
+                    "telegram_stars",
+                    serde_json::json!({
+                        "user_id": user_id.as_uuid().to_string(),
+                        "product_id": product_id,
+                        "chips": chips_grant,
+                        "product_type": product_type,
+                    }),
+                )
+                .await?;
+
+                info!(
+                    user_id = %user_id.as_uuid(),
+                    chips = chips_grant,
+                    stars = stars_price,
+                    "Created Telegram Stars invoice link"
+                );
+
+                Ok(link)
             }
             _ => Err(AppError::InvalidInput("Unsupported provider".into())),
         }
