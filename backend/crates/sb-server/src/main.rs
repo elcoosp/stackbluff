@@ -373,11 +373,17 @@ async fn run_app() {
         // trait object used by everything else (tournaments, clubs, etc.)
         // and is the only piece overridden by the Telegram service.
         let notif = Arc::new(InMemoryNotificationService::new());
+        // B-10 FIX (partial): use the working single-channel Telegram
+        // notifier when a bot token is configured. The multi-channel
+        // notifier exists in the tree but is not yet consistent with the
+        // current trait APIs (see `sb-notification/src/multi_channel.rs`)
+        // and stays on the shelf until that gap is closed.
         let notification_service: Arc<dyn sb_contracts::notification_api::NotificationService> =
             match std::env::var("TELEGRAM_BOT_TOKEN") {
-                Ok(tok) if !tok.is_empty() => Arc::new(
-                    sb_notification::TelegramNotificationService::new(tok),
-                ),
+                Ok(tok) if !tok.is_empty() => {
+                    tracing::info!("B-10: using TelegramNotificationService");
+                    Arc::new(sb_notification::TelegramNotificationService::new(tok))
+                }
                 _ => {
                     tracing::warn!(
                         "B-10: TELEGRAM_BOT_TOKEN is unset — using in-memory notifier (noop)"
