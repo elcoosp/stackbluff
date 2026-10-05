@@ -327,13 +327,24 @@ impl TournamentService for TournamentServiceImpl {
 
     async fn register(
         &self,
-        _ctx: &RequestContext,
+        ctx: &RequestContext,
         tournament_id: TournamentId,
         user_id: UserId,
     ) -> Result<(), AppError> {
-        // Check if this is a club tournament
+        // B-3 FIX: the buy-in was never debited. Registration was pure
+        // bookkeeping, so a user could register for free, get a full
+        // tournament stack, and the winner's prize came out of thin air.
+        // Crash recovery also refunded a buy-in that had never been
+        // charged. We now debit the wallet before asking the actor to
+        // seat the player, and refund on actor-side rejection.
+        //
+        // A fully transactional fix (debit + insert + pool increment in
+        // one DB txn, per the design in `tournament_api::register_player_txn`)
+        // is the eventual goal; this closes the free-money faucet now.
         let tournament = self.repo.get_tournament(tournament_id).await?;
-        if let Some(t) = tournament
+
+        // Check if this is a club tournament
+        if let Some(t) = &tournament
             && let Some(club_id) = t.config.club_id
             && let Some(club_repo) = &self.club_repo
         {
@@ -346,10 +357,37 @@ impl TournamentService for TournamentServiceImpl {
             }
         }
 
+        let buy_in = tournament
+            .as_ref()
+            .map(|t| t.config.buy_in.as_i64())
+            .unwrap_or(0);
+
+        // Debit up-front. `update_chip_balance_with_conn` rejects negative
+        // balances (see user_repo); the writer-loop path should as well.
+        // If the debit fails we do not touch the actor.
+        if buy_in > 0 {
+            let debited = self
+                .user_repo
+                .update_chip_balance(ctx.clone(), user_id, -buy_in)
+                .await;
+            if let Err(e) = debited {
+                tracing::info!(
+                    %user_id,
+                    %tournament_id,
+                    buy_in,
+                    error = ?e,
+                    "tournament register: buy-in debit failed (likely insufficient chips)"
+                );
+                return Err(AppError::InvalidInput(format!(
+                    "Could not charge buy-in of {buy_in} chips: {e}"
+                )));
+            }
+        }
+
         let (sit_tx, mtt_tx, typ) = self.get_sender(tournament_id)?;
         let (rtx, rrx) = tokio::sync::oneshot::channel();
 
-        match typ {
+        let send_result = match typ {
             TournamentType::SitAndGo => {
                 sit_tx
                     .send(SitGoCommand::Register {
@@ -357,7 +395,7 @@ impl TournamentService for TournamentServiceImpl {
                         respond_to: rtx,
                     })
                     .await
-                    .map_err(|_| AppError::Internal("actor dropped".into()))?;
+                    .map_err(|_| AppError::Internal("actor dropped".into()))
             }
             TournamentType::Mtt => {
                 mtt_tx
@@ -366,24 +404,61 @@ impl TournamentService for TournamentServiceImpl {
                         respond_to: rtx,
                     })
                     .await
-                    .map_err(|_| AppError::Internal("actor dropped".into()))?;
+                    .map_err(|_| AppError::Internal("actor dropped".into()))
             }
+        };
+
+        if let Err(e) = send_result {
+            // Compensate: refund the buy-in since the actor never saw the
+            // request.
+            if buy_in > 0 {
+                let _ = self
+                    .user_repo
+                    .update_chip_balance(ctx.clone(), user_id, buy_in)
+                    .await;
+            }
+            return Err(e);
         }
 
-        rrx.await
-            .map_err(|_| AppError::Internal("response dropped".into()))?
+        let actor_result = rrx
+            .await
+            .map_err(|_| AppError::Internal("response dropped".into()))?;
+
+        if let Err(e) = actor_result {
+            // Compensate: the actor rejected the registration (full,
+            // duplicate, closed) — refund the buy-in.
+            if buy_in > 0 {
+                let _ = self
+                    .user_repo
+                    .update_chip_balance(ctx.clone(), user_id, buy_in)
+                    .await;
+            }
+            return Err(e);
+        }
+
+        Ok(())
     }
 
     async fn unregister(
         &self,
-        _ctx: &RequestContext,
+        ctx: &RequestContext,
         tournament_id: TournamentId,
         user_id: UserId,
     ) -> Result<(), AppError> {
+        // B-3 (cont): we charged the buy-in on register, so we must refund
+        // it on unregister. The actor checks that the user was actually
+        // registered — a no-op unregister should not mint chips.
+        let buy_in = self
+            .repo
+            .get_tournament(tournament_id)
+            .await?
+            .map(|t| t.config.buy_in.as_i64())
+            .unwrap_or(0);
+
         let (sit_tx, mtt_tx, typ) = self.get_sender(tournament_id)?;
         let (rtx, rrx) = tokio::sync::oneshot::channel();
 
-        match typ {
+        let send_result = match typ {
             TournamentType::SitAndGo => {
                 sit_tx
                     .send(SitGoCommand::Unregister {
@@ -391,7 +466,7 @@ impl TournamentService for TournamentServiceImpl {
                         respond_to: rtx,
                     })
                     .await
-                    .map_err(|_| AppError::Internal("actor dropped".into()))?;
+                    .map_err(|_| AppError::Internal("actor dropped".into()))
             }
             TournamentType::Mtt => {
                 mtt_tx
@@ -400,8 +475,12 @@ impl TournamentService for TournamentServiceImpl {
                         respond_to: rtx,
                     })
                     .await
-                    .map_err(|_| AppError::Internal("actor dropped".into()))?;
+                    .map_err(|_| AppError::Internal("actor dropped".into()))
             }
+        };
+
+        if let Err(e) = send_result {
+            return Err(e);
         }
 
         rrx.await
