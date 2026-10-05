@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "dev:pwa": "pnpm --filter @stackbluff/pwa dev",
-    "dev:mini": "pnpm --filter @stackbluff/mini-app dev",
-    "dev": "pnpm run dev:pwa & pnpm run dev:mini",
+    "dev": "pnpm --filter @stackbluff/pwa dev",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "lint": "biome check .",
