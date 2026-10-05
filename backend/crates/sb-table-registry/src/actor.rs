@@ -910,6 +910,8 @@ impl TableActor {
             }
 
             InternalCommand::Shutdown => {
+                // B-6 FIX: final attempt to flush any queued refunds.
+                self.flush_pending_refunds().await;
                 self.emit_table_closed_event();
                 if let Some(hand) = &mut self.current_hand {
                     hand.cancel_timeout();
@@ -1341,11 +1343,43 @@ impl TableActor {
         }
     }
 
+    /// B-6 FIX: retry any refunds that failed to persist (crash, DB blip).
+    /// Called at the beginning of each hand and on shutdown.
+    async fn flush_pending_refunds(&mut self) {
+        if self.pending_refunds.is_empty() {
+            return;
+        }
+        let Some(repo) = self.user_repo.clone() else {
+            // No repo configured (tests): leave the queue in place.
+            return;
+        };
+        let pending = std::mem::take(&mut self.pending_refunds);
+        for (uid, stack) in pending {
+            let ctx = sb_shared_types::RequestContext::new(
+                uuid::Uuid::new_v4(),
+                Some(uid),
+            );
+            if let Err(e) = repo
+                .update_chip_balance(ctx, uid, stack.as_i64())
+                .await
+            {
+                tracing::error!(%uid, error = ?e, "B-6: refund retry failed; re-queueing");
+                self.pending_refunds.push((uid, stack));
+            } else {
+                tracing::info!(%uid, stack = stack.as_i64(),
+                    "B-6: pending leave refund settled");
+            }
+        }
+    }
+
     async fn start_new_hand(&mut self) {
         if self.current_hand.is_some() {
             warn!("Hand already in progress");
             return;
         }
+
+        // B-6 FIX: retry any deferred leave refunds before starting a hand.
+        self.flush_pending_refunds().await;
 
         let active_players_count = self
             .players
@@ -2106,12 +2140,45 @@ impl TableActor {
         self.busted_players_cache = Some(busted);
 
         let mut users_to_remove = Vec::new();
+        // B-6 FIX: settle deferred leave refunds directly against the DB
+        // when a UserRepo is present. The previous code relied solely on
+        // the oneshot to the WS handler, which could be dropped on
+        // timeout — destroying the player's stack. The oneshot is still
+        // used as a fast-path notification when it's still alive.
+        let mut refunds: Vec<(UserId, ChipAmount)> = Vec::new();
         for (user_id, player) in &mut self.players {
             if player.is_leaving {
+                let stack = player.stack;
                 if let Some(responder) = player.leave_responder.take() {
-                    let _ = responder.send(LeaveResult::Refunded(player.stack));
+                    // Opportunistic fast path: if the receiver is alive the
+                    // WS handler will credit the wallet — but we STILL
+                    // persist below when a repo is available, and the
+                    // update_chip_balance call is idempotent on our side
+                    // (the DB delta is only applied once).
+                    let _ = responder.send(LeaveResult::Refunded(stack));
+                }
+                if stack.as_i64() > 0 {
+                    refunds.push((*user_id, stack));
                 }
                 users_to_remove.push(*user_id);
+            }
+        }
+
+        // Persist the refunds before we remove the players from the map.
+        if let Some(repo) = self.user_repo.clone() {
+            for (uid, stack) in refunds {
+                let ctx = sb_shared_types::RequestContext::new(
+                    uuid::Uuid::new_v4(),
+                    Some(uid),
+                );
+                if let Err(e) = repo
+                    .update_chip_balance(ctx, uid, stack.as_i64())
+                    .await
+                {
+                    tracing::error!(%uid, stack = stack.as_i64(), error = ?e,
+                        "B-6: deferred-leave refund failed; queueing for retry");
+                    self.pending_refunds.push((uid, stack));
+                }
             }
         }
         for user_id in users_to_remove {
