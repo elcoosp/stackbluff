@@ -298,6 +298,18 @@ export const useGameStore = create<GameState>((set, _get) => ({
         seat.action = { text: action.toUpperCase(), amount };
       }
 
+      // L-4 FIX: also update fields that the individual action broadcast
+      // carries but the reducer previously ignored. Without this, a
+      // dropped TableState left stale `current_bet`/`is_folded` visuals.
+      // `amount` is the seat's new committed chips this round.
+      if (typeof amount === 'number') {
+        seat.current_bet = amount;
+      }
+      if (typeof action === 'string' && action.toUpperCase() === 'FOLD') {
+        seat.is_folded = true;
+        seat.is_active = false;
+      }
+
       return {
         rooms: {
           ...state.rooms,
