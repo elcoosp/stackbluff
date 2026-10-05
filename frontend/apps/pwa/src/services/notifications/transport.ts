@@ -25,7 +25,14 @@ export async function sendSubscriptionToBackend(
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ subscription }),
+      // F-7 FIX: the backend expects the flat shape `{ endpoint, keys }`
+      // (see notification_routes::SubscribeRequest). We previously nested
+      // it under `subscription`, which the deserializer rejected with 422.
+      body: JSON.stringify({
+        endpoint: subscription.endpoint,
+        keys: subscription.keys,
+        expiration_time: null,
+      }),
     });
 
     if (!response.ok) {
