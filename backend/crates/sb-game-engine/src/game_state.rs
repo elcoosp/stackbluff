@@ -77,6 +77,9 @@ pub struct Winner {
 
 pub struct GameState {
     pub hand_id: HandId,
+    /// L-2 FIX: remember the table_id passed to `new_hand` so snapshots
+    /// carry the real identifier instead of `TableId::nil()`.
+    pub table_id: TableId,
     deck: Deck,
     players: Vec<PlayerHandState>,
     pub current_round: BettingRound,
@@ -172,7 +175,9 @@ impl GameState {
         dealer_index: usize,
         blinds: (ChipAmount, ChipAmount),
     ) -> Result<Self, &'static str> {
-        let _ = table_id;
+        // L-2 FIX: previously `let _ = table_id;` — the id was discarded
+        // and every snapshot used `TableId::nil()`.
+        let _ = table_id; // keep for reference; field assignment below uses it
         if players.len() < 2 {
             return Err("Need at least 2 players");
         }
@@ -253,6 +258,7 @@ impl GameState {
 
         Ok(GameState {
             hand_id,
+            table_id,
             deck,
             players: player_states,
             current_round: BettingRound::Preflop,
@@ -835,7 +841,8 @@ impl GameState {
             })
             .collect();
         sb_ws_messages::TableStateUpdate {
-            table_id: sb_shared_types::TableId::new(uuid::Uuid::nil()),
+            // L-2 FIX: use the real table_id, not a nil placeholder.
+            table_id: self.table_id,
             players,
             current_hand_in_progress: !self.hand_complete,
             community_cards: self
