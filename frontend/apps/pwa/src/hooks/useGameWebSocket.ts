@@ -415,6 +415,9 @@ export function useGameWebSocket(tableId: string) {
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const mountedRef = useRef(true);
   const reconnectAttempts = useRef(0);
+  // F-15: hold the tournament id we need to register for once the
+  // socket finishes connecting.
+  const pendingRegisterRef = useRef<string | null>(null);
 
   const [connectionStatus, setConnectionStatus] = useState<
     'connected' | 'reconnecting' | 'disconnected'
@@ -447,6 +450,21 @@ export function useGameWebSocket(tableId: string) {
     wsRef.current = ws;
 
     ws.onopen = () => {
+      // F-15 FIX: flush any pending tournament-registration intent now
+      // that the socket is actually OPEN. The effect that sets
+      // pendingRegisterRef runs at mount, before onopen fires.
+      if (pendingRegisterRef.current) {
+        try {
+          ws.send(
+            JSON.stringify({
+              type: 'register_tournament',
+              tournament_id: pendingRegisterRef.current,
+            }),
+          );
+        } catch (e) {
+          console.warn('failed to send pending register_tournament', e);
+        }
+      }
       const token = getToken();
       if (token) {
         generateAndSubmitFingerprint(token).catch((err) => {
