@@ -5,6 +5,7 @@ use axum::{
     routing::{get, post},
 };
 use sb_contracts::tournament_api::TournamentService;
+use sb_contracts::tournament_api::TournamentRepo;
 use sb_shared_types::{AppError, TournamentId, UserId};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -57,6 +58,14 @@ pub fn tournament_routes(state: Arc<TournamentState>) -> Router {
         .route("/tournaments/{tournament_id}/unregister", post(unregister))
         .route("/tournaments/{tournament_id}/results", get(get_results))
         .route("/tournaments/{tournament_id}/my-table", get(get_my_table))
+        // F-6 FIX: the frontend needs to know whether the current user is
+        // already registered so the Register button does not keep showing.
+        // The repo method `count_registrations` already exists; this route
+        // exposes it (plus the caller's own registered flag).
+        .route(
+            "/tournaments/{tournament_id}/registrations",
+            get(get_registrations),
+        )
         // B-7 FIX: layer the JWT auth middleware so AuthedUser is populated
         // from a verified token (previously the router was merged without
         // auth). This is the same treatment club_router receives in main.rs.
@@ -308,4 +317,47 @@ async fn get_my_table(
             Json(serde_json::json!({"error": e.to_string()})),
         )),
     }
+}
+
+// F-6 FIX: return the number of registrants plus whether the caller is
+// registered. The frontend's tournament detail page queries this; before
+// this route existed, the request 404'd and the Register button was shown
+// even to already-registered users.
+async fn get_registrations(
+    State(state): State<Arc<TournamentState>>,
+    AuthedUser { user_id: user_id_str }: AuthedUser,
+    Path(tournament_id): Path<TournamentId>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
+    let user_id = match uuid::Uuid::parse_str(&user_id_str) {
+        Ok(u) => sb_shared_types::UserId::new(u),
+        Err(_) => {
+            return Err((
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({"error": "Invalid user id in token"})),
+            ));
+        }
+    };
+
+    let registrations = state
+        .tournament_repo
+        .list_registrations(tournament_id)
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({"error": e.to_string()})),
+            )
+        })?;
+
+    let is_registered = registrations.iter().any(|r| r.user_id == user_id);
+    let users: Vec<_> = registrations
+        .iter()
+        .map(|r| serde_json::json!({ "user_id": r.user_id }))
+        .collect();
+
+    Ok(Json(serde_json::json!({
+        "registered": is_registered,
+        "count": users.len(),
+        "users": users,
+    })))
 }
