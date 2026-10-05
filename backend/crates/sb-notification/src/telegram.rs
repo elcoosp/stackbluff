@@ -65,7 +65,7 @@ impl TelegramNotificationService {
 
         let mut payload = json!({
             "chat_id": chat_id,
-            "text": text,
+            "text": md_escape(&text),
             "parse_mode": "Markdown",
         });
 
