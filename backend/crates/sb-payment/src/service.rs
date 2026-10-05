@@ -154,27 +154,25 @@ impl PaymentService for RealPaymentService {
                 .to_string())
             }
             "telegram_stars" => {
-                let synthetic_id = format!(
-                    "tg_{}_{}",
-                    user_id.as_uuid(),
-                    chrono::Utc::now().timestamp()
-                );
-                PaymentRepo::insert_pending(
-                    &self.db,
-                    &synthetic_id,
-                    user_id.as_uuid(),
-                    amount.as_i64(),
-                    &currency,
-                    "telegram_stars",
-                    serde_json::json!({ "user_id": user_id.as_uuid().to_string() }),
-                )
-                .await?;
-                let invoice_link = format!(
-                    "https://t.me/{}/stars?amount={}",
-                    self.config.telegram_bot_token,
-                    amount.as_i64()
-                );
-                Ok(invoice_link)
+                // P-4 FIX: the previous implementation returned a fake URL
+                // of the form `https://t.me/<bot_token>/stars?amount=...`
+                // — which is not a valid Telegram payments URL, and worse,
+                // embedded the FULL bot token in the client response. A
+                // single user inspecting the JSON got complete control of
+                // the bot (message send, invoice creation, …).
+                //
+                // Proper support requires calling the Bot API
+                // `createInvoiceLink` server-side and storing the returned
+                // invoice id on the payment row, plus a real webhook flow
+                // (see P-2). Reject explicitly until that is built.
+                let _ = user_id;
+                let _ = amount;
+                let _ = currency;
+                Err(AppError::Internal(
+                    "Telegram Stars checkout is not yet implemented; \
+                     please use Stripe for now"
+                        .into(),
+                ))
             }
             _ => Err(AppError::InvalidInput("Unsupported provider".into())),
         }
