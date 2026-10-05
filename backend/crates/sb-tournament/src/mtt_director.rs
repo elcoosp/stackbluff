@@ -407,11 +407,12 @@ impl MttDirector {
         }
 
         let mut scheduler = BlindScheduler::new(self.config.blind_schedule.levels.clone());
-        let (sb, bb, _) = scheduler.current_blinds();
+        let (sb, bb, ante_i64) = scheduler.current_blinds();
+        let ante_chips = ChipAmount::new(ante_i64).unwrap_or_default();
         for table in &self.tables {
             let _ = table
                 .cmd_tx
-                .send(TableCommand::SetBlinds { small: sb, big: bb })
+                .send(TableCommand::SetBlinds { small: sb, big: bb, ante: ante_chips })
                 .await;
         }
         scheduler.start_timer();
@@ -494,9 +495,10 @@ impl MttDirector {
             && let Some((level, sb, bb, ante)) = scheduler.on_hand_completed()
         {
             for table in &self.tables {
+                let ante_chips = ChipAmount::new(ante).unwrap_or_default();
                 let _ = table
                     .cmd_tx
-                    .send(TableCommand::SetBlinds { small: sb, big: bb })
+                    .send(TableCommand::SetBlinds { small: sb, big: bb, ante: ante_chips })
                     .await;
             }
             let msg = sb_table_registry::game_room::RoomMessage::TournamentBlindLevel {
