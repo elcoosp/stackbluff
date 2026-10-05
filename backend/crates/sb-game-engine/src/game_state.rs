@@ -752,8 +752,22 @@ impl GameState {
                 }
             };
 
+            // E-5 FIX: cap Monte Carlo iterations by street. Previously
+            // this ran 500 simulations synchronously on the actor's event
+            // loop for every ActionRequired — ~500 x 5-7 card evaluations
+            // per broadcast. Preflop is cheap to estimate (200 is plenty);
+            // the river can afford 1000. The long-term fix is to move the
+            // whole computation to `spawn_blocking` or compute lazily on
+            // an explicit analytics request, but this alone cuts the cost
+            // noticeably on the most common streets.
+            let iterations = match self.community_cards.len() {
+                0 => 200,
+                3 => 300,
+                4 => 400,
+                _ => 600,
+            };
             let win_prob =
-                crate::analytics::run_monte_carlo(hole_cards, &self.community_cards, 500);
+                crate::analytics::run_monte_carlo(hole_cards, &self.community_cards, iterations);
 
             Some(sb_ws_messages::AnalyticsPayload {
                 win_prob,
