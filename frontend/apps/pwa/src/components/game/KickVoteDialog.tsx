@@ -2,7 +2,7 @@ import { Trans } from '@lingui/react/macro';
 import { Dialog } from '@stackbluff/shared/components/Dialog';
 import { motion } from 'framer-motion';
 import { AlertTriangle, CheckCircle, Clock, UserX } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 interface KickVoteDialogProps {
@@ -32,12 +32,31 @@ export function KickVoteDialog({
   const [hasVoted, setHasVoted] = useState(false);
   const [passed, setPassed] = useState(false);
 
+  // F-11 FIX: the previous effect depended on `hasVoted`, `votes` and
+  // `onTimeout` (a fresh closure on every TablePage render at 10 Hz), so
+  // the interval was torn down and recreated on almost every parent
+  // re-render — the countdown never completed and `onTimeout` never
+  // fired. We now:
+  //   * track the state via refs so the interval closure always reads
+  //     the latest values without being recreated,
+  //   * hold `onTimeout` in a ref (TablePage passes a fresh arrow),
+  //   * keep the effect deps to `open, durationSecs, kickVoteId,
+  //     requiredVotes` only.
+  const votesRef = useRef(0);
+  const hasVotedRef = useRef(false);
+  const onTimeoutRef = useRef(onTimeout);
+  useEffect(() => { onTimeoutRef.current = onTimeout; });
+  useEffect(() => { votesRef.current = votes; }, [votes]);
+  useEffect(() => { hasVotedRef.current = hasVoted; }, [hasVoted]);
+
   useEffect(() => {
     if (!open) {
       setTimeLeft(durationSecs);
       setVotes(0);
       setHasVoted(false);
       setPassed(false);
+      votesRef.current = 0;
+      hasVotedRef.current = false;
       return;
     }
 
@@ -45,8 +64,9 @@ export function KickVoteDialog({
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(interval);
-          if (!hasVoted && votes < requiredVotes) {
-            onTimeout();
+          // Fire timeout only if nobody has voted and the vote hasn't passed.
+          if (!hasVotedRef.current && votesRef.current < requiredVotes) {
+            onTimeoutRef.current();
           }
           return 0;
         }
@@ -54,7 +74,6 @@ export function KickVoteDialog({
       });
     }, 1000);
 
-    // Listen for kick vote updates
     const handler = (event: Event) => {
       const detail = (event as CustomEvent).detail;
       if (detail.kickVoteId === kickVoteId) {
@@ -62,6 +81,7 @@ export function KickVoteDialog({
         if (detail.passed) {
           setPassed(true);
           setHasVoted(true);
+          hasVotedRef.current = true;
         }
       }
     };
@@ -71,7 +91,7 @@ export function KickVoteDialog({
       clearInterval(interval);
       window.removeEventListener('kickVoteUpdate', handler as EventListener);
     };
-  }, [open, durationSecs, kickVoteId, requiredVotes, hasVoted, votes, onTimeout]);
+  }, [open, durationSecs, kickVoteId, requiredVotes]);
 
   const handleVoteYes = () => {
     if (hasVoted) return;
