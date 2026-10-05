@@ -48,22 +48,36 @@ function RegisterPage() {
       toast.error(error.message || t`Registration failed`);
     },
   });
+  // F-up FIX: migrate to the current TanStack Form API. The old code used
+  // `validatorAdapter: zodValidator()` and `form.validateField(...)`
+  // which no longer exist — the form silently typed against `any`.
+  // We now register the combined zod schema as an onChange validator and
+  // validate the current step inline before advancing.
   const form = useForm({
     defaultValues: { username: '', email: '', password: '' },
     validators: { onChange: step1Schema.and(step2Schema).and(step3Schema) },
     onSubmit: ({ value }) => mutation.mutate(value),
   });
 
-  const nextStep = async () => {
-    let errs: string[] = [];
-    if (step === 1) errs = await form.validateField('username', 'change');
-    else if (step === 2) errs = await form.validateField('email', 'change');
-    if (errs.length === 0) setStep(step + 1);
+  const nextStep = () => {
+    const values = form.state.values;
+    if (step === 1) {
+      if (!step1Schema.safeParse({ username: values.username }).success) return;
+    } else if (step === 2) {
+      if (!step2Schema.safeParse({ email: values.email }).success) return;
+    }
+    setStep((s) => Math.min(s + 1, 3));
   };
-  const prevStep = () => setStep(step - 1);
-  const getErrorMessage = (err: string | { message?: string } | undefined) => {
+  const prevStep = () => setStep((s) => Math.max(s - 1, 1));
+
+  // Field errors from TanStack Form's zod adapter come as
+  // `StandardSchemaV1Issue` objects, not strings.
+  const getErrorMessage = (
+    err: string | { message?: string } | undefined,
+  ): string => {
+    if (!err) return '';
     if (typeof err === 'string') return err;
-    if (err?.message) return err.message;
+    if (typeof err.message === 'string') return err.message;
     return t`Validation error`;
   };
 
@@ -126,9 +140,7 @@ function RegisterPage() {
                             className="text-xs font-data-mono text-red-400 mt-1"
                           >
                             {field.state.meta.errors
-                              .map((e: string | { message?: string } | undefined) =>
-                                getErrorMessage(e),
-                              )
+                              .map((e: unknown) => getErrorMessage(e as never))
                               .join(', ')}
                           </motion.p>
                         )}
@@ -172,9 +184,7 @@ function RegisterPage() {
                             className="text-xs font-data-mono text-red-400 mt-1"
                           >
                             {field.state.meta.errors
-                              .map((e: string | { message?: string } | undefined) =>
-                                getErrorMessage(e),
-                              )
+                              .map((e: unknown) => getErrorMessage(e as never))
                               .join(', ')}
                           </motion.p>
                         )}
@@ -218,9 +228,7 @@ function RegisterPage() {
                             className="text-xs font-data-mono text-red-400 mt-1"
                           >
                             {field.state.meta.errors
-                              .map((e: string | { message?: string } | undefined) =>
-                                getErrorMessage(e),
-                              )
+                              .map((e: unknown) => getErrorMessage(e as never))
                               .join(', ')}
                           </motion.p>
                         )}
