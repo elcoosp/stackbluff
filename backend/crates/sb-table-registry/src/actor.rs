@@ -565,6 +565,14 @@ pub struct TableActor {
 
     // ── NEW: store last hand result for TableClosedEvent ──────────────
     last_hand_result: Option<(UserId, String, ChipAmount)>,
+
+    // B-6 FIX: optional UserRepo so the actor can settle deferred leave
+    // refunds itself, instead of relying on a oneshot channel that the WS
+    // handler may drop on a timeout (destroying chips).
+    user_repo: Option<Arc<dyn sb_contracts::repo_api::UserRepo + Send + Sync>>,
+    /// Refunds that failed to persist. Retried on every hand boundary
+    /// and on actor shutdown.
+    pending_refunds: Vec<(UserId, ChipAmount)>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -580,6 +588,7 @@ impl TableActor {
         active_players: Arc<AtomicU8>,
         created_by: sb_shared_types::UserId,
         chat_id: Option<String>,
+        user_repo: Option<Arc<dyn sb_contracts::repo_api::UserRepo + Send + Sync>>,
     ) -> Self {
         Self {
             created_by,
@@ -610,6 +619,8 @@ impl TableActor {
             timeout_handle: None,
             busted_players_cache: None,
             last_hand_result: None,
+            user_repo,
+            pending_refunds: Vec::new(),
         }
     }
 
@@ -2677,6 +2688,9 @@ pub struct TableActorConfig {
     pub active_players: Arc<AtomicU8>,
     pub created_by: UserId,
     pub chat_id: Option<String>,
+    /// B-6 FIX: optional repo so the actor can write deferred leave refunds
+    /// itself. `None` in tests; set in production.
+    pub user_repo: Option<Arc<dyn sb_contracts::repo_api::UserRepo + Send + Sync>>,
 }
 
 pub fn spawn_table_actor(
@@ -2691,6 +2705,7 @@ pub fn spawn_table_actor(
         active_players,
         created_by,
         chat_id,
+        user_repo,
     } = config;
 
     let (tx, rx) = mpsc::channel(32);
@@ -2704,6 +2719,7 @@ pub fn spawn_table_actor(
         active_players,
         created_by,
         chat_id,
+        user_repo,
     );
     let handle = tokio::spawn(actor.run(rx));
     (tx, handle)
