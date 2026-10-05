@@ -221,8 +221,9 @@ export const useGameStore = create<GameState>((set, _get) => ({
       // clearing the hero's hole cards (cards = []) hit the early return and
       // nothing happened. Between hands the previous hand's cards stayed
       // face-up on the table UI. Set `heroHoleCards` to the new value or
-      // null on clear.
-      const next = cards && cards.length === 2 ? cards : null;
+      // null on clear. Narrow the tuple to satisfy the store's type.
+      const next: [Card, Card] | null =
+        cards && cards.length === 2 ? [cards[0], cards[1]] : null;
       return {
         rooms: {
           ...state.rooms,
