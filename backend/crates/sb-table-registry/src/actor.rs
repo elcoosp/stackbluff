@@ -1217,6 +1217,29 @@ impl TableActor {
         respond_to: tokio::sync::oneshot::Sender<LeaveResult>,
         force: bool,
     ) {
+        self.leave_player_inner(user_id, respond_to, force, false).await
+    }
+
+    /// Same as `leave_player`, but with an opt-in to skip the B-17
+    /// live-connection guard. Used by kick-vote finalization, which is an
+    /// explicit, user-initiated removal that must happen even if the
+    /// target's socket is still attached.
+    async fn leave_player_bypassing_guard(
+        &mut self,
+        user_id: UserId,
+        respond_to: tokio::sync::oneshot::Sender<LeaveResult>,
+        force: bool,
+    ) {
+        self.leave_player_inner(user_id, respond_to, force, true).await
+    }
+
+    async fn leave_player_inner(
+        &mut self,
+        user_id: UserId,
+        respond_to: tokio::sync::oneshot::Sender<LeaveResult>,
+        force: bool,
+        bypass_live_check: bool,
+    ) {
         debug!(%user_id, force, "Handling leave_player");
 
         // B-17 FIX: refuse a forced leave when a live connection is still
@@ -1228,7 +1251,7 @@ impl TableActor {
         // crediting their stack to the wallet. A user's sender is closed
         // when their previous socket's send task aborts; a live sender
         // therefore means "please do not leave".
-        if force {
+        if force && !bypass_live_check {
             if let Some(tx) = self.user_senders.get(&user_id) {
                 if !tx.is_closed() {
                     debug!(%user_id, "Force-leave refused: live connection present");
@@ -2669,7 +2692,9 @@ impl TableActor {
         };
         let refund_responder = self.kick_refund_responder.take();
         let (tx, rx) = tokio::sync::oneshot::channel();
-        self.leave_player(state.target, tx, true).await;
+        // B-17 follow-up: the kick-vote removal must succeed even if
+        // the target's socket is still attached.
+        self.leave_player_bypassing_guard(state.target, tx, true).await;
         tokio::spawn(async move {
             let stack = match rx.await {
                 Ok(LeaveResult::Refunded(stack)) => stack,
