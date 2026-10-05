@@ -262,35 +262,40 @@ pub async fn telegram_stars_webhook(
     headers: axum::http::HeaderMap,
     body: String,
 ) -> impl IntoResponse {
+    // P-2 FIX: complete rewrite to match the actual Telegram Bot API spec.
+    //
+    // The previous implementation:
+    //   * verified a body HMAC against a header Telegram never sends
+    //     (X-Telegram-Bot-Api-Signature) — every genuine request 400'd;
+    //   * parsed the merchant payload from `metadata` instead of
+    //     `invoice_payload` — always failed;
+    //   * awarded chips on pre_checkout_query (i.e. before payment) and
+    //     never called answerPreCheckoutQuery — even a forged request
+    //     paid nothing and got chips.
+    //
+    // We now implement the real flow:
+    //   1. Verify the static secret token header.
+    //   2. On `pre_checkout_query`, validate the invoice_payload (which we
+    //      put in the invoice when creating it) and answer within 8s.
+    //   3. On `successful_payment`, confirm idempotently and award.
     let request_id = Uuid::new_v4();
-    use hmac::{Hmac, Mac};
-    use sha2::Sha256;
-    type HmacSha256 = Hmac<Sha256>;
 
-    let bot_token = match std::env::var("TELEGRAM_BOT_TOKEN") {
-        Ok(t) => t,
-        Err(_) => {
-            error!(request_id = %request_id, "TELEGRAM_BOT_TOKEN not set");
+    // 1) Static secret token — constant-time compare.
+    let expected = state.telegram_webhook_secret();
+    if !expected.is_empty() {
+        let received = headers
+            .get("X-Telegram-Bot-Api-Secret-Token")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("");
+        if !constant_time_eq(received.as_bytes(), expected.as_bytes()) {
+            warn!(request_id = %request_id, "Invalid Telegram secret token");
             metrics::record_webhook_failure();
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Server configuration error",
-            )
-                .into_response();
+            return (StatusCode::UNAUTHORIZED, "Invalid secret token").into_response();
         }
-    };
-    let mut mac = HmacSha256::new_from_slice(bot_token.as_bytes()).unwrap();
-    mac.update(body.as_bytes());
-    let computed = hex::encode(mac.finalize().into_bytes());
-    let received = headers
-        .get("X-Telegram-Bot-Api-Signature")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("");
-    if !constant_time_eq(computed.as_bytes(), received.as_bytes()) {
-        warn!(request_id = %request_id, "Invalid Telegram HMAC signature");
-        metrics::record_webhook_failure();
-        return (StatusCode::BAD_REQUEST, "Invalid HMAC").into_response();
+    } else {
+        warn!(request_id = %request_id, "TELEGRAM_WEBHOOK_SECRET is empty — webhook is UNVERIFIED");
     }
+
     let update: Value = match serde_json::from_str(&body) {
         Ok(u) => u,
         Err(e) => {
@@ -299,100 +304,134 @@ pub async fn telegram_stars_webhook(
             return (StatusCode::BAD_REQUEST, "Invalid JSON").into_response();
         }
     };
-    if let Some(pre_checkout) = update.get("pre_checkout_query") {
-        let payment_id = pre_checkout["id"].as_str().unwrap_or("");
-        let metadata = pre_checkout.get("metadata").and_then(|m| m.as_object());
-        let user_id_str = metadata
-            .and_then(|m| m.get("user_id"))
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
-        let user_uuid = match Uuid::parse_str(user_id_str) {
-            Ok(u) => u,
-            Err(_) => {
-                error!(request_id = %request_id, payment_id = %payment_id, user_id = %user_id_str, "Invalid user_id UUID from Telegram");
+
+    // 2) pre_checkout_query: validate, answer within 8s.
+    if let Some(q) = update.get("pre_checkout_query") {
+        let query_id = q["id"].as_str().unwrap_or("").to_string();
+        let payload = q["invoice_payload"].as_str().unwrap_or("");
+        let parsed = parse_invoice_payload(payload);
+
+        let ok = match parsed {
+            Some((user_id, _product_id, chips, _kind)) => {
+                // Look up the pending record we created when the user
+                // initiated the purchase. Match on the synthetic id we
+                // stored under `payment_id`.
+                let synthetic = format!("tg_{}_{}", user_id.as_uuid(), chips);
+                match crate::db::PaymentRepo::find_by_payment_id(&state.db, &synthetic).await {
+                    Ok(Some(existing)) => existing.status == "pending",
+                    _ => false,
+                }
+            }
+            None => false,
+        };
+
+        let body = serde_json::json!({
+            "pre_checkout_query_id": query_id,
+            "ok": ok,
+            "error_message": if ok { "" } else { "Purchase could not be validated" },
+        });
+        if let Err(e) = state.call_bot_api("answerPreCheckoutQuery", &body).await {
+            error!(request_id = %request_id, query_id, error = %e,
+                "answerPreCheckoutQuery failed");
+            metrics::record_webhook_failure();
+            return (StatusCode::INTERNAL_SERVER_ERROR, "Internal error").into_response();
+        }
+        metrics::record_webhook_success();
+        return (StatusCode::OK, "OK").into_response();
+    }
+
+    // 3) successful_payment inside a message.
+    if let Some(msg) = update.get("message")
+        && let Some(sp) = msg.get("successful_payment")
+    {
+        let payload = sp["invoice_payload"].as_str().unwrap_or("");
+        let telegram_charge_id = sp["telegram_payment_charge_id"].as_str().unwrap_or("");
+        let (user_id, _product_id, chips, product_type) = match parse_invoice_payload(payload) {
+            Some(v) => v,
+            None => {
+                warn!(request_id = %request_id, %telegram_charge_id,
+                    "successful_payment with unparseable invoice_payload");
                 metrics::record_webhook_failure();
-                return (StatusCode::BAD_REQUEST, "Invalid user_id").into_response();
+                return (StatusCode::BAD_REQUEST, "Invalid payload").into_response();
             }
         };
-        let user_id = UserId::new(user_uuid);
-        let stars = pre_checkout["total_amount"].as_i64().unwrap_or(0);
-        // Assume 1 star = 1 chip (or could use a configurable ratio)
-        let chips = stars;
 
-        // P-3 FIX: same idempotent gate as the Stripe path.
-        let start = std::time::Instant::now();
+        // Idempotency key is the Telegram charge id — the same message can
+        // be retried by Telegram until we return 2xx.
+        let payment_id = format!("tg_charge_{}", telegram_charge_id);
         let first_time = match state
-            .confirm_payment_idempotent(payment_id, Some(chrono::Utc::now()))
+            .confirm_payment_idempotent(&payment_id, Some(chrono::Utc::now()))
             .await
         {
             Ok(v) => v,
             Err(e) => {
-                error!(request_id = %request_id, payment_id = %payment_id, error = %e, "Failed to confirm Telegram payment");
+                error!(request_id = %request_id, %payment_id, error = %e,
+                    "Failed to confirm Telegram Stars payment");
                 metrics::record_webhook_failure();
                 return (StatusCode::INTERNAL_SERVER_ERROR, "Internal error").into_response();
             }
         };
-        metrics::record_confirmation_duration("telegram", start.elapsed());
 
         if !first_time {
-            info!(request_id = %request_id, payment_id = %payment_id, "Duplicate Telegram webhook — ignoring");
+            info!(request_id = %request_id, %payment_id,
+                "Duplicate Telegram Stars webhook — ignoring");
             metrics::record_webhook_success();
             return (StatusCode::OK, "OK").into_response();
         }
 
-        let chip_amount = match ChipAmount::new(chips) {
-            Some(a) => a,
-            None => {
-                error!(request_id = %request_id, payment_id = %payment_id, chips, "Invalid chip amount — refusing to award");
-                metrics::record_webhook_failure();
-                return (StatusCode::INTERNAL_SERVER_ERROR, "Invalid chip amount").into_response();
+        // Award chips from the payload, not the raw Stars total, so our
+        // advertised grant is authoritative.
+        if chips > 0 {
+            let chip_amount = ChipAmount::new(chips).unwrap_or_default();
+            if let Err(e) = state.award_chips_on_success(user_id, chip_amount).await {
+                error!(request_id = %request_id, %payment_id, error = %e,
+                    "Failed to award chips from Telegram Stars");
+            } else {
+                info!(request_id = %request_id, %payment_id, user_id = %user_id.as_uuid(),
+                    chips, "Telegram Stars chips awarded");
             }
-        };
-        if let Err(e) = state.award_chips_on_success(user_id, chip_amount).await {
-            error!(request_id = %request_id, payment_id = %payment_id, user_id = %user_id.as_uuid(), error = %e, "Failed to award chips from Telegram");
-        } else {
-            info!(request_id = %request_id, payment_id = %payment_id, user_id = %user_id.as_uuid(), stars = stars, chips = chips, "Telegram chips awarded");
         }
 
-        // Handle entitlements (season_pass / club_pro)
-        let metadata_obj = pre_checkout.get("metadata").and_then(|m| m.as_object());
-        let product_type = metadata_obj
-            .and_then(|m| m.get("product_type"))
-            .and_then(|v| v.as_str());
-        let duration_days = metadata_obj
-            .and_then(|m| m.get("duration_days"))
-            .and_then(|v| v.as_i64())
-            .unwrap_or(0);
-        if let Some(ptype) = product_type {
-            match ptype {
-                "season_pass" => {
-                    if let Err(e) = state
-                        .user_service
-                        .extend_season_pass(user_id, duration_days)
-                        .await
-                    {
-                        error!(request_id = %request_id, user_id = %user_id.as_uuid(), error = %e, "Failed to extend season pass (Telegram)");
-                    } else {
-                        info!(request_id = %request_id, user_id = %user_id.as_uuid(), duration_days, "Season pass extended (Telegram)");
-                    }
-                }
-                "club_pro" => {
-                    if let Err(e) = state
-                        .user_service
-                        .extend_club_pro(user_id, duration_days)
-                        .await
-                    {
-                        error!(request_id = %request_id, user_id = %user_id.as_uuid(), error = %e, "Failed to extend club pro (Telegram)");
-                    } else {
-                        info!(request_id = %request_id, user_id = %user_id.as_uuid(), duration_days, "Club pro extended (Telegram)");
-                    }
-                }
-                _ => {}
+        // Entitlements.
+        match product_type.as_deref() {
+            Some("season_pass") => {
+                let _ = state.user_service.extend_season_pass(user_id, 30).await;
             }
+            Some("club_pro") => {
+                let _ = state.user_service.extend_club_pro(user_id, 30).await;
+            }
+            _ => {}
         }
+
         metrics::record_webhook_success();
+        return (StatusCode::OK, "OK").into_response();
     }
+
+    // Unrecognized update kind — log and 200 so Telegram stops retrying.
+    info!(request_id = %request_id, "Unhandled Telegram update (logged)");
     (StatusCode::OK, "OK").into_response()
+}
+
+/// P-2: parse the invoice payload we set at creation time.
+/// Format (created by `create_product_purchase`): we currently store
+/// `<user_id>|<product_id>|<chips>|<product_type>` but fall back to the
+/// legacy `<user_id>` shape for pre-existing rows.
+fn parse_invoice_payload(payload: &str) -> Option<(UserId, String, i64, Option<String>)> {
+    let parts: Vec<&str> = payload.split('|').collect();
+    if parts.is_empty() || parts[0].is_empty() {
+        return None;
+    }
+    let user_id = Uuid::parse_str(parts[0]).ok()?;
+    let user_id = UserId::new(user_id);
+    let product_id = parts.get(1).unwrap_or(&"").to_string();
+    let chips: i64 = parts
+        .get(2)
+        .and_then(|s| s.parse::<i64>().ok())
+        .unwrap_or(0);
+    let product_type = parts.get(3).and_then(|s| {
+        if s.is_empty() { None } else { Some(s.to_string()) }
+    });
+    Some((user_id, product_id, chips, product_type))
 }
 
 fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
