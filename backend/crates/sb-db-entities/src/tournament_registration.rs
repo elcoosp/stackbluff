@@ -12,6 +12,10 @@ pub struct Model {
     pub user_id: Uuid,
     pub buy_in: i64,
     pub registered_at: DateTimeUtc,
+    /// B-3/B-8 follow-up: true when this registration's buy-in was
+    /// actually debited from the player's wallet. Crash recovery refunds
+    /// only committed rows so a no-op registration cannot mint chips.
+    pub chip_committed: bool,
 }
 
 impl ActiveModelBehavior for ActiveModel {}
