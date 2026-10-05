@@ -66,40 +66,39 @@ impl ClubRepo for ClubRepoImpl {
     }
 
     async fn join_club(&self, club_id: ClubId, user_id: UserId) -> Result<(), ClubError> {
-        let txn = self
-            .db
-            .begin()
-            .await
-            .map_err(|e: sea_orm::DbErr| ClubError::Database(e.to_string()))?;
-        let member_count = club_memberships::Entity::find()
-            .filter(club_memberships::Column::ClubId.eq(club_id.as_uuid()))
-            .count(&txn)
-            .await
-            .map_err(|e: sea_orm::DbErr| ClubError::Database(e.to_string()))?;
-        let division = ((member_count as u32) / DIVISION_SIZE) + 1;
+        // B-23 FIX: compute the division inside a single INSERT ... SELECT
+        // so the COUNT is evaluated as part of the same atomic statement.
+        // Previously this was SELECT COUNT -> client-side divide -> INSERT
+        // inside a *deferred* transaction, so two concurrent joins could
+        // both read the same count and both insert into the same division.
+        // SQLite serializes writes, so the subquery inside the INSERT
+        // cannot observe a stale count.
+        // All values below are UUIDs / timestamps we generate ourselves, so
+        // they are safe to inline. The alternative (Statement::from_sql_and_values
+        // + ConnectionTrait::execute) does not compile in sea-orm 2.0 because
+        // `execute` expects a `StatementBuilder`, which `Statement` is not.
+        use sea_orm::ConnectionTrait;
+
         let id = Uuid::new_v4();
         let now = Utc::now();
-        let active = club_memberships::ActiveModel {
-            id: Set(id),
-            club_id: Set(club_id.as_uuid()),
-            user_id: Set(user_id.as_uuid()),
-            weekly_xp: Set(0),
-            joined_at: Set(now),
-            updated_at: Set(now),
-            division: Set(division as i32),
-        };
-        match active.insert(&txn).await {
-            Ok(_) => {
-                txn.commit()
-                    .await
-                    .map_err(|e: sea_orm::DbErr| ClubError::Database(e.to_string()))?;
-                Ok(())
-            }
+        let id_str = id.to_string();
+        let club_str = club_id.as_uuid().to_string();
+        let user_str = user_id.as_uuid().to_string();
+        let now_str = now.to_rfc3339();
+        let div_size = DIVISION_SIZE as i64;
+
+        let sql = format!(
+            "INSERT INTO club_memberships \
+             (id, club_id, user_id, weekly_xp, joined_at, updated_at, division) \
+             VALUES ('{id_str}', '{club_str}', '{user_str}', 0, '{now_str}', '{now_str}', \
+               (SELECT COUNT(*) FROM club_memberships WHERE club_id = '{club_str}') / {div_size} + 1)"
+        );
+
+        match self.db.execute_unprepared(&sql).await {
+            Ok(_) => Ok(()),
             Err(e) => {
-                txn.rollback()
-                    .await
-                    .map_err(|e: sea_orm::DbErr| ClubError::Database(e.to_string()))?;
-                if e.to_string().contains("unique") || e.to_string().contains("constraint") {
+                let s = e.to_string();
+                if s.contains("unique") || s.contains("constraint") {
                     tracing::warn!(
                         club_id = %club_id,
                         user_id = %user_id,
@@ -107,7 +106,7 @@ impl ClubRepo for ClubRepoImpl {
                     );
                     Err(ClubError::AlreadyMember)
                 } else {
-                    Err(ClubError::Database(e.to_string()))
+                    Err(ClubError::Database(s))
                 }
             }
         }
