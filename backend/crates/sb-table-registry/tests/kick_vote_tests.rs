@@ -47,7 +47,8 @@ async fn kick_vote_passes_and_refunds() {
         active_players,
         created_by: UserId::new(uuid::Uuid::nil()),
         chat_id: None,
-    });
+        user_repo: None,
+});
 
     async fn join_player(
         tx: &mpsc::Sender<InternalCommand>,
