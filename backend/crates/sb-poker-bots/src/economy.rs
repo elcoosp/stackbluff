@@ -77,7 +77,7 @@ impl BankrollManager {
                         .one(&self.db)
                         .await?
                         .ok_or(BankrollError::UserNotFound)?;
-                    Ok(user_model.bot_bankroll.unwrap_or(0))
+                    Ok(user_model.bot_bankroll)
                 } else {
                     Err(BankrollError::InsufficientFunds)
                 }
