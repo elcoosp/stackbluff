@@ -553,6 +553,7 @@ export function useGameWebSocket(tableId: string) {
               // extended to track blinds.
               smallBlind: 0,
               bigBlind: 0,
+              ante: 0,
               seats: {},
               communityCards: [],
               pot: 0,
