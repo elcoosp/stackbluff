@@ -921,26 +921,70 @@ impl GameState {
                 continue;
             }
             if self.community_cards.len() < 5 {
-                // E-6 (deferred): the audit noted this branch splits the
-                // pot equally whenever the board has fewer than 5 cards.
-                // The existing `evaluate_hand_strength` requires exactly a
-                // 5-card community, so a correct tie-break fix needs a
-                // variable-length evaluator that this crate does not yet
-                // have. In a 52-card deck this path is unreachable in
-                // practice; leave the equal-split fallback (with the E-3
-                // odd-chip distribution) until the evaluator supports
-                // short boards (short-deck variants, feature #051).
-                warn!("Showdown with incomplete community cards – splitting pot");
-                let n = eligible_indices.len() as i64;
-                let share_val = pot.amount.as_i64() / n;
-                let remainder = (pot.amount.as_i64() % n) as usize;
-                for (k, idx) in eligible_indices.into_iter().enumerate() {
-                    let extra = if k < remainder { 1 } else { 0 };
-                    winners.push(Winner {
-                        player_id: self.players[idx].player_id,
-                        amount: ChipAmount::new(share_val + extra).expect("share positive"),
-                        hand_rank: HandRank::HighCard,
-                    });
+                // E-6 FIX: evaluate on the cards we actually have using
+                // the crate's variable-length evaluator. Previously this
+                // branch split every pot equally — a royal flush chopped
+                // with high card. `evaluate_best_hand` handles any number
+                // of cards (it falls back to rank/kicker counting below
+                // five). In a 52-card deck this path is unreachable, but
+                // short-deck variants and future game modes can hit it.
+                warn!("Showdown with incomplete community cards – evaluating on available cards");
+                let mut best_strength_inner: Option<crate::evaluate::HandStrength> = None;
+                let mut best_inner: Vec<usize> = Vec::new();
+                for &idx in &eligible_indices {
+                    let hole = match self.players[idx].hole_cards.as_ref() {
+                        Some(h) => h,
+                        None => continue,
+                    };
+                    let mut all: Vec<Card> = Vec::with_capacity(2 + self.community_cards.len());
+                    all.extend_from_slice(hole);
+                    all.extend_from_slice(&self.community_cards);
+                    let (strength, _cards) = crate::evaluate::evaluate_best_hand(&all);
+                    match &best_strength_inner {
+                        Some(cur) if strength > *cur => {
+                            best_strength_inner = Some(strength);
+                            best_inner = vec![idx];
+                        }
+                        Some(cur) if strength == *cur => best_inner.push(idx),
+                        None => {
+                            best_strength_inner = Some(strength);
+                            best_inner = vec![idx];
+                        }
+                        _ => {}
+                    }
+                }
+                if !best_inner.is_empty() {
+                    let n = best_inner.len() as i64;
+                    let share_val = pot.amount.as_i64() / n;
+                    let remainder = (pot.amount.as_i64() % n) as usize;
+                    let rank_of_best = best_strength_inner
+                        .as_ref()
+                        .map(|s| s.rank)
+                        .unwrap_or(HandRank::HighCard);
+                    for (k, idx) in best_inner.into_iter().enumerate() {
+                        let extra = if k < remainder { 1 } else { 0 };
+                        winners.push(Winner {
+                            player_id: self.players[idx].player_id,
+                            amount: ChipAmount::new(share_val + extra)
+                                .expect("share positive"),
+                            hand_rank: rank_of_best,
+                        });
+                    }
+                } else {
+                    // No hole cards available — true fallback split.
+                    warn!("No hole cards for showdown – splitting pot equally");
+                    let n = eligible_indices.len() as i64;
+                    let share_val = pot.amount.as_i64() / n;
+                    let remainder = (pot.amount.as_i64() % n) as usize;
+                    for (k, idx) in eligible_indices.into_iter().enumerate() {
+                        let extra = if k < remainder { 1 } else { 0 };
+                        winners.push(Winner {
+                            player_id: self.players[idx].player_id,
+                            amount: ChipAmount::new(share_val + extra)
+                                .expect("share positive"),
+                            hand_rank: HandRank::HighCard,
+                        });
+                    }
                 }
                 continue;
             }
