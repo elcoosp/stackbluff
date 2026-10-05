@@ -18,11 +18,16 @@ class ClubWebSocketManager {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
+  // F-17 FIX: tracks explicit disconnect() so a late onclose handler does
+  // not re-arm the reconnect timer after the caller asked us to stop.
+  private intentionallyClosed = false;
 
   connect() {
     if (this.ws?.readyState === WebSocket.OPEN) {
       return;
     }
+    // F-17: a fresh connect clears any previous intentional-disconnect.
+    this.intentionallyClosed = false;
 
     const token = getToken();
     if (!token) {
@@ -78,6 +83,10 @@ class ClubWebSocketManager {
   }
 
   private attemptReconnect() {
+    // F-17: never reschedule after an explicit disconnect().
+    if (this.intentionallyClosed) {
+      return;
+    }
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       console.warn('Max WebSocket reconnect attempts reached');
       return;
