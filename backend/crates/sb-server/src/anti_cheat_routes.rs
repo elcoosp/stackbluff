@@ -39,6 +39,17 @@ pub async fn record_fingerprint(
         Err(_) => return Err((StatusCode::BAD_REQUEST, "Invalid user ID".to_string())),
     };
 
+    // B-11 FIX: use the anti-cheat service to rate-limit fingerprint
+    // submissions per IP. The service was instantiated but never called;
+    // wiring it here (and calling it in future transfer/pairing paths)
+    // keeps the engine live.
+    if let Err(_e) = state.service.check_auth_rate(&ctx.ip) {
+        return Err((
+            StatusCode::TOO_MANY_REQUESTS,
+            "Rate limit exceeded".to_string(),
+        ));
+    }
+
     // B-11 FIX: normalize and validate the client-supplied fingerprint.
     // The previous version stored whatever string arrived, so a client
     // could rotate an arbitrary value per login and defeat device linking
