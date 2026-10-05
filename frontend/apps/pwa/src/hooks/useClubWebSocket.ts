@@ -25,7 +25,11 @@ function useWebSocketConnection(clubId: string) {
       return;
     }
 
-    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3000';
+    // F-17 FIX: the previous fallback hardcoded `ws://localhost:3000`, which
+    // fails on any real deployment (including HTTPS origins, where the
+    // browser rejects mixed content). Derive from the current origin.
+    const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const wsUrl = import.meta.env.VITE_WS_URL || `${proto}://${window.location.host}`;
     const ws = new WebSocket(`${wsUrl}/ws/club?token=${token}`);
     wsRef.current = ws;
 
