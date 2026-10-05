@@ -45,6 +45,12 @@ pub struct PlayerStateInfo {
 #[derive(Debug, Clone, Serialize)]
 pub struct TableStateUpdate {
     pub room_id: TableId,
+    // F-8 FIX: expose the table's blind level to clients so the raise
+    // slider and BB-based presets can be accurate. Previously the client
+    // hardcoded `bigBlind = 10` (see ActionBar.tsx), making preflop
+    // preset raises wrong at every table whose blinds differ.
+    pub small_blind: u64,
+    pub big_blind: u64,
     pub players: Vec<PlayerStateInfo>,
     pub current_hand_in_progress: bool,
     pub community_cards: Vec<WsCard>,
