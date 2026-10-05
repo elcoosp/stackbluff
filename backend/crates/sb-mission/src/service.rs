@@ -16,6 +16,18 @@ use std::sync::Arc;
 
 use crate::entities::{daily_mission, streak};
 
+/// H-3 FIX: the pool of mission types whose progress handlers are
+/// actually implemented in `progress_from_hand`. The audit found
+/// 28 of 33 declared types were unreachable, so users were assigned
+/// impossible daily missions and could not complete the reward.
+const IMPLEMENTABLE_DAILY: &[&str] = &[
+    "play_10_hands",
+    "play_20_hands",
+    "raise_preflop_10",
+    "showdown_5",
+    "all_in_3",
+];
+
 pub struct MissionServiceImpl {
     db: Arc<DatabaseConnection>,
     user_service: Arc<dyn UserService>,
@@ -63,7 +75,11 @@ impl MissionServiceImpl {
             return Ok(existing);
         }
 
-        let pool = all_mission_definitions();
+        let pool: Vec<_> = all_mission_definitions()
+            .into_iter()
+            // H-3 FIX: only pool implementable mission types.
+            .filter(|(t, _, _, _, _)| IMPLEMENTABLE_DAILY.contains(&t.as_str()))
+            .collect();
         let indices = self.select_daily_missions(user_id, date);
         let mut new_assignments = Vec::new();
         for &idx in &indices {
