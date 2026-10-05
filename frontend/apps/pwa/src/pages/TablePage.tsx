@@ -810,7 +810,10 @@ export function TablePage() {
     [sendAction, trigger, resolvedHeroSeat, activeRoomId],
   );
 
-  const _handleKick = useCallback(
+  // F-11 FIX: renamed from `_handleKick` — the leading underscore was a
+  // signal that it was dead code (never referenced). It is now wired to
+  // SeatGrid → PlayerSpot.
+  const handleKick = useCallback(
     (targetUserId: string) => {
       if (!activeRoomId) return;
       const room = useGameStore.getState().rooms[activeRoomId];
@@ -1105,6 +1108,7 @@ export function TablePage() {
               opponentTimerTotalMs={opponentTimerTotalMs}
               isDealing={isDealing}
               onShowStats={setStatsUserId}
+              onKick={handleKick}
             />
 
             <DealAnimationLayer
