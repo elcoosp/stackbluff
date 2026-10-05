@@ -53,12 +53,17 @@ impl TournamentRepo for TournamentRepoImpl {
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;
 
+        // B-3/B-8 follow-up: mark the registration committed. The caller
+        // (tournament_service::register) debits the wallet *before*
+        // invoking this method, so by the time we get here the money has
+        // moved and the row must be refundable on crash.
         let reg = tournament_registration::ActiveModel {
             id: Set(Uuid::new_v4()),
             tournament_id: Set(tournament_id.as_uuid()),
             user_id: Set(user_id.as_uuid()),
             buy_in: Set(buy_in.as_i64()),
             registered_at: Set(chrono::Utc::now()),
+            chip_committed: Set(true),
         };
         reg.insert(&txn)
             .await
@@ -271,6 +276,7 @@ impl TournamentRepo for TournamentRepoImpl {
                 tournament_id: TournamentId::new(m.tournament_id),
                 user_id: UserId::new(m.user_id),
                 registered_at: m.registered_at,
+                chip_committed: m.chip_committed,
             })
             .collect())
     }
