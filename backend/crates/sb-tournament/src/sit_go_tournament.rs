@@ -162,6 +162,10 @@ impl SitGoTournament {
                 }
                 else => break,
             }
+            // T-7 FIX: exit on terminal status so the task does not leak.
+            if matches!(self.status, TournamentStatus::Completed | TournamentStatus::Cancelled) {
+                break;
+            }
         }
         info!(tournament_id = %self.tournament_id, "SitGoTournament terminated");
     }
