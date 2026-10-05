@@ -671,12 +671,18 @@ export const PlayerSpot = memo(
         updates.af = newA > prev.af ? 'text-green-400' : 'text-red-400';
       }
 
+      // L-6 FIX: update `prevStatsRef` UNCONDITIONALLY before returning.
+      // The previous version only refreshed it in the "no changes" path,
+      // so after a flash fired, the next render compared against the
+      // pre-flash values and flashed again (repeating the animation on
+      // every parent re-render).
+      prevStatsRef.current = { vpip: newV, pfr: newP, af: newA };
+
       if (Object.keys(updates).length > 0) {
         setFlashColors(updates);
         const timer = setTimeout(() => setFlashColors({}), 1500);
         return () => clearTimeout(timer);
       }
-      prevStatsRef.current = { vpip: newV, pfr: newP, af: newA };
     }, [rawVpip, rawPfr, rawAf]);
 
     const statsElement = useMemo(() => {
