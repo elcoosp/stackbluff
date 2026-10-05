@@ -289,9 +289,11 @@ export const useGameStore = create<GameState>((set, _get) => ({
       const seat = { ...newSeats[Number(seatNum)] }; // Create a copy to mutate
 
       if (seat) {
-        // FIX: Safely parse stack in case backend sends a string like "1500"
+        // L-3 FIX: reject NaN / negative values instead of corrupting the
+        // seat with `Number(0)` when the backend sends something the
+        // parser can't handle. Only assign a finite non-negative number.
         const parsedStack = Number(new_stack);
-        if (!Number.isNaN(parsedStack)) {
+        if (Number.isFinite(parsedStack) && parsedStack >= 0) {
           seat.stack = parsedStack;
         }
         // Update the seat's action so the PlayerSpot badge updates correctly
