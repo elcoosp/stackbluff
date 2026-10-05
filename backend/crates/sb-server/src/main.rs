@@ -537,7 +537,7 @@ async fn run_app() {
                 chip_balance: sea_orm::Set(0),
                 is_bot: sea_orm::Set(true),
                 bot_profile: sea_orm::Set(Some(name.to_lowercase().replace("bot1", ""))),
-                bot_bankroll: sea_orm::Set(Some(100000)),
+                bot_bankroll: sea_orm::Set(100000),
                 ..Default::default()
             };
             if let Err(e) = active.insert(&db).await {
