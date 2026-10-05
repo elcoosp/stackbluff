@@ -4,23 +4,36 @@ import { type CreateIntentRequest, createPaymentIntent } from '../lib/shopApi';
 import { useShopStore } from '../stores/shopStore';
 
 export function usePurchaseFlow() {
-  const shop = useShopStore();
+  // F-18 FIX: previously subscribed to the WHOLE shop store (a render
+  // storm on any store update) and hardcoded `provider: 'stripe'`, pushing
+  // Mini-App users through external card checkout even though the backend
+  // supports Telegram Stars. Pick per-store slices and choose the
+  // provider by runtime environment.
+  const selectedProduct = useShopStore((s) => s.selectedProduct);
+  const setError = useShopStore((s) => s.setError);
+  const setDialogOpen = useShopStore((s) => s.setDialogOpen);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const isMiniApp =
+    typeof window !== 'undefined' &&
+    !!(window as unknown as { Telegram?: { WebApp?: unknown } }).Telegram?.WebApp;
+  const provider = isMiniApp ? 'telegram_stars' : 'stripe';
+
   const confirmPurchase = async () => {
-    const product = shop.selectedProduct;
+    const product = selectedProduct;
     if (!product) {
       toast.error('No product selected');
       return;
     }
 
     setIsProcessing(true);
-    shop.setError(null);
+    setError(null);
 
     try {
       const req: CreateIntentRequest = {
         product_id: product.id,
-        provider: 'stripe', // TODO: allow user to choose
+        // F-18 FIX: choose by environment instead of hardcoding Stripe.
+        provider,
       };
       const response = await createPaymentIntent(req);
 
@@ -37,10 +50,10 @@ export function usePurchaseFlow() {
         toast.success('Purchase initiated!');
       }
 
-      shop.setDialogOpen(false);
+      setDialogOpen(false);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Purchase failed';
-      shop.setError(message);
+      setError(message);
       toast.error(message);
     } finally {
       setIsProcessing(false);
