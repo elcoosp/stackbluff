@@ -474,7 +474,12 @@ fn build_analytics(hand: &ActiveHand, user_id: UserId) -> Option<AnalyticsPayloa
 
     let best_hand_name = get_hand_description(&strength);
     let base_strength = get_strength_score(strength.rank);
-    let win_prob = run_monte_carlo(&hole_cards, comm_cards, 300);
+    let win_prob = run_monte_carlo(
+        &hole_cards,
+        comm_cards,
+        // E-5 FIX: cap by street to reduce actor-side CPU.
+        match comm_cards.len() { 0 => 200, 3 => 300, 4 => 400, _ => 600 },
+    );
 
     Some(AnalyticsPayload {
         win_prob,
