@@ -483,8 +483,28 @@ impl TournamentService for TournamentServiceImpl {
             return Err(e);
         }
 
-        rrx.await
-            .map_err(|_| AppError::Internal("response dropped".into()))?
+        // B-3 (cont): refund the buy-in only on successful unregister.
+        let actor_result = rrx
+            .await
+            .map_err(|_| AppError::Internal("response dropped".into()))?;
+
+        if actor_result.is_ok() && buy_in > 0 {
+            if let Err(e) = self
+                .user_repo
+                .update_chip_balance(ctx.clone(), user_id, buy_in)
+                .await
+            {
+                tracing::error!(
+                    %user_id,
+                    %tournament_id,
+                    buy_in,
+                    error = ?e,
+                    "tournament unregister: refund failed"
+                );
+            }
+        }
+
+        actor_result
     }
 
     async fn get_tournament(
