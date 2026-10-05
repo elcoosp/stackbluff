@@ -683,9 +683,31 @@ export function useGameWebSocket(tableId: string) {
       }
     };
 
-    ws.onclose = () => {
+    ws.onclose = (ev) => {
       if (!mountedRef.current) return;
       wsRef.current = null;
+      // F-14 FIX: previously every close (expired token, server restart,
+      // network death) scheduled another reconnect forever with no cap,
+      // so a permanently-rejected session spun at 30s intervals for the
+      // life of the tab. We now:
+      //   * stop retrying on auth-failure close codes (4001/4401), and
+      //   * cap the number of exponential-backoff attempts.
+      // A manual "Reconnect" button in the UI can re-arm after this.
+      const CLOSE_AUTH_FAILED = 4001;
+      const CLOSE_AUTH_FAILED_ALT = 4401;
+      const MAX_RECONNECT_ATTEMPTS = 8;
+
+      if (ev.code === CLOSE_AUTH_FAILED || ev.code === CLOSE_AUTH_FAILED_ALT) {
+        console.warn('WS closed with auth failure, not reconnecting', ev.code);
+        setConnectionStatus('disconnected');
+        return;
+      }
+      if (reconnectAttempts.current >= MAX_RECONNECT_ATTEMPTS) {
+        console.warn('WS reconnect attempts exhausted, giving up');
+        setConnectionStatus('disconnected');
+        return;
+      }
+
       setConnectionStatus('reconnecting');
       const delay = Math.min(3000 * 1.5 ** reconnectAttempts.current, 30000);
       reconnectAttempts.current += 1;
@@ -775,15 +797,28 @@ export function useGameWebSocket(tableId: string) {
     }
   }, []);
 
+  // F-15 FIX: the effect ran once at mount, at which point the socket was
+  // CONNECTING, so `readyState === WebSocket.OPEN` was false and the
+  // registration message was never sent. Now we stash the intent in a ref
+  // and flush it from the WS `onopen` handler (see `pendingRegisterRef`
+  // usage in the connect() function). Unregister on unmount still fires if
+  // the socket is open by then.
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tournamentId = urlParams.get('tournamentId');
-    if (tournamentId && wsRef.current?.readyState === WebSocket.OPEN) {
+    if (!tournamentId) return;
+
+    pendingRegisterRef.current = tournamentId;
+    // If we were already connected (reconnect later), send it now.
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
       sendWsMessage('register_tournament', { tournament_id: tournamentId });
-      return () => {
-        sendWsMessage('unregister_tournament', { tournament_id: tournamentId });
-      };
     }
+    return () => {
+      pendingRegisterRef.current = null;
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        sendWsMessage('unregister_tournament', { tournament_id: tournamentId });
+      }
+    };
   }, [sendWsMessage]);
 
   return {
