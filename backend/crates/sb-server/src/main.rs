@@ -379,16 +379,45 @@ async fn run_app() {
         // trait object used by everything else (tournaments, clubs, etc.)
         // and is the only piece overridden by the Telegram service.
         let notif = Arc::new(InMemoryNotificationService::new());
-        // B-10 FIX (partial): use the working single-channel Telegram
-        // notifier when a bot token is configured. The multi-channel
-        // notifier exists in the tree but is not yet consistent with the
-        // current trait APIs (see `sb-notification/src/multi_channel.rs`)
-        // and stays on the shelf until that gap is closed.
+        // B-10 FIX: when a bot token is present, use the multi-channel
+        // notifier so user-targeted notifications fan out to Web Push too.
+        // Push is attached only when VAPID_PRIVATE_KEY is configured; the
+        // Telegram path always works.
         let notification_service: Arc<dyn sb_contracts::notification_api::NotificationService> =
             match std::env::var("TELEGRAM_BOT_TOKEN") {
                 Ok(tok) if !tok.is_empty() => {
-                    tracing::info!("B-10: using TelegramNotificationService");
-                    Arc::new(sb_notification::TelegramNotificationService::new(tok))
+                    let telegram = Arc::new(sb_notification::TelegramNotificationService::new(tok));
+                    let mut multi = sb_notification::MultiChannelNotifier::new(telegram);
+
+                    // Optional Web Push fanout.
+                    if let Ok(pem) = std::env::var("VAPID_PRIVATE_KEY") {
+                        if !pem.is_empty() {
+                            let subject = std::env::var("VAPID_SUBJECT")
+                                .unwrap_or_else(|_| "mailto:admin@stackbluff.com".into());
+                            match sb_notification::WebPushSender::new(pem, subject) {
+                                Ok(sender) => {
+                                    let repo: Arc<
+                                        dyn sb_db_repos::push_subscription_repo::PushSubscriptionRepo,
+                                    > = Arc::new(
+                                        sb_db_repos::push_subscription_repo::PushSubscriptionRepoImpl {
+                                            db: db.clone(),
+                                        },
+                                    );
+                                    multi = multi.with_web_push(Arc::new(sender), repo);
+                                    tracing::info!("B-10: Web Push fanout enabled");
+                                }
+                                Err(e) => tracing::warn!(
+                                    error = ?e,
+                                    "B-10: Web PushSender init failed; push fanout disabled"
+                                ),
+                            }
+                        }
+                    } else {
+                        tracing::info!("B-10: VAPID_PRIVATE_KEY unset — push fanout disabled");
+                    }
+
+                    tracing::info!("B-10: using MultiChannelNotifier");
+                    Arc::new(multi)
                 }
                 _ => {
                     tracing::warn!(
