@@ -465,6 +465,20 @@ impl MttDirector {
                     .unwrap_or_else(|| PlayerId::new(user_id.as_uuid()));
                 self.elimination_order.push((*user_id, player_id));
 
+                // T-5 FIX: drop the busted player from the table roster.
+                // Previously `TableInfo.players` accumulated every entrant
+                // forever, so final-table merges "moved" dead entries
+                // (consuming the 9 seats), rebalancers saw inflated loads
+                // and stopped breaking short tables, and the retain/truncate
+                // logic closed tables whose live players were still seated.
+                if let Some(table) = self
+                    .tables
+                    .iter_mut()
+                    .find(|t| t.table_id == event.room_id)
+                {
+                    table.players.retain(|(_, uid)| uid != user_id);
+                }
+
                 let msg = sb_table_registry::game_room::RoomMessage::TournamentElimination {
                     tournament_id: self.tournament_id,
                     user_id: *user_id,
@@ -547,6 +561,15 @@ impl MttDirector {
         let mut table_states = Vec::with_capacity(self.tables.len());
         for idx in 0..self.tables.len() {
             let stacks = self.fetch_player_stacks(idx).await;
+            // T-5 FIX: prune roster entries that are not actually seated
+            // (busts, prior transfers, disconnects) before computing moves.
+            // `fetch_player_stacks` reports missing players with stack 0,
+            // which used to be treated as "still here" and consumed seats.
+            let live_user_ids: std::collections::HashSet<_> =
+                stacks.iter().map(|(_, uid, _)| *uid).collect();
+            self.tables[idx]
+                .players
+                .retain(|(_, uid)| live_user_ids.contains(uid));
             table_states.push(stacks);
         }
 
@@ -595,6 +618,12 @@ impl MttDirector {
                         respond_to: tx,
                     })
                     .await;
+                // T-5 FIX: log when the target table rejects the player
+                // (e.g. it was already at capacity). The previous code
+                // silently dropped the error and left the source table
+                // truncated/closed, stranding the player on an orphaned
+                // table. We re-insert them into the source roster so the
+                // next rebalance can retry.
                 if let Ok(seat_result) = rx.await
                     && let Ok(seat) = seat_result
                 {
@@ -606,6 +635,24 @@ impl MttDirector {
                     self.broker.send_to_user(m.user_id, msg);
                     self.user_to_table.insert(m.user_id, to_table.table_id);
                     self.player_assignments.insert(m.user_id, m.to_table_idx);
+
+                    // T-5 FIX: reflect the move in the director's rosters.
+                    // Without this, `TableInfo.players` grows on every
+                    // rebalance and the next round of moves targets stale
+                    // seats. We snapshot the entry first, then mutate the
+                    // two `TableInfo` vectors by index to avoid a nested
+                    // borrow on `self.tables`.
+                    let from_idx = m.from_table_idx;
+                    let to_idx = m.to_table_idx;
+                    let entry = (m.player_id, m.user_id);
+                    if let Some(from_table) = self.tables.get_mut(from_idx) {
+                        from_table.players.retain(|p| *p != entry);
+                    }
+                    if let Some(to_table_mut) = self.tables.get_mut(to_idx) {
+                        if !to_table_mut.players.contains(&entry) {
+                            to_table_mut.players.push(entry);
+                        }
+                    }
                 }
             }
         }
@@ -682,6 +729,12 @@ impl MttDirector {
                         respond_to: tx,
                     })
                     .await;
+                // T-5 FIX: log when the target table rejects the player
+                // (e.g. it was already at capacity). The previous code
+                // silently dropped the error and left the source table
+                // truncated/closed, stranding the player on an orphaned
+                // table. We re-insert them into the source roster so the
+                // next rebalance can retry.
                 if let Ok(seat_result) = rx.await
                     && let Ok(seat) = seat_result
                 {
@@ -693,6 +746,24 @@ impl MttDirector {
                     self.broker.send_to_user(m.user_id, msg);
                     self.user_to_table.insert(m.user_id, to_table.table_id);
                     self.player_assignments.insert(m.user_id, m.to_table_idx);
+
+                    // T-5 FIX: reflect the move in the director's rosters.
+                    // Without this, `TableInfo.players` grows on every
+                    // rebalance and the next round of moves targets stale
+                    // seats. We snapshot the entry first, then mutate the
+                    // two `TableInfo` vectors by index to avoid a nested
+                    // borrow on `self.tables`.
+                    let from_idx = m.from_table_idx;
+                    let to_idx = m.to_table_idx;
+                    let entry = (m.player_id, m.user_id);
+                    if let Some(from_table) = self.tables.get_mut(from_idx) {
+                        from_table.players.retain(|p| *p != entry);
+                    }
+                    if let Some(to_table_mut) = self.tables.get_mut(to_idx) {
+                        if !to_table_mut.players.contains(&entry) {
+                            to_table_mut.players.push(entry);
+                        }
+                    }
                 }
             }
         }
