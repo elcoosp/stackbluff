@@ -106,7 +106,7 @@ class ClubWebSocketManager {
   }
 
   disconnect() {
-    intentionallyClosed = true;
+    this.intentionallyClosed = true;
 
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);
