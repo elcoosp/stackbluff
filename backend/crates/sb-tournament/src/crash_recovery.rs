@@ -56,6 +56,19 @@ pub async fn settle_crashed_tournaments(
 
         let registrations = repo.list_registrations(tournament.id).await?;
         for reg in &registrations {
+            // B-3/B-8 follow-up: only refund registrations whose buy-in was
+            // actually debited. The previous version refunded every row,
+            // including rows whose buy-in was never charged (missing
+            // wallet debit path) — minting chips on every crashed
+            // tournament.
+            if !reg.chip_committed {
+                info!(
+                    tournament_id = %tournament.id,
+                    user_id = %reg.user_id,
+                    "Skipping refund for registration whose buy-in was never charged"
+                );
+                continue;
+            }
             if result_user_ids.contains(&reg.user_id) {
                 info!(
                     tournament_id = %tournament.id,
