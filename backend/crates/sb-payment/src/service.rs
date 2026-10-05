@@ -29,6 +29,46 @@ pub struct RealPaymentService {
 }
 
 impl RealPaymentService {
+    /// P-2 FIX: call a Telegram Bot API method. Used by the Stars webhook
+    /// to answer pre-checkout queries and to fetch/answer state Telegram
+    /// requires. Returns the parsed JSON body on 2xx.
+    pub async fn call_bot_api(
+        &self,
+        method: &str,
+        body: &serde_json::Value,
+    ) -> Result<serde_json::Value, AppError> {
+        let token = self.config.telegram_bot_token.clone();
+        if token.is_empty() {
+            return Err(AppError::Configuration("TELEGRAM_BOT_TOKEN not set".into()));
+        }
+        let url = format!("https://api.telegram.org/bot{}/{}", token, method);
+        let client = reqwest::Client::new();
+        let resp = client
+            .post(&url)
+            .json(body)
+            .send()
+            .await
+            .map_err(|e| AppError::External(format!("Telegram API request failed: {e}")))?;
+        let status = resp.status();
+        let json: serde_json::Value = resp
+            .json()
+            .await
+            .unwrap_or(serde_json::json!({"ok": false, "description": "non-JSON response"}));
+        if !status.is_success() || json.get("ok").and_then(|v| v.as_bool()) != Some(true) {
+            return Err(AppError::External(format!(
+                "Telegram API error: status={} body={}",
+                status, json
+            )));
+        }
+        Ok(json)
+    }
+
+    /// P-2 FIX: expose the webhook secret so the handler can verify the
+    /// `X-Telegram-Bot-Api-Secret-Token` header.
+    pub fn telegram_webhook_secret(&self) -> &str {
+        &self.config.telegram_webhook_secret
+    }
+
     /// P-3 FIX: atomic "confirm this payment once" entry point used by the
     /// webhooks. Returns `true` only when THIS call performed the transition
     /// `pending -> succeeded`; retries see `false` and must skip awarding.
