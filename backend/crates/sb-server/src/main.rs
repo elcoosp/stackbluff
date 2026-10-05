@@ -267,7 +267,13 @@ async fn run_app() {
     let stats_repo: Arc<dyn PlayerStatsRepo + Send + Sync> =
         Arc::new(PlayerStatsRepoImpl::new(db.clone()));
 
-    let registry = Arc::new(Registry::new(stats_repo.clone()));
+    // B-6 FIX: pass the user repo to the registry so spawned actors can
+    // write deferred leave refunds directly. `Registry::new` (used only
+    // in tests) does not need it.
+    let registry = Arc::new(Registry::with_user_repo(
+        stats_repo.clone(),
+        user_repo.clone(),
+    ));
 
     let system_user = UserId::new(Uuid::nil());
     let db_tables = table_repo
