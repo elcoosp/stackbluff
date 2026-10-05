@@ -18,6 +18,10 @@ interface SeatGridProps {
   opponentTimerTotalMs?: number | null;
   isDealing: boolean;
   onShowStats?: (userId: string) => void;
+  // F-11 FIX: the TablePage had a `_handleKick` callback that was never
+  // threaded down. Adding it here lets the kick-vote UI actually send
+  // `kick_vote_start` to the server.
+  onKick?: (userId: string) => void;
 }
 
 export const SeatGrid = ({
@@ -31,6 +35,7 @@ export const SeatGrid = ({
   opponentTimerTotalMs,
   isDealing,
   onShowStats,
+  onKick,
 }: SeatGridProps) => {
   const [vw, setVw] = useState(typeof window !== 'undefined' ? window.innerWidth : 500);
 
@@ -109,6 +114,7 @@ export const SeatGrid = ({
               timerTotalMs={timerTotalMs ?? undefined}
               isDealing={isDealing}
               onShowStats={onShowStats}
+              onKick={onKick}
             />
           </div>
         );
