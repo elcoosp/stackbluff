@@ -51,6 +51,9 @@ pub struct TableStateUpdate {
     // preset raises wrong at every table whose blinds differ.
     pub small_blind: u64,
     pub big_blind: u64,
+    // T-8 FIX: expose the tournament ante to the client so the HUD
+    // shows the correct amount and preflop odds account for it.
+    pub ante: u64,
     pub players: Vec<PlayerStateInfo>,
     pub current_hand_in_progress: bool,
     pub community_cards: Vec<WsCard>,
