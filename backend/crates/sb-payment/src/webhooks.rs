@@ -163,6 +163,96 @@ pub async fn stripe_webhook(
             }
         }
         metrics::record_webhook_success();
+    } else {
+        // P-5 FIX: handle the events that were previously ignored with a
+        // silent 200 OK. Without these, a user could buy chips, request a
+        // Stripe refund and keep the chips (free-money loop); a chargeback
+        // never touched the account; an expired checkout left a "pending"
+        // row forever.
+        match event.data.object {
+            EventObject::CheckoutSessionExpired(session) => {
+                let payment_id = session.id.clone();
+                if let Ok(Some(existing)) =
+                    crate::db::PaymentRepo::find_by_payment_id(&state.db, &payment_id).await
+                {
+                    if existing.status == "pending" {
+                        if let Err(e) = crate::db::PaymentRepo::update_status(
+                            &state.db,
+                            &payment_id,
+                            "expired",
+                            Some(chrono::Utc::now()),
+                        )
+                        .await
+                        {
+                            error!(request_id = %request_id, %payment_id, error = %e,
+                                "Failed to expire pending payment");
+                        } else {
+                            info!(request_id = %request_id, %payment_id, "Pending payment expired");
+                        }
+                    }
+                }
+            }
+            EventObject::ChargeRefunded(charge) => {
+                // Identify the payment intent that was refunded, then claw
+                // back the chip grant (stored on `payment_intents.amount` by
+                // P-1). Negative chip awards floor at 0 in the DB layer.
+                let intent_id = charge
+                    .payment_intent
+                    .as_ref()
+                    .map(|i| i.id().to_string());
+                if let Some(intent_id) = intent_id {
+                    if let Ok(Some(intent)) =
+                        crate::db::PaymentRepo::find_by_payment_id(&state.db, &intent_id).await
+                    {
+                        if intent.status == "succeeded" && intent.amount > 0 {
+                            let user_id = UserId::new(intent.user_id);
+                            if let Err(e) = state
+                                .user_service
+                                .award_chips(
+                                    user_id,
+                                    ChipAmount::new(-intent.amount).unwrap_or_default(),
+                                )
+                                .await
+                            {
+                                error!(request_id = %request_id, %intent_id, %user_id, error = %e,
+                                    "charge.refunded: failed to claw back chips");
+                            } else {
+                                info!(request_id = %request_id, %intent_id, %user_id,
+                                    chips = intent.amount, "charge.refunded: chips clawed back");
+                            }
+                            let _ = crate::db::PaymentRepo::update_status(
+                                &state.db,
+                                &intent_id,
+                                "refunded",
+                                Some(chrono::Utc::now()),
+                            )
+                            .await;
+                        }
+                    }
+                }
+            }
+            EventObject::ChargeDisputeCreated(dispute) => {
+                if let Some(intent_id) =
+                    dispute.payment_intent.as_ref().map(|i| i.id().to_string())
+                {
+                    error!(request_id = %request_id, %intent_id,
+                        "charge.dispute.created: manual review required");
+                    let _ = crate::db::PaymentRepo::update_status(
+                        &state.db,
+                        &intent_id,
+                        "disputed",
+                        Some(chrono::Utc::now()),
+                    )
+                    .await;
+                }
+            }
+            other => {
+                // Never silently 200 an event we do not understand.
+                info!(request_id = %request_id, event_type = %event.type_,
+                    object = ?other, "Unhandled Stripe event (logged)");
+            }
+        }
+        metrics::record_webhook_success();
     }
     (StatusCode::OK, Json(json!({ "status": "ok" }))).into_response()
 }
