@@ -74,6 +74,8 @@ impl GdprRepo for PgGdprRepo {
     }
 
     async fn get_user_data(&self, user_id: Uuid) -> Result<UserDataExportDto, PersistenceError> {
+        use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
+
         let user = user::Entity::find_by_id(user_id)
             .one(&self.db)
             .await
@@ -84,10 +86,45 @@ impl GdprRepo for PgGdprRepo {
                 "Not found".to_string(),
             )))?;
 
+        // B-13 FIX: the previous export returned empty arrays for both
+        // hand_history and missions — a GDPR Art. 15 violation if shipped.
+        // We now query the two tables the user is actually represented in:
+        //   * `hand_history.participants` is a comma-separated CSV of user
+        //     ids with leading/trailing commas (see migration docstring).
+        //   * `mission_completion` is keyed by (user_id, mission_type, date).
+        let user_id_str = user_id.to_string();
+        let participants_like = format!("%,{},%", user_id_str);
+
+        let hands = sb_db_entities::hand_history::Entity::find()
+            .filter(
+                sea_orm::Condition::any()
+                    // Fast path when participants has leading/trailing commas
+                    .add(sb_db_entities::hand_history::Column::Participants.contains(&participants_like))
+                    // Belt-and-braces for legacy rows
+                    .add(sb_db_entities::hand_history::Column::Participants.contains(&user_id_str)),
+            )
+            .all(&self.db)
+            .await
+            .map_err(|e| {
+                PersistenceError::from(sb_shared_types::AppError::Internal(format!("{:?}", e)))
+            })?;
+
+        let hand_history_json = serde_json::to_value(&hands).unwrap_or(serde_json::json!([]));
+
+        let missions = sb_db_entities::mission_completion::Entity::find()
+            .filter(sb_db_entities::mission_completion::Column::UserId.eq(user_id))
+            .all(&self.db)
+            .await
+            .map_err(|e| {
+                PersistenceError::from(sb_shared_types::AppError::Internal(format!("{:?}", e)))
+            })?;
+
+        let missions_json = serde_json::to_value(&missions).unwrap_or(serde_json::json!([]));
+
         Ok(UserDataExportDto {
             profile: serde_json::to_value(&user).unwrap_or_default(),
-            hand_history: serde_json::json!([]),
-            missions: serde_json::json!([]),
+            hand_history: hand_history_json,
+            missions: missions_json,
         })
     }
 
