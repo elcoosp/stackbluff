@@ -1,92 +1,111 @@
+//! Multi-channel notifier.
+//!
+//! B-10 FIX (redesign): earlier drafts of this module tried to implement
+//! a hypothetical high-level `NotificationService` (event-based) that
+//! does not match what the codebase actually uses. Every call site in
+//! tournament, bot-handler and reminder paths depends on the *low-level*
+//! `sb_contracts::notification_api::NotificationService` trait:
+//!
+//!   * `send_telegram_message(chat_id, text, keyboard)`
+//!   * `send_telegram_message_to_user(user_id, text, keyboard)`
+//!   * `answer_callback_query(id, text)`
+//!
+//! This module now implements exactly that trait, delegating Telegram
+//! calls to a `TelegramNotificationService` and fanning out a Web Push
+//! to the user's registered subscriptions on the *user-targeted* path.
+//! The chat-id-targeted path is not fanned out because we have no
+//! stable user id to look up subscriptions for.
+//!
+//! `ClubNotifier` is also implemented by delegation.
+
 use async_trait::async_trait;
-use sb_contracts::notification_api::{NotificationError, NotificationService, ClubNotifier};
-use sb_contracts::notification::NotificationEvent;
-use sb_db_repos::push_subscription_repo::PushSubscriptionRepo;
-use sb_shared_types::{errors::AppError, RequestContext, UserId, ClubId};
 use std::sync::Arc;
-use crate::web_push::{WebPushSender, SendOutcome};
-use serde::Serialize;
+use tracing::{debug, warn};
 
-/// B-28 FIX: local Markdown escape for user-derived content. Mirrors
-/// telegram::md_escape. Interpolating club names, tournament names, etc.
-/// into `parse_mode: Markdown` bodies could inject links or break
-/// rendering with unbalanced `*`/`_`.
-fn escape_md(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    for c in s.chars() {
-        if matches!(c, '_' | '*' | '[' | ']' | '(' | ')' | '~' | '`' | '>' | '#' | '+' | '-' | '=' | '|' | '{' | '}' | '.' | '!') {
-            out.push('\\');
-        }
-        out.push(c);
-    }
-    out
-}
+use sb_contracts::notification_api::{ClubNotifier, NotificationError, NotificationService};
+use sb_db_repos::push_subscription_repo::PushSubscriptionRepo;
+use sb_shared_types::{errors::AppError, ClubId, UserId};
 
-#[derive(Serialize)]
-struct PushPayload {
-    title: String,
-    body: String,
-    url: String,
-}
-
-impl PushPayload {
-    fn from_event(event: &NotificationEvent) -> Self {
-        match event {
-            NotificationEvent::TournamentReminder { tournament_id, name, starts_at } => Self {
-                title: "Tournament Reminder".to_string(),
-                body: format!("{} starts at {}", name, starts_at),
-                url: format!("/tournaments/{}", tournament_id),
-            },
-            NotificationEvent::TournamentStarting { tournament_id } => Self {
-                title: "Tournament Starting".to_string(),
-                body: "Your tournament is starting now!".to_string(),
-                url: format!("/tournaments/{}", tournament_id),
-            },
-            NotificationEvent::TournamentResult { tournament_id, position, prize } => Self {
-                title: "Tournament Result".to_string(),
-                body: format!("You finished #{} and won {} chips!", position, prize),
-                url: format!("/tournaments/{}", tournament_id),
-            },
-            NotificationEvent::ClubReminder { club_id, message } => Self {
-                title: "Club Reminder".to_string(),
-                body: message.clone(),
-                url: format!("/clubs/{}", club_id),
-            },
-            NotificationEvent::FriendInvite { from_user_id } => Self {
-                title: "Friend Invite".to_string(),
-                body: format!("You have a friend invite from {}", from_user_id),
-                url: "/friends".to_string(),
-            },
-            NotificationEvent::ReplayCardReady { hand_id } => Self {
-                title: "Replay Card Ready".to_string(),
-                body: "Your replay card is ready to view!".to_string(),
-                url: format!("/replays/{}", hand_id),
-            },
-            NotificationEvent::SeasonCardReady { season_id } => Self {
-                title: "Season Card Ready".to_string(),
-                body: format!("Your season {} card is ready!", season_id),
-                url: "/profile".to_string(),
-            },
-        }
-    }
-}
+use crate::telegram::TelegramNotificationService;
+use crate::web_push::{SendOutcome, WebPushSender};
 
 pub struct MultiChannelNotifier {
-    pub telegram: Arc<dyn NotificationService>,
-    pub push_sender: Arc<WebPushSender>,
-    pub push_repo: Arc<dyn PushSubscriptionRepo>,
+    telegram: Arc<TelegramNotificationService>,
+    push_sender: Option<Arc<WebPushSender>>,
+    push_repo: Option<Arc<dyn PushSubscriptionRepo>>,
+    /// Base URL used to build link targets inside push payloads.
+    app_base_url: String,
 }
 
 impl MultiChannelNotifier {
-    pub fn new(
-        telegram: Arc<dyn NotificationService>,
-        push_sender: Arc<WebPushSender>,
-        push_repo: Arc<dyn PushSubscriptionRepo>,
-    ) -> Self {
+    pub fn new(telegram: Arc<TelegramNotificationService>) -> Self {
         Self {
             telegram,
-            push_sender,
-            push_repo,
+            push_sender: None,
+            push_repo: None,
+            app_base_url: std::env::var("APP_BASE_URL")
+                .unwrap_or_else(|_| "http://localhost:3000".into()),
+        }
+    }
+
+    /// Attach Web Push fanout. Called only when VAPID keys and a push
+    /// subscription repo are available.
+    pub fn with_web_push(
+        mut self,
+        sender: Arc<WebPushSender>,
+        repo: Arc<dyn PushSubscriptionRepo>,
+    ) -> Self {
+        self.push_sender = Some(sender);
+        self.push_repo = Some(repo);
+        self
+    }
+
+    /// Fan a user-facing message out to every registered push subscription.
+    /// Delivery is best-effort: failures are logged, never propagated.
+    async fn fanout_push(&self, user_id: UserId, body: String) {
+        let (Some(sender), Some(repo)) = (self.push_sender.as_ref(), self.push_repo.as_ref())
+        else {
+            return;
+        };
+
+        let subs = match repo.list_for_user(user_id.0).await {
+            Ok(s) => s,
+            Err(e) => {
+                warn!(%user_id, error = %e, "push fanout: list subscriptions failed");
+                return;
+            }
+        };
+        if subs.is_empty() {
+            return;
+        }
+
+        // A small default payload — title is the app name, body is the
+        // notification text. Uses the same shape as the client SW handler.
+        let payload = serde_json::json!({
+            "title": "StackBluff",
+            "body": body,
+            "url": self.app_base_url,
+        })
+        .to_string();
+
+        for sub in subs {
+            let sender = sender.clone();
+            let repo = repo.clone();
+            let payload = payload.clone();
+            // Best-effort: spawn so one slow endpoint cannot stall the
+            // caller. Clean up subscriptions the push service rejects as
+            // gone.
+            tokio::spawn(async move {
+                match sender.send(&sub, payload).await {
+                    Ok(SendOutcome::Gone) => {
+                        let _ = repo.delete_by_endpoint(sub.endpoint.clone()).await;
+                    }
+                    Ok(_) => {}
+                    Err(e) => {
+                        debug!(endpoint = %sub.endpoint, error = %e, "push delivery failed");
+                    }
+                }
+            });
         }
     }
 }
@@ -99,7 +118,10 @@ impl NotificationService for MultiChannelNotifier {
         text: String,
         keyboard: Option<serde_json::Value>,
     ) -> Result<(), NotificationError> {
-        self.telegram.send_telegram_message(chat_id, text, keyboard).await
+        // No user id → no push fanout. Pure Telegram path.
+        self.telegram
+            .send_telegram_message(chat_id, text, keyboard)
+            .await
     }
 
     async fn send_telegram_message_to_user(
@@ -108,7 +130,12 @@ impl NotificationService for MultiChannelNotifier {
         text: String,
         keyboard: Option<serde_json::Value>,
     ) -> Result<(), NotificationError> {
-        self.telegram.send_telegram_message_to_user(user_id, text, keyboard).await
+        // Fan out push first (cheap, non-blocking), then send the
+        // Telegram message. We do not wait on push results.
+        self.fanout_push(user_id, text.clone()).await;
+        self.telegram
+            .send_telegram_message_to_user(user_id, text, keyboard)
+            .await
     }
 
     async fn answer_callback_query(
@@ -116,44 +143,9 @@ impl NotificationService for MultiChannelNotifier {
         callback_query_id: String,
         text: Option<String>,
     ) -> Result<(), NotificationError> {
-        self.telegram.answer_callback_query(callback_query_id, text).await
-    }
-}
-
-#[async_trait]
-impl sb_contracts::notification::NotificationService for MultiChannelNotifier {
-    async fn send(
-        &self,
-        ctx: &RequestContext,
-        user_id: UserId,
-        event: NotificationEvent,
-    ) -> Result<(), AppError> {
-        let _ = self.telegram.send(ctx, user_id, event.clone()).await;
-
-        let subs = self
-            .push_repo
-            .list_for_user(user_id.0)
+        self.telegram
+            .answer_callback_query(callback_query_id, text)
             .await
-            .map_err(|e| AppError::Internal(e.to_string()))?;
-
-        let payload = serde_json::to_string(&PushPayload::from_event(&event))
-            .unwrap_or_else(|_| "{}".to_string());
-
-        for sub in subs {
-            let sender = self.push_sender.clone();
-            let repo = self.push_repo.clone();
-            let p = payload.clone();
-            tokio::spawn(async move {
-                match sender.send(&sub, p).await {
-                    Ok(SendOutcome::Gone) => {
-                        let _ = repo.delete_by_endpoint(sub.endpoint).await;
-                    }
-                    Err(e) => tracing::error!("Web push failed: {}", e),
-                    _ => {}
-                }
-            });
-        }
-        Ok(())
     }
 }
 
