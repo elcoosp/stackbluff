@@ -18,6 +18,17 @@ export function usePreAction({ isMyTurn, toCall, sendAction }: UsePreActionParam
   const preActionRef = useRef<PreAction | null>(null);
   const executedRef = useRef(false);
 
+  // F-1 FIX: hold the latest `sendAction` in a ref and remove it from the
+  // effect dependency list below. TablePage passed an inline arrow function
+  // so its identity changed on every render (~10 Hz while a turn timer
+  // runs). Each re-render therefore (a) cleared the previous 400 ms timer
+  // in the cleanup, and (b) re-ran the effect only to be short-circuited
+  // by `executedRef.current === true`. The queued action was never sent.
+  const sendActionRef = useRef(sendAction);
+  useEffect(() => {
+    sendActionRef.current = sendAction;
+  });
+
   // Keep ref in sync with state
   useEffect(() => {
     preActionRef.current = preAction;
@@ -29,7 +40,8 @@ export function usePreAction({ isMyTurn, toCall, sendAction }: UsePreActionParam
     executedRef.current = false;
   }, []);
 
-  // Execute pre-action when it becomes our turn
+  // Execute pre-action when it becomes our turn. Intentionally does NOT
+  // depend on `sendAction` — it reads the latest via `sendActionRef`.
   useEffect(() => {
     if (!isMyTurn) {
       executedRef.current = false;
@@ -75,7 +87,7 @@ export function usePreAction({ isMyTurn, toCall, sendAction }: UsePreActionParam
       // Send the action after a short delay so the user sees the flash
       const { action, amount } = result;
       const timer = setTimeout(() => {
-        sendAction(action, amount);
+        sendActionRef.current(action, amount);
         setPreActionState(null);
         preActionRef.current = null;
         setExecutingAction(null);
@@ -83,7 +95,7 @@ export function usePreAction({ isMyTurn, toCall, sendAction }: UsePreActionParam
 
       return () => clearTimeout(timer);
     }
-  }, [isMyTurn, toCall, sendAction]);
+  }, [isMyTurn, toCall]);
 
   return { preAction, togglePreAction, executingAction };
 }
