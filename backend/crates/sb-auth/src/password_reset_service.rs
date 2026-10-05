@@ -92,6 +92,23 @@ impl PasswordResetService {
         let user_id = UserId(claims.sub);
         let ctx = RequestContext::new(Uuid::new_v4(), None);
 
+        // B-30 FIX: single-use reset tokens. The reset token carries an
+        // `iat`; a completed reset updates `password_changed_at`. Reject
+        // any token whose `iat` is <= the user's current
+        // `password_changed_at` — after the first successful reset, the
+        // same token can never be reused (its iat is now in the past),
+        // even if an attacker captured it before it was consumed.
+        // The first-ever reset (password_changed_at = None) still works.
+        if let Ok(profile) = self.user_repo.get_user_profile(ctx.clone(), user_id).await {
+            if let Some(changed_at) = profile.password_changed_at {
+                if (claims.iat as i64) <= changed_at.timestamp() {
+                    return Err(AppError::Unauthorized(
+                        "Reset token has already been used".into(),
+                    ));
+                }
+            }
+        }
+
         self.user_repo
             .update_password_with_timestamp(ctx, user_id, &hash)
             .await
