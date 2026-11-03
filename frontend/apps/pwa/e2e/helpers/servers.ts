@@ -1,7 +1,7 @@
-import { spawn, execSync, ChildProcess } from 'child_process';
-import path from 'path';
-import fs from 'fs';
-import { TEST_DB_PATH, BACKEND_PORT, FRONTEND_PORT, BACKEND_URL, FRONTEND_URL } from '../config';
+import { type ChildProcess, execSync, spawn } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import { BACKEND_PORT, FRONTEND_PORT, TEST_DB_PATH } from '../config';
 
 let backendProcess: ChildProcess | null = null;
 let frontendProcess: ChildProcess | null = null;
@@ -14,7 +14,7 @@ function killProcessOnPort(port: number): void {
       console.log(`[Test] Killing process ${pid} on port ${port}`);
       execSync(`kill -9 ${pid}`);
     }
-  } catch (e) {
+  } catch (_e) {
     // No process on port or error, ignore
   }
 }
@@ -79,7 +79,7 @@ export async function startTestServers(): Promise<void> {
 
   let attempts = 0;
   while (!backendReady && attempts < 120) {
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     attempts++;
     if (backendProcess.exitCode !== null) {
       throw new Error(`Backend process exited with code ${backendProcess.exitCode}`);
@@ -119,7 +119,7 @@ export async function startTestServers(): Promise<void> {
 
   attempts = 0;
   while (!frontendReady && attempts < 60) {
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     attempts++;
     if (frontendProcess.exitCode !== null) {
       throw new Error(`Frontend process exited with code ${frontendProcess.exitCode}`);
@@ -135,7 +135,7 @@ export async function stopTestServers(): Promise<void> {
     // Kill the entire process group to ensure children are terminated
     try {
       process.kill(-backendProcess.pid!, 'SIGKILL');
-    } catch (e) {
+    } catch (_e) {
       // Already dead
     }
     backendProcess = null;
@@ -143,7 +143,7 @@ export async function stopTestServers(): Promise<void> {
   if (frontendProcess) {
     try {
       process.kill(-frontendProcess.pid!, 'SIGKILL');
-    } catch (e) {
+    } catch (_e) {
       // Already dead
     }
     frontendProcess = null;

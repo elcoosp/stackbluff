@@ -272,7 +272,7 @@ export function TablePage() {
   const activeRoomId = useGameStore((s) => s.activeRoomId);
   // F-8 FIX: read the current room's big blind from the store.
   const bigBlind = useGameStore((s) =>
-    s.activeRoomId ? s.rooms[s.activeRoomId]?.bigBlind ?? 10 : 10,
+    s.activeRoomId ? (s.rooms[s.activeRoomId]?.bigBlind ?? 10) : 10,
   );
 
   const rooms = useGameStore((s) => s.rooms);
@@ -314,7 +314,7 @@ export function TablePage() {
       // Remove the room matching this tableId if present, then clear
       // activeRoomId so the join flow can re-create it fresh.
       const match = Object.entries(store.rooms).find(
-        ([, r]: [string, any]) => r.tableId === tableId,
+        ([, r]: [string, GameRoomState]) => r.tableId === tableId,
       );
       if (match) {
         const [rid] = match;
@@ -576,7 +576,7 @@ export function TablePage() {
         // not every open room the user has.
         const store = useGameStore.getState();
         const match = Object.entries(store.rooms).find(
-          ([, r]: [string, any]) => r.tableId === tableId,
+          ([, r]: [string, GameRoomState]) => r.tableId === tableId,
         );
         if (match) {
           const [rid] = match;
@@ -592,7 +592,7 @@ export function TablePage() {
         // For tournaments, we just wait for the table assignment via polling/events
       }
     }
-  }, [notSeated, isJoining, isObserving, isTournament]);
+  }, [notSeated, isJoining, isObserving, isTournament, tableId]);
 
   // ─── Handle joining / seating ──────────────────────────────────────
   useEffect(() => {

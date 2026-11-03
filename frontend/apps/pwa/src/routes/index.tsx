@@ -41,7 +41,7 @@ const features = [
   {
     icon: Trophy,
     titleKey: 'Compete',
-    body: "Climb the season ranks. Leaderboard positions update in real-time.",
+    body: 'Climb the season ranks. Leaderboard positions update in real-time.',
     cta: 'VIEW RANKS',
     to: '/leaderboard',
   },
@@ -88,8 +88,8 @@ function IndexPage() {
           </h1>
           <p className="font-data-mono text-xs md:text-sm text-on-surface-variant mt-5 max-w-md mx-auto leading-relaxed">
             <Trans>
-              Precision poker for the sophisticated player. Real stakes, live tables, and a
-              tactical edge that reads the table before you do.
+              Precision poker for the sophisticated player. Real stakes, live tables, and a tactical
+              edge that reads the table before you do.
             </Trans>
           </p>
 

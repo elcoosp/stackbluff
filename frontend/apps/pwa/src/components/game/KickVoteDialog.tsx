@@ -45,9 +45,15 @@ export function KickVoteDialog({
   const votesRef = useRef(0);
   const hasVotedRef = useRef(false);
   const onTimeoutRef = useRef(onTimeout);
-  useEffect(() => { onTimeoutRef.current = onTimeout; });
-  useEffect(() => { votesRef.current = votes; }, [votes]);
-  useEffect(() => { hasVotedRef.current = hasVoted; }, [hasVoted]);
+  useEffect(() => {
+    onTimeoutRef.current = onTimeout;
+  });
+  useEffect(() => {
+    votesRef.current = votes;
+  }, [votes]);
+  useEffect(() => {
+    hasVotedRef.current = hasVoted;
+  }, [hasVoted]);
 
   useEffect(() => {
     if (!open) {

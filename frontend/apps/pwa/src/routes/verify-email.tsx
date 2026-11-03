@@ -111,9 +111,9 @@ function VerifyEmailPage() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#1a1b1e_0%,_#0a0a0a_100%)]" />
       <div className="relative z-10 w-full max-w-md">
         <div className="text-center mb-8">
-<h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter">
-              <Trans>STACKBLUFF</Trans>
-            </h1>
+          <h1 className="font-display-lg text-4xl text-on-surface uppercase tracking-tighter">
+            <Trans>STACKBLUFF</Trans>
+          </h1>
         </div>
         <GlassPanel>
           <div className="space-y-6 p-2 text-center">

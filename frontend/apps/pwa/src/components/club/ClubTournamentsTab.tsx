@@ -116,7 +116,9 @@ function TournamentCard({
                 <p
                   className={cn(
                     'font-medium text-sm mt-0.5',
-                    tournament.status === 'Registering' ? 'text-tertiary' : 'text-on-surface-variant',
+                    tournament.status === 'Registering'
+                      ? 'text-tertiary'
+                      : 'text-on-surface-variant',
                   )}
                 >
                   {tournament.status}

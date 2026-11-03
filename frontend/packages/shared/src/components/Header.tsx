@@ -30,7 +30,9 @@ export function Header() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleLogout = () => {
-    removeToken();
+    // removeToken is async now (platform surface storage); fire-and-forget
+    // keeps the logout flow synchronous as before.
+    void removeToken();
     logout();
     navigate({ to: '/login' });
   };

@@ -2,16 +2,7 @@ import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import { createFileRoute } from '@tanstack/react-router';
 import { motion } from 'framer-motion';
-import {
-  Brain,
-  Check,
-  ChevronRight,
-  Crown,
-  Gem,
-  ListChecks,
-  Target,
-  Users,
-} from 'lucide-react';
+import { Brain, Check, ChevronRight, Crown, Gem, ListChecks, Target, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';

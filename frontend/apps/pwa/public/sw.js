@@ -17,7 +17,7 @@ self.addEventListener('install', (event) => {
       return cache.addAll([OFFLINE_URL, '/']).catch(() => {
         // Ignore cache failures during install
       });
-    })
+    }),
   );
   self.skipWaiting();
 });
@@ -28,11 +28,9 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
-        cacheNames
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => caches.delete(name))
+        cacheNames.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name)),
       );
-    })
+    }),
   );
   self.clients.claim();
 });
@@ -43,7 +41,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(event.request).catch(() => {
         return caches.match(OFFLINE_URL);
-      })
+      }),
     );
   }
 });
@@ -69,7 +67,7 @@ self.addEventListener('push', (event) => {
         ...payload,
         data: { ...data.data, ...payload.data },
       };
-    } catch (e) {
+    } catch (_e) {
       data.body = event.data.text();
     }
   }
@@ -84,9 +82,7 @@ self.addEventListener('push', (event) => {
     actions: data.actions || [],
   };
 
-  event.waitUntil(
-    self.registration.showNotification(data.title, options)
-  );
+  event.waitUntil(self.registration.showNotification(data.title, options));
 });
 
 // Notification click - focus/open window
@@ -108,7 +104,7 @@ self.addEventListener('notificationclick', (event) => {
       if (clients.openWindow) {
         return clients.openWindow(urlToOpen);
       }
-    })
+    }),
   );
 });
 

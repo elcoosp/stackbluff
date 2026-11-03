@@ -1,4 +1,4 @@
-import path from 'path';
+import path from 'node:path';
 
 // Use an absolute path in the current working directory
 export const TEST_DB_PATH = path.join(process.cwd(), 'stackbluff_test.db');

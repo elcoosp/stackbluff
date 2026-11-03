@@ -260,21 +260,13 @@ function ReplaysPage() {
           animate="visible"
           className="grid grid-cols-2 md:grid-cols-3 gap-3"
         >
-          <StatCard
-            icon={Layers}
-            label={t`Total Replays`}
-            value={totalReplays.toLocaleString()}
-          />
+          <StatCard icon={Layers} label={t`Total Replays`} value={totalReplays.toLocaleString()} />
           <StatCard
             icon={Coins}
             label={t`Total Won`}
             value={`$${totalWinnings.toLocaleString()}`}
           />
-          <StatCard
-            icon={Crown}
-            label={t`Biggest Pot`}
-            value={`$${biggestPot.toLocaleString()}`}
-          />
+          <StatCard icon={Crown} label={t`Biggest Pot`} value={`$${biggestPot.toLocaleString()}`} />
         </motion.div>
       )}
 

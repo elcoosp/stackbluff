@@ -19,66 +19,71 @@ function useWebSocketConnection(clubId: string) {
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
-    const token = getToken();
-    if (!token) {
-      logger.warn('Cannot connect to WebSocket: no auth token');
-      return;
-    }
-
-    // F-17 FIX: the previous fallback hardcoded `ws://localhost:3000`, which
-    // fails on any real deployment (including HTTPS origins, where the
-    // browser rejects mixed content). Derive from the current origin.
-    const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const wsUrl = import.meta.env.VITE_WS_URL || `${proto}://${window.location.host}`;
-    const ws = new WebSocket(`${wsUrl}/ws/club?token=${token}`);
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      logger.info('Club WebSocket connected', { clubId });
-      setConnectionStatus('connected');
-      reconnectAttemptsRef.current = 0;
-
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
+    // getToken is async now (platform surface storage). Guard the connect
+    // window with a ref-free check after the read below.
+    void (async () => {
+      const token = await getToken();
+      if (!token) {
+        logger.warn('Cannot connect to WebSocket: no auth token');
+        return;
       }
+      if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
-      ws.send(JSON.stringify({ type: 'subscribe', channel: `club:${clubId}` }));
-    };
+      // F-17 FIX: the previous fallback hardcoded `ws://localhost:3000`, which
+      // fails on any real deployment (including HTTPS origins, where the
+      // browser rejects mixed content). Derive from the current origin.
+      const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+      const wsUrl = import.meta.env.VITE_WS_URL || `${proto}://${window.location.host}`;
+      const ws = new WebSocket(`${wsUrl}/ws/club?token=${token}`);
+      wsRef.current = ws;
 
-    ws.onmessage = (event) => {
-      try {
-        const rawData = JSON.parse(event.data);
-        const message = ClubWebSocketEventSchema.parse(rawData);
+      ws.onopen = () => {
+        logger.info('Club WebSocket connected', { clubId });
+        setConnectionStatus('connected');
+        reconnectAttemptsRef.current = 0;
 
-        window.dispatchEvent(new CustomEvent('club:event', { detail: message }));
-      } catch (err) {
-        logger.error('Failed to parse WebSocket message', err instanceof Error ? err : undefined);
-      }
-    };
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+        }
 
-    ws.onclose = () => {
-      logger.info('Club WebSocket disconnected', { clubId });
-      setConnectionStatus('reconnecting');
+        ws.send(JSON.stringify({ type: 'subscribe', channel: `club:${clubId}` }));
+      };
 
-      if (reconnectAttemptsRef.current < WEBSOCKET.MAX_RECONNECT_ATTEMPTS) {
-        const delay = WEBSOCKET.BASE_RECONNECT_DELAY * 2 ** reconnectAttemptsRef.current;
-        reconnectTimeoutRef.current = setTimeout(() => {
-          reconnectAttemptsRef.current++;
-          logger.info('Attempting to reconnect WebSocket', {
-            attempt: reconnectAttemptsRef.current,
-            clubId,
-          });
-          connect();
-        }, delay);
-      } else {
-        logger.warn('Max WebSocket reconnect attempts reached', { clubId });
-        setConnectionStatus('disconnected');
-      }
-    };
+      ws.onmessage = (event) => {
+        try {
+          const rawData = JSON.parse(event.data);
+          const message = ClubWebSocketEventSchema.parse(rawData);
 
-    ws.onerror = (err) => {
-      logger.error('Club WebSocket error', err instanceof Error ? err : undefined, { clubId });
-    };
+          window.dispatchEvent(new CustomEvent('club:event', { detail: message }));
+        } catch (err) {
+          logger.error('Failed to parse WebSocket message', err instanceof Error ? err : undefined);
+        }
+      };
+
+      ws.onclose = () => {
+        logger.info('Club WebSocket disconnected', { clubId });
+        setConnectionStatus('reconnecting');
+
+        if (reconnectAttemptsRef.current < WEBSOCKET.MAX_RECONNECT_ATTEMPTS) {
+          const delay = WEBSOCKET.BASE_RECONNECT_DELAY * 2 ** reconnectAttemptsRef.current;
+          reconnectTimeoutRef.current = setTimeout(() => {
+            reconnectAttemptsRef.current++;
+            logger.info('Attempting to reconnect WebSocket', {
+              attempt: reconnectAttemptsRef.current,
+              clubId,
+            });
+            connect();
+          }, delay);
+        } else {
+          logger.warn('Max WebSocket reconnect attempts reached', { clubId });
+          setConnectionStatus('disconnected');
+        }
+      };
+
+      ws.onerror = (err) => {
+        logger.error('Club WebSocket error', err instanceof Error ? err : undefined, { clubId });
+      };
+    })();
   }, [clubId]);
 
   useEffect(() => {
