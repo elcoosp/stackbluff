@@ -54,11 +54,7 @@ export function CreateClubModal({ open, onClose }: CreateClubModalProps) {
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      className="raised-panel rounded-3xl max-w-lg p-6 md:p-8"
-    >
+    <Dialog open={open} onClose={onClose} className="raised-panel rounded-3xl max-w-lg p-6 md:p-8">
       <motion.form
         onSubmit={handleSubmit}
         initial={{ opacity: 0, y: 10 }}

@@ -21,12 +21,13 @@ export const Route = createFileRoute('/table/$tableId')({
 
 function TablePageWithFingerprint() {
   useEffect(() => {
-    const token = getToken();
-    if (token) {
+    // getToken is async now (platform surface storage).
+    void getToken().then((token) => {
+      if (!token) return;
       generateAndSubmitFingerprint(token).catch((err) => {
         console.warn('Fingerprint submission on table mount failed:', err);
       });
-    }
+    });
   }, []);
 
   return <TablePage />;

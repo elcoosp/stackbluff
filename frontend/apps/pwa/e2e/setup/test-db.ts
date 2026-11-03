@@ -1,4 +1,4 @@
-import fs from 'fs';
+import fs from 'node:fs';
 import { TEST_DB_PATH } from '../config';
 
 export function resetDatabase() {

@@ -1,13 +1,23 @@
-const TOKEN_KEY = 'auth_token';
-export function getToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
+import { getPlatformSurface } from '../platform/surface';
+
+/**
+ * Auth token access — routed through the platform surface's TokenStorage
+ * (web default: localStorage key 'auth_token'; native: injected storage).
+ * Storage reads/writes are asynchronous on native, so these APIs are async
+ * everywhere for a uniform call pattern.
+ */
+export async function getToken(): Promise<string | null> {
+  return getPlatformSurface().tokenStorage.get();
 }
-export function setToken(token: string): void {
-  localStorage.setItem(TOKEN_KEY, token);
+
+export async function setToken(token: string): Promise<void> {
+  await getPlatformSurface().tokenStorage.set(token);
 }
-export function removeToken(): void {
-  localStorage.removeItem(TOKEN_KEY);
+
+export async function removeToken(): Promise<void> {
+  await getPlatformSurface().tokenStorage.set(null);
 }
-export function isAuthenticated(): boolean {
-  return !!getToken();
+
+export async function isAuthenticated(): Promise<boolean> {
+  return !!(await getToken());
 }

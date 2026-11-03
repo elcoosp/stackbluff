@@ -237,27 +237,15 @@ function HistoryPage() {
           animate="visible"
           className="grid grid-cols-2 md:grid-cols-4 gap-3"
         >
-          <StatCard
-            icon={Layers}
-            label={t`Total Hands`}
-            value={total.toLocaleString()}
-          />
+          <StatCard icon={Layers} label={t`Total Hands`} value={total.toLocaleString()} />
           <StatCard
             icon={Trophy}
             label={t`Win Rate`}
             value={`${winRate}%`}
             sub={`${wins}W / ${losses}L`}
           />
-          <StatCard
-            icon={Coins}
-            label={t`Winnings`}
-            value={`$${totalWinnings.toLocaleString()}`}
-          />
-          <StatCard
-            icon={Crown}
-            label={t`Biggest Pot`}
-            value={`$${biggestPot.toLocaleString()}`}
-          />
+          <StatCard icon={Coins} label={t`Winnings`} value={`$${totalWinnings.toLocaleString()}`} />
+          <StatCard icon={Crown} label={t`Biggest Pot`} value={`$${biggestPot.toLocaleString()}`} />
         </motion.div>
       )}
 

@@ -296,8 +296,8 @@ function LobbyPage() {
           </Button>
           <button
             type="button"
-            onClick={() => {
-              removeToken();
+            onClick={async () => {
+              await removeToken();
               logout();
               navigate({ to: '/login' });
             }}

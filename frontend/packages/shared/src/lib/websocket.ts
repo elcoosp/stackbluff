@@ -1,4 +1,4 @@
-import { getToken } from '@stackbluff/shared/auth/token';
+import { getToken } from '../auth/token';
 
 type MessageType =
   | 'club.updated'
@@ -22,14 +22,14 @@ class ClubWebSocketManager {
   // not re-arm the reconnect timer after the caller asked us to stop.
   private intentionallyClosed = false;
 
-  connect() {
+  async connect() {
     if (this.ws?.readyState === WebSocket.OPEN) {
       return;
     }
     // F-17: a fresh connect clears any previous intentional-disconnect.
     this.intentionallyClosed = false;
 
-    const token = getToken();
+    const token = await getToken();
     if (!token) {
       console.warn('Cannot connect to WebSocket: no auth token');
       return;
@@ -38,7 +38,7 @@ class ClubWebSocketManager {
     const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`;
 
     try {
-      this.ws = new WebSocket(wsUrl + (getToken() ? `?token=${encodeURIComponent(getToken()!)}` : ''));
+      this.ws = new WebSocket(`${wsUrl}?token=${encodeURIComponent(token)}`);
 
       this.ws.onopen = () => {
         console.log('Club WebSocket connected');

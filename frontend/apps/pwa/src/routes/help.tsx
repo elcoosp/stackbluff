@@ -2,15 +2,7 @@ import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { AnimatePresence, motion } from 'framer-motion';
-import {
-  BookOpen,
-  Bug,
-  ChevronDown,
-  HelpCircle,
-  MessageCircle,
-  Send,
-  Users,
-} from 'lucide-react';
+import { BookOpen, Bug, ChevronDown, HelpCircle, MessageCircle, Send, Users } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';

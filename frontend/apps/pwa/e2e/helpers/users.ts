@@ -1,6 +1,6 @@
-import { Page } from 'puppeteer';
-import { apiClient } from './api';
+import type { Page } from 'puppeteer';
 import { FRONTEND_URL } from '../config';
+import { apiClient } from './api';
 
 export async function createUser(username: string, password = 'Test123!') {
   const email = `${username}@test.com`;

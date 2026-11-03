@@ -195,11 +195,7 @@ function JoinClubPage() {
             <Trans>View Club</Trans>
           </Button>
         ) : (
-          <Button
-            onClick={handleJoin}
-            disabled={joinMutation.isPending}
-            className="w-full"
-          >
+          <Button onClick={handleJoin} disabled={joinMutation.isPending} className="w-full">
             {joinMutation.isPending ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />

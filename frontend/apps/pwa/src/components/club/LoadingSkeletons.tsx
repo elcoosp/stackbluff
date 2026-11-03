@@ -31,8 +31,11 @@ export function LeaderboardSkeleton() {
   return (
     <div className="space-y-2 animate-pulse">
       {Array.from({ length: 10 }).map((_, i) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: stable skeleton, no state
-        <div key={i} className="flex items-center gap-4 p-4 bg-white/[0.04] border border-white/10 rounded-xl">
+        <div
+          // biome-ignore lint/suspicious/noArrayIndexKey: stable skeleton, no state
+          key={i}
+          className="flex items-center gap-4 p-4 bg-white/[0.04] border border-white/10 rounded-xl"
+        >
           <div className="w-12 h-8 bg-white/10 rounded" />
           <div className="w-12 h-12 rounded-full bg-white/10" />
           <div className="flex-grow h-6 bg-white/10 rounded" />

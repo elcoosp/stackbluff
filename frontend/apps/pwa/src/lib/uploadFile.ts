@@ -8,7 +8,7 @@ export async function uploadFile(file: File): Promise<string> {
   const formData = new FormData();
   formData.append('file', file);
 
-  const token = getToken();
+  const token = await getToken();
   const headers: Record<string, string> = {};
   if (token) {
     headers.Authorization = `Bearer ${token}`;

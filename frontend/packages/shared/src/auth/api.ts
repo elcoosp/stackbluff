@@ -4,7 +4,7 @@ const API_BASE = '/api';
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  const token = getToken();
+  const token = await getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
@@ -61,7 +61,9 @@ export const authApi = {
     return response.json();
   },
   verifyEmail: async (token: string) => {
-    const response = await fetch(`${API_BASE}/auth/verify-email?token=${encodeURIComponent(token)}`);
+    const response = await fetch(
+      `${API_BASE}/auth/verify-email?token=${encodeURIComponent(token)}`,
+    );
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Verification failed' }));
       throw new Error(error.message || 'Verification failed');

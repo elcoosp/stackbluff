@@ -61,14 +61,13 @@ function LoginPage() {
 
   const loginMutation = useMutation({
     mutationFn: authApi.login,
-    onSuccess: (data) => {
-      setToken(data.token);
+    onSuccess: async (data) => {
+      await setToken(data.token);
       setAuth(data.user, data.token, data.balance || 0);
       trackGameEvent('login_success', { platform: 'email' });
       // L-5 FIX: honor the redirect search param when present and it is
       // a safe in-app path (leading '/').
-      const dest =
-        search?.redirect && search.redirect.startsWith('/') ? search.redirect : '/';
+      const dest = search?.redirect?.startsWith('/') ? search.redirect : '/';
       navigate({ to: dest });
     },
     onError: (error) => {
@@ -78,14 +77,13 @@ function LoginPage() {
 
   const telegramMutation = useMutation({
     mutationFn: authApi.telegramAuth,
-    onSuccess: (data) => {
-      setToken(data.token);
+    onSuccess: async (data) => {
+      await setToken(data.token);
       setAuth(data.user, data.token, data.balance || 0);
       trackGameEvent('login_success', { platform: 'telegram' });
       // L-5 FIX: honor the redirect search param when present and it is
       // a safe in-app path (leading '/').
-      const dest =
-        search?.redirect && search.redirect.startsWith('/') ? search.redirect : '/';
+      const dest = search?.redirect?.startsWith('/') ? search.redirect : '/';
       navigate({ to: dest });
     },
     onError: (error) => {

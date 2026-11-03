@@ -1,11 +1,10 @@
+import path from 'node:path';
+import { linguiMacroSwcPlugin } from '@lingui/swc-plugin/options';
+import { lingui } from '@lingui/vite-plugin';
+import tailwindcss from '@tailwindcss/vite';
+import react from '@vitejs/plugin-react-swc';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
-
-import react from '@vitejs/plugin-react-swc';
-import tailwindcss from '@tailwindcss/vite';
-import path from 'path';
-import { lingui } from '@lingui/vite-plugin';
-import { linguiMacroSwcPlugin } from '@lingui/swc-plugin/options';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -18,7 +17,7 @@ export default defineConfig({
       injectRegister: true,
       devOptions: {
         enabled: true,
-        type: 'module'
+        type: 'module',
       },
       manifest: {
         name: 'StackBluff',
@@ -29,15 +28,15 @@ export default defineConfig({
           {
             src: 'icons/icon-192x192.png',
             sizes: '192x192',
-            type: 'image/png'
+            type: 'image/png',
           },
           {
             src: 'icons/icon-512x512.png',
             sizes: '512x512',
-            type: 'image/png'
-          }
-        ]
-      }
+            type: 'image/png',
+          },
+        ],
+      },
     }),
     react({
       plugins: [linguiMacroSwcPlugin()],

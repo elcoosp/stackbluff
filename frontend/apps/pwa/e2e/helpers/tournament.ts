@@ -1,6 +1,10 @@
 import { apiClient } from './api';
 
-export async function createTournament(type: 'SitAndGo' | 'Mtt', maxPlayers: number, buyIn: number) {
+export async function createTournament(
+  type: 'SitAndGo' | 'Mtt',
+  maxPlayers: number,
+  buyIn: number,
+) {
   const payload = {
     tournament_type: type,
     max_players: maxPlayers,

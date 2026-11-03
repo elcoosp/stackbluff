@@ -76,6 +76,9 @@ export interface TableState {
   current_turn_user_id: string | null;
   current_turn_expires_at: number | null;
   current_turn_timeout_ms: number | null;
+  small_blind?: number;
+  big_blind?: number;
+  ante?: number;
 }
 
 export interface ShowdownPlayer {
@@ -204,9 +207,9 @@ export const useGameStore = create<GameState>((set, _get) => ({
           [roomId]: {
             ...state.rooms[roomId],
             tableId: tableState.room_id,
-            smallBlind: (tableState as any).small_blind ?? 0,
-            bigBlind: (tableState as any).big_blind ?? 0,
-            ante: (tableState as any).ante ?? 0,
+            smallBlind: tableState.small_blind ?? 0,
+            bigBlind: tableState.big_blind ?? 0,
+            ante: tableState.ante ?? 0,
             seats: seatsMap,
             communityCards: tableState.community_cards || [],
             pot: tableState.pot || 0,
@@ -234,8 +237,7 @@ export const useGameStore = create<GameState>((set, _get) => ({
       // nothing happened. Between hands the previous hand's cards stayed
       // face-up on the table UI. Set `heroHoleCards` to the new value or
       // null on clear. Narrow the tuple to satisfy the store's type.
-      const next: [Card, Card] | null =
-        cards && cards.length === 2 ? [cards[0], cards[1]] : null;
+      const next: [Card, Card] | null = cards && cards.length === 2 ? [cards[0], cards[1]] : null;
       return {
         rooms: {
           ...state.rooms,

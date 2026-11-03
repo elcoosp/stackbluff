@@ -1,4 +1,4 @@
-import puppeteer, { Browser } from 'puppeteer';
+import puppeteer, { type Browser } from 'puppeteer';
 import { Cluster } from 'puppeteer-cluster';
 
 let browser: Browser | null = null;

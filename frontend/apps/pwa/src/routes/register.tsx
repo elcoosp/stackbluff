@@ -38,8 +38,8 @@ function RegisterPage() {
   const [step, setStep] = useState(1);
   const mutation = useMutation({
     mutationFn: authApi.register,
-    onSuccess: (data) => {
-      setToken(data.token);
+    onSuccess: async (data) => {
+      await setToken(data.token);
       setAuth(data.user, data.token, data.balance || 0);
       trackGameEvent('registration_success', { platform: 'email' });
       navigate({ to: '/' });
@@ -72,9 +72,7 @@ function RegisterPage() {
 
   // Field errors from TanStack Form's zod adapter come as
   // `StandardSchemaV1Issue` objects, not strings.
-  const getErrorMessage = (
-    err: string | { message?: string } | undefined,
-  ): string => {
+  const getErrorMessage = (err: string | { message?: string } | undefined): string => {
     if (!err) return '';
     if (typeof err === 'string') return err;
     if (typeof err.message === 'string') return err.message;

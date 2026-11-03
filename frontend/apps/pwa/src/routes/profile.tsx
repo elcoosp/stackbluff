@@ -123,7 +123,9 @@ function ProfilePage() {
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3 flex-wrap">
-                  <h1 className="font-display-lg text-3xl text-on-surface tracking-tight">{displayName}</h1>
+                  <h1 className="font-display-lg text-3xl text-on-surface tracking-tight">
+                    {displayName}
+                  </h1>
                   {hasFoundingMember && (
                     <Badge
                       variant="outline"
@@ -196,7 +198,6 @@ function ProfilePage() {
             value={handsPlayed.toLocaleString()}
             icon={<Target className="w-4 h-4" />}
             color="text-tertiary"
-            bg="bg-tertiary/10"
             variants={itemVariants}
           />
           <StatCard
@@ -204,7 +205,6 @@ function ProfilePage() {
             value={`${(winRate * 100).toFixed(1)}%`}
             icon={<TrendingUp className="w-4 h-4" />}
             color="text-tertiary"
-            bg="bg-tertiary/10"
             variants={itemVariants}
           />
           <StatCard
@@ -212,7 +212,6 @@ function ProfilePage() {
             value={`${netProfit >= 0 ? '+' : ''}${netProfit.toLocaleString()}`}
             icon={<Coins className="w-4 h-4" />}
             color="text-tertiary"
-            bg="bg-tertiary/10"
             variants={itemVariants}
           />
           <StatCard
@@ -220,7 +219,6 @@ function ProfilePage() {
             value={biggestPot.toLocaleString()}
             icon={<Gem className="w-4 h-4" />}
             color="text-tertiary"
-            bg="bg-tertiary/10"
             variants={itemVariants}
           />
         </div>
@@ -332,14 +330,12 @@ function StatCard({
   value,
   icon,
   color,
-  bg,
   variants,
 }: {
   label: string;
   value: string | number;
   icon: React.ReactNode;
   color: string;
-  bg: string;
   variants: Variants;
 }) {
   return (

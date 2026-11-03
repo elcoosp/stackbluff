@@ -54,7 +54,7 @@ export async function subscribeUserToPush(): Promise<boolean> {
 
     // Send the flat shape the backend expects.
     const json = subscription.toJSON();
-    const token = getToken();
+    const token = await getToken();
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (token) headers.Authorization = `Bearer ${token}`;
 
@@ -90,7 +90,7 @@ export async function unsubscribeUserFromPush(): Promise<void> {
 
     if (subscription) {
       await subscription.unsubscribe();
-      const token = getToken();
+      const token = await getToken();
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) headers.Authorization = `Bearer ${token}`;
       await fetch(`${API_BASE}/notifications/unsubscribe`, {
