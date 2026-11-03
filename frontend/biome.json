@@ -2,6 +2,14 @@
   "$schema": "https://biomejs.dev/schemas/2.4.15/schema.json",
   "files": {
     "includes": [
+      "**",
+      "!**/*.css",
+      "!**/apps/mobile/assets",
+      "**",
+      "!**/.serena",
+      "!**/dist",
+      "!**/.export-smoke",
+      "!**/.expo",
       "apps/*/src/**/*.ts",
       "apps/*/src/**/*.tsx",
       "packages/*/src/**/*.ts",
@@ -41,7 +49,10 @@
       "enabled": false
     },
     "formatter": {
-      "enabled": true
+      "enabled": false
+    },
+    "parser": {
+      "tailwindDirectives": true
     }
   },
   "assist": {
